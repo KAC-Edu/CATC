@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I22 | 2026-07-08 (I22: 옵저버 질문 클릭 동기화 송신 훅 미설치 수정 — hookQa의 `!window.ui` 체크가 const 선언(ui) 특성상 항상 실패해 openQaModal 래핑이 설치되지 않던 근본 원인. typeof ui 기반 체크로 교체(admin.js J46 전역 노출과 이중 안전장치) (I18: 비상 출결(OTP 대체) 패널·진입 버튼 신설 — 코드 119로 활성, 고정 6자리 비상번호 대형 표시+전체화면+종료 버튼 (I17: ①과정현황 OTP 출결 라벨의 * 표기 제거 ②옵저버 동기화 모듈을 준비 폴링으로 보강(firebase/state/ui 로드 지연 시 1회 체크 후 영구 비활성되던 취약점) + 수신 콘솔 진단 로그 (I16.1: [기존버그] 홈검색 위치보정 스크립트의 닫는 script 태그 누락 복구 — 점검모드 스니펫 추가로 드러남, 미복구 시 푸터·후속 스크립트 전체 파손. 전체 점검모드 스니펫 추가(system/maintenance 실시간 스위치) (I16: 옵저버 동기화 확장 — 질문 블록 클릭 동기화 신설: 보조자(옵저버)가 질문을 클릭해 모달을 열거나 닫으면 무대(강사) 화면도 동일하게 열기/닫기(status/coAttn 활용, 규칙 기허용 키), 질문 화면이 아니면 자동으로 질문 메뉴 이동 후 열기. 보조 패널에 동작 안내문구 추가. 기존 메뉴(mode) 동기화는 유지 (I15.1: OTP 출결 라벨 옆 * 표시(빨강) 추가 (I15: ①'오늘 한눈에' 칩 떨림·클릭 씹힘 수정 — 요약줄을 값이 바뀔 때만 다시 그림(매 갱신 innerHTML 재생성이 원인) ②질문사항 보기 버튼 세로 확대(68px)+42px Q&A 아이콘 배지+부제("교육생이 올린 질문 확인·답변")+카드 flex화로 하단 여백 채움 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I23 | 2026-07-08 (I23: ①옵저버 동기화 확장 — 입교안내 페이지 넘김(renderPage 훅, 목표 페이지 번호 전송)·전체화면 토글(guideFs)을 무대에 그대로 반영. 무대는 사용자 제스처 부재로 네이티브 전체화면이 불가하여 fixed 유사 전체화면 오버레이로 표현(ESC/더블클릭 로컬 해제) ②동기화 ON 전환 시 관리자 비밀번호(13281) 입력 요구 — 세션 내 1회 인증, OFF는 자유 ③알림 팝업(customAlertModal) 배경 클릭·✕ 버튼으로 닫기 추가(admin.js J47 ESC 닫기와 세트) — 옵저버 제한 안내 팝업이 안 닫히던 불편 해소 (I22: 옵저버 질문 클릭 동기화 송신 훅 미설치 수정 — hookQa의 `!window.ui` 체크가 const 선언(ui) 특성상 항상 실패해 openQaModal 래핑이 설치되지 않던 근본 원인. typeof ui 기반 체크로 교체(admin.js J46 전역 노출과 이중 안전장치) (I18: 비상 출결(OTP 대체) 패널·진입 버튼 신설 — 코드 119로 활성, 고정 6자리 비상번호 대형 표시+전체화면+종료 버튼 (I17: ①과정현황 OTP 출결 라벨의 * 표기 제거 ②옵저버 동기화 모듈을 준비 폴링으로 보강(firebase/state/ui 로드 지연 시 1회 체크 후 영구 비활성되던 취약점) + 수신 콘솔 진단 로그 (I16.1: [기존버그] 홈검색 위치보정 스크립트의 닫는 script 태그 누락 복구 — 점검모드 스니펫 추가로 드러남, 미복구 시 푸터·후속 스크립트 전체 파손. 전체 점검모드 스니펫 추가(system/maintenance 실시간 스위치) (I16: 옵저버 동기화 확장 — 질문 블록 클릭 동기화 신설: 보조자(옵저버)가 질문을 클릭해 모달을 열거나 닫으면 무대(강사) 화면도 동일하게 열기/닫기(status/coAttn 활용, 규칙 기허용 키), 질문 화면이 아니면 자동으로 질문 메뉴 이동 후 열기. 보조 패널에 동작 안내문구 추가. 기존 메뉴(mode) 동기화는 유지 (I15.1: OTP 출결 라벨 옆 * 표시(빨강) 추가 (I15: ①'오늘 한눈에' 칩 떨림·클릭 씹힘 수정 — 요약줄을 값이 바뀔 때만 다시 그림(매 갱신 innerHTML 재생성이 원인) ②질문사항 보기 버튼 세로 확대(68px)+42px Q&A 아이콘 배지+부제("교육생이 올린 질문 확인·답변")+카드 flex화로 하단 여백 채움 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -2438,9 +2438,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
 </div>
 
 
-        <!-- [신규] Custom Alert Modal (전체화면 깨짐 방지용) -->
-        <div id="customAlertModal" class="modal-overlay" style="z-index: 2147483647 !important;">
-            <div class="modal-box" style="width: 420px; max-width:90vw; text-align: center; padding:28px 30px;">
+        <!-- [신규] Custom Alert Modal (전체화면 깨짐 방지용) [I23: 배경 클릭·✕ 버튼으로도 닫기] -->
+        <div id="customAlertModal" class="modal-overlay" style="z-index: 2147483647 !important;" onclick="if(event.target===this) ui.closeAlert()">
+            <div class="modal-box" style="width: 420px; max-width:90vw; text-align: center; padding:28px 30px; position:relative;">
+                <button onclick="ui.closeAlert()" title="닫기" style="position:absolute; top:10px; right:12px; width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#64748b; font-size:16px; font-weight:900; cursor:pointer; line-height:1;"><i class="fa-solid fa-xmark"></i></button>
                 <div style="font-size:40px; margin-bottom:15px; color:#3b82f6;"><i class="fa-solid fa-circle-info"></i></div>
                 <p id="customAlertText" style="font-size:16px; line-height:1.65; color:var(--text-color); font-weight:700; margin-bottom:25px; word-break:keep-all; white-space:pre-line; text-align:center;"></p>
                 <button class="btn-action btn-primary" style="width:100%;" onclick="ui.closeAlert()">확인</button>
@@ -3219,6 +3220,30 @@ var opsCfg = (function(){
     clearTimeout(t._tm); t._tm=setTimeout(function(){ t.style.opacity='0'; }, 1600);
   }
 
+  // ── [I23] 입교안내 유사 전체화면(무대 측) — 원격 신호는 사용자 제스처가 없어 네이티브
+  //  requestFullscreen이 브라우저 정책상 항상 거부됨 → 화면 전체를 덮는 fixed 오버레이로 동일 효과.
+  //  강의 PC는 보통 이미 브라우저가 전체화면(F11)/빔프로젝터 송출 상태라 시각적으로 동일.
+  (function(){ var s=document.createElement('style'); s.textContent=
+    '#pdfWrapper.co-guide-fs{position:fixed !important;inset:0 !important;z-index:2147482000 !important;'
+    +'background:#000 !important;max-width:none !important;width:100vw !important;height:100vh !important;'
+    +'margin:0 !important;border-radius:0 !important;display:flex !important;align-items:center;justify-content:center;}'
+    +'#pdfWrapper.co-guide-fs canvas{width:auto !important;height:100% !important;max-width:100% !important;'
+    +'border-radius:0 !important;box-shadow:none !important;margin:auto;}'
+    +'#pdfWrapper.co-guide-fs #guideProfile{width:auto !important;max-width:100% !important;max-height:100% !important;margin:auto;}';
+    document.head.appendChild(s); })();
+  window.coGuideFs = function(on){
+    var w = document.getElementById('pdfWrapper');
+    if(!w) return;
+    w.classList.toggle('co-guide-fs', !!on);
+  };
+  // 무대 로컬 해제 수단: ESC 또는 오버레이 더블클릭 (changePage 클릭과 충돌 없음)
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Escape'){ var w=document.getElementById('pdfWrapper'); if(w && w.classList.contains('co-guide-fs')) window.coGuideFs(false); }
+  });
+  document.addEventListener('dblclick', function(e){
+    var w=document.getElementById('pdfWrapper'); if(w && w.classList.contains('co-guide-fs') && w.contains(e.target)) window.coGuideFs(false);
+  });
+
   // ── 강사(소유자) 측 수신 ──
   function attach(room){
     if (ref) { try{ ref.off(); }catch(e){} ref=null; }
@@ -3246,6 +3271,28 @@ var opsCfg = (function(){
                 })(); })(at.id);
             } else if (at && at.a === 'qaClose') {
               ui.closeQaModal(); toast('보조자 동기화 → 질문 닫기');
+            } else if (at && at.a === 'guidePage' && at.p) {
+              // ── [I23] 입교안내 페이지 동기화 수신 — 보조자가 넘긴 페이지를 무대도 동일 표시 ──
+              if (state.currentMode !== 'guide') { try { ui.setMode('guide'); } catch(e){} }
+              (function(p){ var n=0; (function pgTry(){
+                  var slot = (typeof guideMgr!=='undefined' && guideMgr._slot) ? guideMgr._slot() : null;
+                  if(slot && slot.pdfDoc && !guideMgr.isRendering){ try{ guideMgr.renderPage(p); }catch(e){} toast('보조자 동기화 → 입교안내 '+p+'p'); return; }
+                  if(n++ < 30) setTimeout(pgTry, 250);   // PDF 로딩(수 초) 대기 후 적용
+                })(); })(at.p);
+            } else if (at && at.a === 'guideFs') {
+              // ── [I23] 입교안내 전체화면 동기화 수신 — 사용자 제스처가 없어 브라우저 네이티브
+              //  전체화면은 정책상 불가 → 화면 전체를 덮는 유사 전체화면(fixed 오버레이)으로 표현.
+              //  무대 PC에서 ESC 또는 화면 더블클릭으로 로컬 해제 가능.
+              if (at.on) {
+                if (state.currentMode !== 'guide') { try { ui.setMode('guide'); } catch(e){} }
+                (function(){ var n=0; (function fsTry(){
+                    var w = document.getElementById('pdfWrapper');
+                    if(w && w.offsetParent !== null){ coGuideFs(true); toast('보조자 동기화 → 입교안내 전체화면'); return; }
+                    if(n++ < 30) setTimeout(fsTry, 250);
+                  })(); })();
+              } else {
+                coGuideFs(false); toast('보조자 동기화 → 전체화면 해제');
+              }
             }
           } catch(e){ console.warn('[copilot] coAttn parse/act err', e); }
         }
@@ -3299,7 +3346,7 @@ var opsCfg = (function(){
     p.innerHTML='<div id="coDrag" style="font-weight:900;margin-bottom:9px;display:flex;align-items:center;gap:7px;cursor:move;"><i class="fa-solid fa-headset" style="color:#60a5fa;"></i> 강사 보조 <i class="fa-solid fa-up-down-left-right" style="margin-left:auto;opacity:.45;font-size:11px;"></i></div>'
       + '<button id="coSyncBtn" onclick="coToggleSync()" style="width:100%;padding:11px;border:none;border-radius:10px;font-weight:800;cursor:pointer;background:#334155;color:#cbd5e1;">화면 동기화 OFF</button>'
       + '<div id="coSyncMsg" style="font-size:11px;margin-top:7px;color:#94a3b8;line-height:1.4;text-align:center;">동기화 OFF</div>'
-      + '<div style="font-size:10.5px;margin-top:6px;color:#64748b;line-height:1.45;text-align:center;">ON이면 내 메뉴 이동·질문 클릭이<br>무대(강사) 화면에 그대로 반영됩니다</div>';
+      + '<div style="font-size:10.5px;margin-top:6px;color:#64748b;line-height:1.45;text-align:center;">ON이면 내 메뉴 이동·질문 클릭·<br>입교안내 페이지/전체화면이<br>무대(강사) 화면에 그대로 반영됩니다<br><span style="color:#475569;">(활성화 시 관리자 비밀번호 필요)</span></div>';
     document.body.appendChild(p);
     var btn=document.getElementById('coSyncBtn');
     if(btn&&window._coSync){ btn.textContent='화면 동기화 ON'; btn.style.background='#16a34a'; btn.style.color='#fff'; var m=document.getElementById('coSyncMsg'); if(m){m.textContent='● 동기화 중';m.style.color='#4ade80';} }
@@ -3325,7 +3372,15 @@ var opsCfg = (function(){
   }
 
   window._coSync=false;
+  // [I23] 동기화 활성화 비밀번호 게이트 — ON 전환 시에만 요구(OFF는 자유), 세션 내 1회 인증
+  window._coAuthOk = false; try{ window._coAuthOk = (sessionStorage.getItem('kac_co_auth')==='1'); }catch(e){}
   window.coToggleSync=function(){
+    if(!window._coSync && !window._coAuthOk){
+      var pw = prompt('🔒 화면 동기화 활성화\n관리자 비밀번호를 입력하세요.');
+      if(pw === null) return;                       // 취소
+      if(String(pw).trim() !== '13281'){ toast('⛔ 비밀번호가 올바르지 않습니다'); return; }
+      window._coAuthOk = true; try{ sessionStorage.setItem('kac_co_auth','1'); }catch(e){}
+    }
     window._coSync=!window._coSync;
     var btn=document.getElementById('coSyncBtn');
     if(btn){ btn.textContent=window._coSync?'화면 동기화 ON':'화면 동기화 OFF'; btn.style.background=window._coSync?'#16a34a':'#334155'; btn.style.color=window._coSync?'#fff':'#cbd5e1'; }
@@ -3354,6 +3409,27 @@ var opsCfg = (function(){
       _close(e);
       var m = document.getElementById('qaModal');
       if (state.isObserver && window._coSync && (!m || m.style.display === 'none')) sendAttn({ a:'qaClose', ts:Date.now() });
+    };
+  })();
+
+  // ── [I23] 보조자: 입교안내 페이지 넘김·전체화면도 전송 — guideMgr 래핑(1회 설치) ──
+  (function hookGuide(){
+    if (typeof guideMgr === 'undefined' || !guideMgr.renderPage || guideMgr._coHooked) { setTimeout(hookGuide, 800); return; }
+    guideMgr._coHooked = true;
+    // 페이지 이동의 최종 관문은 renderPage(changePage/goFirst 모두 여기로 수렴) → 목표 페이지 번호를 그대로 전송
+    var _rp = guideMgr.renderPage.bind(guideMgr);
+    guideMgr.renderPage = function(num){
+      var r = _rp(num);
+      if (state.isObserver && window._coSync && state.currentMode === 'guide') sendAttn({ a:'guidePage', p:num, ts:Date.now() });
+      return r;
+    };
+    // 전체화면 토글: 호출 '직전' 상태로 목표(on/off)를 판정해 전송 (보조자 본인은 네이티브 전체화면 그대로)
+    var _fs = guideMgr.toggleFullScreen.bind(guideMgr);
+    guideMgr.toggleFullScreen = function(){
+      var w = document.getElementById('pdfWrapper');
+      var goingOn = w && (document.fullscreenElement !== w);
+      _fs();
+      if (state.isObserver && window._coSync) sendAttn({ a:'guideFs', on: !!goingOn, ts:Date.now() });
     };
   })();
 
