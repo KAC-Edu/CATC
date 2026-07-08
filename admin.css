@@ -2512,7 +2512,7 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     flex-wrap:wrap;
 }
 /* [I20] 교육기간+강의실 통합 테두리 바(시안) — 채운 블록 대신 얇은 테두리 + 가운데 구분선 */
-.hero-meta-bar{ display:inline-flex; align-items:stretch; border:1.5px solid rgba(255,255,255,0.38); border-radius:14px; background:rgba(255,255,255,0.06); overflow:hidden; white-space:nowrap; flex-shrink:0; }
+.hero-meta-bar{ display:inline-flex; align-items:stretch; border:none; border-radius:14px; background:rgba(255,255,255,0.06); overflow:hidden; white-space:nowrap; flex-shrink:0; }   /* [I21] 테두리 제거(요청) — 배경·구분선만 유지 */
 .hero-meta-bar .hmb-seg{ display:inline-flex; align-items:center; gap:8px; padding:9px 18px; font-size:14px; cursor:pointer; }
 .hero-meta-bar .hmb-seg i{ color:#93c5fd; }
 .hero-meta-bar .hmb-div{ width:1px; background:rgba(255,255,255,0.30); align-self:stretch; }
