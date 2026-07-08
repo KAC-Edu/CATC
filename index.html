@@ -9921,46 +9921,4 @@ html.kac-core-screen #realUserCount::before{
 #keduHome.kac-em-on .kh-edit{ display:none !important; }
 #keduHome.kac-em-on #keduGradBtn{ display:none !important; }
 #kacEmBanner{ display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; border-radius:14px; padding:13px 15px; margin:0 0 12px; font-size:13.5px; font-weight:800; line-height:1.5; box-shadow:0 8px 22px rgba(185,28,28,.3); animation:kacEmPulse 1.8s ease-in-out infinite; }
-@keyframes kacEmPulse{ 0%,100%{box-shadow:0 8px 22px rgba(185,28,28,.3);} 50%{box-shadow:0 8px 22px rgba(185,28,28,.3),0 0 0 8px rgba(185,28,28,0);} }
-</style>
-<script>
-(function(){
-  var ref=null, cur='';
-  function apply(on){
-    var home=document.getElementById('keduHome'); if(!home) return;
-    home.classList.toggle('kac-em-on', !!on);
-    var b=document.getElementById('kacEmBanner');
-    if(on){
-      if(!b){
-        b=document.createElement('div'); b.id='kacEmBanner';
-        b.innerHTML='<span style="font-size:22px;flex-shrink:0;">🚨</span><span>비상 출결 모드입니다.<br><b>[출결하기]</b>를 눌러 강사 화면의 <b>비상번호</b>를 입력해 주세요.</span>';
-        var att=document.getElementById('keduAttendBtn');
-        if(att && att.parentNode) att.parentNode.insertBefore(b, att);
-        else home.insertBefore(b, home.firstChild);
-      }
-    } else if(b){ b.remove(); }
-  }
-  setInterval(function(){
-    try{
-      if(typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length) return;
-      var home=document.getElementById('keduHome');
-      var visible=home && home.offsetParent!==null && home.style.display!=='none';
-      var room='';
-      if(visible && typeof getKakaoAttendanceRoom==='function'){
-        room=String(getKakaoAttendanceRoom()||'');
-        if(room && typeof normalizeKakaoRoom==='function') room=normalizeKakaoRoom(room)||'';
-      }
-      if(room!==cur){
-        if(ref){ try{ref.off();}catch(e){} ref=null; }
-        cur=room;
-        if(room){
-          ref=firebase.database().ref('courses/'+room+'/attendanceOtp/emergency');
-          ref.on('value', function(snap){ var v=snap.val()||{}; apply(!!v.on); });
-        } else apply(false);
-      }
-    }catch(e){}
-  }, 2500);
-})();
-</script>
-</body>
-</html>
+@keyframes kac
