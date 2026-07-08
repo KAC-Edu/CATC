@@ -6209,6 +6209,12 @@ var venueBlockMgr = {
   }
 };
 window.venueBlockMgr = venueBlockMgr;
+
+/* [D72] '설정' 드롭다운(details.coord-room-tools)이 바깥 클릭으로 안 닫히던 문제 — 문서 클릭 시 열린 것 닫기 */
+document.addEventListener('click', function(e){
+  var opens = document.querySelectorAll('details.coord-room-tools[open]');
+  for(var i=0;i<opens.length;i++){ if(!opens[i].contains(e.target)) opens[i].removeAttribute('open'); }
+});
 window.__customRooms = window.__customRooms || {};
 function _effectiveGroupsCoord(){
     const out = CLASSROOM_DETAIL_GROUPS_SHARED.map(g => ({label:g.label, items:g.items.slice()}));
