@@ -8914,13 +8914,14 @@ function _coordFitDormFrame(reschedule){
         var st=idoc.createElement('style');
         st.id='coordDormNameBoost';
         st.textContent=[
-          'body.embedboard #boardMapArea .dm-chip{font-size:15px!important;font-weight:900!important;line-height:1.18!important;padding:3px 9px!important;border-width:2px!important;border-radius:10px!important;}',
-          'body.embedboard #boardMapArea .fm-intl .dm-chip{font-size:13px!important;}',
-          'body.embedboard #boardMapArea .dm-chip.dm-foreign .dm-fname{font-size:14px!important;line-height:1.12!important;}',
-          'body.embedboard #boardMapArea .dm-chip.dm-foreign .dm-fgender{font-size:11px!important;}',
-          'body.embedboard #boardMapArea .fm-body{gap:4px!important;padding:5px 4px!important;}',
-          'body.embedboard #boardMapArea .fm-room{min-height:70px!important;}',
-          'body.embedboard #boardMapArea .fm-room.fm-intl{min-height:86px!important;}'
+          'body.embedboard #boardMapArea .dm-chip{font-size:17px!important;font-weight:900!important;line-height:1.2!important;padding:5px 12px!important;border-width:2px!important;border-radius:11px!important;}',
+          'body.embedboard #boardMapArea .fm-intl .dm-chip{font-size:14.5px!important;}',
+          'body.embedboard #boardMapArea .dm-chip.dm-foreign .dm-fname{font-size:15.5px!important;line-height:1.14!important;}',
+          'body.embedboard #boardMapArea .dm-chip.dm-foreign .dm-fgender{font-size:12px!important;}',
+          'body.embedboard #boardMapArea .fm-body{gap:6px!important;padding:7px 6px!important;}',
+          'body.embedboard #boardMapArea .fm-head{font-size:13px!important;padding:3px 2px!important;}',
+          'body.embedboard #boardMapArea .fm-room{min-height:92px!important;}',
+          'body.embedboard #boardMapArea .fm-room.fm-intl{min-height:104px!important;}'
         ].join('');
         (idoc.head||idoc.documentElement).appendChild(st);
       }
