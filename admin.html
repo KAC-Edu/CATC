@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I29 | 2026-07-09 (I29: 홈 화면 하단바(#appFooter '본 웹사이트는…© 2026 KAC') 제거 + 그만큼 홈 콘텐츠(#view-home: 제목·검색·사진·통계 블록)를 아래로 내림(margin-top:56px). 연도 표기 하단바 자체를 없애 연도 경과 무관) (I28: 날씨 예보 모델을 ECMWF(IFS 0.25°, models=ecmwf_ifs025)로 지정 — Windy 기본 모델과 동일 계열이라 표시값 근접(주의: Windy는 유료 9km HRES, 여기는 공개 0.25° 버전이라 완전 동일하진 않음). ECMWF 실패/빈응답 시 best_match 폴백, weather_code 미제공 대비 강수량 기반 아이콘 폴백, 캐시 키 v3, 갱신 표기에 'ECMWF' 명시 (I27: 과정현황 정리 — ①하단 '과정 운영 현황 사용법' 도움말 블록 제거 ②'오늘의 운영' 헤더 우측 요약(수강생·Q&A·전자기기)을 제거 — 상단 '오늘 한눈에' 칩과 중복. 갱신 대상 ID(dashTotalCount/dashQaCount/dashArrivedCount/dashTabletLoanCount)는 참조 오류 방지 위해 숨김(display:none) 컨테이너로 보존 (I26: 날씨 스트립 고도화 — ①'지금' 위치 파란 점선 박스 마커 + 시각 행 첫 칸 '지금' 표기(현재 시각이 속한 3시간 칸) ②예보 3일→5일(40칸, forecast_days=6, 캐시 키 v2 교체) ③마우스 드래그로 좌우 스크롤(grab 커서·포인터 캡처) + 세로 휠→가로 스크롤 변환 — 너비 그대로 5일치 탐색 (I25: 홈 화면 정돈 — ①날씨 스트립 가로 스크롤바 숨김(스크롤 자체는 휠/드래그로 유지, overflow-y도 차단해 우측 세로바 제거) ②현황판 제목~검색창~catc.png 사이 여백 압축(#view-home 스코프 한정 오버라이드: 헤더 30/25→12/6, 검색창 34/40→12/18, 사진 하단 20→14) — 홈 전용이라 다른 탭 간격은 그대로 (I24: 홈 화면 통계 카드 아래 '청주 문의면 날씨 예보' 스트립 신설 — Windy 하단 예보줄 형태로 시각·아이콘·기온·강수(mm)만 3시간 간격 3일치 컴팩트 표시. 데이터는 Open-Meteo(무료·키 불필요·CORS 허용), 30분 localStorage 캐시로 호출 최소화, 좌측 고정 라벨(시각/°C/비㎜)+가로 스크롤, API 실패 시 카드 자체 숨김 (I23: ①옵저버 동기화 확장 — 입교안내 페이지 넘김(renderPage 훅, 목표 페이지 번호 전송)·전체화면 토글(guideFs)을 무대에 그대로 반영. 무대는 사용자 제스처 부재로 네이티브 전체화면이 불가하여 fixed 유사 전체화면 오버레이로 표현(ESC/더블클릭 로컬 해제) ②동기화 ON 전환 시 관리자 비밀번호(13281) 입력 요구 — 세션 내 1회 인증, OFF는 자유 ③알림 팝업(customAlertModal) 배경 클릭·✕ 버튼으로 닫기 추가(admin.js J47 ESC 닫기와 세트) — 옵저버 제한 안내 팝업이 안 닫히던 불편 해소 (I22: 옵저버 질문 클릭 동기화 송신 훅 미설치 수정 — hookQa의 `!window.ui` 체크가 const 선언(ui) 특성상 항상 실패해 openQaModal 래핑이 설치되지 않던 근본 원인. typeof ui 기반 체크로 교체(admin.js J46 전역 노출과 이중 안전장치) (I18: 비상 출결(OTP 대체) 패널·진입 버튼 신설 — 코드 119로 활성, 고정 6자리 비상번호 대형 표시+전체화면+종료 버튼 (I17: ①과정현황 OTP 출결 라벨의 * 표기 제거 ②옵저버 동기화 모듈을 준비 폴링으로 보강(firebase/state/ui 로드 지연 시 1회 체크 후 영구 비활성되던 취약점) + 수신 콘솔 진단 로그 (I16.1: [기존버그] 홈검색 위치보정 스크립트의 닫는 script 태그 누락 복구 — 점검모드 스니펫 추가로 드러남, 미복구 시 푸터·후속 스크립트 전체 파손. 전체 점검모드 스니펫 추가(system/maintenance 실시간 스위치) (I16: 옵저버 동기화 확장 — 질문 블록 클릭 동기화 신설: 보조자(옵저버)가 질문을 클릭해 모달을 열거나 닫으면 무대(강사) 화면도 동일하게 열기/닫기(status/coAttn 활용, 규칙 기허용 키), 질문 화면이 아니면 자동으로 질문 메뉴 이동 후 열기. 보조 패널에 동작 안내문구 추가. 기존 메뉴(mode) 동기화는 유지 (I15.1: OTP 출결 라벨 옆 * 표시(빨강) 추가 (I15: ①'오늘 한눈에' 칩 떨림·클릭 씹힘 수정 — 요약줄을 값이 바뀔 때만 다시 그림(매 갱신 innerHTML 재생성이 원인) ②질문사항 보기 버튼 세로 확대(68px)+42px Q&A 아이콘 배지+부제("교육생이 올린 질문 확인·답변")+카드 flex화로 하단 여백 채움 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: I30 | 2026-07-09 (I30: 홈 대시보드 '청주 문의면 날씨 예보' 스트립 클릭 시 Windy 상세 예보(청주시 문의면 좌표 36.505,127.508, zoom11)를 새 탭으로 열기 — 카드에 cursor:pointer·'Windy 상세보기' 표기·외부링크 아이콘 추가. 예보 스트립을 '드래그'해 스크롤한 경우엔 클릭이 발동하지 않도록 moved 플래그로 차단(단순 클릭만 열림)) | VERSION: I29 | 2026-07-09 (I29: 홈 화면 하단바(#appFooter '본 웹사이트는…© 2026 KAC') 제거 + 그만큼 홈 콘텐츠(#view-home: 제목·검색·사진·통계 블록)를 아래로 내림(margin-top:56px). 연도 표기 하단바 자체를 없애 연도 경과 무관) (I28: 날씨 예보 모델을 ECMWF(IFS 0.25°, models=ecmwf_ifs025)로 지정 — Windy 기본 모델과 동일 계열이라 표시값 근접(주의: Windy는 유료 9km HRES, 여기는 공개 0.25° 버전이라 완전 동일하진 않음). ECMWF 실패/빈응답 시 best_match 폴백, weather_code 미제공 대비 강수량 기반 아이콘 폴백, 캐시 키 v3, 갱신 표기에 'ECMWF' 명시 (I27: 과정현황 정리 — ①하단 '과정 운영 현황 사용법' 도움말 블록 제거 ②'오늘의 운영' 헤더 우측 요약(수강생·Q&A·전자기기)을 제거 — 상단 '오늘 한눈에' 칩과 중복. 갱신 대상 ID(dashTotalCount/dashQaCount/dashArrivedCount/dashTabletLoanCount)는 참조 오류 방지 위해 숨김(display:none) 컨테이너로 보존 (I26: 날씨 스트립 고도화 — ①'지금' 위치 파란 점선 박스 마커 + 시각 행 첫 칸 '지금' 표기(현재 시각이 속한 3시간 칸) ②예보 3일→5일(40칸, forecast_days=6, 캐시 키 v2 교체) ③마우스 드래그로 좌우 스크롤(grab 커서·포인터 캡처) + 세로 휠→가로 스크롤 변환 — 너비 그대로 5일치 탐색 (I25: 홈 화면 정돈 — ①날씨 스트립 가로 스크롤바 숨김(스크롤 자체는 휠/드래그로 유지, overflow-y도 차단해 우측 세로바 제거) ②현황판 제목~검색창~catc.png 사이 여백 압축(#view-home 스코프 한정 오버라이드: 헤더 30/25→12/6, 검색창 34/40→12/18, 사진 하단 20→14) — 홈 전용이라 다른 탭 간격은 그대로 (I24: 홈 화면 통계 카드 아래 '청주 문의면 날씨 예보' 스트립 신설 — Windy 하단 예보줄 형태로 시각·아이콘·기온·강수(mm)만 3시간 간격 3일치 컴팩트 표시. 데이터는 Open-Meteo(무료·키 불필요·CORS 허용), 30분 localStorage 캐시로 호출 최소화, 좌측 고정 라벨(시각/°C/비㎜)+가로 스크롤, API 실패 시 카드 자체 숨김 (I23: ①옵저버 동기화 확장 — 입교안내 페이지 넘김(renderPage 훅, 목표 페이지 번호 전송)·전체화면 토글(guideFs)을 무대에 그대로 반영. 무대는 사용자 제스처 부재로 네이티브 전체화면이 불가하여 fixed 유사 전체화면 오버레이로 표현(ESC/더블클릭 로컬 해제) ②동기화 ON 전환 시 관리자 비밀번호(13281) 입력 요구 — 세션 내 1회 인증, OFF는 자유 ③알림 팝업(customAlertModal) 배경 클릭·✕ 버튼으로 닫기 추가(admin.js J47 ESC 닫기와 세트) — 옵저버 제한 안내 팝업이 안 닫히던 불편 해소 (I22: 옵저버 질문 클릭 동기화 송신 훅 미설치 수정 — hookQa의 `!window.ui` 체크가 const 선언(ui) 특성상 항상 실패해 openQaModal 래핑이 설치되지 않던 근본 원인. typeof ui 기반 체크로 교체(admin.js J46 전역 노출과 이중 안전장치) (I18: 비상 출결(OTP 대체) 패널·진입 버튼 신설 — 코드 119로 활성, 고정 6자리 비상번호 대형 표시+전체화면+종료 버튼 (I17: ①과정현황 OTP 출결 라벨의 * 표기 제거 ②옵저버 동기화 모듈을 준비 폴링으로 보강(firebase/state/ui 로드 지연 시 1회 체크 후 영구 비활성되던 취약점) + 수신 콘솔 진단 로그 (I16.1: [기존버그] 홈검색 위치보정 스크립트의 닫는 script 태그 누락 복구 — 점검모드 스니펫 추가로 드러남, 미복구 시 푸터·후속 스크립트 전체 파손. 전체 점검모드 스니펫 추가(system/maintenance 실시간 스위치) (I16: 옵저버 동기화 확장 — 질문 블록 클릭 동기화 신설: 보조자(옵저버)가 질문을 클릭해 모달을 열거나 닫으면 무대(강사) 화면도 동일하게 열기/닫기(status/coAttn 활용, 규칙 기허용 키), 질문 화면이 아니면 자동으로 질문 메뉴 이동 후 열기. 보조 패널에 동작 안내문구 추가. 기존 메뉴(mode) 동기화는 유지 (I15.1: OTP 출결 라벨 옆 * 표시(빨강) 추가 (I15: ①'오늘 한눈에' 칩 떨림·클릭 씹힘 수정 — 요약줄을 값이 바뀔 때만 다시 그림(매 갱신 innerHTML 재생성이 원인) ②질문사항 보기 버튼 세로 확대(68px)+42px Q&A 아이콘 배지+부제("교육생이 올린 질문 확인·답변")+카드 flex화로 하단 여백 채움 (I14: '오늘의 운영' 메뉴 구성 기능 — ①제목 옆 톱니로 표시 메뉴 선택 팝업(6종: OTP/외출외박/석식/셔틀/질문사항/전자기기, 최소 1개) ②행 5초 롱프레스→흔들림 모드에서 드래그로 순서 변경, 상단 배너 저장/취소 ③설정은 system/coord/dashOpsConfig 공용 저장 — 모든 과정·모든 PC 과정현황에 동일 적용, 실시간 동기화(.on), 규칙 변경 불필요(coord 하위 재사용) ④질문사항/전자기기 행 값은 기존 카운트 미러링·0이면 흐림 (I13: 공지 카드의 '전체 현황 보기' 버튼을 '질문사항 보기'로 교체 — Q&A 화면(질문 및 답변)으로 이동, 질문 수 배지 표시, 질문 1건 이상이면 파란 채움+펄스 강조로 강사가 즉시 인지(dashQaCount 실시간 연동) (I12: 과정현황 하단을 시안 기반 2카드로 재구성 — ①'오늘의 운영' 리스트 카드: 헤더에 수강생/Q&A/전자기기 요약(클릭 이동), OTP 출결·외출외박·석식·셔틀 행(아이콘 타일+값+화살표, 행 전체 클릭 시 해당 메뉴 이동), 셔틀 행에 정류장별 소계 서브라인·기사공지 배너 유지 ②'공지 및 필수 확인' 카드: 운영/입교안내 공지(클릭 이동), 점선 구분, 청렴/노조교육 2타일, '전체 현황 보기' 버튼. JS 갱신 ID 전부 보존 (I11: 과정현황 하단 3카드 정렬 개선 — 공지 허브에도 상단 컬러바 추가(3카드 상단선 통일), 공지 태그(운영/입교안내)·교육 배지(청렴/노조) 폭 고정으로 좌측 정렬 맞춤, 세로 중앙정렬. '오늘 한눈에' 요약 칩 클릭 시 해당 메뉴 이동(수강생/Q&A/셔틀/외출외박) (I10: OTP 안내 이미지 클릭→전체화면 연결(cursor:zoom-in), OTP 카드 라벨에 '전체화면' 재진입 버튼 추가 (I9.1: 직무 토글을 오른쪽줄→왼쪽 정보 pill 줄(장소 다음)로 이동·소형화, 수료 기념사진과 한 줄 정렬로 공간 정리 [I9: 대시보드 직무 토글 추가(admin.js J17 연동) ②OTP 출결 화면을 2블록 가로 배치로 — 좌측에 OTP 입력 안내자료(otp_attendance_guide.png, GitHub 루트 업로드 필요·파일 없으면 자동 숨김), 우측에 기존 OTP 블록, 좁은 화면에서는 세로 배치) [I8: 과정현황 바로가기 및 입교안내 공지 명칭 통일] -->
 <html lang="ko">
 <head>
 <script>
@@ -1692,10 +1692,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </style>
 
     <!-- [I24] 청주 문의면 날씨 예보 스트립 — 시간·기온·강수(mm)만 컴팩트 표시 (Open-Meteo, 데이터 도착 시 표시) -->
-    <div id="homeWxCard" style="width:100%; max-width:1100px; background:#fff; border-radius:18px; box-shadow:0 4px 20px rgba(0,51,102,.08); padding:16px 18px 12px; margin:-18px 0 40px; display:none;">
+    <!-- [I30] 클릭 시 Windy(청주시 문의면) 상세 예보 새 탭으로 열기 -->
+    <div id="homeWxCard" onclick="window.open('https://www.windy.com/?36.505,127.508,11','_blank','noopener')" title="클릭하면 Windy에서 청주 문의면 상세 날씨를 봅니다" style="width:100%; max-width:1100px; background:#fff; border-radius:18px; box-shadow:0 4px 20px rgba(0,51,102,.08); padding:16px 18px 12px; margin:-18px 0 40px; display:none; cursor:pointer;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
             <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i>
             <b style="font-size:14.5px; color:#0f172a;">청주 문의면 날씨 예보</b>
+            <i class="fa-solid fa-up-right-from-square" style="font-size:11px; color:#3b82f6;" title="Windy 상세보기"></i>
+            <span style="font-size:11px; color:#3b82f6; font-weight:700;">Windy 상세보기</span>
             <span id="homeWxUpdated" style="font-size:11px; color:#94a3b8; margin-left:auto;"></span>
         </div>
         <div style="display:flex; align-items:stretch;">
@@ -3826,6 +3829,8 @@ var opsCfg = (function(){
     function up(e){ if(!down) return; down=false; el.style.cursor='grab'; try{ el.releasePointerCapture(e.pointerId); }catch(err){} }
     el.addEventListener('pointerup', up);
     el.addEventListener('pointercancel', up);
+    // [I30] 스트립을 '드래그'한 경우엔 카드 클릭(Windy 열기)이 발동하지 않도록 차단(단순 클릭은 통과)
+    el.addEventListener('click', function(e){ if(moved){ e.stopPropagation(); e.preventDefault(); } });
     el.addEventListener('wheel', function(e){
       if(Math.abs(e.deltaY)>Math.abs(e.deltaX)){ el.scrollLeft += e.deltaY; e.preventDefault(); }
     }, {passive:false});
@@ -3847,22 +3852,4 @@ var opsCfg = (function(){
     req('ecmwf_ifs025')
       .then(function(data){
         if(data && data.hourly && data.hourly.time && data.hourly.time.length) return data;
-        return req('');   // 폴백
-      })
-      .catch(function(){ return req(''); })
-      .then(function(data){
-        if(!data || !data.hourly) return;
-        if(render(data.hourly)){ stamp(Date.now()); show();
-          try{ localStorage.setItem('kac_home_wx_v3', JSON.stringify({ts:Date.now(), hourly:data.hourly})); }catch(e){}
-        }
-      })
-      .catch(function(){ /* 오프라인/차단 시 카드 미표시(화면 오염 없음) */ });
-  }
-  function boot(){ load(false); setInterval(function(){ load(true); }, TTL); }
-  if(document.readyState!=='loading') setTimeout(boot, 800); else document.addEventListener('DOMContentLoaded', function(){ setTimeout(boot, 800); });
-})();
-</script>
-
-</body>
-</html>
-<!-- @build 20260623 (강사 vJ-kiosk) -->
+        return req('');   /
