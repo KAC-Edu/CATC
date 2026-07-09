@@ -6200,14 +6200,17 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     margin:0 0 22px !important;
     padding:24px 28px !important;
     border-radius:16px !important;
-    background:#eef5ff !important;
-    border:1px solid #cfe0ff !important;
+    /* [J52] 시인성 개선 — 어두운 남색 배경 + 흰 글씨 */
+    background:linear-gradient(135deg,#14264d,#1e3a6b) !important;
+    border:1px solid #2a4372 !important;
+    box-shadow:0 8px 22px rgba(15,23,42,.16) !important;
 }
 #view-quiz .quiz-question{
     max-width:1100px;
     font-size:clamp(27px,2.25vw,38px) !important;
     line-height:1.38 !important;
-    color:#173b78 !important;
+    color:#ffffff !important;
+    text-shadow:0 1px 2px rgba(0,0,0,.28) !important;
     text-align:center !important;
     letter-spacing:0 !important;
 }
