@@ -6511,4 +6511,5 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     will-change:left,top;
     cursor:grabbing;
 }
-#courseS
+#courseSmartRemote.hex-remote-v2.is-dragging .hex-key{ filter:none !important; transition:none !important; }
+#courseSmartRemote.hex-remote-v2.is-dragging .hex-center{ transition:none !important; box-shadow:none !important; }
