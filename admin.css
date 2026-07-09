@@ -6511,5 +6511,49 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     will-change:left,top;
     cursor:grabbing;
 }
-#courseSmartRemote.hex-remote-v2.is-dragging .hex-key{ filter:none !important; transition:none !important; }
-#courseSmartRemote.hex-remote-v2.is-dragging .hex-center{ transition:none !important; box-shadow:none !important; }
+#courseS
+/* ============================================================
+   [J54] 퀴즈 문제블록 강조 + 2줄 보기 정렬 개선 (2026-07-09)
+   - 문제 블록: 진한 남색 + 상단에 금색 "❓ 문제" 배지로 '문제'임을 명확히
+   - 객관식 보기: 2줄이 될 때 번호를 첫 줄에 맞춰 정렬(가운데 붕 뜨는 현상 제거)
+   ============================================================ */
+#view-quiz .quiz-question-area{
+    position:relative !important;
+    overflow:visible !important;
+    margin:24px 0 28px !important;
+    padding:34px 32px 28px !important;
+    background:linear-gradient(135deg,#0f2350,#22468a) !important;
+    border:1px solid #34528c !important;
+    box-shadow:0 12px 30px rgba(15,23,42,.26) !important;
+}
+#view-quiz .quiz-question-area::before{
+    content:"❓ 문제";
+    position:absolute; top:-17px; left:26px;
+    padding:7px 18px;
+    background:linear-gradient(135deg,#f59e0b,#fcd34d);
+    color:#3a2600;
+    font-size:17px; font-weight:900; letter-spacing:.5px;
+    border-radius:999px;
+    box-shadow:0 7px 16px rgba(245,158,11,.45);
+    white-space:nowrap; line-height:1;
+}
+#view-quiz .quiz-question{
+    color:#ffffff !important;
+    text-shadow:0 2px 5px rgba(0,0,0,.4) !important;
+}
+/* 객관식 보기 정렬: 박스는 내용에 맞춰 스냅, 번호는 첫 줄 기준으로 정렬 */
+#view-quiz .quiz-options.is-multiple .quiz-opt{
+    flex:0 0 auto !important;
+    align-items:center !important;          /* 내용 블록을 박스 세로 가운데로 */
+    padding:20px 26px !important;
+}
+#view-quiz .quiz-options.is-multiple .opt-text-wrapper{
+    align-items:flex-start !important;      /* 번호·텍스트를 위(첫 줄) 기준 정렬 */
+}
+#view-quiz .quiz-options.is-multiple .opt-num{
+    align-self:flex-start !important;
+    flex:0 0 auto !important;
+}
+#view-quiz .quiz-options.is-multiple .opt-text{
+    padding-top:5px !important;             /* 첫 줄 중앙을 번호 중앙에 맞춤 */
+}
