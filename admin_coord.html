@@ -1,4 +1,4 @@
-<!-- ===== PLATFORM_EDIT_STATUS: 수정완료 | COORD C1 | 2026-07-10 (C1: 교육운영부 입교현황 패널 대개편 — ①행별 인라인 추가·수정·삭제 + PDF/HWP 파일 업로드(교육지원부와 동일). 저장은 지원부와 공유(system/dorm/rosters·coord/rosters·coordRoster·expectedStudents) ②출처/수정자 배지(교육지원부/교육운영부 업로드·수정·일시) ③업로드 시 변경 diff 팝업(빠지는 인원·새로 추가 인원, 중복 자동제외) ④생활관을 예정자도 지원부 배정과 매칭 표시(전체 주차 병합 — 기존 이번주만 봐서 미래주차 예정과정이 미배정으로 뜨던 문제) ⑤미배정자 클릭 시 비어있는 생활관으로 임시 배정(system/dorm/assignments, 최종확정=지원부 현황/출력) ⑥소속 열 좌측정렬. 편집 중 외부 재렌더 가드) ===== -->
+<!-- ===== PLATFORM_EDIT_STATUS: 수정완료 | COORD C2 | 2026-07-10 (C2: 입교현황 명단 편집 보강 — ①편집표에도 생활관 컬럼 추가(보기/편집 모드 공통, 변경 즉시 반영) ②표 헤더·셀 전체 중앙정렬 통일 ③생활관 배정 권한 게이트: 교육지원부가 배정 확정(system/dorm/locks 잠금)한 주차만 운영부 배정 가능·확정명단 직접 반영, 미확정 시 배정하기 비활성+안내문 표기. 생활관은 전체 주차 배정 병합 매칭(예정자 포함)) | COORD C1 | 2026-07-10 (C1: 교육운영부 입교현황 패널 대개편 — ①행별 인라인 추가·수정·삭제 + PDF/HWP 파일 업로드(교육지원부와 동일). 저장은 지원부와 공유(system/dorm/rosters·coord/rosters·coordRoster·expectedStudents) ②출처/수정자 배지(교육지원부/교육운영부 업로드·수정·일시) ③업로드 시 변경 diff 팝업(빠지는 인원·새로 추가 인원, 중복 자동제외) ④생활관을 예정자도 지원부 배정과 매칭 표시(전체 주차 병합 — 기존 이번주만 봐서 미래주차 예정과정이 미배정으로 뜨던 문제) ⑤미배정자 클릭 시 비어있는 생활관으로 임시 배정(system/dorm/assignments, 최종확정=지원부 현황/출력) ⑥소속 열 좌측정렬. 편집 중 외부 재렌더 가드) ===== -->
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
@@ -9779,7 +9779,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var _estart=(curPeriod.indexOf(' ~ ')>=0?(curPeriod.split(' ~ ')[0]||'').trim():'');
         var _ewk=(typeof _coordWkMon==='function'?_coordWkMon(_estart):'');
         window._coordEnrollMeta=window._coordEnrollMeta||{};
-        window._coordEnrollMeta[ei]={ rid:r.rid, courseName:(r.s.courseName||''), period:curPeriod, roomDetail:(r.s.roomDetail||r.s.room||''), start:_estart, weekKey:_ewk, sharedKey:(_ewk?_ewk+'__'+r.rid:''), source:(_meta&&_meta.source)||'', updatedAt:(_meta&&_meta.updatedAt)||0, lastAction:(_meta&&_meta.lastAction)||'', lastActionBy:(_meta&&_meta.lastActionBy)||'', uploadedBy:(_meta&&_meta.uploadedBy)||'', uploadedAt:(_meta&&_meta.uploadedAt)||0, list:roster.map(function(s){return {name:(s.name||''),empNo:(s.empNo||s.sabun||s.id||''),dept:(s.dept||s.affil||s.org||''),gender:(s.gender||'')};}) };
+        window._coordEnrollMeta[ei]={ rid:r.rid, courseName:(r.s.courseName||''), period:curPeriod, roomDetail:(r.s.roomDetail||r.s.room||''), start:_estart, weekKey:_ewk, sharedKey:(_ewk?_ewk+'__'+r.rid:''), source:(_meta&&_meta.source)||'', updatedAt:(_meta&&_meta.updatedAt)||0, lastAction:(_meta&&_meta.lastAction)||'', lastActionBy:(_meta&&_meta.lastActionBy)||'', uploadedBy:(_meta&&_meta.uploadedBy)||'', uploadedAt:(_meta&&_meta.uploadedAt)||0, locked:(function(){ var L=window._coordDormLocks||{}; return !!(_ewk && L[_ewk] && L[_ewk].locked); })(), list:roster.map(function(s){return {name:(s.name||''),empNo:(s.empNo||s.sabun||s.id||''),dept:(s.dept||s.affil||s.org||''),gender:(s.gender||'')};}) };
         var total=roster.length;                                   // 예정 인원 = 계획 명단 수(업로드/공유 명단)
         var arrived=roster.filter(function(s){ return arrivedSet[norm(s.name)]; }).length;   // 예정자 중 입교완료(QR)
         var rate=total?Math.round(arrived/total*100):0;            // 입교율 = 입교완료/예정
@@ -9791,7 +9791,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var _started=_startDate?(_today>=_startDate):true;   // 교육시작일부터 true
         var body = displayRoster.length ? displayRoster.map(function(s,i){
           var ar=arrivedSet[norm(s.name)];
-          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;text-align:left;padding-left:16px;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(_enrRoom(s)?('<span style="background:#eef2ff;color:#1e40af;padding:2px 8px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+esc(_enrRoom(s))+'</span>'):('<span onclick="coordAssignDorm('+ei+',\''+encodeURIComponent(s.name||'')+'\',\''+encodeURIComponent(s.empNo||s.sabun||s.id||'')+'\')" style="color:#2563eb;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" title="비어있는 생활관으로 임시 배정">배정하기</span>'))+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
+          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;text-align:center;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;text-align:center;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;text-align:center;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+_coordEnrollDormCell(ei, s.name, (s.empNo||s.sabun||s.id))+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
         return '<div class="csec-card">'
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
@@ -9808,11 +9808,12 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     Promise.all([
       firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
       firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;}),
-      firebase.database().ref('system/dorm/assignments').once('value').catch(function(){return null;})
+      firebase.database().ref('system/dorm/assignments').once('value').catch(function(){return null;}),
+      firebase.database().ref('system/dorm/locks').once('value').catch(function(){return null;})
     ]).then(function(res){
       var ext={};
       [res[0],res[1]].forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
-      var dmap={}; var _allw=(res[2]&&res[2].val())||{}; Object.keys(_allw).forEach(function(wk){ var st=(_allw[wk]&&_allw[wk].students)||{}; Object.keys(st).forEach(function(k){ var a=st[k]; if(!a||!a.name) return; var nm=norm(a.name); var id=(''+(a.empNo||'')).replace(/[^0-9]/g,''); dmap[nm+'|'+id]=a; if(!dmap['n:'+nm]) dmap['n:'+nm]=a; }); }); window._coordDormAssign=dmap;
+      var dmap={}; var _allw=(res[2]&&res[2].val())||{}; Object.keys(_allw).forEach(function(wk){ var st=(_allw[wk]&&_allw[wk].students)||{}; Object.keys(st).forEach(function(k){ var a=st[k]; if(!a||!a.name) return; var nm=norm(a.name); var id=(''+(a.empNo||'')).replace(/[^0-9]/g,''); dmap[nm+'|'+id]=a; if(!dmap['n:'+nm]) dmap['n:'+nm]=a; }); }); window._coordDormAssign=dmap; window._coordDormLocks=(res[3]&&res[3].val())||{};
     window._coordEnrollExt=ext; window._coordRosterExt=ext; try{ if(typeof _coordSyncTotalStudentsFromOverview==='function') _coordSyncTotalStudentsFromOverview(); }catch(e){} paint(ext);
     }).catch(function(){});
   };
@@ -9821,6 +9822,14 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 function _coordWkMon(start){ try{ var d=new Date(String(start)+'T00:00:00'); if(isNaN(d.getTime())) return ''; var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }catch(e){ return ''; } }
 function _coordFmtDT(ts){ try{ if(!ts) return ''; var d=new Date(ts); var p=function(n){return String(n).padStart(2,'0');}; return p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
 function _ecEsc(v){ return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+window._coordEnrRoom=function(name, empNo){ var m=window._coordDormAssign||{}; var nm=String(name||'').replace(/\s+/g,'').toLowerCase(); var id=(''+(empNo||'')).replace(/[^0-9]/g,''); var a=m[nm+'|'+id]||m['n:'+nm]; if(!a) return ''; var ho=(''+(a.no||a.room||'')).trim(); if(!ho) return (a.building||''); return ((a.building||'')+' '+ho+(ho.indexOf('호')<0?'호':'')).trim(); };
+function _coordEnrollDormCell(ei, name, empNo){
+  var room=window._coordEnrRoom(name, empNo);
+  if(room){ return '<span style="background:#eef2ff;color:#1e40af;padding:2px 9px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+_ecEsc(room)+'</span>'; }
+  var m=(window._coordEnrollMeta||{})[ei]||{};
+  if(m.locked){ return '<span onclick="coordAssignDorm('+ei+',\''+encodeURIComponent(name||'')+'\',\''+encodeURIComponent(empNo||'')+'\')" style="color:#2563eb;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" title="비어있는 생활관으로 배정">배정하기</span>'; }
+  return '<span style="color:#cbd5e1;font-weight:700;" title="교육지원부 생활관 배정 확정(잠금) 전에는 배정할 수 없습니다">미배정</span>';
+}
 function _coordEnrollSrcLabel(src){ return src==='coord' ? '교육운영부' : (src ? '교육지원부' : ''); }
 function _coordEnrollProv(m){
   var src=(m&&m.source)||''; var act=(m&&m.lastAction)||(src?'업로드':''); var when=(m&&m.updatedAt)?_coordFmtDT(m.updatedAt):'';
@@ -9840,22 +9849,24 @@ function _coordEnrollPanelInner(ei, viewBody){
         +'<button onclick="coordEnrollCancel('+ei+')" class="cenr-btn" style="background:#f1f5f9;color:#475569;">취소</button>')
       :('<button onclick="coordEnrollEdit('+ei+')" class="cenr-btn" style="background:#2563eb;color:#fff;"><i class="fa-solid fa-pen" style="margin-right:4px;"></i>명단 편집</button>'))
     +'</div></div>';
+  var note='<div style="padding:8px 16px;font-size:11.5px;line-height:1.55;'+(m.locked?'background:#f0fdf4;color:#166534;border-bottom:1px solid #dcfce7;':'background:#fffbeb;color:#92400e;border-bottom:1px solid #fde68a;')+'"><i class="fa-solid '+(m.locked?'fa-circle-check':'fa-triangle-exclamation')+'" style="margin-right:5px;"></i>'+(m.locked?'<b>생활관 배정 확정됨</b> — 여기서 배정·변경하면 교육지원부의 <b>확정 명단에 직접 반영</b>됩니다.':'<b>생활관 배정 확정 전</b> — 교육지원부가 배정을 <b>확정(잠금)</b>하기 전에는 운영부 배정 권한이 없습니다. (확정 후 배정 가능)')+'</div>';
   var table = editing ? _coordEnrollEditTable(ei)
-    : ('<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;padding-left:16px;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+viewBody+'</tbody></table></div>');
-  return prov+table;
+    : ('<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:26%"><col style="width:16%"><col style="width:16%"><col style="width:19%"><col style="width:14%"></colgroup><thead><tr><th style="text-align:center;">연번</th><th style="text-align:center;">소속</th><th style="text-align:center;">사번</th><th style="text-align:center;">성명</th><th style="text-align:center;">생활관</th><th style="text-align:center;">상태</th></tr></thead><tbody>'+viewBody+'</tbody></table></div>');
+  return prov+note+table;
 }
 function _coordEnrollEditTable(ei){
   var buf=(window._coordEnrollBuf||{})[ei]||[];
   var rows=buf.length?buf.map(function(s,i){
     return '<tr>'
      +'<td style="text-align:center;color:#94a3b8;padding:4px 6px;border-bottom:1px solid #f1f5f9;">'+(i+1)+'</td>'
-     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.dept)+'" oninput="coordEnrollSet('+ei+','+i+',\'dept\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;"></td>'
-     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.empNo)+'" oninput="coordEnrollSet('+ei+','+i+',\'empNo\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;"></td>'
-     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.name)+'" oninput="coordEnrollSet('+ei+','+i+',\'name\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-weight:800;"></td>'
+     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.dept)+'" oninput="coordEnrollSet('+ei+','+i+',\'dept\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;text-align:center;"></td>'
+     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.empNo)+'" oninput="coordEnrollSet('+ei+','+i+',\'empNo\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;text-align:center;"></td>'
+     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.name)+'" oninput="coordEnrollSet('+ei+','+i+',\'name\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-weight:800;text-align:center;"></td>'
+     +'<td style="text-align:center;padding:4px 6px;border-bottom:1px solid #f1f5f9;">'+_coordEnrollDormCell(ei, s.name, s.empNo)+'</td>'
      +'<td style="text-align:center;padding:4px 6px;border-bottom:1px solid #f1f5f9;"><button onclick="coordEnrollRowDel('+ei+','+i+')" style="color:#ef4444;border:none;background:none;cursor:pointer;font-size:16px;font-weight:800;">✕</button></td>'
     +'</tr>';
-  }).join(''):'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">명단이 없습니다. [＋ 행 추가] 또는 [파일 업로드]로 입력하세요.</td></tr>';
-  return '<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:33%"><col style="width:19%"><col style="width:29%"><col style="width:10%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;padding-left:12px;">소속</th><th>사번</th><th>성명</th><th>삭제</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  }).join(''):'<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">명단이 없습니다. [＋ 행 추가] 또는 [파일 업로드]로 입력하세요.</td></tr>';
+  return '<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:8%"><col style="width:26%"><col style="width:17%"><col style="width:22%"><col style="width:18%"><col style="width:9%"></colgroup><thead><tr><th style="text-align:center;">연번</th><th style="text-align:center;">소속</th><th style="text-align:center;">사번</th><th style="text-align:center;">성명</th><th style="text-align:center;">생활관</th><th style="text-align:center;">삭제</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 function _coordEnrollRepaint(ei){ var b=document.getElementById('coordEnrollBody'+ei); if(b){ b.innerHTML=_coordEnrollPanelInner(ei,''); b.style.display='block'; var ch=document.getElementById('coordEnrChev'+ei); if(ch) ch.style.transform='rotate(180deg)'; } }
 window.coordEnrollEdit=function(ei){ var m=(window._coordEnrollMeta||{})[ei]; if(!m){ return; } window._coordEnrollBuf=window._coordEnrollBuf||{}; window._coordEnrollBuf[ei]=(m.list||[]).map(function(s){return {name:s.name||'',empNo:s.empNo||'',dept:s.dept||'',gender:s.gender||''};}); window._coordEnrollEditing=ei; _coordEnrollRepaint(ei); };
@@ -9928,6 +9939,7 @@ window.coordAssignDorm=function(ei, encName, encEmp){
   var m=(window._coordEnrollMeta||{})[ei]||{};
   var name=''; var empNo=''; try{ name=decodeURIComponent(encName||''); }catch(e){ name=encName||''; } try{ empNo=decodeURIComponent(encEmp||''); }catch(e){ empNo=encEmp||''; }
   if(!name){ return; }
+  if(!m.locked){ alert('교육지원부가 생활관 배정을 확정(잠금)한 뒤에만 배정할 수 있습니다.\n확정 전에는 운영부 배정 권한이 없습니다.'); return; }
   var wk=m.weekKey || (typeof _coordDormMondayKey==='function'?_coordDormMondayKey():'');
   if(!wk){ alert('교육 주차를 확인할 수 없습니다.'); return; }
   // 대상자 성별(명단에서)
