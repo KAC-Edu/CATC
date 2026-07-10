@@ -12,7 +12,7 @@
     if(isPc && location.search.indexOf('forcem')<0){ location.replace('nutritionist.html'+location.search+location.hash); }
   }catch(e){} })();
   </script>
-<!-- @version NM1 · 2026-06-28 -->
+<!-- @version NM2 · 2026-07-10 (조식/중식/석식 라벨 확대·인원 한 줄, 식수 카드 클릭 시 도출근거(명단) 시트, 중식체크 접이식 가로바(총원만 표기), 금주 식단표 모바일 사진 업로드/삭제) -->
 <!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
      · nutritionist.html(영양사)의 모바일 라이트판(조회 중심). 직접 진입 시 접속코드 요구.
      · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리. -->
@@ -127,6 +127,41 @@
 
     .ov-img{ position:fixed; inset:0; background:rgba(15,23,42,.9); display:none; align-items:center; justify-content:center; z-index:500; padding:14px; }
     .ov-img.open{ display:flex; } .ov-img img{ max-width:100%; max-height:100%; border-radius:10px; }
+    /* [vB] 식수 카드 확대·한줄 + 클릭 상세 */
+    .meal{ cursor:pointer; position:relative; }
+    .meal .l{ font-size:15px; font-weight:900; margin-top:6px; }
+    .meal .n{ font-size:28px; font-weight:900; line-height:1; }
+    .meal .n .un{ font-size:14px; font-weight:800; margin-left:1px; }
+    .meal .tap{ position:absolute; right:8px; top:8px; font-size:10px; opacity:.28; }
+    .resv{ cursor:pointer; }
+    /* 중식 체크 가로바 */
+    .lunch-bar{ display:flex; align-items:center; gap:10px; background:#fff; border:1px solid #eef1f6; border-radius:14px; padding:13px 15px; box-shadow:var(--shadow); cursor:pointer; }
+    .lunch-bar .lb-ic{ width:30px; height:30px; border-radius:9px; background:#dbeafe; color:#1d4ed8; display:flex; align-items:center; justify-content:center; font-size:14px; }
+    .lunch-bar .lb-t{ font-size:14px; font-weight:900; color:#334155; }
+    .lunch-bar .lb-tot{ margin-left:auto; font-size:14px; font-weight:900; color:#1d4ed8; } .lunch-bar .lb-tot b{ font-size:22px; }
+    .lunch-bar .lb-chev{ color:#94a3b8; transition:transform .2s; margin-left:2px; }
+    .lunch-bar.open .lb-chev{ transform:rotate(180deg); }
+    #lunchDetail{ margin-top:10px; }
+    /* 상세 바텀시트 */
+    .msheet-ov{ position:fixed; inset:0; z-index:600; background:rgba(15,23,42,.5); display:none; align-items:flex-end; }
+    .msheet-ov.open{ display:flex; animation:msFade .2s ease; }
+    @keyframes msFade{ from{opacity:0} to{opacity:1} }
+    .msheet{ background:#fff; width:100%; max-width:600px; margin:0 auto; border-radius:24px 24px 0 0; padding:12px 16px calc(20px + env(safe-area-inset-bottom)); max-height:82dvh; overflow-y:auto; animation:msUp .26s cubic-bezier(.4,0,.2,1); }
+    @keyframes msUp{ from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .msheet::before{ content:''; display:block; width:42px; height:5px; border-radius:999px; background:#dfe6ef; margin:0 auto 12px; }
+    .msheet h3{ margin:0 0 3px; font-size:17px; font-weight:900; display:flex; align-items:center; gap:8px; }
+    .msheet .ms-sub{ font-size:12px; color:#94a3b8; font-weight:700; margin-bottom:12px; line-height:1.5; }
+    .ms-tbl{ width:100%; border-collapse:collapse; font-size:13.5px; }
+    .ms-tbl th{ text-align:left; background:#f8fafc; color:#64748b; font-weight:800; padding:8px 10px; font-size:12px; border-bottom:2px solid #eef1f6; white-space:nowrap; }
+    .ms-tbl td{ padding:9px 10px; border-bottom:1px solid #f4f7fb; font-weight:700; color:#1e293b; }
+    .ms-tbl .num{ width:32px; text-align:center; color:#b8c2d4; }
+    .ms-close{ width:100%; margin-top:12px; padding:13px; border:none; border-radius:12px; background:#0f172a; color:#fff; font-weight:900; font-size:14px; cursor:pointer; }
+    /* 식단표 업로드 버튼 */
+    .menu-actions{ display:flex; gap:8px; margin-top:10px; }
+    .menu-actions button{ flex:1; padding:11px; border-radius:11px; border:none; font-size:13px; font-weight:900; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+    .mbtn-up{ background:linear-gradient(135deg,#f59e0b,#d97706); color:#fff; }
+    .mbtn-up:active{ transform:scale(.98); }
+    .mbtn-del{ background:#fff; color:#dc2626; border:1.5px solid #fca5a5; flex:0 0 92px; }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -179,21 +214,34 @@
   <div class="sec">
     <div class="sec-ttl"><i class="fa-solid fa-bowl-food"></i> 오늘 식수 현황 <span id="todayLbl" style="font-weight:700;color:#94a3b8;"></span></div>
     <div class="meal-grid">
-      <div class="meal b"><div class="ic"><i class="fa-solid fa-mug-saucer"></i></div><div class="n" id="cnt-b">0</div><div class="u">명</div><div class="l">조식</div></div>
-      <div class="meal l2"><div class="ic"><i class="fa-solid fa-bowl-rice"></i></div><div class="n" id="cnt-l">0</div><div class="u">명</div><div class="l">중식</div></div>
-      <div class="meal d"><div class="ic"><i class="fa-solid fa-moon"></i></div><div class="n" id="cnt-d">0</div><div class="u">명</div><div class="l">석식</div></div>
+      <div class="meal b" onclick="openMealDetail('b')"><span class="tap"><i class="fa-solid fa-magnifying-glass"></i></span><div class="ic"><i class="fa-solid fa-mug-saucer"></i></div><div class="l">조식</div><div class="n"><span id="cnt-b">0</span><span class="un">명</span></div></div>
+      <div class="meal l2" onclick="openMealDetail('l')"><span class="tap"><i class="fa-solid fa-magnifying-glass"></i></span><div class="ic"><i class="fa-solid fa-bowl-rice"></i></div><div class="l">중식</div><div class="n"><span id="cnt-l">0</span><span class="un">명</span></div></div>
+      <div class="meal d" onclick="openMealDetail('d')"><span class="tap"><i class="fa-solid fa-magnifying-glass"></i></span><div class="ic"><i class="fa-solid fa-moon"></i></div><div class="l">석식</div><div class="n"><span id="cnt-d">0</span><span class="un">명</span></div></div>
     </div>
-    <div class="resv"><i class="fa-solid fa-calendar-check" style="color:#a78bfa;"></i> 석식 예약 <b id="cnt-r">0명</b></div>
+    <div class="resv" onclick="openMealDetail('r')"><i class="fa-solid fa-calendar-check" style="color:#a78bfa;"></i> 석식 예약 <b id="cnt-r">0명</b> <i class="fa-solid fa-magnifying-glass" style="color:#cbd5e1;font-size:11px;"></i></div>
   </div>
 
   <div class="sec">
-    <div class="sec-ttl"><i class="fa-solid fa-building-user"></i> 부서별 중식 (상위)</div>
-    <div class="dept-card" id="deptCard"><div class="empty">집계 중...</div></div>
+    <div class="lunch-bar" id="lunchBar" onclick="toggleLunch()">
+      <span class="lb-ic"><i class="fa-solid fa-bowl-rice"></i></span>
+      <span class="lb-t">중식 체크</span>
+      <span class="lb-tot"><b id="lunchTot">0</b>명</span>
+      <i class="fa-solid fa-chevron-down lb-chev"></i>
+    </div>
+    <div id="lunchDetail" style="display:none;">
+      <div class="sec-ttl" style="margin-top:12px;"><i class="fa-solid fa-building-user"></i> 부서별 중식 (상위)</div>
+      <div class="dept-card" id="deptCard"><div class="empty">집계 중...</div></div>
+    </div>
   </div>
 
   <div class="sec">
     <div class="sec-ttl"><i class="fa-solid fa-calendar-week"></i> 금주 식단표</div>
     <div class="menu-card" id="menuCard"><div class="empty">불러오는 중...</div></div>
+    <input type="file" id="menuFile" accept="image/*" style="display:none" onchange="uploadMenu(this)">
+    <div class="menu-actions">
+      <button class="mbtn-up" onclick="document.getElementById('menuFile').click()"><i class="fa-solid fa-camera"></i> 식단표 사진 업로드/교체</button>
+      <button class="mbtn-del" onclick="deleteMenu()"><i class="fa-solid fa-trash"></i> 삭제</button>
+    </div>
   </div>
 
   <div class="sec">
@@ -204,8 +252,9 @@
 
 </div>
 
+<div class="msheet-ov" id="mealSheetOv"><div class="msheet" id="mealSheet"></div></div>
 <div class="ov-img" id="imgOv" onclick="this.classList.remove('open')"><img id="imgOvImg" src="" alt="식단표"></div>
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">영양M vA</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">영양M vB</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -231,15 +280,74 @@ setInterval(tickClock,1000); tickClock();
 
 function countObj(o){ return o ? Object.keys(o).filter(function(k){ return !!o[k]; }).length : 0; }
 
-/* 식수: breakfast / checks(중식) / dinner / dinner_resv */
-db.ref('system/staffMeal/breakfast/'+today).on('value', function(s){ document.getElementById('cnt-b').textContent=countObj(s.val()); if(window.kacBootDone) kacBootDone(); });
-db.ref('system/staffMeal/dinner/'+today).on('value', function(s){ document.getElementById('cnt-d').textContent=countObj(s.val()); });
-db.ref('system/staffMeal/dinner_resv/'+today).on('value', function(s){ document.getElementById('cnt-r').textContent=countObj(s.val())+'명'; });
+/* 식수: breakfast / checks(중식) / dinner / dinner_resv — 원본을 MEAL에 저장해 도출근거(명단) 표시 */
+var MEAL={ b:{}, l:{}, d:{}, r:{} };
+db.ref('system/staffMeal/breakfast/'+today).on('value', function(s){ MEAL.b=s.val()||{}; document.getElementById('cnt-b').textContent=countObj(MEAL.b); refreshSheet('b'); if(window.kacBootDone) kacBootDone(); });
+db.ref('system/staffMeal/dinner/'+today).on('value', function(s){ MEAL.d=s.val()||{}; document.getElementById('cnt-d').textContent=countObj(MEAL.d); refreshSheet('d'); });
+db.ref('system/staffMeal/dinner_resv/'+today).on('value', function(s){ MEAL.r=s.val()||{}; document.getElementById('cnt-r').textContent=countObj(MEAL.r)+'명'; refreshSheet('r'); });
 db.ref('system/staffMeal/checks/'+today).on('value', function(s){
-  LUNCH=s.val()||{};
+  LUNCH=s.val()||{}; MEAL.l=LUNCH;
   document.getElementById('cnt-l').textContent=countObj(LUNCH);
-  renderDept();
+  var lt=document.getElementById('lunchTot'); if(lt) lt.textContent=countObj(LUNCH);
+  renderDept(); refreshSheet('l');
 });
+
+/* ── 식수 도출근거(명단) 바텀시트 ── */
+var MEAL_META={ b:{t:'조식',ic:'fa-mug-saucer'}, l:{t:'중식',ic:'fa-bowl-rice'}, d:{t:'석식',ic:'fa-moon'}, r:{t:'석식 예약',ic:'fa-calendar-check'} };
+var _sheetKind=null;
+function mealRows(kind){
+  var data=MEAL[kind]||{};
+  var rows=Object.keys(data).map(function(k){ return data[k]; }).filter(function(x){ return !!x; });
+  rows.sort(function(a,b){ var da=(a.dept||''), dbb=(b.dept||''); if(da!==dbb) return da<dbb?-1:1; return String(a.name||'')<String(b.name||'')?-1:1; });
+  return rows;
+}
+function deptLabel(r){ if(r.dept&&(''+r.dept).trim()) return r.dept; if(r.category==='external') return '사외강사'; if(r.category==='internal') return '내부강사'; return '-'; }
+function openMealDetail(kind){
+  _sheetKind=kind;
+  var meta=MEAL_META[kind], rows=mealRows(kind);
+  var html='<h3><i class="fa-solid '+meta.ic+'"></i> '+meta.t+' 명단</h3>'
+    +'<div class="ms-sub">'+today+' · 총 <b>'+rows.length+'명</b><br>아래 인원이 체크되어 합계로 집계되었습니다.</div>';
+  if(!rows.length){ html+='<div class="empty">해당 인원이 없습니다.</div>'; }
+  else{
+    html+='<table class="ms-tbl"><thead><tr><th class="num">#</th><th>성함</th><th>부서/구분</th><th>시간</th></tr></thead><tbody>'
+      +rows.map(function(r,i){ return '<tr><td class="num">'+(i+1)+'</td><td>'+h(r.name||'-')+'</td><td>'+h(deptLabel(r))+'</td><td style="color:#94a3b8;">'+h(r.time||'')+'</td></tr>'; }).join('')
+      +'</tbody></table>';
+  }
+  html+='<button class="ms-close" onclick="closeMealSheet()">닫기</button>';
+  document.getElementById('mealSheet').innerHTML=html;
+  document.getElementById('mealSheetOv').classList.add('open');
+}
+function refreshSheet(kind){ if(_sheetKind===kind && document.getElementById('mealSheetOv').classList.contains('open')) openMealDetail(kind); }
+function closeMealSheet(){ _sheetKind=null; document.getElementById('mealSheetOv').classList.remove('open'); }
+
+/* ── 중식 체크 접이식 ── */
+function toggleLunch(){ var b=document.getElementById('lunchBar'), d=document.getElementById('lunchDetail'); if(!b||!d) return; var open=(d.style.display==='none'); d.style.display=open?'block':'none'; b.classList.toggle('open',open); }
+
+/* ── 금주 식단표 사진 업로드(모바일) — PC와 동일 형식(weekKey/uploadedAt/url/fileName) ── */
+function uploadMenu(input){
+  var file=input.files&&input.files[0]; if(!file){ return; }
+  if(!/^image\//.test(file.type||'')){ alert('이미지 파일을 선택해 주세요.'); input.value=''; return; }
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var maxW=1400, w=img.width, hh=img.height;
+      if(w>maxW){ hh=Math.round(hh*maxW/w); w=maxW; }
+      var c=document.createElement('canvas'); c.width=w; c.height=hh;
+      c.getContext('2d').drawImage(img,0,0,w,hh);
+      var q=0.7, url=c.toDataURL('image/jpeg',q);
+      while(url.length>300*1024 && q>0.42){ q-=0.06; url=c.toDataURL('image/jpeg',q); }
+      db.ref(MENU_KEY).set({ weekKey:getMondayOf(getToday()), uploadedAt:Date.now(), url:url, fileName:(file.name||'모바일 업로드') })
+        .then(function(){ alert('✅ 금주 식단표가 업로드되었습니다.'); })
+        .catch(function(){ alert('업로드에 실패했습니다. 다시 시도해 주세요.'); });
+    };
+    img.onerror=function(){ alert('이미지를 읽지 못했습니다.'); };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function deleteMenu(){ if(!confirm('금주 식단표를 삭제할까요?')) return; db.ref(MENU_KEY).remove().then(function(){ alert('삭제되었습니다.'); }); }
 
 function renderDept(){
   var byD={};
@@ -304,6 +412,7 @@ function renderCourses(){
     return '<div class="crs"><span class="rb">#'+r.rid+'</span><span class="cn">'+h(r.cn)+'</span><span class="pc">'+r.c+'명</span></div>';
   }).join('');
 }
+var _msov=document.getElementById('mealSheetOv'); if(_msov) _msov.addEventListener('click', function(e){ if(e.target===this) closeMealSheet(); });
 </script>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
