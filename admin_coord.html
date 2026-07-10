@@ -1,4 +1,4 @@
-<!-- ===== PLATFORM_EDIT_STATUS: 수정안하는중 ===== -->
+<!-- ===== PLATFORM_EDIT_STATUS: 수정완료 | COORD C1 | 2026-07-10 (C1: 교육운영부 입교현황 패널 대개편 — ①행별 인라인 추가·수정·삭제 + PDF/HWP 파일 업로드(교육지원부와 동일). 저장은 지원부와 공유(system/dorm/rosters·coord/rosters·coordRoster·expectedStudents) ②출처/수정자 배지(교육지원부/교육운영부 업로드·수정·일시) ③업로드 시 변경 diff 팝업(빠지는 인원·새로 추가 인원, 중복 자동제외) ④생활관을 예정자도 지원부 배정과 매칭 표시(전체 주차 병합 — 기존 이번주만 봐서 미래주차 예정과정이 미배정으로 뜨던 문제) ⑤미배정자 클릭 시 비어있는 생활관으로 임시 배정(system/dorm/assignments, 최종확정=지원부 현황/출력) ⑥소속 열 좌측정렬. 편집 중 외부 재렌더 가드) ===== -->
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
@@ -9738,7 +9738,8 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     try{ _coordRenderStudentMap(counts,total,unknown,{total:'coordMapTotalE',list:'coordMapListE',map:'coordStudentMapKakaoE'}); }catch(e){}
   };
   window.coordRenderEnrollMap=window.coordRenderEnrollMap;
-  coordRenderEnroll = function(){
+  coordRenderEnroll = function(_force){
+    if(window._coordEnrollEditing!=null && !_force){ return; }   // [명단편집] 편집 중 외부 재렌더 무시(입력 보존)
     var box=document.getElementById('csecEnrollList'); if(!box) return;
     try{ coordRenderEnrollMap(); }catch(e){}
     if(typeof _coordActiveRooms!=='function'){ box.innerHTML='<p style="padding:24px;text-align:center;color:#94a3b8;">연결 대기 중…</p>'; return; }
@@ -9769,11 +9770,16 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var arrivedSet={}; students.forEach(function(s){ arrivedSet[norm(s.name)]=true; });
         var roster=[];
         var curPeriod=(''+(r.s.period||'')).trim();
-        var cr=r.room.coordRoster;
-        if(cr && Array.isArray(cr.list) && cr.list.length){ var crP=(''+(cr.period||'')).trim(); if(!crP||!curPeriod||crP===curPeriod) roster=cr.list; }
-        if(!roster.length){ var k=norm(r.s.courseName); var cands=(ext[k]||[]); var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)&&pick.list.length) roster=pick.list; }
+        var cr=r.room.coordRoster; var _meta=null;
+        if(cr && Array.isArray(cr.list) && cr.list.length){ var crP=(''+(cr.period||'')).trim(); if(!crP||!curPeriod||crP===curPeriod){ roster=cr.list; _meta=cr; } }
+        if(!roster.length){ var k=norm(r.s.courseName); var cands=(ext[k]||[]); var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)&&pick.list.length){ roster=pick.list; _meta=pick; } }
         // [입교율 정정] 예정(분모)=계획 명단만. QR 입교자(walk-in)로 채우지 않음 → 계획명단 없이 자체입교 1명이 100% 되는 버그 방지
         roster=roster.slice().filter(function(s){ return s && (''+(s.name||'')).trim() && s.name!=='undefined'; });
+        // [명단편집] 카드별 메타(출처/키/명단) 저장 — 편집·저장 시 사용
+        var _estart=(curPeriod.indexOf(' ~ ')>=0?(curPeriod.split(' ~ ')[0]||'').trim():'');
+        var _ewk=(typeof _coordWkMon==='function'?_coordWkMon(_estart):'');
+        window._coordEnrollMeta=window._coordEnrollMeta||{};
+        window._coordEnrollMeta[ei]={ rid:r.rid, courseName:(r.s.courseName||''), period:curPeriod, roomDetail:(r.s.roomDetail||r.s.room||''), start:_estart, weekKey:_ewk, sharedKey:(_ewk?_ewk+'__'+r.rid:''), source:(_meta&&_meta.source)||'', updatedAt:(_meta&&_meta.updatedAt)||0, lastAction:(_meta&&_meta.lastAction)||'', lastActionBy:(_meta&&_meta.lastActionBy)||'', uploadedBy:(_meta&&_meta.uploadedBy)||'', uploadedAt:(_meta&&_meta.uploadedAt)||0, list:roster.map(function(s){return {name:(s.name||''),empNo:(s.empNo||s.sabun||s.id||''),dept:(s.dept||s.affil||s.org||''),gender:(s.gender||'')};}) };
         var total=roster.length;                                   // 예정 인원 = 계획 명단 수(업로드/공유 명단)
         var arrived=roster.filter(function(s){ return arrivedSet[norm(s.name)]; }).length;   // 예정자 중 입교완료(QR)
         var rate=total?Math.round(arrived/total*100):0;            // 입교율 = 입교완료/예정
@@ -9785,7 +9791,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
         var _started=_startDate?(_today>=_startDate):true;   // 교육시작일부터 true
         var body = displayRoster.length ? displayRoster.map(function(s,i){
           var ar=arrivedSet[norm(s.name)];
-          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(_enrRoom(s)?('<span style="background:#eef2ff;color:#1e40af;padding:2px 8px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+esc(_enrRoom(s))+'</span>'):'<span style="color:#cbd5e1;">미배정</span>')+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
+          return '<tr><td style="text-align:center;color:#94a3b8;">'+(i+1)+'</td><td style="color:#475569;text-align:left;padding-left:16px;">'+esc(s.dept||s.affil||s.org||'-')+'</td><td style="color:#64748b;white-space:nowrap;">'+esc(s.empNo||s.sabun||s.id||'-')+'</td><td style="font-weight:800;">'+esc(s.name||'-')+'</td><td style="text-align:center;">'+(_enrRoom(s)?('<span style="background:#eef2ff;color:#1e40af;padding:2px 8px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+esc(_enrRoom(s))+'</span>'):('<span onclick="coordAssignDorm('+ei+',\''+encodeURIComponent(s.name||'')+'\',\''+encodeURIComponent(s.empNo||s.sabun||s.id||'')+'\')" style="color:#2563eb;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" title="비어있는 생활관으로 임시 배정">배정하기</span>'))+'</td><td style="text-align:center;">'+(!_started?'<span style="color:#2563eb;font-weight:700;">예정</span>':(ar?'<span style="color:#16a34a;font-weight:800;">입교완료</span>':'<span style="color:#dc2626;font-weight:800;">미입교</span>'))+'</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:18px;">등록된 명단이 없습니다.</td></tr>';
         return '<div class="csec-card">'
           +'<div class="csec-card-head" onclick="coordToggleEnroll('+ei+')" style="cursor:pointer;display:flex;align-items:center;gap:14px;padding:14px 16px;">'
@@ -9794,7 +9800,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
             +'<span class="cstat-pill" onclick="event.stopPropagation(); coordShowEnrollInfo('+arrived+','+total+')" title="예정/입교율 보기" style="cursor:pointer;'+((total>0&&rate>0)?'background:#dcfce7;color:#16a34a;':'background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0;')+'">예정 '+total+'명 · 입교 '+arrived+'명 ('+rate+'%)</span>'
             +'<i class="fa-solid fa-chevron-down crow-chev" id="coordEnrChev'+ei+'"></i>'
           +'</div>'
-          +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'
+          +'<div id="coordEnrollBody'+ei+'" style="display:none;border-top:1px solid #eef2f7;">'+(typeof _coordEnrollPanelInner==='function'?_coordEnrollPanelInner(ei, body):'<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>')+'</div>'
           +'</div>';
       }).join('');
     }
@@ -9802,14 +9808,182 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     Promise.all([
       firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
       firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;}),
-      firebase.database().ref('system/dorm/assignments/'+(typeof _coordDormMondayKey==='function'?_coordDormMondayKey():'')+'/students').once('value').catch(function(){return null;})
+      firebase.database().ref('system/dorm/assignments').once('value').catch(function(){return null;})
     ]).then(function(res){
       var ext={};
       [res[0],res[1]].forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
-      var dmap={}; var av=(res[2]&&res[2].val())||{}; Object.keys(av).forEach(function(k){ var a=av[k]; if(!a||!a.name) return; var nm=norm(a.name); var id=(''+(a.empNo||'')).replace(/[^0-9]/g,''); dmap[nm+'|'+id]=a; if(!dmap['n:'+nm]) dmap['n:'+nm]=a; }); window._coordDormAssign=dmap;
+      var dmap={}; var _allw=(res[2]&&res[2].val())||{}; Object.keys(_allw).forEach(function(wk){ var st=(_allw[wk]&&_allw[wk].students)||{}; Object.keys(st).forEach(function(k){ var a=st[k]; if(!a||!a.name) return; var nm=norm(a.name); var id=(''+(a.empNo||'')).replace(/[^0-9]/g,''); dmap[nm+'|'+id]=a; if(!dmap['n:'+nm]) dmap['n:'+nm]=a; }); }); window._coordDormAssign=dmap;
     window._coordEnrollExt=ext; window._coordRosterExt=ext; try{ if(typeof _coordSyncTotalStudentsFromOverview==='function') _coordSyncTotalStudentsFromOverview(); }catch(e){} paint(ext);
     }).catch(function(){});
   };
+
+/* ===== [입교현황 인라인 명단 편집] 교육운영부 ↔ 교육지원부 공유(system/dorm/rosters) ===== */
+function _coordWkMon(start){ try{ var d=new Date(String(start)+'T00:00:00'); if(isNaN(d.getTime())) return ''; var dow=(d.getDay()+6)%7; d.setDate(d.getDate()-dow); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }catch(e){ return ''; } }
+function _coordFmtDT(ts){ try{ if(!ts) return ''; var d=new Date(ts); var p=function(n){return String(n).padStart(2,'0');}; return p(d.getMonth()+1)+'/'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes()); }catch(e){ return ''; } }
+function _ecEsc(v){ return String(v==null?'':v).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function _coordEnrollSrcLabel(src){ return src==='coord' ? '교육운영부' : (src ? '교육지원부' : ''); }
+function _coordEnrollProv(m){
+  var src=(m&&m.source)||''; var act=(m&&m.lastAction)||(src?'업로드':''); var when=(m&&m.updatedAt)?_coordFmtDT(m.updatedAt):'';
+  if(!src){ return '<span style="color:#94a3b8;">공유 명단 없음 — [명단 편집]에서 업로드·추가</span>'; }
+  return '<b style="color:#1e3a8a;">'+_ecEsc(_coordEnrollSrcLabel(src))+'</b> '+_ecEsc(act||'업로드')+(when?(' · '+when):'');
+}
+function _coordEnrollPanelInner(ei, viewBody){
+  var m=(window._coordEnrollMeta||{})[ei]||{};
+  var editing=(window._coordEnrollEditing===ei);
+  var prov='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:11px 16px;background:#f8fafc;border-bottom:1px solid #eef2f7;">'
+    +'<div style="font-size:12.5px;color:#475569;font-weight:700;"><i class="fa-solid fa-clipboard-user" style="color:#2563eb;margin-right:5px;"></i>'+_coordEnrollProv(m)+'</div>'
+    +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'
+    +(editing
+      ?('<button onclick="coordEnrollAddRow('+ei+')" class="cenr-btn" style="background:#eef2ff;color:#1e40af;">＋ 행 추가</button>'
+        +'<label class="cenr-btn" style="background:#eef2ff;color:#1e40af;cursor:pointer;">📄 파일 업로드<input type="file" accept="application/pdf,.hwp,.hwpx" style="display:none;" onchange="coordEnrollUpload('+ei+',event)"></label>'
+        +'<button onclick="coordEnrollSave('+ei+')" class="cenr-btn" style="background:#16a34a;color:#fff;">💾 저장</button>'
+        +'<button onclick="coordEnrollCancel('+ei+')" class="cenr-btn" style="background:#f1f5f9;color:#475569;">취소</button>')
+      :('<button onclick="coordEnrollEdit('+ei+')" class="cenr-btn" style="background:#2563eb;color:#fff;"><i class="fa-solid fa-pen" style="margin-right:4px;"></i>명단 편집</button>'))
+    +'</div></div>';
+  var table = editing ? _coordEnrollEditTable(ei)
+    : ('<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:29%"><col style="width:15%"><col style="width:15%"><col style="width:18%"><col style="width:14%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;padding-left:16px;">소속</th><th>사번</th><th>성명</th><th>생활관</th><th>상태</th></tr></thead><tbody>'+viewBody+'</tbody></table></div>');
+  return prov+table;
+}
+function _coordEnrollEditTable(ei){
+  var buf=(window._coordEnrollBuf||{})[ei]||[];
+  var rows=buf.length?buf.map(function(s,i){
+    return '<tr>'
+     +'<td style="text-align:center;color:#94a3b8;padding:4px 6px;border-bottom:1px solid #f1f5f9;">'+(i+1)+'</td>'
+     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.dept)+'" oninput="coordEnrollSet('+ei+','+i+',\'dept\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;"></td>'
+     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.empNo)+'" oninput="coordEnrollSet('+ei+','+i+',\'empNo\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;"></td>'
+     +'<td style="padding:4px 6px;border-bottom:1px solid #f1f5f9;"><input value="'+_pesc(s.name)+'" oninput="coordEnrollSet('+ei+','+i+',\'name\',this.value)" style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:6px 8px;font-weight:800;"></td>'
+     +'<td style="text-align:center;padding:4px 6px;border-bottom:1px solid #f1f5f9;"><button onclick="coordEnrollRowDel('+ei+','+i+')" style="color:#ef4444;border:none;background:none;cursor:pointer;font-size:16px;font-weight:800;">✕</button></td>'
+    +'</tr>';
+  }).join(''):'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:18px;">명단이 없습니다. [＋ 행 추가] 또는 [파일 업로드]로 입력하세요.</td></tr>';
+  return '<div style="overflow-x:auto;"><table class="cpop-table" style="width:100%;table-layout:fixed;"><colgroup><col style="width:9%"><col style="width:33%"><col style="width:19%"><col style="width:29%"><col style="width:10%"></colgroup><thead><tr><th>연번</th><th style="text-align:left;padding-left:12px;">소속</th><th>사번</th><th>성명</th><th>삭제</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function _coordEnrollRepaint(ei){ var b=document.getElementById('coordEnrollBody'+ei); if(b){ b.innerHTML=_coordEnrollPanelInner(ei,''); b.style.display='block'; var ch=document.getElementById('coordEnrChev'+ei); if(ch) ch.style.transform='rotate(180deg)'; } }
+window.coordEnrollEdit=function(ei){ var m=(window._coordEnrollMeta||{})[ei]; if(!m){ return; } window._coordEnrollBuf=window._coordEnrollBuf||{}; window._coordEnrollBuf[ei]=(m.list||[]).map(function(s){return {name:s.name||'',empNo:s.empNo||'',dept:s.dept||'',gender:s.gender||''};}); window._coordEnrollEditing=ei; _coordEnrollRepaint(ei); };
+window.coordEnrollCancel=function(ei){ window._coordEnrollEditing=null; if(window._coordEnrollBuf) delete window._coordEnrollBuf[ei]; if(typeof coordRenderEnroll==='function') coordRenderEnroll(true); setTimeout(function(){ var b=document.getElementById('coordEnrollBody'+ei); if(b) b.style.display='block'; },40); };
+window.coordEnrollSet=function(ei,i,f,v){ var buf=(window._coordEnrollBuf||{})[ei]; if(buf&&buf[i]) buf[i][f]=v; };
+window.coordEnrollRowDel=function(ei,i){ var buf=(window._coordEnrollBuf||{})[ei]; if(!buf) return; buf.splice(i,1); _coordEnrollRepaint(ei); };
+window.coordEnrollAddRow=function(ei){ window._coordEnrollBuf=window._coordEnrollBuf||{}; (window._coordEnrollBuf[ei]=window._coordEnrollBuf[ei]||[]).push({name:'',empNo:'',dept:'',gender:'M'}); _coordEnrollRepaint(ei); setTimeout(function(){ var b=document.getElementById('coordEnrollBody'+ei); if(!b) return; var ins=b.querySelectorAll('tbody input'); if(ins.length>=3) ins[ins.length-3].focus(); },30); };
+window.coordEnrollSave=async function(ei, action){
+  var m=(window._coordEnrollMeta||{})[ei]; var buf=(window._coordEnrollBuf||{})[ei]||[];
+  if(!m){ return; }
+  var clean=buf.filter(function(s){return s&&(s.name||'').trim();}).map(function(s,i){return {seq:i+1,name:(s.name||'').trim(),empNo:(s.empNo||'').trim(),dept:(s.dept||'').trim(),gender:s.gender||''};});
+  var now=Date.now();
+  var payload={ courseName:m.courseName, period:m.period, roomDetail:m.roomDetail||'', weekKey:m.weekKey, room:m.rid, list:clean, source:'coord', updatedAt:now, lastAction:(action||'수정'), lastActionBy:'coord', uploadedBy:(m.uploadedBy||'coord'), uploadedAt:(m.uploadedAt||now) };
+  try{
+    var db=firebase.database(); var ps=[];
+    if(m.sharedKey){ ps.push(db.ref('system/dorm/rosters/'+m.sharedKey).set(payload)); ps.push(db.ref('system/coord/rosters/'+m.sharedKey).set(payload)); }
+    ps.push(db.ref('courses/'+m.rid+'/coordRoster').set(payload));
+    var names=Array.from(new Set(clean.map(function(x){return x.name;}).filter(Boolean)));
+    ps.push(db.ref('courses/'+m.rid+'/expectedStudents').set(names));
+    await Promise.all(ps);
+  }catch(e){ alert('저장 오류: '+(e&&e.message?e.message:e)); return; }
+  window._coordEnrollEditing=null; if(window._coordEnrollBuf) delete window._coordEnrollBuf[ei];
+  if(typeof coordRenderEnroll==='function') coordRenderEnroll(true);
+  setTimeout(function(){ var b=document.getElementById('coordEnrollBody'+ei); if(b) b.style.display='block'; },40);
+};
+window.coordEnrollUpload=async function(ei,ev){
+  var file=ev.target.files&&ev.target.files[0]; if(!file) return; ev.target.value='';
+  var m=(window._coordEnrollMeta||{})[ei]||{}; var students=[];
+  try{
+    var ln=file.name.toLowerCase();
+    if(ln.endsWith('.hwpx')){ var tx=await _coordHwpxExtract(file); students=_coordParseRoster(tx); }
+    else if(ln.endsWith('.hwp')){ var buf=await file.arrayBuffer(); var tx2=await _coordHwpExtract(buf); students=_coordParseRoster(tx2); }
+    else { var buf2=await file.arrayBuffer(); var pdf=await pdfjsLib.getDocument(new Uint8Array(buf2)).promise; var rawLines=[];
+      for(var pp=1;pp<=pdf.numPages;pp++){ var page=await pdf.getPage(pp); var content=await page.getTextContent(); var rowsMap={};
+        content.items.forEach(function(it){ var s=(it.str||'').trim(); if(!s)return; var y=Math.round(it.transform[5]); var key=Object.keys(rowsMap).find(function(k){return Math.abs(k-y)<=3;}); if(key==null)key=y; (rowsMap[key]=rowsMap[key]||[]).push(s); });
+        Object.keys(rowsMap).sort(function(a,b){return b-a;}).forEach(function(k){ rawLines.push(rowsMap[k].join(' ')); }); }
+      students=_coordParseRoster(rawLines.join('\n')); }
+  }catch(e){ alert('판독 오류: '+(e&&e.message?e.message:e)); return; }
+  var seen={}, newList=[];
+  students.forEach(function(s){ var nm=(s.name||'').trim(); if(!nm) return; var key=nm.replace(/\s+/g,''); if(seen[key]) return; seen[key]=1; newList.push({name:nm,empNo:(s.empNo||'').trim(),dept:(s.dept||'').trim(),gender:s.gender||'M'}); });
+  var cur=(window._coordEnrollBuf&&window._coordEnrollBuf[ei])||m.list||[];
+  var curSet={}, newSet={};
+  cur.forEach(function(s){ var n=(s.name||'').trim().replace(/\s+/g,''); if(n) curSet[n]=(s.name||'').trim(); });
+  newList.forEach(function(s){ var n=(s.name||'').trim().replace(/\s+/g,''); if(n) newSet[n]=(s.name||'').trim(); });
+  var removed=Object.keys(curSet).filter(function(n){return !newSet[n];}).map(function(n){return curSet[n];});
+  var added=Object.keys(newSet).filter(function(n){return !curSet[n];}).map(function(n){return newSet[n];});
+  _coordEnrollDiffPopup(newList.length, removed, added, function(){
+    window._coordEnrollBuf=window._coordEnrollBuf||{}; window._coordEnrollBuf[ei]=newList; window._coordEnrollEditing=ei;
+    coordEnrollSave(ei,'업로드');
+  });
+};
+function _coordEnrollDiffPopup(total, removed, added, onOk){
+  var pop=document.getElementById('coordEnrollDiffPop'); if(!pop){ pop=document.createElement('div'); pop.id='coordEnrollDiffPop'; document.body.appendChild(pop); }
+  pop.setAttribute('style','position:fixed;inset:0;z-index:31000;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);');
+  var chip=function(n,c,b){return '<span style="display:inline-block;margin:3px;padding:4px 10px;border-radius:8px;font-size:13px;font-weight:800;background:'+b+';color:'+c+';">'+_ecEsc(n)+'</span>';};
+  pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:24px 26px;width:min(560px,94vw);max-height:86vh;overflow:auto;box-shadow:0 25px 60px rgba(0,0,0,.32);">'
+   +'<div style="font-size:17px;font-weight:900;color:#0f172a;margin-bottom:6px;"><i class="fa-solid fa-arrows-rotate" style="color:#2563eb;margin-right:7px;"></i>명단 변경 확인</div>'
+   +'<div style="font-size:13px;color:#64748b;margin-bottom:16px;">업로드한 명단 <b style="color:#2563eb;">'+total+'명</b> · 중복은 자동 제외됩니다. 아래 변경 내용을 확인 후 적용하세요.</div>'
+   +'<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:5px;">➖ 빠지는 인원 ('+removed.length+'명) <span style="font-weight:600;color:#94a3b8;">기존엔 있으나 새 명단에 없음</span></div><div>'+(removed.length?removed.map(function(n){return chip(n,'#b91c1c','#fef2f2');}).join(''):'<span style="color:#94a3b8;font-size:13px;">없음</span>')+'</div></div>'
+   +'<div style="margin-bottom:20px;"><div style="font-size:13px;font-weight:800;color:#16a34a;margin-bottom:5px;">➕ 새로 추가 ('+added.length+'명) <span style="font-weight:600;color:#94a3b8;">기존엔 없으나 새 명단에 있음</span></div><div>'+(added.length?added.map(function(n){return chip(n,'#15803d','#f0fdf4');}).join(''):'<span style="color:#94a3b8;font-size:13px;">없음</span>')+'</div></div>'
+   +'<div style="display:flex;gap:10px;justify-content:flex-end;"><button onclick="var e=document.getElementById(\'coordEnrollDiffPop\');if(e)e.remove();" style="padding:11px 18px;background:#f1f5f9;color:#475569;border:none;border-radius:11px;font-weight:800;cursor:pointer;">취소</button><button id="coordEnrollDiffOk" style="padding:11px 20px;background:#2563eb;color:#fff;border:none;border-radius:11px;font-weight:800;cursor:pointer;">이 명단으로 적용·저장</button></div>'
+  +'</div>';
+  pop.onclick=function(e){ if(e.target===pop) pop.remove(); };
+  var ok=document.getElementById('coordEnrollDiffOk'); if(ok) ok.onclick=function(){ pop.remove(); try{ onOk(); }catch(e){} };
+}
+(function(){ if(!document.getElementById('coordEnrollStyle')){ var st=document.createElement('style'); st.id='coordEnrollStyle'; st.textContent='.cenr-btn{border:none;border-radius:9px;padding:7px 13px;font-size:12.5px;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;}'; (document.head||document.documentElement).appendChild(st); } })();
+/* ===== [입교현황 인라인 명단 편집] 끝 ===== */
+/* ===== [운영부 생활관 빠른 배정] 비어있는 방으로 임시 배정 (최종확정=지원부 현황/출력) ===== */
+window.coordAssignDorm=function(ei, encName, encEmp){
+  var m=(window._coordEnrollMeta||{})[ei]||{};
+  var name=''; var empNo=''; try{ name=decodeURIComponent(encName||''); }catch(e){ name=encName||''; } try{ empNo=decodeURIComponent(encEmp||''); }catch(e){ empNo=encEmp||''; }
+  if(!name){ return; }
+  var wk=m.weekKey || (typeof _coordDormMondayKey==='function'?_coordDormMondayKey():'');
+  if(!wk){ alert('교육 주차를 확인할 수 없습니다.'); return; }
+  // 대상자 성별(명단에서)
+  var gender=''; (m.list||[]).forEach(function(s){ if((s.name||'').trim()===name.trim()){ gender=(s.gender||''); } });
+  var db=firebase.database();
+  Promise.all([ db.ref('system/dorm/rooms').once('value'), db.ref('system/dorm/assignments/'+wk+'/students').once('value') ]).then(function(res){
+    var rooms=(res[0]&&res[0].val())||{}; var asg=(res[1]&&res[1].val())||{};
+    var occ={}; Object.keys(asg).forEach(function(k){ var a=asg[k]; if(a&&a.roomId){ occ[a.roomId]=(occ[a.roomId]||0)+1; } });
+    // 배정 가능(빈자리) 방 목록
+    var avail=[];
+    Object.keys(rooms).forEach(function(id){ var r=rooms[id]||{}; if(r.noAssign) return; var cap=parseInt(r.capacity,10)||1; var used=occ[id]||0; if(used>=cap) return; if(r.gender && gender && r.gender!==gender) return; avail.push({ id:id, building:r.building||'', floor:r.floor||'', no:String(r.no||''), cap:cap, used:used, free:cap-used }); });
+    avail.sort(function(a,b){ return (a.building+'').localeCompare(b.building+'') || (parseInt(a.floor,10)||0)-(parseInt(b.floor,10)||0) || (a.no+'').localeCompare(b.no+'',undefined,{numeric:true}); });
+    _coordAssignPopup(ei, name, empNo, gender, wk, avail);
+  }).catch(function(e){ alert('생활관 정보를 불러오지 못했습니다: '+(e&&e.message?e.message:e)); });
+};
+function _coordAssignPopup(ei, name, empNo, gender, wk, avail){
+  var esc=(typeof _ecEsc==='function')?_ecEsc:function(v){return String(v==null?'':v);};
+  var pop=document.getElementById('coordAssignPop'); if(!pop){ pop=document.createElement('div'); pop.id='coordAssignPop'; document.body.appendChild(pop); }
+  pop.setAttribute('style','position:fixed;inset:0;z-index:31200;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,.5);backdrop-filter:blur(4px);');
+  var byB={}; avail.forEach(function(r){ (byB[r.building]=byB[r.building]||[]).push(r); });
+  var bodyHtml = avail.length ? Object.keys(byB).map(function(b){
+    return '<div style="margin-bottom:14px;"><div style="font-size:13px;font-weight:900;color:#1e3a8a;margin:0 0 7px 2px;">'+esc(b||'건물')+'</div><div style="display:flex;flex-wrap:wrap;gap:7px;">'
+      + byB[b].map(function(r){ return '<button onclick="coordAssignPick('+ei+',\''+encodeURIComponent(name)+'\',\''+encodeURIComponent(empNo)+'\',\''+encodeURIComponent(gender)+'\',\''+esc(wk)+'\',\''+esc(r.id)+'\')" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:9px;padding:8px 11px;font-size:12.5px;font-weight:800;cursor:pointer;">'+esc(r.floor)+'층 '+esc(r.no)+'호 <span style="color:#16a34a;">('+r.free+'/'+r.cap+')</span></button>'; }).join('')
+    + '</div></div>';
+  }).join('') : '<div style="text-align:center;color:#94a3b8;padding:24px;">배정 가능한 빈 생활관이 없습니다.</div>';
+  pop.innerHTML='<div style="background:#fff;border-radius:20px;padding:22px 24px;width:min(600px,94vw);max-height:86vh;overflow:auto;box-shadow:0 25px 60px rgba(0,0,0,.32);">'
+   +'<div style="font-size:17px;font-weight:900;color:#0f172a;margin-bottom:4px;"><i class="fa-solid fa-bed" style="color:#2563eb;margin-right:7px;"></i>생활관 임시 배정</div>'
+   +'<div style="font-size:13px;color:#64748b;margin-bottom:6px;"><b style="color:#1e3a8a;">'+esc(name)+'</b>'+(gender?(' · '+(gender==='F'?'여':'남')):'')+' — 비어있는 방을 선택하세요.</div>'
+   +'<div style="font-size:11.5px;color:#94a3b8;margin-bottom:16px;">※ 여기서의 배정은 <b>임시</b>이며, 최종 확정·수정은 교육지원부 현황/출력 최종확정 화면에서 이루어집니다.</div>'
+   + bodyHtml
+   +'<div style="display:flex;justify-content:flex-end;margin-top:8px;"><button onclick="var e=document.getElementById(\'coordAssignPop\');if(e)e.remove();" style="padding:10px 18px;background:#f1f5f9;color:#475569;border:none;border-radius:11px;font-weight:800;cursor:pointer;">닫기</button></div>'
+  +'</div>';
+  pop.onclick=function(e){ if(e.target===pop) pop.remove(); };
+}
+window.coordAssignPick=function(ei, encName, encEmp, encGender, wk, roomId){
+  var name='',empNo='',gender=''; try{name=decodeURIComponent(encName||'');}catch(e){name=encName||'';} try{empNo=decodeURIComponent(encEmp||'');}catch(e){empNo=encEmp||'';} try{gender=decodeURIComponent(encGender||'');}catch(e){gender=encGender||'';}
+  var m=(window._coordEnrollMeta||{})[ei]||{};
+  var db=firebase.database();
+  db.ref('system/dorm/rooms/'+roomId).once('value').then(function(rs){
+    var r=rs.val()||{};
+    var cap=parseInt(r.capacity,10)||1;
+    return db.ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(as){
+      var asg=as.val()||{}; var used=0; Object.keys(asg).forEach(function(k){ if(asg[k]&&asg[k].roomId===roomId) used++; });
+      if(used>=cap){ alert('방금 다른 배정으로 방이 찼습니다. 다시 선택해 주세요.'); return; }
+      var nkey=('coord_'+String(name).replace(/[^가-힣A-Za-z0-9]/g,'')+'_'+String(empNo).replace(/[^0-9A-Za-z]/g,'')).slice(0,60)||('coord_'+Date.now());
+      var rec={ name:name, empNo:empNo||'-', dept:(function(){var d='';(m.list||[]).forEach(function(s){if((s.name||'').trim()===name.trim())d=(s.dept||'');});return d;})(), gender:gender||'', course:(m.courseName||''), room:((r.building||'')+' '+(r.no||'')).trim(), roomId:roomId, building:(r.building||''), floor:(r.floor||''), no:String(r.no||''), rosterKey:(m.sharedKey||''), provisional:true, assignedBy:'coord', assignedAt:Date.now() };
+      return db.ref('system/dorm/assignments/'+wk+'/students/'+nkey).set(rec).then(function(){
+        var e=document.getElementById('coordAssignPop'); if(e) e.remove();
+        if(typeof coordRenderEnroll==='function') coordRenderEnroll(true);
+        setTimeout(function(){ var b=document.getElementById('coordEnrollBody'+ei); if(b) b.style.display='block'; },60);
+      });
+    });
+  }).catch(function(e){ alert('배정 저장 오류: '+(e&&e.message?e.message:e)); });
+};
+/* ===== [운영부 생활관 빠른 배정] 끝 ===== */
+
 
   // ── 섹션4: 외출·외박 (과정별 1줄 1블록, 클릭→신청명단 팝업) ──
   window.coordSetHold = function(rid,date,key,checked){

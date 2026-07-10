@@ -6536,21 +6536,22 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 #view-quiz .quiz-top-bar{ display:flex !important; align-items:center; justify-content:space-between; gap:16px; }
 #view-quiz .qtb-left{ display:flex; align-items:center; gap:12px; }
 #view-quiz .qtb-right{ display:flex; align-items:center; gap:18px; justify-content:flex-end; text-align:right; }
-#view-quiz .quiz-top-bar .quiz-exit-icon{ position:static !important; margin:0 !important; }
+#view-quiz .quiz-top-bar .quiz-exit-icon{ position:static !important; margin:0 0 0 4px !important; width:56px; height:56px; font-size:32px; display:inline-flex; align-items:center; justify-content:center; border-radius:15px; cursor:pointer; color:#334155; flex:0 0 auto; }
+#view-quiz .quiz-top-bar .quiz-exit-icon:hover{ background:#f1f5f9; color:#0f172a; }
 #view-quiz .qtb-gear{ width:44px; height:44px; border-radius:12px; border:none; background:#1e293b; color:#fff; font-size:18px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
 #view-quiz .qtb-gear:hover{ background:#0f172a; }
 #view-quiz .qtb-timer{ display:inline-flex; align-items:center; gap:10px; background:#0f172a; color:#fff; padding:9px 22px; border-radius:14px; font-size:36px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:1.5px; box-shadow:0 8px 20px rgba(15,23,42,.28); line-height:1; }
 #view-quiz .qtb-timer i{ font-size:25px; color:#fbbf24; }
 #view-quiz .qtb-timer #quizTimer{ color:#fff; }
 #view-quiz .qtb-timer #quizTimer.urgent{ color:#fca5a5; animation:blink 1s infinite; }
-#view-quiz .qtb-qnum{ font-size:36px !important; font-weight:950 !important; color:#1d4ed8 !important; letter-spacing:0; white-space:nowrap; }
-#view-quiz .qtb-part{ font-size:18px; font-weight:800; color:#334155; text-align:right; white-space:nowrap; }
-#view-quiz .qtb-part i{ color:#94a3b8; margin-right:5px; }
+#view-quiz .qtb-qnum{ font-size:50px !important; font-weight:950 !important; color:#1d4ed8 !important; letter-spacing:0; white-space:nowrap; }
+#view-quiz .qtb-part{ font-size:24px; font-weight:800; color:#334155; text-align:right; white-space:nowrap; }
+#view-quiz .qtb-part i{ color:#94a3b8; margin-right:6px; font-size:22px; }
 #view-quiz .qtb-part b{ color:#0f172a; }
-#view-quiz .qtb-part .qtb-part-sub{ font-size:15.5px; color:#64748b; margin-left:6px; font-weight:800; }
+#view-quiz .qtb-part .qtb-part-sub{ font-size:19px; color:#64748b; margin-left:7px; font-weight:800; }
 #view-quiz .qtb-part .qtb-part-sub b:first-of-type{ color:#10b981; }
 #view-quiz .qtb-part .qtb-part-sub b:last-of-type{ color:#ef4444; }
-@media(max-width:900px){ #view-quiz .qtb-timer{ font-size:27px; padding:7px 15px; } #view-quiz .qtb-qnum{ font-size:26px !important; } #view-quiz .qtb-part{ font-size:15px; } #view-quiz .qtb-part .qtb-part-sub{ display:block; margin-left:0; } }
+@media(max-width:900px){ #view-quiz .qtb-timer{ font-size:27px; padding:7px 15px; } #view-quiz .qtb-qnum{ font-size:34px !important; } #view-quiz .qtb-part{ font-size:18px; } #view-quiz .qtb-part .qtb-part-sub{ display:block; margin-left:0; } #view-quiz .quiz-top-bar .quiz-exit-icon{ width:46px; height:46px; font-size:26px; } }
 
 /* [I37] 퀴즈 분석 리포트 강화 */
 #quizSummaryOverlay .summary-card b i{ font-style:normal; font-size:.55em; font-weight:700; color:#94a3b8; margin-left:3px; }
