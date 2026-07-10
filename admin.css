@@ -6466,10 +6466,10 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .nh-item p { flex:1; min-width:0; font-size:12.5px; margin:0; line-height:1.45; color:#475569; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 .nh-go { flex-shrink:0; color:#94a3b8; font-size:12px; }
 .nh-dash { border-top:2px dashed #e2e8f0; margin:13px 0; }
-.edu-tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.edu-tiles { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
 .edu-tile { border:1.5px solid; border-radius:14px; padding:12px 14px; display:flex; flex-direction:column; gap:8px; min-height:74px; box-sizing:border-box; }
 .edu-tile .et-badge { display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:900; }
-.edu-tile b { font-size:19px; font-weight:900; text-align:right; margin-top:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.edu-tile b { font-size:17px; font-weight:900; text-align:right; margin-top:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.3; }
 .card-notice-hub { display:flex; flex-direction:column; }
 .nh-all { width:100%; margin-top:auto; padding:15px 18px; border:1.5px solid #1e3a8a; border-radius:14px; background:#fff; color:#1e3a8a; font-size:15.5px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:flex-start; gap:13px; min-height:68px; transition:background .13s, color .13s, border-color .13s; }
 .nh-all:hover { background:#1e3a8a; color:#fff; }
@@ -6559,14 +6559,19 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 #quizSummaryOverlay .summary-card.summary-hl span{ color:#dbeafe !important; }
 #quizSummaryOverlay .summary-card.summary-hl b{ color:#fff !important; }
 #quizSummaryOverlay .summary-card.summary-hl b i{ color:#bfdbfe !important; }
-.qbd-row{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:11px 13px; margin-bottom:9px; }
-.qbd-head{ display:flex; align-items:center; gap:9px; margin-bottom:8px; }
-.qbd-no{ flex:0 0 auto; background:#1e293b; color:#fff; font-weight:800; font-size:12.5px; padding:3px 9px; border-radius:7px; }
-.qbd-title{ flex:1 1 auto; font-size:14.5px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.qbd-pt{ flex:0 0 auto; font-size:12.5px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 9px; border-radius:7px; }
-.qbd-bar{ height:9px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:6px; }
-.qbd-fill{ height:100%; border-radius:6px; transition:width .4s; }
-.qbd-meta{ display:flex; justify-content:space-between; gap:8px; font-size:12.5px; color:#64748b; font-weight:600; }
+.qbd-row{ background:#fff; border:1px solid #e5eaf1; border-radius:14px; padding:15px 17px; margin-bottom:11px; box-shadow:0 1px 3px rgba(15,23,42,.05); }
+.qbd-row.qbd-worst{ border-color:#fecaca; box-shadow:0 2px 10px rgba(239,68,68,.12); }
+.qbd-top{ display:flex; align-items:center; gap:9px; margin-bottom:11px; }
+.qbd-rank{ flex:0 0 auto; width:27px; height:27px; border-radius:8px; background:#eef2ff; color:#1e40af; font-weight:900; font-size:14px; display:inline-flex; align-items:center; justify-content:center; }
+.qbd-row.qbd-worst .qbd-rank{ background:#fee2e2; color:#dc2626; }
+.qbd-no{ flex:0 0 auto; background:#1e293b; color:#fff; font-weight:800; font-size:13px; padding:3px 11px; border-radius:7px; }
+.qbd-tag{ flex:0 0 auto; background:#dc2626; color:#fff; font-weight:800; font-size:11.5px; padding:3px 9px; border-radius:7px; }
+.qbd-acc{ flex:1 1 auto; text-align:right; font-size:15.5px; font-weight:800; white-space:nowrap; }
+.qbd-pt{ flex:0 0 auto; font-size:13px; font-weight:800; color:#2563eb; background:#eff6ff; padding:4px 11px; border-radius:8px; }
+.qbd-q{ font-size:18px; font-weight:700; color:#1e293b; line-height:1.45; margin-bottom:13px; word-break:keep-all; }
+.qbd-bar{ height:11px; background:#eef2f7; border-radius:7px; overflow:hidden; margin-bottom:9px; }
+.qbd-fill{ height:100%; border-radius:7px; transition:width .5s; }
+.qbd-meta{ display:flex; justify-content:flex-end; gap:0; font-size:13.5px; color:#64748b; font-weight:700; }
 
 
 /* [I39] 퀴즈 상단바 좌측 통합 알약 — Q1(검정·대형) → 카운터 → 톱니, 시인성↑ */
