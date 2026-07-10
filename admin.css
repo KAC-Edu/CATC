@@ -6531,3 +6531,38 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 .ops-row.feat-off .ops-val{ visibility:hidden; position:relative; }
 .ops-row.feat-off .ops-val::after{ content:"본 과정 해당없음"; visibility:visible; position:absolute; right:0; top:50%; transform:translateY(-50%); white-space:nowrap; color:#94a3b8; font-size:12.5px; font-weight:800; }
 .ops-row.feat-off .ops-go{ display:none; }
+
+/* [I36] 퀴즈 상단바 재배치 — 좌:닫기·톱니·타이머 / 우:Q번호·참여자 */
+#view-quiz .quiz-top-bar{ display:flex !important; align-items:center; justify-content:space-between; gap:16px; }
+#view-quiz .qtb-left{ display:flex; align-items:center; gap:12px; }
+#view-quiz .qtb-right{ display:flex; align-items:center; gap:18px; justify-content:flex-end; text-align:right; }
+#view-quiz .quiz-top-bar .quiz-exit-icon{ position:static !important; margin:0 !important; }
+#view-quiz .qtb-gear{ width:44px; height:44px; border-radius:12px; border:none; background:#1e293b; color:#fff; font-size:18px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
+#view-quiz .qtb-gear:hover{ background:#0f172a; }
+#view-quiz .qtb-timer{ display:inline-flex; align-items:center; gap:10px; background:#0f172a; color:#fff; padding:9px 22px; border-radius:14px; font-size:36px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:1.5px; box-shadow:0 8px 20px rgba(15,23,42,.28); line-height:1; }
+#view-quiz .qtb-timer i{ font-size:25px; color:#fbbf24; }
+#view-quiz .qtb-timer #quizTimer{ color:#fff; }
+#view-quiz .qtb-timer #quizTimer.urgent{ color:#fca5a5; animation:blink 1s infinite; }
+#view-quiz .qtb-qnum{ font-size:36px !important; font-weight:950 !important; color:#1d4ed8 !important; letter-spacing:0; white-space:nowrap; }
+#view-quiz .qtb-part{ font-size:18px; font-weight:800; color:#334155; text-align:right; white-space:nowrap; }
+#view-quiz .qtb-part i{ color:#94a3b8; margin-right:5px; }
+#view-quiz .qtb-part b{ color:#0f172a; }
+#view-quiz .qtb-part .qtb-part-sub{ font-size:15.5px; color:#64748b; margin-left:6px; font-weight:800; }
+#view-quiz .qtb-part .qtb-part-sub b:first-of-type{ color:#10b981; }
+#view-quiz .qtb-part .qtb-part-sub b:last-of-type{ color:#ef4444; }
+@media(max-width:900px){ #view-quiz .qtb-timer{ font-size:27px; padding:7px 15px; } #view-quiz .qtb-qnum{ font-size:26px !important; } #view-quiz .qtb-part{ font-size:15px; } #view-quiz .qtb-part .qtb-part-sub{ display:block; margin-left:0; } }
+
+/* [I37] 퀴즈 분석 리포트 강화 */
+#quizSummaryOverlay .summary-card b i{ font-style:normal; font-size:.55em; font-weight:700; color:#94a3b8; margin-left:3px; }
+#quizSummaryOverlay .summary-card.summary-hl{ background:linear-gradient(135deg,#1d4ed8,#2563eb) !important; box-shadow:0 8px 20px rgba(37,99,235,.3); }
+#quizSummaryOverlay .summary-card.summary-hl span{ color:#dbeafe !important; }
+#quizSummaryOverlay .summary-card.summary-hl b{ color:#fff !important; }
+#quizSummaryOverlay .summary-card.summary-hl b i{ color:#bfdbfe !important; }
+.qbd-row{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:11px 13px; margin-bottom:9px; }
+.qbd-head{ display:flex; align-items:center; gap:9px; margin-bottom:8px; }
+.qbd-no{ flex:0 0 auto; background:#1e293b; color:#fff; font-weight:800; font-size:12.5px; padding:3px 9px; border-radius:7px; }
+.qbd-title{ flex:1 1 auto; font-size:14.5px; font-weight:700; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.qbd-pt{ flex:0 0 auto; font-size:12.5px; font-weight:800; color:#2563eb; background:#eff6ff; padding:3px 9px; border-radius:7px; }
+.qbd-bar{ height:9px; background:#e2e8f0; border-radius:6px; overflow:hidden; margin-bottom:6px; }
+.qbd-fill{ height:100%; border-radius:6px; transition:width .4s; }
+.qbd-meta{ display:flex; justify-content:space-between; gap:8px; font-size:12.5px; color:#64748b; font-weight:600; }
