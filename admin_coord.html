@@ -1,4 +1,4 @@
-<!-- ===== PLATFORM_EDIT_STATUS: 수정완료 | COORD C2 | 2026-07-10 (C2: 입교현황 명단 편집 보강 — ①편집표에도 생활관 컬럼 추가(보기/편집 모드 공통, 변경 즉시 반영) ②표 헤더·셀 전체 중앙정렬 통일 ③생활관 배정 권한 게이트: 교육지원부가 배정 확정(system/dorm/locks 잠금)한 주차만 운영부 배정 가능·확정명단 직접 반영, 미확정 시 배정하기 비활성+안내문 표기. 생활관은 전체 주차 배정 병합 매칭(예정자 포함)) | COORD C1 | 2026-07-10 (C1: 교육운영부 입교현황 패널 대개편 — ①행별 인라인 추가·수정·삭제 + PDF/HWP 파일 업로드(교육지원부와 동일). 저장은 지원부와 공유(system/dorm/rosters·coord/rosters·coordRoster·expectedStudents) ②출처/수정자 배지(교육지원부/교육운영부 업로드·수정·일시) ③업로드 시 변경 diff 팝업(빠지는 인원·새로 추가 인원, 중복 자동제외) ④생활관을 예정자도 지원부 배정과 매칭 표시(전체 주차 병합 — 기존 이번주만 봐서 미래주차 예정과정이 미배정으로 뜨던 문제) ⑤미배정자 클릭 시 비어있는 생활관으로 임시 배정(system/dorm/assignments, 최종확정=지원부 현황/출력) ⑥소속 열 좌측정렬. 편집 중 외부 재렌더 가드) ===== -->
+<!-- ===== PLATFORM_EDIT_STATUS: 수정완료 | COORD C4 | 2026-07-10 (C4: 입교현황 편집표 생활관 "수정 불가" 문제 — 이미 배정된 방이 읽기전용 텍스트라 변경 불가하던 것을, 확정(잠금) 상태에서는 배정된 방도 클릭 시 방 변경 팝업이 열리도록(연필 아이콘 표시). 재배정 시 같은 사람의 기존 배정을 원자적으로 제거 후 신규 반영해 이중배정 방지) | COORD C3 | 2026-07-10 (C3: 입교안내 공지 모달에 "현재 공지 중" 상태 배너 추가 — 모달 열 때 활성 공지(이번주 weeklyNotice 우선→영구 globalNotice)를 읽어 범위·내용 미리보기 표시. 편집창이 빈칸이어도 실제 게시 중인 공지를 인지해 모르고 덮어쓰기/삭제하는 것 방지. + [J65/vJ114 연동] 이번주 공지가 강사 가이드·교육생에도 반영되도록 함께 수정) | COORD C2 | 2026-07-10 (C2: 입교현황 명단 편집 보강 — ①편집표에도 생활관 컬럼 추가(보기/편집 모드 공통, 변경 즉시 반영) ②표 헤더·셀 전체 중앙정렬 통일 ③생활관 배정 권한 게이트: 교육지원부가 배정 확정(system/dorm/locks 잠금)한 주차만 운영부 배정 가능·확정명단 직접 반영, 미확정 시 배정하기 비활성+안내문 표기. 생활관은 전체 주차 배정 병합 매칭(예정자 포함)) | COORD C1 | 2026-07-10 (C1: 교육운영부 입교현황 패널 대개편 — ①행별 인라인 추가·수정·삭제 + PDF/HWP 파일 업로드(교육지원부와 동일). 저장은 지원부와 공유(system/dorm/rosters·coord/rosters·coordRoster·expectedStudents) ②출처/수정자 배지(교육지원부/교육운영부 업로드·수정·일시) ③업로드 시 변경 diff 팝업(빠지는 인원·새로 추가 인원, 중복 자동제외) ④생활관을 예정자도 지원부 배정과 매칭 표시(전체 주차 병합 — 기존 이번주만 봐서 미래주차 예정과정이 미배정으로 뜨던 문제) ⑤미배정자 클릭 시 비어있는 생활관으로 임시 배정(system/dorm/assignments, 최종확정=지원부 현황/출력) ⑥소속 열 좌측정렬. 편집 중 외부 재렌더 가드) ===== -->
 <!-- 이 플랫폼(admin_coord.html / 교육운영부) 수정상태 플래그. 값은 [수정중] 또는 [수정안하는중] 두 가지. -->
 <!-- 작업 시작 시 → 수정중 / 작업 완료 시 → 수정안하는중. 다른 플랫폼은 이 말머리를 보고 연동·수정 가능 여부 판단. -->
 <!-- [외부변경 · 카카오채널연동 2026-06-25] 포털(portal.html/7777) 경유 폐지 → 페이지 직접진입 시 접속코드(catc1234) 게이트 추가, 포털 리다이렉트/종료이동 제거. version C13→D13. 기능 로직은 미변경. -->
@@ -5891,6 +5891,31 @@ function _coordLoadNoticeScope(scope){
 }
 
 // [입교안내 공지] 팝업 열기
+// [입교안내 공지] 현재 게시 중인 공지 표시 — 모르고 덮어쓰거나 지우는 것 방지
+function _coordRefreshActiveNotice(){
+    var el=document.getElementById('gnActiveStatus'); if(!el) return;
+    Promise.all([
+        firebase.database().ref('system/globalNotice').once('value'),
+        firebase.database().ref('system/weeklyNotice').once('value')
+    ]).then(function(r){
+        var gv=r[0].val(); var wv=r[1].val();
+        var gTxt=(gv? String(typeof gv==='object'?(gv.html||''):gv):'').trim();
+        var wTxt=''; if(wv && typeof wv==='object'){ if(!wv.weekKey || wv.weekKey===_coordThisMonday()) wTxt=String(wv.html||'').trim(); } else if(typeof wv==='string'){ wTxt=wv.trim(); }
+        var plain=function(h){ return _noticeHtmlToText(h).replace(/\n+/g,' ').trim(); };
+        el.style.display='block';
+        if(wTxt || gTxt){
+            var activeScope = wTxt ? '이번 주 과정' : '영구';
+            var activeTxt = wTxt || gTxt;
+            var prev=plain(activeTxt); if(prev.length>90) prev=prev.slice(0,90)+'…';
+            var extra = (wTxt && gTxt) ? ' <span style="color:#64748b;font-weight:600;">(영구 공지도 저장돼 있음)</span>' : '';
+            el.style.background='#ecfdf5'; el.style.border='1px solid #a7f3d0'; el.style.color='#065f46';
+            el.innerHTML='<i class="fa-solid fa-circle-check" style="margin-right:6px;"></i><b>현재 공지 중</b> · <b>'+activeScope+'</b>'+extra+'<div style="margin-top:5px;font-weight:600;color:#047857;">\u201c'+_pesc(prev)+'\u201d</div><div style="margin-top:4px;font-size:11.5px;color:#059669;font-weight:600;">\u203b 지우기 전에 확인하세요. 위 \u2018공지 기간\u2019에서 해당 범위를 선택하면 내용이 편집창에 로드됩니다.</div>';
+        } else {
+            el.style.background='#f8fafc'; el.style.border='1px solid #e5eaf1'; el.style.color='#94a3b8';
+            el.innerHTML='<i class="fa-regular fa-circle" style="margin-right:6px;"></i>현재 게시 중인 입교안내 공지가 없습니다.';
+        }
+    }).catch(function(){});
+}
 function openGlobalNoticeModal() {
     toggleMenu(false);
     const modal = document.getElementById('globalNoticeModal');
@@ -5899,6 +5924,7 @@ function openGlobalNoticeModal() {
     const perm = document.querySelector('input[name="gnScope"][value="permanent"]');
     if(perm) perm.checked = true;
     _coordLoadNoticeScope('permanent');
+    _coordRefreshActiveNotice();
 }
 
 // [입교안내 공지] 저장 — 영구=globalNotice, 이번주만=weeklyNotice{html,weekKey}
@@ -5959,6 +5985,7 @@ async function saveGlobalNotice() {
         </div>
 
         <p style="font-size:12px; color:#64748b; font-weight:700; margin:0 0 12px;">아래는 실제 교육생 <b style="color:#1d4ed8;">입교안내 화면</b>에 표출되는 모습입니다. 블록 안에 공지를 작성하세요.</p>
+        <div id="gnActiveStatus" style="margin:0 0 12px; padding:11px 14px; border-radius:11px; font-size:13px; font-weight:700; line-height:1.5; display:none;"></div>
 
         <!-- 입교안내 슬라이드 미리보기 -->
         <div style="border:1px solid #e2e8f0; border-radius:14px; overflow:hidden; background:#f1f5f9; box-shadow:0 4px 14px rgba(15,23,42,.08);">
@@ -9825,9 +9852,15 @@ function _ecEsc(v){ return String(v==null?'':v).replace(/[&<>"]/g,function(c){re
 window._coordEnrRoom=function(name, empNo){ var m=window._coordDormAssign||{}; var nm=String(name||'').replace(/\s+/g,'').toLowerCase(); var id=(''+(empNo||'')).replace(/[^0-9]/g,''); var a=m[nm+'|'+id]||m['n:'+nm]; if(!a) return ''; var ho=(''+(a.no||a.room||'')).trim(); if(!ho) return (a.building||''); return ((a.building||'')+' '+ho+(ho.indexOf('호')<0?'호':'')).trim(); };
 function _coordEnrollDormCell(ei, name, empNo){
   var room=window._coordEnrRoom(name, empNo);
-  if(room){ return '<span style="background:#eef2ff;color:#1e40af;padding:2px 9px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+_ecEsc(room)+'</span>'; }
   var m=(window._coordEnrollMeta||{})[ei]||{};
-  if(m.locked){ return '<span onclick="coordAssignDorm('+ei+',\''+encodeURIComponent(name||'')+'\',\''+encodeURIComponent(empNo||'')+'\')" style="color:#2563eb;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" title="비어있는 생활관으로 배정">배정하기</span>'; }
+  var oc="coordAssignDorm("+ei+",'"+encodeURIComponent(name||'')+"','"+encodeURIComponent(empNo||'')+"')";
+  if(room){
+    if(m.locked){
+      return '<span onclick="'+oc+'" style="cursor:pointer;white-space:nowrap;" title="클릭하면 다른 생활관으로 변경"><span style="background:#eef2ff;color:#1e40af;padding:2px 9px;border-radius:7px;font-size:12px;font-weight:800;">'+_ecEsc(room)+'</span> <i class="fa-solid fa-pen" style="font-size:10px;color:#2563eb;margin-left:1px;"></i></span>';
+    }
+    return '<span style="background:#eef2ff;color:#1e40af;padding:2px 9px;border-radius:7px;font-size:12px;font-weight:800;white-space:nowrap;">'+_ecEsc(room)+'</span>';
+  }
+  if(m.locked){ return '<span onclick="'+oc+'" style="color:#2563eb;font-weight:800;cursor:pointer;text-decoration:underline;text-underline-offset:2px;" title="비어있는 생활관으로 배정">배정하기</span>'; }
   return '<span style="color:#cbd5e1;font-weight:700;" title="교육지원부 생활관 배정 확정(잠금) 전에는 배정할 수 없습니다">미배정</span>';
 }
 function _coordEnrollSrcLabel(src){ return src==='coord' ? '교육운영부' : (src ? '교육지원부' : ''); }
@@ -9982,11 +10015,19 @@ window.coordAssignPick=function(ei, encName, encEmp, encGender, wk, roomId){
     var r=rs.val()||{};
     var cap=parseInt(r.capacity,10)||1;
     return db.ref('system/dorm/assignments/'+wk+'/students').once('value').then(function(as){
-      var asg=as.val()||{}; var used=0; Object.keys(asg).forEach(function(k){ if(asg[k]&&asg[k].roomId===roomId) used++; });
-      if(used>=cap){ alert('방금 다른 배정으로 방이 찼습니다. 다시 선택해 주세요.'); return; }
+      var asg=as.val()||{}; var used=0; var removeKeys=[];
+      var nmNorm=String(name||'').replace(/\s+/g,'').toLowerCase();
+      Object.keys(asg).forEach(function(k){ var a=asg[k]; if(!a) return;
+        if(String(a.name||'').replace(/\s+/g,'').toLowerCase()===nmNorm){ removeKeys.push(k); return; }  // 같은 사람 기존 배정 → 제거(이중배정 방지)
+        if(a.roomId===roomId) used++;
+      });
+      if(used>=cap){ alert('선택한 방이 이미 정원까지 찼습니다. 다른 방을 선택해 주세요.'); return; }
       var nkey=('coord_'+String(name).replace(/[^가-힣A-Za-z0-9]/g,'')+'_'+String(empNo).replace(/[^0-9A-Za-z]/g,'')).slice(0,60)||('coord_'+Date.now());
       var rec={ name:name, empNo:empNo||'-', dept:(function(){var d='';(m.list||[]).forEach(function(s){if((s.name||'').trim()===name.trim())d=(s.dept||'');});return d;})(), gender:gender||'', course:(m.courseName||''), room:((r.building||'')+' '+(r.no||'')).trim(), roomId:roomId, building:(r.building||''), floor:(r.floor||''), no:String(r.no||''), rosterKey:(m.sharedKey||''), provisional:true, assignedBy:'coord', assignedAt:Date.now() };
-      return db.ref('system/dorm/assignments/'+wk+'/students/'+nkey).set(rec).then(function(){
+      var updates={};
+      removeKeys.forEach(function(k){ updates['system/dorm/assignments/'+wk+'/students/'+k]=null; });
+      updates['system/dorm/assignments/'+wk+'/students/'+nkey]=rec;
+      return db.ref().update(updates).then(function(){
         var e=document.getElementById('coordAssignPop'); if(e) e.remove();
         if(typeof coordRenderEnroll==='function') coordRenderEnroll(true);
         setTimeout(function(){ var b=document.getElementById('coordEnrollBody'+ei); if(b) b.style.display='block'; },60);
