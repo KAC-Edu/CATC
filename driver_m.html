@@ -1,26 +1,24 @@
 <!DOCTYPE html>
-<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: DN3 | 2026-07-08 (DN3: 자차 디폴트 재도입(전 화면 동시) — 강사 admin.js J48 규칙과 동일: 미신청 입교완료 교육생을 자차 카운트에 포함(유효 이름·정규화 매칭·중복 1회). 버스 탑승 총원은 실신청 그대로 | 기존 DN2: 2026-06-29) -->
+<!-- PLATFORM_EDIT_STATUS: 수정완료 | VERSION: DM2 | 2026-07-10 (DM2: 기사 전용 모바일 되살림 — 기존 '무조건 driver.html?forcepc' 리다이렉트 제거(모바일에서 PC강제 띄워 불편하던 문제). 상단에 모니터링 요약바(픽업 대기·퇴교 버스·자차 간주 실시간) 추가, 기기 분리도 실제 스마트폰 기준으로 교체(좁은 PC창은 PC 유지). 픽업 처리·퇴교차량 집계 로직 유지, 전체 스케줄 관리는 PC(?forcepc)) | VERSION: DN3 | 2026-07-08 (DN3: 자차 디폴트 재도입(전 화면 동시) — 강사 admin.js J48 규칙과 동일: 미신청 입교완료 교육생을 자차 카운트에 포함(유효 이름·정규화 매칭·중복 1회). 버스 탑승 총원은 실신청 그대로 | 기존 DN2: 2026-06-29) -->
 <html lang="ko">
 <head>
-  <script>
-  /* vDN2: 모바일·태블릿도 네 가지 업무 메뉴가 있는 반응형 통합 화면을 사용 */
-  (function(){
-    try{
-      var params=new URLSearchParams(location.search);
-      params.set('forcepc','1');
-      location.replace('driver.html?'+params.toString()+location.hash);
-    }catch(e){ location.replace('driver.html?forcepc=1'); }
-  })();
-  </script>
+  <!-- [DM2] 강제 PC 리다이렉트 제거 — 전용 모바일(모니터링 중심) 사용. 전체 스케줄 관리는 PC(?forcepc)에서. -->
   <meta charset="UTF-8" />
   <script>
   /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */
   (function(){ try{
-    var wide = window.innerWidth >= 1024;
-    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
-    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
-    var isPc = wide && (fine || noTouch);
-    if(isPc && location.search.indexOf('forcem')<0){ location.replace('driver.html'+location.search+location.hash); }
+    // [DM2] 판별을 '실제 기기(스마트폰)' 기준으로 — 진짜 스마트폰이 아니면(좁은 PC창 포함) PC(driver.html)로. ?forcem=모바일 강제.
+    var qs = location.search || '';
+    if(qs.indexOf('forcem') < 0){
+      var ua = navigator.userAgent || '';
+      var uaPhone = /Android.+Mobile|iPhone|iPod|Windows Phone|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      var touch  = ('ontouchstart' in window) || (navigator.maxTouchPoints||0) > 0;
+      var coarse = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+      var noHover= !!(window.matchMedia && window.matchMedia('(hover:none)').matches);
+      var scrMin = Math.min(screen.width||9999, screen.height||9999);
+      var isPhone = uaPhone || (touch && coarse && noHover && scrMin<=820);
+      if(!isPhone){ location.replace('driver.html'+location.search+location.hash); }
+    }
   }catch(e){} })();
   </script>
 <!-- @version DM1 · 2026-06-28 -->
@@ -162,6 +160,14 @@
 
     #toast{ position:fixed; left:50%; bottom:40px; transform:translateX(-50%) translateY(20px); background:rgba(15,23,42,.95); color:#fff; padding:13px 22px; border-radius:14px; font-size:14px; font-weight:800; z-index:900; opacity:0; transition:all .26s; pointer-events:none; box-shadow:0 12px 34px rgba(0,0,0,.34); max-width:90vw; text-align:center; }
     #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+    /* [DM2] 모니터링 요약 바 */
+    .hero-row{ display:flex; gap:8px; margin-top:13px; }
+    .hstat{ flex:1; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.20); border-radius:14px; padding:10px 8px; text-align:center; z-index:1; }
+    .hstat .hk{ font-size:11px; font-weight:800; color:rgba(255,255,255,.9); margin-bottom:4px; }
+    .hstat .hv{ font-size:22px; font-weight:950; color:#fff; line-height:1; }
+    .hstat .hv small{ font-size:12px; font-weight:800; margin-left:2px; opacity:.9; }
+    .hstat.alert{ background:rgba(250,204,21,.22); border-color:rgba(250,204,21,.5); }
+    .hstat.alert .hv{ color:#fef08a; }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -210,6 +216,11 @@
       <div class="ttl"><div class="mk"><i class="fa-solid fa-van-shuttle"></i></div>차량지원 운행</div>
       <div class="clk" id="clk"></div>
     </div>
+    <div class="hero-row">
+      <div class="hstat" id="hsPend"><div class="hk">픽업 대기</div><div class="hv" id="hPend">0</div></div>
+      <div class="hstat"><div class="hk">퇴교 버스</div><div class="hv" id="hBus">0<small>명</small></div></div>
+      <div class="hstat"><div class="hk">자차 간주</div><div class="hv" id="hCar">0<small>명</small></div></div>
+    </div>
   </div>
 
   <div class="tabs">
@@ -250,7 +261,7 @@
 </div>
 
 <div id="toast"></div>
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">기사M vA</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">기사M vB</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
@@ -324,6 +335,8 @@ function renderPickup(){
     : '<div class="empty"><i class="fa-regular fa-circle-check" style="font-size:20px;display:block;margin-bottom:6px;color:#cbd5e1;"></i>대기 중인 신청이 없습니다.</div>';
   document.getElementById('doneList').innerHTML = done.length ? done.slice(0,12).map(reqCard).join('')
     : '<div class="empty" style="padding:18px 0;">처리 내역 없음</div>';
+  var ep=document.getElementById('hPend'); if(ep) ep.textContent=pend.length;
+  var hp=document.getElementById('hsPend'); if(hp) hp.classList.toggle('alert', pend.length>0);
 }
 
 function confirmPickup(id){
@@ -347,6 +360,7 @@ function undoPickup(id){ firebase.database().ref('system/pickup/'+id).update({ s
 function sumLine(c){ return '오송'+c.osong+'·터미널'+c.terminal+'·공항'+c.airport+(c.car?('·자차'+c.car):''); }
 function renderLeave(){
   var box=document.getElementById('leaveList'); var groups={}, pending=[];
+  var GT={bus:0,car:0};
   for(var rid in allCourses){
     var room=allCourses[rid]; var reqs=room.shuttle&&room.shuttle.requests; if(!reqs) continue;
     var arr=Object.keys(reqs).map(function(k){return reqs[k];}); if(!arr.length) continue;
@@ -366,6 +380,7 @@ function renderLeave(){
       });
     })();
     var busTot=counts.osong+counts.terminal+counts.airport;
+    GT.bus+=busTot; GT.car+=counts.car;
     var cn=(room.settings&&room.settings.courseName)||rid;
     var dep=room.shuttle&&room.shuttle.departure;
     if(dep && dep.announced && dep.time){
@@ -387,6 +402,8 @@ function renderLeave(){
       +'<div class="lv-courses">'+pending.map(function(c){ return '<div class="lv-c"><span>'+h(c.cn)+'</span><b>'+c.busTot+'명</b><small>'+sumLine(c.counts)+'</small></div>'; }).join('')+'</div></div>';
   }
   box.innerHTML=html;
+  var eb=document.getElementById('hBus'); if(eb) eb.innerHTML=GT.bus+'<small>명</small>';
+  var ec=document.getElementById('hCar'); if(ec) ec.innerHTML=GT.car+'<small>명</small>';
 }
 
 var _toastT;
