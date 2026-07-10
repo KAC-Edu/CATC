@@ -5,17 +5,25 @@
   <script>
   /* [기기 분리] PC 접속은 PC 전용 화면으로 (모바일은 이 화면 유지). ?forcem 으로 강제 모바일. */
   (function(){ try{
-    var wide = window.innerWidth >= 1024;
-    var fine = window.matchMedia && window.matchMedia('(pointer:fine)').matches;
-    var noTouch = !('ontouchstart' in window) || navigator.maxTouchPoints === 0;
-    var isPc = wide && (fine || noTouch);
-    if(isPc && location.search.indexOf('forcem')<0){ location.replace('admin.html'+location.search+location.hash); }
+    // [vD] 판별을 '실제 기기(스마트폰)' 기준으로 — 진짜 스마트폰이 아니면(좁은 PC창 포함) PC(admin.html)로 복귀. ?forcem=모바일 강제.
+    var qs = location.search || '';
+    if(qs.indexOf('forcem') < 0){
+      var ua = navigator.userAgent || '';
+      var uaPhone = /Android.+Mobile|iPhone|iPod|Windows Phone|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+      var touch  = ('ontouchstart' in window) || (navigator.maxTouchPoints||0) > 0;
+      var coarse = !!(window.matchMedia && window.matchMedia('(pointer:coarse)').matches);
+      var noHover= !!(window.matchMedia && window.matchMedia('(hover:none)').matches);
+      var scrMin = Math.min(screen.width||9999, screen.height||9999);
+      var isPhone = uaPhone || (touch && coarse && noHover && scrMin<=820);
+      if(!isPhone){ location.replace('admin.html'+location.search+location.hash); }
+    }
   }catch(e){} })();
   </script>
 <!-- ════════ [카카오채널 연동] catc1234 접속 게이트 (수정상태: 수정안하는중) ════════
      · admin.html(교수전용 강의 플랫폼)의 모바일 라이트판(조회 중심). 직접 진입 시 접속코드 요구.
      · 통과 시 localStorage['catc_gate_ok'] 저장. catcLock()으로 잠금 해제. 기능 로직과 분리.
-     · [vC · 2026-07-04 · 운영부 요청으로 admin_coord 담당 디에스장 편집] 상세에 '외출·외박(금일)'·'노조/청렴 공통 교육장소' 조회 카드 추가. 조회 전용(쓰기 없음). 데이터: admin_actions(외출)·system/eduLocations(장소). -->
+     · [vC · 2026-07-04 · 운영부 요청으로 admin_coord 담당 디에스장 편집] 상세에 '외출·외박(금일)'·'노조/청렴 공통 교육장소' 조회 카드 추가. 조회 전용(쓰기 없음). 데이터: admin_actions(외출)·system/eduLocations(장소).
+     · [vD · 2026-07-10 · 홈을 운영부 모바일 방식 과정 블록 목록으로 전면 개편 — 홈=과정 블록(인원·질문·셔틀·외출 배지)→탭하면 그 과정 상세, 상세 상단에 실시간 모니터링 그리드(수강생/Q&A/셔틀/외출) 추가. curView 홈/상세 2뷰 전환, 기존 데이터·헬퍼 재사용] -->
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
@@ -151,6 +159,29 @@
       .shut-grid{ grid-template-columns:repeat(2,1fr); }
       .shut-cell.tot{ grid-column:1 / -1; }
     }
+    /* [vD] 과정 블록형 홈 (운영부 모바일 방식) */
+    .cblock{ background:#fff; border:1px solid #eef1f6; border-radius:18px; padding:15px 16px 16px; margin-bottom:12px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 26px -18px rgba(16,24,40,.22); cursor:pointer; position:relative; transition:transform .12s ease; }
+    .cblock:active{ transform:scale(.985); }
+    .cblock .cb-top{ display:flex; align-items:center; gap:8px; margin-bottom:9px; }
+    .cblock .cb-room{ display:inline-flex; align-items:center; gap:5px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:900; font-size:11.5px; padding:5px 10px; border-radius:999px; }
+    .cblock .cb-live{ margin-left:auto; display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:900; color:#16a34a; }
+    .cblock .cb-live .dot{ width:7px; height:7px; border-radius:50%; background:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.18); }
+    .cblock .cb-name{ font-size:19px; font-weight:950; color:#0f172a; line-height:1.28; word-break:keep-all; margin-bottom:8px; padding-right:20px; }
+    .cblock .cb-meta{ display:flex; flex-wrap:wrap; gap:5px 14px; font-size:12.5px; color:#64748b; font-weight:800; }
+    .cblock .cb-meta i{ color:#b8c2d4; margin-right:5px; }
+    .cblock .cb-badges{ display:flex; gap:7px; margin-top:12px; flex-wrap:wrap; }
+    .cbadge{ display:inline-flex; align-items:center; gap:5px; padding:6px 10px; border-radius:10px; font-size:12px; font-weight:900; background:#f6f9ff; border:1px solid #e4ebf6; color:#334155; }
+    .cbadge i{ font-size:11px; opacity:.8; }
+    .cbadge.hot{ background:#fff1f2; border-color:#fecdd3; color:#e11d48; }
+    .cblock .cb-arrow{ position:absolute; right:15px; top:16px; color:#cbd5e1; font-size:14px; }
+    .dback{ display:inline-flex; align-items:center; gap:7px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.22); color:#fff; font-weight:900; font-size:13px; padding:7px 13px 7px 11px; border-radius:999px; cursor:pointer; }
+    .dback:active{ transform:scale(.97); }
+    .mon-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .mon-cell{ text-align:center; background:#f8fafc; border:1px solid #eef1f6; border-radius:13px; padding:12px 4px; }
+    .mon-cell .mk{ font-size:10.5px; font-weight:800; color:#64748b; margin-bottom:5px; word-break:keep-all; }
+    .mon-cell .mv{ font-size:21px; font-weight:950; color:#1e293b; }
+    .mon-cell.hot{ background:#fff1f2; border-color:#fecdd3; } .mon-cell.hot .mv{ color:#e11d48; }
+    @media(max-width:380px){ .mon-grid{ grid-template-columns:repeat(2,1fr); } }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -193,73 +224,89 @@
 </script>
 
 <div class="wrap">
-  <div class="mhead">
-    <div class="row1">
-      <div class="ttl"><div class="mk"><i class="fa-solid fa-chalkboard-user"></i></div>강의 플랫폼</div>
-      <div class="clk" id="clk"></div>
+  <!-- ===== 홈: 진행 중인 과정 블록 목록 ===== -->
+  <div id="homeView">
+    <div class="mhead">
+      <div class="row1">
+        <div class="ttl"><div class="mk"><i class="fa-solid fa-chalkboard-user"></i></div>강의 플랫폼</div>
+        <div class="clk" id="clk"></div>
+      </div>
+      <div class="hero" style="margin-top:12px;">
+        <div class="hero-course" style="font-size:17px;">진행 중인 과정을 선택하세요</div>
+        <div class="hero-meta"><span class="hero-pill"><i class="fa-solid fa-layer-group"></i><span id="hTotal">0개 과정</span></span></div>
+      </div>
     </div>
-    <div class="hero" id="heroBox">
-      <div class="hero-room" id="hRoom">ROOM</div>
-      <div class="hero-course" id="hCourse">강의실을 선택해 주세요</div>
-      <div class="hero-meta">
-        <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="hCount">0명</span></span>
-        <span class="hero-pill"><i class="fa-solid fa-user-tie"></i><span id="hProf">담임교수 -</span></span>
+    <div class="sec">
+      <div class="sec-ttl"><i class="fa-solid fa-graduation-cap"></i> 운영 중인 과정 <span style="color:#c4cede;font-weight:800;">· 탭하면 상세</span></div>
+      <div id="courseList"><div class="empty">불러오는 중...</div></div>
+    </div>
+  </div>
+
+  <!-- ===== 상세: 선택 과정 모니터링 ===== -->
+  <div id="detailView" style="display:none;">
+    <div class="mhead">
+      <div class="row1">
+        <div class="dback" onclick="goHome()"><i class="fa-solid fa-chevron-left"></i> 과정 목록</div>
+        <div class="clk" id="clk2"></div>
+      </div>
+      <div class="hero" id="heroBox">
+        <div class="hero-room" id="hRoom">ROOM</div>
+        <div class="hero-course" id="hCourse">-</div>
+        <div class="hero-meta">
+          <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="hCount">0명</span></span>
+          <span class="hero-pill"><i class="fa-solid fa-user-tie"></i><span id="hProf">담임교수 -</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="card">
+        <h3><i class="fa-solid fa-wave-square"></i> 실시간 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 모니터링</span></h3>
+        <div class="mon-grid" id="dMon"></div>
+      </div>
+      <div class="card">
+        <h3><i class="fa-solid fa-circle-info"></i> 과정 정보</h3>
+        <div class="cname-big" id="dCourse">-</div>
+        <div class="info-grid" id="dInfo"></div>
+        <div id="dLeaderWrap"></div>
+      </div>
+      <div class="card">
+        <h3><i class="fa-solid fa-bullhorn"></i> 운영부 공지</h3>
+        <div id="dNotice"><div class="notice-empty">받은 공지가 없습니다.</div></div>
+      </div>
+      <div class="card">
+        <h3><i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 실시간</span></h3>
+        <div class="shut-grid" id="dShuttle"></div>
+      </div>
+      <div class="card">
+        <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
+        <div id="dOuting"></div>
+      </div>
+      <div class="card">
+        <h3><i class="fa-solid fa-map-location-dot"></i> 금주 공통 교육장소 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 전 과정 공통</span></h3>
+        <div class="edu-loc-grid">
+          <div class="edu-loc" id="dEduIntegrity"><div class="el-k"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</div><div class="el-v">미정</div></div>
+          <div class="edu-loc" id="dEduUnion"><div class="el-k"><i class="fa-solid fa-handshake"></i> 노조교육</div><div class="el-v">미정</div></div>
+        </div>
       </div>
     </div>
   </div>
-
-  <div class="sec">
-    <div class="sec-ttl"><i class="fa-solid fa-door-closed"></i> 강의실 선택</div>
-    <div class="room-pick" id="roomPick"><div class="empty" style="padding:10px 0;">불러오는 중...</div></div>
-  </div>
-
-  <div class="sec" id="detailSec" style="display:none;">
-    <div class="card">
-      <h3><i class="fa-solid fa-circle-info"></i> 과정 정보</h3>
-      <div class="room-badge" id="dRoomBadge">ROOM</div>
-      <div class="cname-big" id="dCourse">-</div>
-      <div class="info-grid" id="dInfo"></div>
-      <div id="dLeaderWrap"></div>
-    </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-bullhorn"></i> 운영부 공지</h3>
-      <div id="dNotice"><div class="notice-empty">받은 공지가 없습니다.</div></div>
-    </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 실시간</span></h3>
-      <div class="shut-grid" id="dShuttle"></div>
-    </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
-      <div id="dOuting"></div>
-    </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-map-location-dot"></i> 금주 공통 교육장소 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 전 과정 공통</span></h3>
-      <div class="edu-loc-grid">
-        <div class="edu-loc" id="dEduIntegrity"><div class="el-k"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</div><div class="el-v">미정</div></div>
-        <div class="edu-loc" id="dEduUnion"><div class="el-k"><i class="fa-solid fa-handshake"></i> 노조교육</div><div class="el-v">미정</div></div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
-<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">강사M vC</div>
+<div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">강사M vD</div>
 
 <script src="config.js?v=b260620c"></script>
 <script>
-/* ========== 강사·교수 모바일 라이트뷰 (강의실 조회 중심) ========== */
+/* ========== 강사 모바일 vD — 과정 블록형 홈 + 과정별 상세 모니터링 (운영부 모바일 방식) ========== */
 var db=firebase.database();
-var DATA={}, curRID='', EDU={};
+var DATA={}, curRID='', EDU={}, curView='home';
 function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n){ return String(n).padStart(2,'0'); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-
 function tickClock(){
   var d=new Date(), days=['일','월','화','수','목','금','토'];
   var hh=d.getHours(), ap=hh<12?'AM':'PM', h12=((hh%12)||12);
-  var el=document.getElementById('clk');
-  if(el) el.innerHTML=(d.getMonth()+1)+'.'+d.getDate()+'('+days[d.getDay()]+') <b>'+h12+':'+pad(d.getMinutes())+'</b> '+ap;
+  var html=(d.getMonth()+1)+'.'+d.getDate()+'('+days[d.getDay()]+') <b>'+h12+':'+pad(d.getMinutes())+'</b> '+ap;
+  ['clk','clk2'].forEach(function(id){ var el=document.getElementById(id); if(el) el.innerHTML=html; });
 }
 setInterval(tickClock,1000); tickClock();
 
@@ -281,6 +328,12 @@ function activeRooms(){
   }
   return out;
 }
+function orderedRooms(){
+  var list=activeRooms(), owned=ownedRooms().filter(function(r){ return DATA[r] && list.indexOf(r)>=0; });
+  if(!owned.length) return list;
+  var others=list.filter(function(r){ return owned.indexOf(r)<0; });
+  return owned.concat(others);
+}
 function studentsOf(room){ return room && room.students ? Object.keys(room.students).map(function(k){return room.students[k];}).filter(function(x){return x&&x.name&&(''+x.name).trim()&&x.name!=='undefined';}) : []; }
 function leaderOf(room){ var L=studentsOf(room).filter(function(s){return s&&s.isLeader===true;})[0]; if(!L) return null; return { name:L.name||'-', no:(L.empNo||L.sabun||L.id||L.studentId||'') }; }
 function shuttleCount(room){
@@ -292,7 +345,7 @@ function shuttleCount(room){
     airport:e.filter(function(r){return r.type==='airport';}).length,
     car:e.filter(function(r){return r.type==='car';}).length };
 }
-/* [vC] 외출·외박(금일) · 교육장소(공통) 조회용 헬퍼 */
+function questionsCount(room){ return room && room.questions ? Object.keys(room.questions).length : 0; }
 function opWindow(){ var dayMs=86400000; var start=Math.floor(Date.now()/dayMs)*dayMs; return [start, start+dayMs]; }
 function shortRoom(v){ v=(''+(v||'')).trim(); if(!v) return '미정'; var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
 function outingsToday(room){
@@ -317,34 +370,62 @@ function applyEduLoc(id, val){
   var v=el.querySelector('.el-v'); if(v) v.textContent=set?shortRoom(val):'미정';
 }
 
-function renderPick(){
-  var el=document.getElementById('roomPick');
-  var owned=ownedRooms().filter(function(r){ return DATA[r]; });
-  var list = owned.length ? owned : activeRooms();
-  if(!list.length){ el.innerHTML='<div class="empty" style="padding:10px 0;">운영 중인 과정이 없습니다.</div>'; document.getElementById('detailSec').style.display='none'; return; }
-  if(!curRID || list.indexOf(curRID)<0) curRID=list[0];
+/* ===== 홈: 과정 블록 목록 ===== */
+function renderHome(){
+  var list=orderedRooms();
+  var t=document.getElementById('hTotal'); if(t) t.textContent=list.length+'개 과정';
+  var el=document.getElementById('courseList'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
   el.innerHTML=list.map(function(rid){
-    var s=(DATA[rid]&&DATA[rid].settings)||{};
-    return '<div class="rchip '+(rid===curRID?'on':'')+'" onclick="pickRoom(\''+rid+'\')">#'+rid+'<span class="cn">'+h((s.courseName||'').slice(0,8))+'</span></div>';
+    var room=DATA[rid]||{}, s=room.settings||{}, st=room.status||{};
+    var prof=((st.professorName||'').trim())||'-';
+    var cnt=studentsOf(room).length, q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;
+    return '<div class="cblock" onclick="openCourse(\''+rid+'\')">'
+      +'<div class="cb-top"><span class="cb-room"><i class="fa-solid fa-door-closed"></i> #'+rid+'</span>'
+        +'<span class="cb-live"><span class="dot"></span> 진행중</span></div>'
+      +'<div class="cb-name">'+h(s.courseName||'과정명 미설정')+'</div>'
+      +'<div class="cb-meta">'
+        +'<span><i class="fa-solid fa-calendar-days"></i>'+h(s.period||'-')+'</span>'
+        +'<span><i class="fa-solid fa-users"></i>'+cnt+'명</span>'
+        +'<span><i class="fa-solid fa-user-tie"></i>'+h(prof)+'</span>'
+      +'</div>'
+      +'<div class="cb-badges">'
+        +'<span class="cbadge'+(q>0?' hot':'')+'"><i class="fa-solid fa-comment-dots"></i> 질문 '+q+'</span>'
+        +'<span class="cbadge"><i class="fa-solid fa-bus"></i> 셔틀 '+sh.total+'</span>'
+        +'<span class="cbadge'+(ou>0?' hot':'')+'"><i class="fa-solid fa-user-clock"></i> 외출 '+ou+'</span>'
+      +'</div>'
+      +'<i class="fa-solid fa-chevron-right cb-arrow"></i></div>';
   }).join('');
+}
+function openCourse(rid){ curRID=rid; curView='detail';
+  document.getElementById('homeView').style.display='none';
+  document.getElementById('detailView').style.display='block';
+  try{ window.scrollTo(0,0); }catch(e){}
   renderDetail();
 }
-function pickRoom(rid){ curRID=rid; renderPick(); }
+function goHome(){ curView='home';
+  document.getElementById('detailView').style.display='none';
+  document.getElementById('homeView').style.display='block';
+  try{ window.scrollTo(0,0); }catch(e){}
+  renderHome();
+}
 
+/* ===== 상세: 과정 모니터링 ===== */
 function renderDetail(){
-  var sec=document.getElementById('detailSec');
-  var room=DATA[curRID]; if(!room){ sec.style.display='none'; return; }
-  sec.style.display='block';
+  var room=DATA[curRID]; if(!room){ goHome(); return; }
   var s=room.settings||{}, st=room.status||{};
   var prof=((st.professorName||'').trim())?(st.professorName.trim()+' 교수'):'-';
   var count=studentsOf(room).length;
-  var hRoom=document.getElementById('hRoom'), hCourse=document.getElementById('hCourse'), hCount=document.getElementById('hCount'), hProf=document.getElementById('hProf');
-  if(hRoom) hRoom.textContent='ROOM #'+curRID;
-  if(hCourse) hCourse.textContent=s.courseName||'과정명 미설정';
-  if(hCount) hCount.textContent=count+'명';
-  if(hProf) hProf.textContent='담임교수 '+prof;
-  document.getElementById('dRoomBadge').textContent='ROOM #'+curRID;
-  document.getElementById('dCourse').textContent=s.courseName||'-';
+  var setT=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
+  setT('hRoom','ROOM #'+curRID); setT('hCourse',s.courseName||'과정명 미설정');
+  setT('hCount',count+'명'); setT('hProf','담임교수 '+prof);
+  var q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;
+  document.getElementById('dMon').innerHTML=
+     '<div class="mon-cell"><div class="mk">수강생</div><div class="mv">'+count+'</div></div>'
+    +'<div class="mon-cell'+(q>0?' hot':'')+'"><div class="mk">Q&amp;A 질문</div><div class="mv">'+q+'</div></div>'
+    +'<div class="mon-cell"><div class="mk">셔틀신청</div><div class="mv">'+sh.total+'</div></div>'
+    +'<div class="mon-cell'+(ou>0?' hot':'')+'"><div class="mk">외출·외박</div><div class="mv">'+ou+'</div></div>';
+  setT('dCourse',s.courseName||'-');
   document.getElementById('dInfo').innerHTML=
      '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:13px;">'+h(s.period||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:13px;">'+h(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
@@ -354,19 +435,14 @@ function renderDetail(){
   document.getElementById('dLeaderWrap').innerHTML = L
     ? '<div class="leader-box on"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">'+h(L.name)+(L.no?(' <small>('+h(L.no)+')</small>'):'')+'</div></div>'
     : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">지정된 학생장 없음</div></div>';
-
   var notice=(room.coordNotice||'').trim();
   document.getElementById('dNotice').innerHTML = notice ? '<div class="notice-box">'+h(notice)+'</div>' : '<div class="notice-empty">받은 공지가 없습니다.</div>';
-
-  var sh=shuttleCount(room);
   document.getElementById('dShuttle').innerHTML=
      '<div class="shut-cell tot"><div class="sk" style="color:#64748b;">총 신청</div><div class="sv">'+sh.total+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#ef4444;">오송</div><div class="sv">'+sh.osong+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#2563eb;">터미널</div><div class="sv">'+sh.terminal+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#10b981;">공항</div><div class="sv">'+sh.airport+'</div></div>'
     +'<div class="shut-cell"><div class="sk" style="color:#64748b;">자차</div><div class="sv">'+sh.car+'</div></div>';
-
-  // [vC] 외출·외박 (금일) — 조회
   var outs=outingsToday(room);
   var dOut=document.getElementById('dOuting');
   if(dOut){
@@ -388,13 +464,16 @@ function renderDetail(){
         }).join('')+'</tbody></table></div>';
     }
   }
-  // [vC] 노조·청렴 교육장소 (공통) — 조회
   applyEduLoc('dEduIntegrity', EDU.integrity);
   applyEduLoc('dEduUnion', EDU.union);
 }
 
-db.ref('courses').on('value', function(snap){ DATA=snap.val()||{}; renderPick(); if(window.kacBootDone) kacBootDone(); });
-db.ref('system/eduLocations').on('value', function(snap){ EDU=snap.val()||{}; if(curRID && DATA[curRID]) renderDetail(); });
+db.ref('courses').on('value', function(snap){ DATA=snap.val()||{};
+  if(curView==='detail'){ if(DATA[curRID]) renderDetail(); else goHome(); }
+  else renderHome();
+  if(window.kacBootDone) kacBootDone();
+});
+db.ref('system/eduLocations').on('value', function(snap){ EDU=snap.val()||{}; if(curView==='detail'&&DATA[curRID]) renderDetail(); });
 </script>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
