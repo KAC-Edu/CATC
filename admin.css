@@ -6525,8 +6525,6 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 /* [I33.4] ZOOM 안내판 세그먼트는 온라인(Zoom) 과정에서만 노출 (대면 과정에 안 뜨게) */
 body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 
-/* [J56] Q&A 모달 질문 텍스트 — 교육생 입력 줄바꿈·띄어쓰기 보존 */
-#m-text{ white-space:pre-wrap; word-break:break-word; }
 
 /* [J58] 외출/외박 비활성 과정: 오늘의 운영 행을 '본 과정 해당없음'으로 표기 */
 .ops-row.feat-off{ opacity:.6; pointer-events:none; }
