@@ -6513,3 +6513,11 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 }
 #courseSmartRemote.hex-remote-v2.is-dragging .hex-key{ filter:none !important; transition:none !important; }
 #courseSmartRemote.hex-remote-v2.is-dragging .hex-center{ transition:none !important; box-shadow:none !important; }
+
+/* [I33.3] 히어로 정보 알약 통합 세그먼트 — ZOOM 안내판(청록)·수료 기념사진(금색) */
+.info-splitpill .isp-board{ background:linear-gradient(135deg,#0d9488,#0f766e); color:#fff; }
+.info-splitpill .isp-board i, .info-splitpill .isp-board b{ color:#fff; }
+.info-splitpill .isp-board:hover{ filter:brightness(1.08); }
+/* 수료사진 세그먼트: 알약 안에서 라운딩/펄스/이동효과 정리(세그먼트로 자연스럽게) */
+.info-splitpill #dashGradBtn{ border-radius:0 !important; animation:none !important; }
+.info-splitpill #dashGradBtn:hover{ transform:none !important; filter:brightness(1.07); }
