@@ -7130,7 +7130,7 @@ resetShuttleRequests: function() {
                       +_disp.map((s,i)=>'<tr>'
                           +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#94a3b8;">'+(_arrivedSet.has(String(s.name||'').trim()) ? '<span title="입교 완료" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;background:#10b981;color:#fff;font-size:12px;"><i class="fa-solid fa-check"></i></span>' : (s.seq||i+1))+'</td>'
                           +'<td style="padding:7px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#64748b;white-space:nowrap;">'+esc(s.empNo||'-')+'</td>'
-                          +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#475569;word-break:keep-all;">'+(s._qr&&!s.dept ? '<span style="color:#10b981;font-weight:700;">QR 입교(명단 외)</span>' : esc(s.dept||'-'))+'</td>'
+                          +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;color:#475569;word-break:keep-all;">'+(s._qr ? '<span style="color:#10b981;font-weight:700;">QR 입교(명단 외)</span>' : esc(s.dept||'-'))+'</td>'
                           +'<td style="padding:7px 8px;border-bottom:1px solid #f1f5f9;font-weight:800;color:#0f172a;">'+esc(s.name||'-')+'</td>'
                       +'</tr>').join('')
                       +'</tbody></table>';
