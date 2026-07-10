@@ -6521,3 +6521,6 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 /* 수료사진 세그먼트: 알약 안에서 라운딩/펄스/이동효과 정리(세그먼트로 자연스럽게) */
 .info-splitpill #dashGradBtn{ border-radius:0 !important; animation:none !important; }
 .info-splitpill #dashGradBtn:hover{ transform:none !important; filter:brightness(1.07); }
+
+/* [I33.4] ZOOM 안내판 세그먼트는 온라인(Zoom) 과정에서만 노출 (대면 과정에 안 뜨게) */
+body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
