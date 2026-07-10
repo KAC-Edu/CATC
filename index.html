@@ -3017,7 +3017,7 @@ let _currentPopupKey = null;
 
 function lectureBoardNoticeKey(notice) {
     if (!notice) return null;
-    const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
+    const html = (notice && typeof notice === 'object') ? (notice.html || '') : String(notice || '');
     if (!_lectureBoardHasText(html)) return null;
     const version = (typeof notice === 'object' && notice.updatedAt) ? notice.updatedAt : _simpleLectureHash(html);
     return 'kac_board_notice_done_' + currentRoom + '_' + version;
@@ -3058,7 +3058,7 @@ function normalizeLectureBoardHtml(html) {
 }
 
 function handleLectureBoardUpdate(notice) {
-    const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
+    const html = (notice && typeof notice === 'object') ? (notice.html || '') : String(notice || '');
     if (!_lectureBoardHasText(html)) {
         activeLectureBoardNotice = null;
         const overlay = document.getElementById('lectureBoardOverlay');
@@ -3076,7 +3076,7 @@ function handleLectureBoardUpdate(notice) {
 }
 
 function _showOrgNoticePopup(notice, prefix){
-    const html = typeof notice === 'object' ? (notice.html || '') : String(notice || '');
+    const html = (notice && typeof notice === 'object') ? (notice.html || '') : String(notice || '');
     if(!_lectureBoardHasText(html)) return;
     const version = (typeof notice === 'object' && notice.updatedAt) ? notice.updatedAt : _simpleLectureHash(html);
     const key = 'kac_' + prefix + '_done_' + currentRoom + '_' + version;
