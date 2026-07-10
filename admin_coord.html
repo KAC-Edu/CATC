@@ -1806,6 +1806,7 @@ body.cpop-locked{ overflow:hidden !important; }
 </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <style id="kacWkndCss">.flatpickr-day.kac-wknd:not(.selected):not(.inRange):not(.startRange):not(.endRange):not(.flatpickr-disabled){background:#eef2f7 !important;}.flatpickr-day.kac-wknd:not(.selected):not(.inRange){color:#64748b;}</style>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -6511,7 +6512,7 @@ const annualPlanMgrCoord = {
         var fmt = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
         if(el._fp){ el._fp.open(); return; }
         if(typeof flatpickr==='undefined'){ return; }
-        el._fp = flatpickr(el, { mode:'range', locale:'ko', dateFormat:'Y-m-d', disableMobile:true,
+        el._fp = flatpickr(el, { mode:'range', showMonths:2, onDayCreate:function(a,b,c,de){try{var g=de.dateObj.getDay();if(g===0||g===6)de.classList.add('kac-wknd');}catch(e){}},  locale:'ko', dateFormat:'Y-m-d', disableMobile:true,
             defaultDate: (c.startDate && c.endDate) ? [c.startDate, c.endDate] : null,
             onClose: function(dates){ if(dates && dates.length === 2){ c.startDate = fmt(dates[0]); c.endDate = fmt(dates[1]); c.period = c.startDate+' ~ '+c.endDate; c.weekKey = self._getMondayOf(c.startDate); self.renderEditor(); } }
         });

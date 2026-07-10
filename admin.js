@@ -12501,7 +12501,7 @@ annualPlanMgr._openPeriodPicker = function(idx, el){
     var fmt = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
     if(el._fp){ el._fp.open(); return; }
     el._fp = flatpickr(el, {
-        mode:'range', locale:'ko', dateFormat:'Y-m-d', disableMobile:'true',
+        mode:'range', showMonths:2, onDayCreate:function(a,b,c,de){try{var g=de.dateObj.getDay();if(g===0||g===6)de.classList.add('kac-wknd');}catch(e){}},  locale:'ko', dateFormat:'Y-m-d', disableMobile:'true',
         defaultDate: (c.startDate && c.endDate) ? [c.startDate, c.endDate] : null,
         onClose: function(dates){
             if(dates && dates.length === 2){
@@ -12739,7 +12739,7 @@ annualPlanMgr.addRow = function() {
     document.getElementById('ca-err').innerText = '';
     var pe = document.getElementById('ca-period');
     if (pe) {
-        if (!pe._flatpickr) { flatpickr(pe, { mode:'range', locale:'ko', dateFormat:'Y-m-d', disableMobile:'true' }); }
+        if (!pe._flatpickr) { flatpickr(pe, { mode:'range', showMonths:2, onDayCreate:function(a,b,c,de){try{var g=de.dateObj.getDay();if(g===0||g===6)de.classList.add('kac-wknd');}catch(e){}},  locale:'ko', dateFormat:'Y-m-d', disableMobile:'true' }); }
         if (pe._flatpickr) pe._flatpickr.clear();
         pe.value = '';
     }
@@ -14084,7 +14084,7 @@ ui.openFieldEdit = async function(field){
       try{ var ex=document.getElementById('fe-period')._flatpickr; if(ex) ex.destroy(); }catch(e){}
       var pd=get('dashPeriod'); var defaults=[];
       if(pd.indexOf('~')>=0){ var pp=pd.split('~'); var a=(pp[0]||'').trim(), b=(pp[1]||'').trim(); if(a)defaults.push(a); if(b)defaults.push(b); }
-      flatpickr('#fe-period', { mode:'range', locale:'ko', dateFormat:'Y-m-d', showMonths:2, inline:true, closeOnSelect:false, disableMobile:'true', defaultDate: defaults.length?defaults:null });
+      flatpickr('#fe-period', { mode:'range', showMonths:2, onDayCreate:function(a,b,c,de){try{var g=de.dateObj.getDay();if(g===0||g===6)de.classList.add('kac-wknd');}catch(e){}},  locale:'ko', dateFormat:'Y-m-d', showMonths:2, inline:true, closeOnSelect:false, disableMobile:'true', defaultDate: defaults.length?defaults:null });
     }, 60);
     return;
   }
