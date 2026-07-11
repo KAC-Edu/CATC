@@ -4981,8 +4981,10 @@ renderQaList: function(f) {
              · 날짜 구분(머리말/아코디언)을 아예 없애고
              · 전 기간 질문을 하나의 목록으로 쭉 나열하고
              · 추천(좋아요) 많은 순으로 위에 올린다.  (게시판처럼)
+       단, '공통질문'은 특정 강사를 지목한 게 아니므로 게시판 모드에서 제외한다.
        평소(전체/공통질문)에는 기존대로 오늘은 펼침 + 지난 날짜는 접힘을 유지한다.          */
-    const isSubjectPicked = !!(subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all');
+    const _pick = subjectMgr.selectedFilter;
+    const isSubjectPicked = !!(_pick && _pick !== 'all' && _pick !== '공통질문' && _pick !== '일반');
     const dateChip = (ts) => {
         const d = new Date(ts);
         const days = ['일','월','화','수','목','금','토'];
