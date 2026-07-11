@@ -6485,10 +6485,15 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 
 
 /* ═══ [I13] 질문사항 보기 버튼 — 질문 도착 시 강조 ═══ */
-/* [I46] 질문 건수 배지 — 버튼 '우측 상단 모서리'에 붙여 새 질문을 즉시 인지 */
-.nh-all.nh-qa{ position:relative; }
-.nh-qa-badge{ position:absolute; top:-9px; right:-7px; z-index:2; display:inline-flex; align-items:center; justify-content:center; min-width:30px; padding:4px 10px; border-radius:999px; background:#ef4444; color:#fff; font-size:12.5px; font-weight:900; line-height:1; box-shadow:0 4px 12px rgba(239,68,68,.45); border:2px solid #fff; animation:nhQaPulse 1.6s ease-in-out infinite; }
+/* [I46] 질문 건수 배지 — 질문사항 행의 '우측 상단 모서리'에 붙여 새 질문을 즉시 인지 */
+.ops-row{ position:relative; }
+.nh-qa-badge{ position:absolute; top:-8px; right:-6px; z-index:2; display:inline-flex; align-items:center; justify-content:center; min-width:30px; padding:4px 10px; border-radius:999px; background:#ef4444; color:#fff; font-size:12.5px; font-weight:900; line-height:1; box-shadow:0 4px 12px rgba(239,68,68,.45); border:2px solid #fff; animation:nhQaPulse 1.6s ease-in-out infinite; }
 @keyframes nhQaPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.09); } }
+.ops-row.has-q{ border-color:#fecaca; background:#fff7f7; }
+
+/* [I46] 좌우 카드 정렬 — 두 카드가 같은 높이로 맞춰지고 내용은 위에서부터 채움 */
+.dash-premium-grid{ align-items:stretch; }
+.dash-premium-grid > *{ display:flex; flex-direction:column; }
 
 /* [I46] 차량 소요조사 결과 (우측 블록으로 이동) */
 .nh-shuttle{ border:1px solid #e2e8f0; border-radius:13px; padding:12px 14px; background:#f8fafc; cursor:pointer; transition:border-color .12s, background .12s; }
