@@ -3078,14 +3078,17 @@ function setupAcc(btn){
       var qaRow=document.querySelector('.ops-row[data-key="qa"]'); if(qaRow) qaRow.classList.toggle('dash-zero', !(qa>0));
       var tbRow=document.querySelector('.ops-row[data-key="tablet"]'); if(tbRow) tbRow.classList.toggle('dash-zero', !(tab>0));
     }catch(e){}
-    // [I13] 질문사항 보기 버튼 — 질문 수 배지 + 강조 상태 갱신
+    // [J74] 질문사항 버튼의 빨간 배지 = '전체 질문 수'가 아니라 '아직 안 본 질문 수'.
+    //  강사가 Q&A 화면을 열면 0이 되어 사라지고, 새 질문이 오면 다시 뜬다.
+    //  (admin.js의 ui.qaUnreadCount() 사용. 아직 로드 전이면 전체 수로 대체)
     try{
       var qaBtn=document.getElementById('nhQaBtn'), qaBadge=document.getElementById('nhQaBadge');
       if(qaBtn && qaBadge){
-        var q=(qa==null?0:qa);
-        qaBadge.textContent=q+'건';
-        qaBadge.style.display=q>0?'inline-flex':'none';
-        qaBtn.classList.toggle('has-q', q>0);
+        var u=null; try{ u=(typeof window.kacQaUnread==='function') ? window.kacQaUnread() : null; }catch(e){}
+        if(u===null||u===undefined) u=(qa==null?0:qa);
+        qaBadge.textContent=u+'건';
+        qaBadge.style.display=u>0?'inline-flex':'none';
+        qaBtn.classList.toggle('has-q', u>0);
       }
     }catch(e){}
     // 대시보드(과정현황)가 화면에 보일 때만 노출
