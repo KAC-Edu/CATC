@@ -915,11 +915,18 @@ forceEnterRoom: async function(room) {
         if (state.room !== cleanRoom) return; 
         try {
             const rawData = snap.val() || {};
-            state.qaData = rawData; 
-            ui.renderQaList(); 
-            if (document.getElementById('view-dashboard').style.display !== 'none') {
-                ui.updateQaCountBadge(); 
-            }
+            state.qaData = rawData;
+            ui.renderQaList();
+            // [J74] 강사가 지금 Q&A 화면을 보고 있으면 → 새 질문도 즉시 '읽음'(배지 안 뜸)
+            //  다른 화면(과정현황 등)에 있으면 → 미확인으로 남아 빨간 배지가 뜬다
+            try {
+                const _qv = document.getElementById('view-qa');
+                if (_qv && _qv.style.display !== 'none' && _qv.offsetParent !== null) {
+                    ui.markQaAllRead();
+                    return;
+                }
+            } catch(e){}
+            ui.updateQaCountBadge();
         } catch (e) {
             console.error("Q&A 실시간 엔진 오류:", e);
         }
@@ -3045,20 +3052,53 @@ _recalcDashShuttle: function(room) {
     if (totalEl) { totalEl.innerText = m.total + "명"; totalEl.style.color = "#003366"; }
 },
 
+/* [J74] 질문 '읽음' 관리 ─────────────────────────────────────────────
+   빨간 배지는 '전체 질문 수'가 아니라 '아직 안 본 질문 수(미확인)'를 표시한다.
+   - 강사가 질문사항(Q&A) 화면을 열면 → 현재 질문 전부를 '읽음' 처리 → 배지 사라짐
+   - 그 뒤 새 질문이 올라오면 → 그 질문만 미확인이 되어 배지가 다시 나타남
+   읽음 기록은 방(room)별로 localStorage에 질문 ID 목록으로 저장(브라우저/PC별). */
+_qaSeenKey: function(){ return 'kac_qa_seen_' + (state.room || '_'); },
+_qaSeenIds: function(){
+    try {
+        const raw = localStorage.getItem(this._qaSeenKey());
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+    } catch(e){ return []; }
+},
+// 현재 살아있는(삭제 안 된) 질문 ID 목록
+_qaActiveIds: function(){
+    const d = state.qaData || {};
+    return Object.keys(d).filter(k => d[k] && d[k].status !== 'delete');
+},
+// 아직 안 본 질문 수
+qaUnreadCount: function(){
+    const seen = this._qaSeenIds();
+    return this._qaActiveIds().filter(id => seen.indexOf(id) === -1).length;
+},
+// 질문사항 화면을 열었을 때 호출 → 지금 있는 질문을 모두 '읽음'으로 기록
+markQaAllRead: function(){
+    try {
+        // 삭제된 질문 ID가 계속 쌓이지 않도록, 현재 살아있는 질문 ID만 저장
+        localStorage.setItem(this._qaSeenKey(), JSON.stringify(this._qaActiveIds()));
+    } catch(e){}
+    try { this.updateQaCountBadge(); } catch(e){}
+},
+
 // 질문 배지만 별도로 업데이트하는 헬퍼 함수 (필요시 호출)
 updateQaCountBadge: function() {
     if (state.qaData) {
-        const count = Object.values(state.qaData).filter(q => q && q.status !== 'delete').length;
+        const count = this._qaActiveIds().length;   // 전체 질문 수(행 오른쪽 'N건' 숫자)
+        const unread = this.qaUnreadCount();        // 미확인 질문 수(빨간 배지)
         const el = document.getElementById('dashQaCount');
         if (el) el.innerText = count;
-        // [I46] '질문사항 보기' 버튼 우측 모서리에 질문 건수 배지 — 1건 이상이면 빨강 강조
+        // [J74] 빨간 배지 = '미확인' 질문만. Q&A 화면을 열면 0이 되어 사라진다.
         const b = document.getElementById('nhQaBadge');
         const btn = document.getElementById('nhQaBtn');
         if (b) {
-            if (count > 0) { b.style.display = 'inline-flex'; b.innerText = count + '건'; }
+            if (unread > 0) { b.style.display = 'inline-flex'; b.innerText = unread + '건'; }
             else { b.style.display = 'none'; }
         }
-        if (btn) btn.classList.toggle('has-q', count > 0);
+        if (btn) btn.classList.toggle('has-q', unread > 0);
     }
 },
 
@@ -4495,6 +4535,9 @@ openQrModal: function() {
     },
 
 setMode: function(mode) {
+        // [J74] 질문사항(Q&A) 화면을 열면 → 지금 있는 질문을 모두 '읽음' → 빨간 배지 사라짐
+        //  (다음에 새 질문이 올라오면 그 질문만 미확인이 되어 배지가 다시 뜬다)
+        if (mode === 'qa') { try { setTimeout(() => ui.markQaAllRead(), 0); } catch(e){} }
         // [U턴 버튼] 과정(방)에 들어가 있고 현황판/홈이 아닐 때만 표시
         try { document.body.classList.toggle('in-course', !!state.room && mode !== 'waiting' && mode !== 'home' && mode !== 'prof-presentation'); } catch(e){}
         // 마이크 모니터링 버튼도 in-course 상태에 맞춰 표시/숨김 갱신 (현황판에선 숨김)
@@ -15987,6 +16030,8 @@ try { window.kacShuttleMerge = kacShuttleMerge; } catch(e){}
    undefined라 훅이 설치되지 않던 문제. 아래 노출로 복구(각 항목 try/catch로 안전). */
 try { window.ui = ui; } catch(e){}
 try { window.state = state; } catch(e){}
+/* [J74] admin.html 요약바 스크립트가 빨간 배지를 '미확인 질문 수'로 그릴 수 있도록 노출 */
+try { window.kacQaUnread = function(){ try { return ui.qaUnreadCount(); } catch(e){ return null; } }; } catch(e){}
 try { window.dataMgr = dataMgr; } catch(e){}
 try { window.guideMgr = guideMgr; } catch(e){}
 
