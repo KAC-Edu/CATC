@@ -9832,22 +9832,25 @@ init: function() {
        #pdfWrapper 가 position:relative 이므로 그 안에 절대배치로 얹는다.            */
     _loadingOn: function(msg) {
         try {
-            const wrap = document.getElementById('pdfWrapper');
-            if (!wrap) return;
+            // [J79-2] 현황판의 '실시간 데이터 동기화'(#homeSyncBadge)와 같은 크기·형태의 전체화면 오버레이.
+            //  PDF 영역 안에만 넣으면 작아서 눈에 잘 안 띄었다 → 화면 전체를 덮고 크게 보여준다.
             let el = document.getElementById('guideLoading');
             if (!el) {
                 el = document.createElement('div');
                 el.id = 'guideLoading';
-                el.style.cssText = 'position:absolute; inset:0; z-index:30; display:flex; flex-direction:column;'
-                    + 'align-items:center; justify-content:center; gap:16px; border-radius:12px;'
-                    + 'background:linear-gradient(180deg,#f8fbff,#eef4ff); border:1px solid #dbeafe;'
-                    + 'box-shadow:0 4px 20px rgba(0,51,102,0.12); min-height:420px;';
+                el.style.cssText = 'position:fixed; inset:0; z-index:1200; display:flex;'
+                    + 'align-items:center; justify-content:center;'
+                    + 'background:rgba(226,236,250,.35); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px);';
                 el.innerHTML =
-                    '<div style="width:54px; height:54px; border:5px solid #dbeafe; border-top-color:#2563eb;'
-                  + ' border-radius:50%; animation:guideSpin .8s linear infinite;"></div>'
-                  + '<div style="font-size:17px; font-weight:900; color:#1e3a8a;">📘 입교안내를 불러오는 중입니다</div>'
-                  + '<div id="guideLoadingSub" style="font-size:13px; font-weight:700; color:#64748b;">잠시만 기다려 주세요…</div>';
-                wrap.appendChild(el);
+                    '<div style="display:inline-flex; align-items:center; gap:16px; padding:20px 40px; border-radius:999px;'
+                  + ' background:#fff; border:1px solid #dbeafe; color:#2563eb; font-size:26px; font-weight:800;'
+                  + ' box-shadow:0 16px 44px rgba(37,99,235,.24);">'
+                  + '<span style="display:inline-block; width:24px; height:24px; border:3px solid rgba(37,99,235,.25);'
+                  + ' border-top-color:#2563eb; border-radius:50%; animation:guideSpin .7s linear infinite;"></span>'
+                  + '<span>📘 입교안내를 불러오는 중입니다</span>'
+                  + '<span id="guideLoadingSub" style="font-size:16px; font-weight:700; color:#94a3b8;">잠시만 기다려 주세요…</span>'
+                  + '</div>';
+                document.body.appendChild(el);
                 if (!document.getElementById('guideSpinKf')) {
                     const st = document.createElement('style');
                     st.id = 'guideSpinKf';
@@ -9868,9 +9871,15 @@ init: function() {
             guideMgr._loadingOn();
             const el = document.getElementById('guideLoading');
             if (el) el.innerHTML =
-                '<div style="font-size:34px;">⚠️</div>'
-              + '<div style="font-size:17px; font-weight:900; color:#b91c1c;">입교안내를 불러오지 못했습니다</div>'
-              + '<div style="font-size:13px; font-weight:700; color:#64748b;">' + (msg || '잠시 후 다시 시도하거나 운영부에 문의해 주세요.') + '</div>';
+                '<div style="display:inline-flex; align-items:center; gap:16px; padding:20px 40px; border-radius:999px;'
+              + ' background:#fff; border:1px solid #fecaca; color:#b91c1c; font-size:24px; font-weight:800;'
+              + ' box-shadow:0 16px 44px rgba(185,28,28,.20);">'
+              + '<span style="font-size:30px;">⚠️</span>'
+              + '<span>입교안내를 불러오지 못했습니다</span>'
+              + '<span style="font-size:15px; font-weight:700; color:#94a3b8;">' + (msg || '잠시 후 다시 시도해 주세요.') + '</span>'
+              + '<button onclick="guideMgr._loadingOff()" style="margin-left:6px; border:none; background:#f1f5f9; color:#475569;'
+              + ' border-radius:999px; width:34px; height:34px; font-size:16px; font-weight:900; cursor:pointer;">✕</button>'
+              + '</div>';
         } catch (e) {}
     },
 
