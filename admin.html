@@ -1712,17 +1712,20 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
     <!-- [I24] 청주 문의면 날씨 예보 스트립 — 시간·기온·강수(mm)만 컴팩트 표시 (Open-Meteo, 데이터 도착 시 표시) -->
     <!-- [I30] 클릭 시 Windy(청주시 문의면) 상세 예보 새 탭으로 열기 -->
-    <div id="homeWxCard" onclick="window.open('https://www.windy.com/?36.505,127.508,11','_blank','noopener')" title="클릭하면 Windy에서 청주 문의면 상세 날씨를 봅니다" style="width:100%; max-width:1100px; background:#fff; border-radius:18px; box-shadow:0 4px 20px rgba(0,51,102,.08); padding:16px 18px 12px; margin:-18px 0 40px; display:none; cursor:pointer;">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-            <i class="fa-solid fa-location-dot" style="color:#ef4444;"></i>
+    <!-- [I43] 날씨: 평상시 가로바(접힘) → 클릭 시 아래로 펼침(현황판이 밀려 내려감). Windy 링크는 별도 버튼(펼침 토글과 분리) -->
+    <div id="homeWxCard" style="width:100%; max-width:1100px; background:#fff; border-radius:18px; box-shadow:0 4px 20px rgba(0,51,102,.08); padding:13px 18px; margin:-18px 0 24px; display:none;">
+        <div onclick="var b=document.getElementById('homeWxBody'),c=document.getElementById('homeWxChevron');var o=(b.style.display!=='none');b.style.display=o?'none':'block';if(c)c.style.transform=o?'':'rotate(180deg)';" title="클릭하면 날씨 예보가 펼쳐집니다" style="display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none;">
+            <i class="fa-solid fa-cloud-sun" style="color:#3b82f6;"></i>
             <b style="font-size:14.5px; color:#0f172a;">청주 문의면 날씨 예보</b>
-            <i class="fa-solid fa-up-right-from-square" style="font-size:11px; color:#3b82f6;" title="Windy 상세보기"></i>
-            <span style="font-size:11px; color:#3b82f6; font-weight:700;">Windy 상세보기</span>
-            <span id="homeWxUpdated" style="font-size:11px; color:#94a3b8; margin-left:auto;"></span>
+            <span id="homeWxUpdated" style="font-size:11px; color:#94a3b8;"></span>
+            <a onclick="event.stopPropagation(); window.open('https://www.windy.com/?36.505,127.508,11','_blank','noopener');" style="font-size:11px; color:#3b82f6; font-weight:800; margin-left:auto; cursor:pointer; white-space:nowrap;"><i class="fa-solid fa-up-right-from-square" style="font-size:10px;"></i> Windy 상세</a>
+            <i id="homeWxChevron" class="fa-solid fa-chevron-down" style="font-size:12px; color:#94a3b8; transition:transform .2s ease; margin-left:6px;"></i>
         </div>
-        <div style="display:flex; align-items:stretch;">
-            <div id="homeWxLabels" style="width:40px; flex:0 0 40px;"></div>
-            <div id="homeWxStrip" style="overflow-x:auto; flex:1;"></div>
+        <div id="homeWxBody" style="display:none; margin-top:12px;">
+            <div style="display:flex; align-items:stretch;">
+                <div id="homeWxLabels" style="width:40px; flex:0 0 40px;"></div>
+                <div id="homeWxStrip" style="overflow-x:auto; flex:1;"></div>
+            </div>
         </div>
     </div>
 </div> <!-- view-home 끝 -->
