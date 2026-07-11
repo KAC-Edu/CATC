@@ -7300,6 +7300,107 @@ function _coordBuildScheduleData(lines, fileName) {
     return { lines: picked, fileName: fileName || '', savedAt: Date.now() };
 }
 
+/* ══ [JDS260711-V1] 교육장소(강의실) 자동 판독 — 교육지원부(dorm_admin)와 동일 로직 ══
+   한글 시간표 머리말의 강의실 표기가 문서마다 제각각(□ 강의실 / ■ 강의실 / ▣ 교육장소,
+   층 표기 유무, 공백 차이)이므로 느슨하게 뽑아 표준 강의실 이름으로 정규화한다.
+   정규화 성공 시에만 연간계획(system/annualPlan)의 roomDetail에 기록 →
+   차주 과정이 방에 배치될 때 courses/{방}/settings/roomDetailName 으로 자동 반영된다.   */
+var COORD_VENUE_CANON = [
+    '하늘관 1층 대강당','하늘관 1층 소회의실',
+    '하늘관 2층 A강의실','하늘관 2층 B강의실','하늘관 2층 C강의실','하늘관 2층 D강의실',
+    '하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실',
+    '국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실',
+    '국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실',
+    '국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 항공정보통신시설 실습실'
+];
+function coordNormalizeVenue(raw) {
+    var s = String(raw == null ? '' : raw).trim();
+    if (!s) return '';
+    s = s.replace(/\(집체교육\)|\(집체\)/g, '').replace(/\s+/g, ' ').trim();
+    if (/온라인|zoom|비대면/i.test(s)) return '온라인(Zoom)';
+    var compact = s.replace(/\s+/g, '');
+    var i, v, vc, m;
+    for (i = 0; i < COORD_VENUE_CANON.length; i++) {
+        if (compact === COORD_VENUE_CANON[i].replace(/\s+/g, '')) return COORD_VENUE_CANON[i];
+    }
+    m = compact.match(/하늘관.*?([A-Ga-g])강의실/);
+    if (m) return '하늘관 2층 ' + m[1].toUpperCase() + '강의실';
+    if (/하늘관.*대강당/.test(compact)) return '하늘관 1층 대강당';
+    if (/하늘관.*소회의실/.test(compact)) return '하늘관 1층 소회의실';
+    if (/하늘관.*회의실/.test(compact)) return '하늘관 3층 회의실';
+    m = compact.match(/국제(?:동|교육동).*?([ABab])강의실/);
+    if (m) return '국제동 1층 ' + m[1].toUpperCase() + '강의실';
+    if (/국제(?:동|교육동).*세미나/.test(compact)) return '국제동 1층 세미나홀';
+    var best = '';
+    for (i = 0; i < COORD_VENUE_CANON.length; i++) {
+        v = COORD_VENUE_CANON[i]; vc = v.replace(/\s+/g, '');
+        if (compact.indexOf(vc) >= 0 && vc.length > best.length) best = v;
+    }
+    return best || '';
+}
+function coordExtractVenue(lines) {
+    try {
+        var LABEL = /(?:교육\s*장소|강의\s*실|장소)\s*[:：]\s*([^␟\n\r]{2,40})/;
+        var i, j, s, cells, m, norm;
+        for (i = 0; i < (lines || []).length; i++) {                 // 1차: 라벨이 붙은 줄
+            s = String(lines[i] == null ? '' : lines[i]);
+            cells = s.indexOf('␟') >= 0 ? s.split('␟') : [s];
+            for (j = 0; j < cells.length; j++) {
+                m = LABEL.exec(cells[j]);
+                if (!m) continue;
+                norm = coordNormalizeVenue(m[1]);
+                if (norm) return { venue: norm, raw: String(m[1]).trim() };
+            }
+        }
+        for (i = 0; i < (lines || []).length; i++) {                 // 2차: 라벨 없이 이름만
+            s = String(lines[i] == null ? '' : lines[i]);
+            cells = s.indexOf('␟') >= 0 ? s.split('␟') : [s];
+            for (j = 0; j < cells.length; j++) {
+                if (cells[j].length > 30) continue;
+                if (!/강의실|대강당|세미나|실습실|회의실/.test(cells[j])) continue;
+                norm = coordNormalizeVenue(cells[j]);
+                if (norm) return { venue: norm, raw: String(cells[j]).trim() };
+            }
+        }
+    } catch (e) { console.warn('[교육장소 판독]', e); }
+    return null;
+}
+var _coordVenueInfo = null;    // 이번 업로드에서 읽어낸 교육장소
+
+/* 읽어낸 교육장소를 연간계획(+열려 있는 방)에 반영 */
+async function coordApplyVenue(courseName, roomOrNull) {
+    try {
+        var vName = _coordVenueInfo && _coordVenueInfo.venue;
+        var cName = String(courseName || '').trim();
+        if (!vName || !cName) return '';
+        var db = firebase.database();
+        var _n = function (x) { return String(x == null ? '' : x).replace(/\s+/g, '').toLowerCase(); };
+        var snap = await db.ref('system/annualPlan').once('value');
+        var plan = snap.val() || {};
+        var updates = {}, applied = '';
+        Object.keys(plan).forEach(function (k) {
+            var row = plan[k];
+            if (!row || row.cancelled) return;
+            if (_n(row.name) !== _n(cName)) return;
+            if (String(row.roomDetail || '').trim() === vName) return;    // 이미 동일 → 생략
+            updates['system/annualPlan/' + k + '/roomDetail'] = vName;
+        });
+        if (Object.keys(updates).length) { await db.ref().update(updates); applied = vName; }
+        // 이미 열려 있는 방이면 즉시 반영 (단, 수동 지정 강의실은 존중)
+        if (roomOrNull && /^[A-Z]$/.test(String(roomOrNull))) {
+            var rs = await db.ref('courses/' + roomOrNull).once('value');
+            var rd = rs.val() || {};
+            var manual = !!(rd.status && rd.status.roomDetailManual);
+            var same = _n(rd.settings && rd.settings.courseName) === _n(cName);
+            if (!manual && same && String((rd.settings || {}).roomDetailName || '').trim() !== vName) {
+                await db.ref('courses/' + roomOrNull + '/settings/roomDetailName').set(vName);
+                applied = vName;
+            }
+        }
+        return applied;
+    } catch (e) { console.warn('[교육장소 반영] 생략:', e); return ''; }
+}
+
 async function coordHandleRosterFile(ev) {
     const file = ev.target.files[0]; if (!file) return;
     ev.target.value = '';
@@ -7313,19 +7414,23 @@ async function coordHandleRosterFile(ev) {
     statusEl.textContent = '판독 중...';
     _coordScheduleData = null;
     _coordScheduleRawLines = [];
+    _coordVenueInfo = null;                       // [JDS260711-V1] 교육장소 초기화
     try {
         let students = [];
         const lowerName = file.name.toLowerCase();
         if (lowerName.endsWith('.hwpx')) {
             const text = await _coordHwpxExtract(file);
             students = _coordParseRoster(text);
-            _coordScheduleData = _coordBuildScheduleData(
-                _coordScheduleRawLines.length ? _coordScheduleRawLines : text.split(/[\n\r]+/), file.name);
+            const _lx = _coordScheduleRawLines.length ? _coordScheduleRawLines : text.split(/[\n\r]+/);
+            _coordScheduleData = _coordBuildScheduleData(_lx, file.name);
+            _coordVenueInfo = coordExtractVenue(_lx);                       // [JDS260711-V1]
         } else if (lowerName.endsWith('.hwp')) {
             const buf = await file.arrayBuffer();
             const text = await _coordHwpExtract(buf);
             students = _coordParseRoster(text);
-            _coordScheduleData = _coordBuildScheduleData(text.split(/[\n\r]+/), file.name);
+            const _lh = text.split(/[\n\r]+/);
+            _coordScheduleData = _coordBuildScheduleData(_lh, file.name);
+            _coordVenueInfo = coordExtractVenue(_lh);                       // [JDS260711-V1]
         } else {
             const buf = await file.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(new Uint8Array(buf)).promise;
@@ -7344,12 +7449,17 @@ async function coordHandleRosterFile(ev) {
             }
             students = _coordParseRoster(rawLines.join('\n'));
             _coordScheduleData = _coordBuildScheduleData(rawLines, file.name);
+            _coordVenueInfo = coordExtractVenue(rawLines);                  // [JDS260711-V1]
         }
         _coordRosterData = students;
+        // [JDS260711-V1] 판독된 교육장소를 상태줄에 표시 (저장 시 연간계획 반영)
+        const _vTxt = _coordVenueInfo && _coordVenueInfo.venue
+            ? ` · 🏫 교육장소 「${_coordVenueInfo.venue}」 판독됨 (저장 시 연간계획 반영)`
+            : '';
         const tbody = document.getElementById('coordRosterBody');
         if (!students.length) {
             tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;text-align:center;color:#94a3b8;">명단을 찾지 못했습니다</td></tr>';
-            statusEl.textContent = '⚠️ 판독 결과 없음';
+            statusEl.textContent = '⚠️ 판독 결과 없음' + _vTxt;
         } else {
             tbody.innerHTML = students.map((s,i) => `<tr>
                 <td style="text-align:center;color:#94a3b8;padding:6px 8px;border-bottom:1px solid #f1f5f9;width:40px;white-space:nowrap;">${i+1}</td>
@@ -7358,7 +7468,7 @@ async function coordHandleRosterFile(ev) {
                 <td style="color:#475569;font-size:11px;padding:6px 8px;border-bottom:1px solid #f1f5f9;word-break:keep-all;">${s.dept}</td>
                 <td style="text-align:center;padding:6px 8px;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:700;white-space:nowrap;color:${s.gender==='F'?'#ec4899':'#3b82f6'};">${s.gender==='F'?'여':'남'}</td>
             </tr>`).join('');
-            statusEl.textContent = `✅ ${students.length}명 판독됨`;
+            statusEl.textContent = `✅ ${students.length}명 판독됨` + _vTxt;
             document.getElementById('coordRosterCount').textContent = `총 ${students.length}명`;
         }
         coordRenderRosterCompare();
@@ -7457,16 +7567,34 @@ async function coordPlannedHandleFile(ev){
   var file=ev.target.files[0]; if(!file) return; ev.target.value='';
   var st=document.getElementById('coordPlannedStatus'); if(st) st.textContent='판독 중...';
   try{
-    var students=[]; var ln=file.name.toLowerCase();
-    if(ln.endsWith('.hwpx')){ var tx=await _coordHwpxExtract(file); students=_coordParseRoster(tx); }
-    else if(ln.endsWith('.hwp')){ var buf=await file.arrayBuffer(); var tx2=await _coordHwpExtract(buf); students=_coordParseRoster(tx2); }
+    var students=[]; var ln=file.name.toLowerCase(); var vLines=[];
+    if(ln.endsWith('.hwpx')){ var tx=await _coordHwpxExtract(file); students=_coordParseRoster(tx);
+      vLines = (_coordScheduleRawLines && _coordScheduleRawLines.length) ? _coordScheduleRawLines : String(tx).split(/[\n\r]+/); }
+    else if(ln.endsWith('.hwp')){ var buf=await file.arrayBuffer(); var tx2=await _coordHwpExtract(buf); students=_coordParseRoster(tx2);
+      vLines = String(tx2).split(/[\n\r]+/); }
     else { var buf2=await file.arrayBuffer(); var pdf=await pdfjsLib.getDocument(new Uint8Array(buf2)).promise; var rawLines=[];
       for(var pp=1;pp<=pdf.numPages;pp++){ var page=await pdf.getPage(pp); var content=await page.getTextContent(); var rowsMap={};
         content.items.forEach(function(it){ var s=(it.str||'').trim(); if(!s)return; var y=Math.round(it.transform[5]); var key=Object.keys(rowsMap).find(function(k){return Math.abs(k-y)<=3;}); if(key==null)key=y; (rowsMap[key]=rowsMap[key]||[]).push(s); });
         Object.keys(rowsMap).sort(function(a,b){return b-a;}).forEach(function(k){ rawLines.push(rowsMap[k].join(' ')); }); }
-      students=_coordParseRoster(rawLines.join('\n')); }
+      students=_coordParseRoster(rawLines.join('\n')); vLines = rawLines; }
     _coordPlannedData=students.map(function(s){return {name:s.name||'',empNo:s.empNo||'',dept:s.dept||'',gender:s.gender||''};});
-    if(st) st.textContent='✅ '+students.length+'명 판독됨';
+
+    /* [JDS260711-V1] 예정(차주) 과정 — 아직 방이 없으므로 연간계획에만 기록한다.
+       운영부가 차주 과정을 개설(_syncRoomsLockAware)할 때 이 값이 강의실로 자동 배치된다.
+       ★ 이 경로가 "차주 과정 개설 시 자동 배치"의 핵심 진입점이다.                        */
+    _coordVenueInfo = coordExtractVenue(vLines);
+    var vNote = '';
+    try{
+      var _cn = _coordPlannedCtx && _coordPlannedCtx.courseName;
+      if(_coordVenueInfo && _coordVenueInfo.venue && _cn){
+        var applied = await coordApplyVenue(_cn, null);   // 방 없음 → 계획에만
+        if(applied) vNote = ' · 🏫 교육장소 「'+applied+'」 연간계획 반영 (개설 시 자동 배치)';
+      } else if(_coordVenueInfo && _coordVenueInfo.venue){
+        vNote = ' · 🏫 교육장소 「'+_coordVenueInfo.venue+'」 판독됨';
+      }
+    }catch(ve){ console.warn('[예정과정 교육장소 반영]', ve); }
+
+    if(st) st.textContent='✅ '+students.length+'명 판독됨' + vNote;
     _coordPlannedSave(); _coordRenderPlannedRoster();
   }catch(e){ if(st) st.textContent='❌ 오류: '+(e&&e.message?e.message:e); }
 }
@@ -7597,11 +7725,18 @@ async function coordSaveRoster() {
             await firebase.database().ref(`system/dorm/rosters/${rosterKey}`).set(payload);
         }
 
+        /* [JDS260711-V1] 한글에서 읽은 교육장소를 연간교육계획(roomDetail)에 반영.
+           → _syncRoomsLockAware()가 차주 과정을 방에 배치할 때 이 값을 그대로
+             courses/{방}/settings/roomDetailName 으로 넣으므로 과정운영현황에 자동 표시된다.
+           (수동 지정 강의실 roomDetailManual 은 존중 — 덮어쓰지 않음)                     */
+        const venueApplied = await coordApplyVenue(courseName, currentRID);
+        const venueNote = venueApplied ? ` · 🏫 교육장소 「${venueApplied}」 연간계획 반영` : '';
+
         const schedNote = _coordScheduleData
             ? (scheduleSynced ? ' · 교육시간표 강사플랫폼 반영' : ' · 시간표 저장됨(강사플랫폼 자동 표시)')
             : '';
         const dormNote = applyToDorm ? ' · 교육지원부에 공유됨' : ' · 교육운영부만 저장';
-        alert(`✅ ${cleanList.length}명 명단 저장 완료${schedNote}${dormNote}`);
+        alert(`✅ ${cleanList.length}명 명단 저장 완료${schedNote}${dormNote}${venueNote}`);
     } catch (e) {
         console.error('[교육운영부 명단 저장]', e);
         alert('명단 저장 실패: ' + (e && e.message ? e.message : e));
