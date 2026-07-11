@@ -5158,9 +5158,12 @@ body:not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
 /* ═══ [I47] 리모컨 센터 = 한국공항공사 마스코트 '포티' ═══
    파란 포티가 잘 보이도록 센터 원을 흰색 계열로. 이미지(forty.png) 없으면 JS onerror가 기존 아이콘으로 자동 폴백. */
 .hex-center.has-forty{
+  /* [I47.1] 1.4배 확대 + 육각 버튼들 '위로' 떠오르게(z-index·그림자) → 중심축이 잡혀 안정감 */
+  width:106px; height:106px;
+  z-index:6520;                 /* 6개 사이드 버튼보다 위 */
+  border:3px solid #fff;        /* 외곽선 얇게 — 포티가 더 커 보이고 답답함 해소 */
   background:radial-gradient(circle at 50% 38%, #ffffff 0%, #eaf4ff 62%, #d7e9fb 100%);
-  border-color:#fff;
-  box-shadow:0 10px 24px rgba(15,76,129,.34), inset 0 -3px 10px rgba(37,99,235,.10);
+  box-shadow:0 16px 34px rgba(15,76,129,.40), 0 4px 10px rgba(15,76,129,.20), inset 0 -4px 12px rgba(37,99,235,.10);
   gap:0;
   overflow:visible;
 }
@@ -5168,14 +5171,14 @@ body:not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
   background:radial-gradient(circle at 50% 38%, #ffffff 0%, #e2efff 60%, #c9e0fb 100%);
 }
 .hex-center .hex-forty{
-  width:56px; height:56px; object-fit:contain; display:block;
-  margin-top:-4px; pointer-events:none; user-select:none; -webkit-user-drag:none;
-  filter:drop-shadow(0 3px 5px rgba(15,76,129,.28));
+  width:78px; height:78px; object-fit:contain; display:block;
+  margin-top:-5px; pointer-events:none; user-select:none; -webkit-user-drag:none;
+  filter:drop-shadow(0 4px 7px rgba(15,76,129,.30));
   transition:transform .18s cubic-bezier(.34,1.56,.64,1);
 }
 .hex-center.has-forty span{
-  color:#0f4c81; font-size:9.5px; font-weight:950; letter-spacing:-.2px;
-  margin-top:-5px; text-shadow:0 1px 0 rgba(255,255,255,.9);
+  color:#0f4c81; font-size:11px; font-weight:950; letter-spacing:-.2px;
+  margin-top:-7px; text-shadow:0 1px 0 rgba(255,255,255,.9);
 }
 /* 살짝 통통 튀는 반응 */
 .hex-center.has-forty:hover .hex-forty{ transform:translateY(-3px) scale(1.07); }
