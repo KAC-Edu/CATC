@@ -5042,7 +5042,9 @@ body.in-course #courseSmartRemote.hex-remote-v2{display:block;}
 #homeSearchWrap #homeSearchClear:hover{background:#e2e8f0 !important;color:#334155 !important;transform:translateY(-50%) !important;}
 #homeSearchWrap #homeSearchClear:active{background:#cbd5e1 !important;color:#1e293b !important;transform:translateY(-50%) !important;}
 #homeSearchResults{position:absolute;left:0;right:0;top:100%;margin-top:16px;z-index:20;display:flex;flex-direction:column;gap:16px;max-height:calc(100vh - 285px);overflow-y:auto;padding:2px 8px 30px 2px;scrollbar-width:thin;scrollbar-color:#93c5fd transparent;}
-.hsr-card{background:#fff;border:1px solid #dce5f0;border-left:7px solid #2563eb;border-radius:20px;padding:22px 26px;cursor:default;box-shadow:0 10px 28px rgba(15,23,42,.10);transition:transform .12s,box-shadow .12s;text-align:left;}
+/* [J77] 검색 결과 카드 — 과정명 주변에 은은한 그라데이션(위→아래로 파란빛이 옅게 스며들다 흰색으로) */
+/* [J77] 검색 결과 카드 — 과정명 쪽에 은은한 파란 그라데이션. (실제 렌더되는 건 아래 .hsr-v2) */
+.hsr-card{position:relative;background:#fff;border:1px solid #dce5f0;border-left:7px solid #2563eb;border-radius:20px;padding:22px 26px;cursor:default;box-shadow:0 10px 28px rgba(15,23,42,.10);transition:transform .12s,box-shadow .12s,border-left-color .15s;text-align:left;}
 .hsr-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(37,99,235,.16);border-left-color:#1d4ed8;}
 .hsr-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;}
 .hsr-course{font-size:23px;font-weight:950;color:#0f172a;}
@@ -6410,9 +6412,31 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 
 /* ══ [K1] 홈 검색 결과 카드 v2 — 요약형 (버튼 그리드 제거, 대각선 분할 버튼) ══ */
 .hsr-card.hsr-v2{border-left:1px solid #dce5f0;border-radius:16px;padding:20px 24px;}
+/* [J77] 과정명 쪽(좌상단)에서 파란빛이 옅게 번져 나오는 그라데이션 — 오른쪽·아래로 갈수록 흰색 */
+.hsr-card.hsr-v2{
+  background:
+    linear-gradient(100deg, rgba(37,99,235,.10) 0%, rgba(96,165,250,.05) 34%, rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, rgba(219,234,254,.55) 0%, rgba(255,255,255,0) 118px),
+    #fff;
+}
+.hsr-card.hsr-v2:hover{
+  background:
+    linear-gradient(100deg, rgba(37,99,235,.15) 0%, rgba(96,165,250,.07) 34%, rgba(255,255,255,0) 62%),
+    linear-gradient(180deg, rgba(219,234,254,.7) 0%, rgba(255,255,255,0) 118px),
+    #fff;
+}
+/* 좌측 세로 띠 — 과정명 바로 옆 색 포인트 */
+.hsr-card.hsr-v2{ box-shadow:0 10px 28px rgba(15,23,42,.10), inset 5px 0 0 0 rgba(37,99,235,.55); }
+.hsr-card.hsr-v2:hover{ box-shadow:0 12px 26px rgba(37,99,235,.16), inset 5px 0 0 0 rgba(29,78,216,.9); }
 .hsr-v2 .hsr2-head{display:flex;align-items:center;gap:12px;}
 .hsr-v2 .hsr2-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
-.hsr-v2 .hsr2-title{font-size:19px;font-weight:900;color:#0f172a;letter-spacing:-.3px;}
+/* 과정명 글자에도 그라데이션 (남색 → 파랑) */
+.hsr-v2 .hsr2-title{font-size:19px;font-weight:900;letter-spacing:-.3px;
+  background:linear-gradient(92deg,#0f172a 0%,#12306e 55%,#1d4ed8 100%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;}
+@supports not ((-webkit-background-clip:text) or (background-clip:text)){
+  .hsr-v2 .hsr2-title{color:#0f172a;-webkit-text-fill-color:#0f172a;background:none;}
+}
 .hsr-v2 .hsr2-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px;font-size:13.5px;color:#94a3b8;font-weight:700;word-break:keep-all;}
 .hsr-v2 .hsr2-dot{opacity:.6;}
 .hsr-v2 .hsr2-venue{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border:none;border-radius:7px;background:transparent;color:#475569;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;}
