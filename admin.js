@@ -15581,7 +15581,10 @@ ui.confirmRouletteLeader = function(){
         else if (item.mode === 'admin-action') hot = ' hex-key-mint';
         return '<button class="hex-key hex-pos-'+index+hot+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
-      '<button class="hex-center" type="button" title="탭: 펼침/접힘 · 접힌 뒤 한번 더: 과정현황 · 길게: 위치 이동"><i class="fa-solid fa-gauge-high"></i><span>과정현황</span></button></div>';
+      '<button class="hex-center has-forty" type="button" title="탭: 펼침/접힘 · 접힌 뒤 한번 더: 과정현황 · 길게: 위치 이동">' +
+      '<img class="hex-forty" src="forty.png" alt="포티" draggable="false" ' +
+      'onerror="this.remove(); var b=this.closest(\'.hex-center\'); if(b){ b.classList.remove(\'has-forty\'); b.insertAdjacentHTML(\'afterbegin\',\'<i class=&quot;fa-solid fa-gauge-high&quot;></i>\'); }">' +
+      '<span>과정현황</span></button></div>';
 
     host.querySelectorAll('.hex-key').forEach(function(button){
       button.addEventListener('click', function(){
