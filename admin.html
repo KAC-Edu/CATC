@@ -1064,13 +1064,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <span class="ops-val"><b id="dashDinnerSkipCount">0</b>명</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
-                    <div class="ops-row" data-key="shuttle" onclick="ui.setMode('shuttle')">
-                        <span class="ops-ic" style="color:#0ea5e9; background:#f0f9ff;"><i class="fa-solid fa-bus"></i></span>
-                        <span class="ops-name"><span class="i18n" data-en="Shuttle">셔틀</span><span id="dashShuttleTimeInline" style="font-size:12.5px; color:#92400e; font-weight:700;"></span></span>
-                        <span class="ops-subline">오송 <b id="total-osong">0</b> · 터미널 <b id="total-term">0</b> · 공항 <b id="total-air">0</b> · 자차 <b id="total-car">0</b></span>
-                        <span class="ops-val">전체 <span id="dashShuttleTotal" style="font-weight:900;">0명</span></span>
-                        <i class="fa-solid fa-arrow-right ops-go"></i>
-                    </div>
+                    <!-- [I46] 셔틀은 좌측 '오늘의 운영'에서 제거하고 우측 '공지 및 필수 확인' 블록으로 이동(차량 소요조사 결과) -->
                     <div class="ops-row" data-key="qa" style="display:none;" onclick="ui.setMode('qa')">
                         <span class="ops-ic" style="color:#7c3aed; background:#f5f3ff;"><i class="fa-solid fa-comments"></i></span>
                         <span class="ops-name">질문사항 (Q&A)</span>
@@ -1119,6 +1113,23 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <b id="feedEduUnion" style="color:#15803d;">미정</b>
                     </div>
                 </div>
+
+                <!-- [I46] 차량 소요조사 결과 — 좌측 '오늘의 운영'에서 이동. ID는 그대로라 기존 갱신 로직 그대로 동작 -->
+                <div class="nh-dash"></div>
+                <div class="nh-shuttle" onclick="ui.setMode('shuttle')" title="클릭하면 퇴교차량 관리로 이동">
+                    <div class="nhs-head">
+                        <span class="nhs-title"><span class="nhs-ic"><i class="fa-solid fa-bus"></i></span> 차량 소요조사 결과</span>
+                        <span class="nhs-total">전체 <span id="dashShuttleTotal">0명</span><span id="dashShuttleTimeInline" class="nhs-time"></span></span>
+                        <i class="fa-solid fa-chevron-right nh-go"></i>
+                    </div>
+                    <div class="nhs-grid">
+                        <div class="nhs-cell"><span>오송역</span><b id="total-osong">0</b></div>
+                        <div class="nhs-cell"><span>터미널</span><b id="total-term">0</b></div>
+                        <div class="nhs-cell"><span>공항</span><b id="total-air">0</b></div>
+                        <div class="nhs-cell"><span>자차</span><b id="total-car">0</b></div>
+                    </div>
+                </div>
+
                 <!-- [I13→I15] 질문사항 보기 — 세로 확대 + 큰 아이콘 배지로 Q&A 기능임을 한눈에 인지 -->
                 <button id="nhQaBtn" class="nh-all nh-qa" onclick="ui.setMode('qa')">
                     <span class="nh-qa-ic"><i class="fa-solid fa-comments"></i></span>
