@@ -15624,7 +15624,7 @@ ui.confirmRouletteLeader = function(){
         else if (item.mode === 'admin-action') hot = ' hex-key-mint';
         return '<button class="hex-key hex-pos-'+index+hot+'" type="button" data-mode="'+esc(item.mode)+'" title="'+esc(item.label)+'"><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></button>';
       }).join('')+
-      '<button class="hex-center has-forty" type="button" title="탭: 펼침/접힘 · 접힌 뒤 한번 더: 과정현황 · 길게: 위치 이동">' +
+      '<button class="hex-center has-forty" type="button" title="탭: 메뉴 펼침/접힘 · (과정현황이 아닌 화면에선 접힌 뒤 한번 더 누르면 과정현황으로 이동) · 길게: 위치 이동">' +
       '<img class="hex-forty" src="forty.png" alt="포티" draggable="false" ' +
       'onerror="this.remove(); var b=this.closest(\'.hex-center\'); if(b){ b.classList.remove(\'has-forty\'); b.insertAdjacentHTML(\'afterbegin\',\'<i class=&quot;fa-solid fa-gauge-high&quot;></i>\'); }">' +
       '<span>과정현황</span></button></div>';
@@ -15810,10 +15810,29 @@ ui.confirmRouletteLeader = function(){
     clearTimeout(_autoCollapseTimer);
     _autoCollapseTimer = setTimeout(function(){ setCollapsed(host, true); _remotePendingNav = false; }, (ms||4000));
   }
+  // [J75] 이미 과정현황 페이지에 있으면 '과정현황으로 이동' 단계는 의미가 없다.
+  //  → 그럴 땐 중앙 버튼을 '펼침 ↔ 접힘' 단순 토글로만 동작시킨다.
+  function _onDashboard(){
+    try{ if(typeof state !== 'undefined' && state.currentMode === 'dashboard') return true; }catch(e){}
+    try{
+      var v = document.getElementById('view-dashboard');
+      return !!(v && v.style.display !== 'none' && v.offsetParent !== null);
+    }catch(e){ return false; }
+  }
   function handleCenterTap(host){
     if(!host) return;
     clearTimeout(_autoCollapseTimer);
     var collapsed = host.classList.contains('hex-collapsed');
+
+    // ── 과정현황 페이지: 갈 곳이 없으므로 펼침/접힘만 반복 ──
+    if(_onDashboard()){
+      _remotePendingNav = false;
+      if(collapsed){ setCollapsed(host, false); scheduleAutoCollapse(host); }  // 접힘 → 펼침(4초 뒤 자동 접힘)
+      else { setCollapsed(host, true); }                                        // 펼침 → 접힘
+      return;
+    }
+
+    // ── 다른 페이지: 기존 3단계(접기 → 한번 더 누르면 과정현황 이동 → 펼침) ──
     if(!collapsed){
       setCollapsed(host, true);      // 펼쳐진 상태 → 축소만
       _remotePendingNav = true;      // 다음 탭은 과정현황 페이지로
