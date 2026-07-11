@@ -5154,6 +5154,36 @@ body:not([data-mode="waiting"]) .floating-home-btn{bottom:66px;}
 .hex-pos-0{left:90px;top:0}.hex-pos-1{left:0;top:46px}.hex-pos-2{right:0;top:46px}.hex-pos-3{left:0;bottom:46px}.hex-pos-4{right:0;bottom:46px}.hex-pos-5{left:90px;bottom:0}
 .hex-center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:76px;height:76px;border:5px solid #fff;border-radius:50%;background:linear-gradient(145deg,#0f4c81,#2563eb);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;box-shadow:0 10px 24px rgba(15,76,129,.38);z-index:6503;}
 .hex-center:hover{background:linear-gradient(145deg,#2563eb,#4f46e5)}.hex-center i{font-size:20px}.hex-center span{font-size:10px;font-weight:950}
+
+/* ═══ [I47] 리모컨 센터 = 한국공항공사 마스코트 '포티' ═══
+   파란 포티가 잘 보이도록 센터 원을 흰색 계열로. 이미지(forty.png) 없으면 JS onerror가 기존 아이콘으로 자동 폴백. */
+.hex-center.has-forty{
+  background:radial-gradient(circle at 50% 38%, #ffffff 0%, #eaf4ff 62%, #d7e9fb 100%);
+  border-color:#fff;
+  box-shadow:0 10px 24px rgba(15,76,129,.34), inset 0 -3px 10px rgba(37,99,235,.10);
+  gap:0;
+  overflow:visible;
+}
+.hex-center.has-forty:hover{
+  background:radial-gradient(circle at 50% 38%, #ffffff 0%, #e2efff 60%, #c9e0fb 100%);
+}
+.hex-center .hex-forty{
+  width:56px; height:56px; object-fit:contain; display:block;
+  margin-top:-4px; pointer-events:none; user-select:none; -webkit-user-drag:none;
+  filter:drop-shadow(0 3px 5px rgba(15,76,129,.28));
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+}
+.hex-center.has-forty span{
+  color:#0f4c81; font-size:9.5px; font-weight:950; letter-spacing:-.2px;
+  margin-top:-5px; text-shadow:0 1px 0 rgba(255,255,255,.9);
+}
+/* 살짝 통통 튀는 반응 */
+.hex-center.has-forty:hover .hex-forty{ transform:translateY(-3px) scale(1.07); }
+.hex-center.has-forty:active .hex-forty{ transform:translateY(1px) scale(.95); }
+/* 평상시 아주 은은한 숨쉬기 애니메이션 (드래그 중에는 정지) */
+.hex-center.has-forty .hex-forty{ animation:fortyIdle 2.8s ease-in-out infinite; }
+#courseSmartRemote.is-dragging .hex-center.has-forty .hex-forty{ animation:none !important; }
+@keyframes fortyIdle{ 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-2.5px) } }
 .hex-gear{position:absolute;top:5px;right:12px;width:26px;height:26px;border-radius:50%;border:1px solid #e2e8f0;background:#fff;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;z-index:6510;box-shadow:0 2px 5px rgba(15,23,42,.12);transition:background .15s,color .15s,transform .3s,border-color .15s;}
 .hex-gear:hover{background:#eff4ff;color:#2563eb;border-color:#bfdbfe;transform:rotate(60deg);}
 
