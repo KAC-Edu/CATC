@@ -4974,6 +4974,23 @@ renderQaList: function(f) {
     let htmlBuffer = "";
     const now = Date.now();
 
+    /* [J78] 특정 강사·과목을 직접 골랐을 때는 '게시판 모드'로 바꾼다.
+       왜: 교육생이 모레 강의를 앞두고 미리 질문해 두면 그 질문이 과거 날짜 그룹에 접혀 들어가,
+           강사가 날짜마다 일일이 펼쳐 봐야 했다. 강사를 콕 집어 고른 순간의 의도는
+           "나한테 온 질문 전부 보기"이므로 —
+             · 날짜 구분(머리말/아코디언)을 아예 없애고
+             · 전 기간 질문을 하나의 목록으로 쭉 나열하고
+             · 추천(좋아요) 많은 순으로 위에 올린다.  (게시판처럼)
+       평소(전체/공통질문)에는 기존대로 오늘은 펼침 + 지난 날짜는 접힘을 유지한다.          */
+    const isSubjectPicked = !!(subjectMgr.selectedFilter && subjectMgr.selectedFilter !== 'all');
+    const dateChip = (ts) => {
+        const d = new Date(ts);
+        const days = ['일','월','화','수','목','금','토'];
+        const isTd = (`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` === todayStr);
+        const txt = isTd ? '오늘' : `${d.getMonth()+1}/${d.getDate()}(${days[d.getDay()]})`;
+        return `<span style="font-size:10px;font-weight:800;color:${isTd?'#2563eb':'#94a3b8'};background:${isTd?'#eff6ff':'#f1f5f9'};border-radius:4px;padding:1px 6px;white-space:nowrap;">${txt}</span>`;
+    };
+
     const buildCard = (i) => {
         try {
             const s = i.status;
@@ -5012,11 +5029,36 @@ renderQaList: function(f) {
                 </div>
                 <div class="q-meta">
                     <div class="q-like-badge">👍 ${i.likes}</div>
-                    <div class="q-time">${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
+                    <div class="q-time">${isSubjectPicked ? dateChip(i.timestamp) + ' ' : ''}${new Date(i.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</div>
                 </div>
             </div>`;
         } catch(err) { return ''; }
     };
+
+    // [J78] 게시판 모드 — 날짜 구분 없이 전 기간을 한 목록으로, 추천 많은 순
+    if (isSubjectPicked) {
+        const wS = s => s==='pin'?3:s==='later'?2:s==='normal'?1:0;   // 고정·보류는 그래도 위로
+        const flat = items.slice().sort((a, b) => {
+            const wd = wS(b.status) - wS(a.status);
+            if (wd !== 0) return wd;
+            if (b.likes !== a.likes) return b.likes - a.likes;        // ★ 추천 많은 순
+            return b.timestamp - a.timestamp;                          // 동점이면 최신
+        });
+        const doneN = flat.filter(i => i.status === 'done' || i.status === 'pin-done').length;
+        list.innerHTML = (flat.length ? `
+            <div style="display:flex; align-items:center; gap:8px; margin:2px 0 12px; padding:9px 13px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px;">
+                <i class="fa-solid fa-list-ul" style="color:#7c3aed; font-size:12px;"></i>
+                <span style="font-weight:800; color:#5b21b6; font-size:13px;">${ui._esc(String(subjectMgr.selectedFilter))}</span>
+                <span style="font-size:12px; color:#7c3aed; font-weight:700;">전체 ${flat.length}건</span>
+                ${doneN > 0 ? `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ ${doneN}건 답변</span>` : ''}
+                <span style="margin-left:auto; font-size:11px; color:#8b5cf6; font-weight:700;">날짜 구분 없이 · 추천 많은 순</span>
+            </div>` : '')
+            + (flat.map(buildCard).join('') || `
+            <div style="text-align:center; padding:80px 0; color:#94a3b8;">
+                <p>이 강사·과목으로 온 질문이 없습니다.</p>
+            </div>`);
+        return;
+    }
 
     sortedDates.forEach((dStr, idx) => {
         const grp = groups[dStr];
