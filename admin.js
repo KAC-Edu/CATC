@@ -3051,6 +3051,14 @@ updateQaCountBadge: function() {
         const count = Object.values(state.qaData).filter(q => q && q.status !== 'delete').length;
         const el = document.getElementById('dashQaCount');
         if (el) el.innerText = count;
+        // [I46] '질문사항 보기' 버튼 우측 모서리에 질문 건수 배지 — 1건 이상이면 빨강 강조
+        const b = document.getElementById('nhQaBadge');
+        const btn = document.getElementById('nhQaBtn');
+        if (b) {
+            if (count > 0) { b.style.display = 'inline-flex'; b.innerText = count + '건'; }
+            else { b.style.display = 'none'; }
+        }
+        if (btn) btn.classList.toggle('has-q', count > 0);
     }
 },
 
