@@ -1930,25 +1930,44 @@ const profMgr = {
     },
 
 
-// [추가] 사진 용량 최적화 (가로 500px 기준 압축)
+// [J76] 사진 용량 최적화 — 가로 축소 + '용량 상한'까지 강제
+//  기존: 500px·품질0.7 로만 줄여서, 사진에 따라 100KB를 훌쩍 넘는 경우가 있었음
+//        (프로필 사진은 DB에 base64로 들어가고, 교수 목록 화면은 이걸 한꺼번에 읽으므로
+//         한 장이 커지면 그대로 다운로드 사용량이 됨)
+//  변경: 목표 용량(기본 40KB) 이하가 될 때까지 품질을 낮추고, 그래도 크면 가로를 더 줄인다.
+    PHOTO_MAX_W: 480,          // 화면 표시 크기 대비 충분 (프로필 사진은 작게 보임)
+    PHOTO_TARGET_BYTES: 40960, // 40KB 목표
     resizeImage: function(file, callback) {
+        const MAXW = profMgr.PHOTO_MAX_W, TARGET = profMgr.PHOTO_TARGET_BYTES;
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                const max_size = 500; // 최대 가로 크기 500px
+                let width = img.width, height = img.height;
+                if (width > MAXW) { height = Math.round(height * MAXW / width); width = MAXW; }
 
-                if (width > max_size) {
-                    height *= max_size / width;
-                    width = max_size;
+                const draw = function(w, h){
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    return canvas;
+                };
+                // base64 문자열 길이 ≈ 실제 바이트(여유 감안). 목표 이하가 될 때까지 품질 ↓
+                let canvas = draw(width, height);
+                let q = 0.72;
+                let url = canvas.toDataURL('image/jpeg', q);
+                while (url.length > TARGET && q > 0.40) { q -= 0.06; url = canvas.toDataURL('image/jpeg', q); }
+                // 품질을 최저까지 낮춰도 크면 → 가로를 한 단계 더 줄여서 재시도(최대 2회)
+                let guard = 0;
+                while (url.length > TARGET && width > 240 && guard < 2) {
+                    guard++;
+                    height = Math.round(height * 0.75); width = Math.round(width * 0.75);
+                    canvas = draw(width, height);
+                    q = 0.72; url = canvas.toDataURL('image/jpeg', q);
+                    while (url.length > TARGET && q > 0.40) { q -= 0.06; url = canvas.toDataURL('image/jpeg', q); }
                 }
-                canvas.width = width;
-                canvas.height = height;
-                canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-                callback(canvas.toDataURL('image/jpeg', 0.7)); // 70% 품질로 압축
+                try { console.log('[프로필사진] 압축 결과', width + 'px', Math.round(url.length/1024) + 'KB'); } catch(e){}
+                callback(url);
             };
             img.src = e.target.result;
         };
