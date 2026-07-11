@@ -1065,11 +1065,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
                     <!-- [I46] 셔틀은 좌측 '오늘의 운영'에서 제거하고 우측 '공지 및 필수 확인' 블록으로 이동(차량 소요조사 결과) -->
-                    <div class="ops-row" data-key="qa" style="display:none;" onclick="ui.setMode('qa')">
+                    <!-- [I46] 질문사항 — 새 질문 건수를 행 우측 상단 모서리에 빨간 배지로 표시(nhQaBtn/nhQaBadge는 admin.js가 갱신) -->
+                    <div id="nhQaBtn" class="ops-row" data-key="qa" style="display:none;" onclick="ui.setMode('qa')">
                         <span class="ops-ic" style="color:#7c3aed; background:#f5f3ff;"><i class="fa-solid fa-comments"></i></span>
                         <span class="ops-name">질문사항 (Q&A)</span>
                         <span class="ops-val"><b class="opsQaMirror">0</b>건</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
+                        <span id="nhQaBadge" class="nh-qa-badge" style="display:none;">0건</span>
                     </div>
                     <div class="ops-row" data-key="tablet" style="display:none;" onclick="ui.setMode('tablet-loan')">
                         <span class="ops-ic" style="color:#6366f1; background:#eef2ff;"><i class="fa-solid fa-tablet-screen-button"></i></span>
@@ -1130,13 +1132,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
                     </div>
                 </div>
 
-                <!-- [I13→I15] 질문사항 보기 — 세로 확대 + 큰 아이콘 배지로 Q&A 기능임을 한눈에 인지 -->
-                <button id="nhQaBtn" class="nh-all nh-qa" onclick="ui.setMode('qa')">
-                    <span class="nh-qa-ic"><i class="fa-solid fa-comments"></i></span>
-                    <span class="nh-qa-txt">질문사항 보기<small>교육생이 올린 질문 확인·답변</small></span>
-                    <span id="nhQaBadge" class="nh-qa-badge" style="display:none;">0건</span>
-                    <i class="fa-solid fa-chevron-right"></i>
-                </button>
+                <!-- [I46] '질문사항 보기' 버튼 제거 — 좌측 '오늘의 운영'의 질문사항(Q&A) 행과 중복이므로 통합 -->
             </div>
 
         </div> <!-- dash-premium-grid 끝 -->
