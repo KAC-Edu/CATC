@@ -6165,7 +6165,6 @@ resetShuttleRequests: function() {
             { name: '기사(차량)', file: 'driver.html' },
             { name: '영양사', file: 'nutritionist.html' },
             { name: '미화/시설', file: 'facility_admin.html' },
-            { name: '자동연결(go)', file: 'go.html' },
             { name: '학생장', file: 'student_leader.html' }
         ];
         const mailSubject = encodeURIComponent('[KAC 항공기술훈련원 플랫폼 문의]');
@@ -6272,7 +6271,7 @@ resetShuttleRequests: function() {
     //  파일을 수정/배포할 때마다 여기 값도 같이 올려주세요(배지값과 동일하게).
     _LATEST_VER: {
         'index.html':'vH14', 'admin.html':'vV0', 'admin_coord.html':'vH1', 'dorm_admin.html':'vK2',
-        'driver.html':'vD', 'nutritionist.html':'vE', 'facility_admin.html':'vC', 'go.html':'vI', 'student_leader.html':'vA'
+        'driver.html':'vD', 'nutritionist.html':'vE', 'facility_admin.html':'vC', 'student_leader.html':'vA'
     },
     // [버전 실시간 로드] 각 플랫폼 파일 배지를 읽어 'Firebase 최신 기준'과 비교 (없으면 코드 기본값)
     _loadPlatVersions: function(list){
@@ -7525,11 +7524,11 @@ loadFile: function(e) {
             container.innerHTML = "";
             const data = snap.val();
             if (!data) {
-                container.innerHTML = `<div style="text-align:center; padding:30px 20px 24px; color:#94a3b8;">
+                container.innerHTML = `<div style="text-align:center; padding:34px 20px 28px; color:#94a3b8;">
                     <div style="font-size:34px; margin-bottom:10px;">📂</div>
                     <div style="font-weight:700;">저장된 퀴즈가 없습니다.</div>
-                    <div style="font-size:12px; margin-top:4px;">아래에서 <b>퀴즈 파일(.txt)을 업로드</b>하거나 '샘플 문항'으로 시작하세요.</div>
-                    <button onclick="document.getElementById('modalQuizInput').click()" style="margin-top:16px; height:44px; padding:0 22px; border:none; background:linear-gradient(135deg,#f59e0b,#f97316); color:#fff; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 6px 16px rgba(245,158,11,.32);"><i class="fa-solid fa-upload"></i> 퀴즈 파일 업로드</button>
+                    <div style="font-size:12.5px; margin-top:7px; line-height:1.7;">아래 <b style="color:#f59e0b;">[퀴즈 파일 업로드]</b> 로 .txt 파일을 올리거나<br><b style="color:#2563eb;">[샘플 문항]</b> 으로 바로 시작하세요.</div>
+                    <div style="margin-top:8px; font-size:20px; color:#cbd5e1;">↓</div>
                 </div>`;
                 return;
             }
