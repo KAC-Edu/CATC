@@ -9388,8 +9388,10 @@ init: function() {
         const wantUrl = guideMgr._isOnline() ? guideMgr.GUIDE_PDF_ONLINE_URL : guideMgr.GUIDE_PDF_URL;
         if (slot.pdfDoc && slot.pdfUrl === wantUrl) {
             guideMgr.isRendering = false;
+            guideMgr._loadingOff();       // [J79] 이미 받아둔 PDF → 로딩 화면 없이 바로 표시
             guideMgr.renderPage(slot.pageNum || 1);
         } else {
+            guideMgr._loadingOn('잠시만 기다려 주세요…');   // [J79] 빈 화면 대신 로딩 화면부터 띄운다
             guideMgr._clearStaleView();   // [J12.3] 같은 방에서 대면↔비대면 변형이 바뀐 경우도 즉시 비움
             slot.pdfDoc = null;
             slot.pageNum = 1;
@@ -9823,14 +9825,65 @@ init: function() {
         );
     },
 
+    /* [J79] 입교안내 로딩 화면
+       처음 [입교안내]를 누르면 PDF(수 MB)를 내려받는 동안 캔버스가 비어 있어
+       흰/검은 빈 화면이 잠깐 스쳤다. 두 번째부터는 캐시(pdfDoc)라 바로 나온다.
+       → 그 빈 구간에 "입교안내를 불러오는 중입니다" 오버레이를 덮어 준비 중임을 알린다.
+       #pdfWrapper 가 position:relative 이므로 그 안에 절대배치로 얹는다.            */
+    _loadingOn: function(msg) {
+        try {
+            const wrap = document.getElementById('pdfWrapper');
+            if (!wrap) return;
+            let el = document.getElementById('guideLoading');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'guideLoading';
+                el.style.cssText = 'position:absolute; inset:0; z-index:30; display:flex; flex-direction:column;'
+                    + 'align-items:center; justify-content:center; gap:16px; border-radius:12px;'
+                    + 'background:linear-gradient(180deg,#f8fbff,#eef4ff); border:1px solid #dbeafe;'
+                    + 'box-shadow:0 4px 20px rgba(0,51,102,0.12); min-height:420px;';
+                el.innerHTML =
+                    '<div style="width:54px; height:54px; border:5px solid #dbeafe; border-top-color:#2563eb;'
+                  + ' border-radius:50%; animation:guideSpin .8s linear infinite;"></div>'
+                  + '<div style="font-size:17px; font-weight:900; color:#1e3a8a;">📘 입교안내를 불러오는 중입니다</div>'
+                  + '<div id="guideLoadingSub" style="font-size:13px; font-weight:700; color:#64748b;">잠시만 기다려 주세요…</div>';
+                wrap.appendChild(el);
+                if (!document.getElementById('guideSpinKf')) {
+                    const st = document.createElement('style');
+                    st.id = 'guideSpinKf';
+                    st.textContent = '@keyframes guideSpin{to{transform:rotate(360deg)}}';
+                    document.head.appendChild(st);
+                }
+            }
+            const sub = document.getElementById('guideLoadingSub');
+            if (sub && msg) sub.textContent = msg;
+            el.style.display = 'flex';
+        } catch (e) {}
+    },
+    _loadingOff: function() {
+        try { const el = document.getElementById('guideLoading'); if (el) el.style.display = 'none'; } catch (e) {}
+    },
+    _loadingFail: function(msg) {
+        try {
+            guideMgr._loadingOn();
+            const el = document.getElementById('guideLoading');
+            if (el) el.innerHTML =
+                '<div style="font-size:34px;">⚠️</div>'
+              + '<div style="font-size:17px; font-weight:900; color:#b91c1c;">입교안내를 불러오지 못했습니다</div>'
+              + '<div style="font-size:13px; font-weight:700; color:#64748b;">' + (msg || '잠시 후 다시 시도하거나 운영부에 문의해 주세요.') + '</div>';
+        } catch (e) {}
+    },
+
     // 3. PDF 로드 — GitHub raw URL에서 직접 fetch
     loadPDF: async function(url) {
         if (typeof pdfjsLib === 'undefined') {
             console.error("PDF.js 라이브러리가 로드되지 않았습니다.");
             const badge = document.getElementById('guideStatusBadge');
             if (badge) { badge.innerText = "❌ PDF 라이브러리 오류"; badge.style.color = "#ef4444"; }
+            guideMgr._loadingFail('PDF 라이브러리를 불러오지 못했습니다.');
             return;
         }
+        guideMgr._loadingOn('잠시만 기다려 주세요…');
         // 로드 시작 시점의 방을 고정 (비동기 완료 전 방이 바뀌어도 안전)
         const targetRoom = guideMgr._room();
         const badge = document.getElementById('guideStatusBadge');
@@ -9845,6 +9898,19 @@ init: function() {
             for (const candidate of candidates) {
                 try {
                     const loadingTask = pdfjsLib.getDocument({ url: candidate, withCredentials: false });
+                    // [J79] 내려받는 진행률을 로딩 화면에 표시 (몇 MB짜리라 체감이 크다)
+                    try {
+                        loadingTask.onProgress = function (p) {
+                            const sub = document.getElementById('guideLoadingSub');
+                            if (!sub) return;
+                            if (p && p.total) {
+                                const pct = Math.min(100, Math.round(p.loaded / p.total * 100));
+                                sub.textContent = '내려받는 중… ' + pct + '%';
+                            } else if (p && p.loaded) {
+                                sub.textContent = '내려받는 중… ' + (p.loaded / 1048576).toFixed(1) + 'MB';
+                            }
+                        };
+                    } catch (pe) {}
                     pdfDoc = await loadingTask.promise;
                     break;
                 } catch (candidateError) {
@@ -9853,6 +9919,7 @@ init: function() {
                 }
             }
             if (!pdfDoc) throw lastError || new Error('입교안내 PDF를 불러오지 못했습니다.');
+            guideMgr._loadingOn('첫 페이지를 준비하는 중…');
             // 로드 완료 후 해당 방 슬롯에만 저장
             if (!guideMgr._roomCache[targetRoom]) {
                 guideMgr._roomCache[targetRoom] = { pdfDoc: null, pageNum: 1 };
@@ -9863,12 +9930,14 @@ init: function() {
             if (badge) { badge.innerText = "✅ 가이드 로드 완료"; badge.style.color = "#10b981"; }
             // 로드 완료 시점에도 같은 방이면 렌더링
             if (guideMgr._room() === targetRoom) {
-                guideMgr.renderPage(1);
+                await guideMgr.renderPage(1);
             }
+            guideMgr._loadingOff();   // [J79] 첫 페이지가 실제로 그려진 뒤에 로딩 화면 제거
         } catch (err) {
             console.error("PDF 로딩 실패:", err);
             guideMgr.isRendering = false;
             if (badge) { badge.innerText = "❌ PDF 로드 실패 (운영부 문의)"; badge.style.color = "#ef4444"; }
+            guideMgr._loadingFail('잠시 후 다시 시도하거나 운영부에 문의해 주세요.');
         }
     },
 
