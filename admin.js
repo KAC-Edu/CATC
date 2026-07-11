@@ -15894,6 +15894,62 @@ window.addEventListener('resize', function(){
    명단 비우기 후 loadStudentList 2곳)도 이 한 줄로 함께 복구됨.
    ══════════════════════════════════════════════════════════════════════ */
 /* ══════════════════════════════════════════════════════════════════════
-   [J48] 퇴교차량 '자차 디폴트' 공통 집계 규칙 — 전 화면(대시보드·셔틀보드·홈카드·기사PC/모바일) 단일 규칙.
-   · 미신청 입교완료 교육생 = 자차(미선택) 간주
-   · J44 교훈: 학
+   [J48] 퇴교차량 '자차 디폴트' 공통 집계 규칙 — kacShuttleMerge (전 화면 단일 규칙)
+   신청 목록(items)+미신청 입교완료자(nonApp=자차 간주)를 합쳐 counts/total 산출.
+   유효 이름만 · 공백제거 소문자 정규화 · 중복 이름 1회. driver.html B5와 동일 규칙.
+   ※[복구 2026-07-11] 파일 말단이 저장 중 잘려(2026-07-03 동일 사고 재발) 이 정의가
+     통째로 유실 → 강사 플랫폼 admin.js 전체 파싱 실패(SyntaxError)로 접속 불가였음.
+     3개 호출부(대시보드 _recalcDashShuttle · 셔틀보드 _renderShuttleBoard · 홈 카드)의
+     계약(items/nonApp/counts/total)과 driver.html 규칙에 맞춰 원형 복원 + 전역 노출 재접합.
+   ══════════════════════════════════════════════════════════════════════ */
+function kacShuttleMerge(reqObj, stuObj){
+  var _nm = function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+  var DEST = { osong:'오송역', terminal:'터미널', airport:'공항', car:'자차' };
+  var counts = { osong:0, terminal:0, airport:0, car:0 };
+  var items = [];
+  var seen = {};
+  var reqs = reqObj || {};
+  Object.keys(reqs).forEach(function(k){
+    var r = reqs[k]; if(!r) return;
+    var nm = (r.name || r.student || r.studentName || r.prof || '교육생');
+    var type = r.type || 'car';
+    if(type==='osong' || type==='terminal' || type==='airport') counts[type]++;
+    else counts.car++;                        // 신청 자차 + 미지정 타입
+    if(r.name) seen[_nm(r.name)] = 1;
+    items.push({
+      token: k,
+      name: nm,
+      phone: (r.phone || r.contact || '-'),
+      type: type,
+      typeText: (r.typeText || DEST[type] || '자차'),
+      timestamp: (r.timestamp || r.time || 0)
+    });
+  });
+  // 미신청 입교완료 교육생 = 자차(미선택) 간주 — 유효 이름·정규화 중복 1회, 신청자 제외
+  var nonApp = [];
+  var dupe = {};
+  var stus = stuObj || {};
+  Object.keys(stus).forEach(function(k){
+    var s = stus[k]; if(!s) return;
+    var nm = String(s.name==null?'':s.name).trim();
+    if(!nm || nm==='undefined') return;
+    var key = _nm(nm);
+    if(dupe[key]) return; dupe[key] = 1;
+    if(seen[key]) return;                      // 이미 신청함
+    nonApp.push(nm);
+  });
+  counts.car += nonApp.length;                 // 자차 = 신청 자차 + 미선택 간주
+  var total = items.length + nonApp.length;    // 총 = 신청 + 미선택(전 인원)
+  return { items: items, nonApp: nonApp, counts: counts, total: total };
+}
+try { window.kacShuttleMerge = kacShuttleMerge; } catch(e){}
+
+/* [J46/J47 복구] 파일 말미 전역 노출 — const 선언(ui/state/dataMgr/guideMgr)은 window 속성이
+   되지 않아, admin.html 옵저버 동기화 모듈(hookQa 등)이 window.ui 등으로 존재를 확인하는데
+   undefined라 훅이 설치되지 않던 문제. 아래 노출로 복구(각 항목 try/catch로 안전). */
+try { window.ui = ui; } catch(e){}
+try { window.state = state; } catch(e){}
+try { window.dataMgr = dataMgr; } catch(e){}
+try { window.guideMgr = guideMgr; } catch(e){}
+
+/* === CATC-ADMIN-JS-END-OK v=J72R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
