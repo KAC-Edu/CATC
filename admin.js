@@ -2071,8 +2071,33 @@ const coordMgr = {
         return { name: raw, title: "" };
     },
 
-    // 성함 + 직책 합본 (드롭다운 값 / coordinatorName 호환 유지)
+    // 성함 + 직책 합본 (드롭다운 '값' / coordinatorName 저장·매칭 호환 — 절대 형식 바꾸지 말 것)
     fullName: function(c) { return ((c.name || '') + ' ' + (c.title || '')).trim(); },
+
+    // [I45/J74] 화면 '표시'는 언제나 "직책 성함" (예: 과장 백유민 / 차장 전은영)
+    //  저장값이 "백유민", "백유민 과장", "과장 백유민" 어떤 형태로 와도 명단(system/coordinators)에서
+    //  직책을 찾아 보강해 통일 표기. 명단에 없으면 있는 그대로(이름만) 표시.
+    displayName: function(raw) {
+        if (raw && typeof raw === 'object') {                       // 명단 객체를 직접 넘긴 경우
+            const t = (raw.title || '').trim(), n = (raw.name || '').trim();
+            return (t ? (t + ' ' + n) : n).trim();
+        }
+        let s = String(raw == null ? '' : raw).trim();
+        if (!s) return '';
+        const RANKS = ['부장','차장','과장','대리','주임','사원','팀장','실장','원장'];
+        // 앞/뒤에 붙은 직책 제거 → 순수 이름 추출
+        let pure = s;
+        RANKS.forEach(r => {
+            pure = pure.replace(new RegExp('^\\s*' + r + '\\s*'), '').replace(new RegExp('\\s*' + r + '\\s*$'), '');
+        });
+        pure = pure.replace(/\s+/g, '').trim();
+        // 명단에서 같은 이름 찾아 직책 보강
+        const hit = (coordMgr.list || []).find(c => String(c.name || '').replace(/\s+/g, '') === pure);
+        if (hit) { const t = (hit.title || '').trim(); return (t ? (t + ' ' + hit.name) : hit.name).trim(); }
+        // 명단에 없으면: 원문에 직책이 있으면 앞으로 옮겨서라도 통일
+        const found = RANKS.find(r => s.includes(r));
+        return found ? (found + ' ' + pure) : pure;
+    },
 
     // 직책 기준 우선순위 (객체/문자열 모두 허용)
     getPriority: function(c) {
@@ -2809,10 +2834,10 @@ loadDashboardStats: function() {
             }
         } catch(e){}
         if (document.getElementById('dashCoordName')) {
-            // Firebase 저장값(표기 차이 가능)을 명단의 정식 이름으로 매칭하여 전체 이름 표시
+            // [I45/J74] 표시는 항상 "직책 성함"(예: 과장 백유민)으로 통일
             const savedCoord = s.coordinatorName || '';
-            const canonical = coordMgr.matchName(savedCoord);
-            document.getElementById('dashCoordName').innerText = canonical || (savedCoord || '미지정');
+            const disp = coordMgr.displayName(coordMgr.matchName(savedCoord) || savedCoord);
+            document.getElementById('dashCoordName').innerText = disp || '미지정';
         }
     });
 
@@ -6791,7 +6816,7 @@ resetShuttleRequests: function() {
                 +'<div class="hero-left"><div class="hero-tag">NOW TRAINING</div><h2>'+esc(settings.courseName||'과정명 미정')+'</h2>'
                 +'<div class="hero-info-row"><span class="info-pill"><i class="fa-solid fa-calendar-check"></i> <b>'+esc(settings.period||'-')+'</b></span><span class="info-pill"><i class="fa-solid fa-map-location-dot"></i> <b>'+esc(settings.roomDetailName||settings.roomDetail||('Room '+room))+'</b></span></div></div>'
                 +'<div class="hero-right"><div class="prof-glass-card" style="position:relative;"><div class="prof-avatar"><i class="fa-solid fa-user-tie"></i></div><div class="prof-details"><span class="prof-label">과정 담임</span><div class="prof-name-row"><strong>'+esc(status.professorName||'-')+'</strong> <span>교수님</span></div></div></div>'
-                +'<div class="date-minimal-box" style="color:rgba(255,255,255,0.9)!important; font-weight:800;"><i class="fa-solid fa-user-tie"></i> 과정담당: <span style="margin-left:5px;">'+esc(settings.coordinatorName||'-')+'</span></div></div>'
+                +'<div class="date-minimal-box" style="color:rgba(255,255,255,0.9)!important; font-weight:800;"><i class="fa-solid fa-user-tie"></i> 과정담당: <span style="margin-left:5px;">'+esc(coordMgr.displayName(settings.coordinatorName||'')||'-')+'</span></div></div>'
                 +'</div>'
                 +'<div class="dash-premium-grid">'
                 +'<div class="stat-premium-card card-blue" style="padding:18px;"><div class="card-content combined-stats">'
@@ -6942,12 +6967,14 @@ resetShuttleRequests: function() {
             rows += '<div class="prof-swap-empty">등록된 과정담당자가 없습니다. 교육운영부에서 담당자를 등록하면 여기에 표시됩니다.</div>';
         } else {
             list.forEach(function(c){
-                var nm = e(c.name||'');
-                var isCur = (String(c.name||'').trim()===cur);
+                // [I45/J74] 저장은 "성함 직책"(매칭 호환), 표시는 "직책 성함"으로 통일
+                var save = e(coordMgr.fullName(c));            // 예: 백유민 과장  (coordinatorName 저장값)
+                var disp = e(coordMgr.displayName(c));         // 예: 과장 백유민  (화면 표시)
+                var isCur = (coordMgr.displayName(c) === coordMgr.displayName(cur));
                 rows += '<div class="prof-swap-item'+(isCur?' is-current':'')+'">'
-                      + '<button class="prof-swap-pick" onclick="ui._assignCoordToRoom(\''+e(room)+'\',\''+nm+'\')" title="이 담당자로 배정">'
+                      + '<button class="prof-swap-pick" onclick="ui._assignCoordToRoom(\''+e(room)+'\',\''+save+'\')" title="이 담당자로 배정">'
                       + (isCur?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
-                      + '<span class="prof-swap-name">'+nm+'</span>'
+                      + '<span class="prof-swap-name">'+disp+'</span>'
                       + (isCur?'<span class="prof-swap-badge">현재</span>':'')
                       + '</button></div>';
             });
