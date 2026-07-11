@@ -9834,13 +9834,17 @@ init: function() {
         try {
             // [J79-2] 현황판의 '실시간 데이터 동기화'(#homeSyncBadge)와 같은 크기·형태의 전체화면 오버레이.
             //  PDF 영역 안에만 넣으면 작아서 눈에 잘 안 띄었다 → 화면 전체를 덮고 크게 보여준다.
+            // [J79-3] 전체화면일 때는 그 요소의 '하위'만 그려진다.
+            //  body에 붙이면 PDF 전체화면에서 로딩 화면이 안 보이므로, 현재 전체화면 요소에 붙인다.
+            const host = document.fullscreenElement || document.webkitFullscreenElement || document.body;
             let el = document.getElementById('guideLoading');
+            if (el && el.parentNode !== host) { try { host.appendChild(el); } catch (e) {} }   // 전체화면 진입/해제 시 옮겨 붙임
             if (!el) {
                 el = document.createElement('div');
                 el.id = 'guideLoading';
-                el.style.cssText = 'position:fixed; inset:0; z-index:1200; display:flex;'
+                el.style.cssText = 'position:fixed; inset:0; z-index:2147483000; display:flex;'
                     + 'align-items:center; justify-content:center;'
-                    + 'background:rgba(226,236,250,.35); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px);';
+                    + 'background:rgba(226,236,250,.55); backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px);';
                 el.innerHTML =
                     '<div style="display:inline-flex; align-items:center; gap:16px; padding:20px 40px; border-radius:999px;'
                   + ' background:#fff; border:1px solid #dbeafe; color:#2563eb; font-size:26px; font-weight:800;'
@@ -9850,7 +9854,7 @@ init: function() {
                   + '<span>📘 입교안내를 불러오는 중입니다</span>'
                   + '<span id="guideLoadingSub" style="font-size:16px; font-weight:700; color:#94a3b8;">잠시만 기다려 주세요…</span>'
                   + '</div>';
-                document.body.appendChild(el);
+                host.appendChild(el);
                 if (!document.getElementById('guideSpinKf')) {
                     const st = document.createElement('style');
                     st.id = 'guideSpinKf';
