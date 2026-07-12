@@ -1085,6 +1085,13 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         <span class="ops-val" style="color:#2563eb; font-weight:900;">퀴즈 열기</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
+                    <!-- [J81] 수강생 현황 — '오늘의 운영' 선택 메뉴에 추가 (인원수는 dashTotalCount를 미러링) -->
+                    <div class="ops-row" data-key="students" style="display:none;" onclick="ui.setMode('students')">
+                        <span class="ops-ic" style="color:#0ea5e9; background:#f0f9ff;"><i class="fa-solid fa-user-graduate"></i></span>
+                        <span class="ops-name">수강생 현황</span>
+                        <span class="ops-val"><b class="opsStuMirror">0</b>명</span>
+                        <i class="fa-solid fa-arrow-right ops-go"></i>
+                    </div>
                     <!-- 기사님 실시간 공지 (있을 때만 표시 — JS가 제어) -->
                     <div id="dashShuttleNotice" style="display:none; font-size:12px; background:#fffbeb; padding:8px 12px; border-radius:10px; color:#92400e; border:1px solid #fef3c7;">
                         <i class="fa-solid fa-bullhorn" style="color:#eab308; margin-right:5px;"></i>
@@ -3073,6 +3080,8 @@ function setupAcc(btn){
     // [I14] 선택형 행(질문사항/전자기기) 값 미러
     try{
       var tab=num(document.getElementById('dashTabletLoanCount'));
+      // [J81] 수강생 현황 행의 인원수 미러링 (상단 '오늘 한눈에'의 수강생 수와 동일)
+      document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent=(students==null?0:students); });
       document.querySelectorAll('.opsQaMirror').forEach(function(e){ e.textContent=(qa==null?0:qa); });
       document.querySelectorAll('.opsTabletMirror').forEach(function(e){ e.textContent=(tab==null?0:tab); });
       var qaRow=document.querySelector('.ops-row[data-key="qa"]'); if(qaRow) qaRow.classList.toggle('dash-zero', !(qa>0));
@@ -3111,13 +3120,14 @@ function setupAcc(btn){
 var opsCfg = (function(){
   var PATH='system/coord/dashOpsConfig';
   var CATALOG=[
-    {k:'otp',    n:'OTP 출결'},
-    {k:'action', n:'외출·외박'},
-    {k:'dinner', n:'석식 제외'},
-    {k:'shuttle',n:'셔틀'},
-    {k:'qa',     n:'질문사항 (Q&A)'},
-    {k:'tablet', n:'전자기기 대여'},
-    {k:'quiz',   n:'퀴즈모드'}
+    {k:'otp',      n:'OTP 출결'},
+    {k:'action',   n:'외출·외박'},
+    {k:'dinner',   n:'석식 제외'},
+    {k:'shuttle',  n:'셔틀'},
+    {k:'qa',       n:'질문사항 (Q&A)'},
+    {k:'students', n:'수강생 현황'},          // [J81] 추가
+    {k:'tablet',   n:'전자기기 대여'},
+    {k:'quiz',     n:'퀴즈모드'}
   ];
   var DEFAULT=['otp','action','dinner','shuttle'];
   var cur=DEFAULT.slice(), reorder=false, lpT=null;
