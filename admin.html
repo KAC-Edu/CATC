@@ -2377,14 +2377,20 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 </div>
             </div>
         </div>
-        <div id="quizSummaryOverlay" class="status-overlay" style="background:#f1f5f9; color:#1e293b; backdrop-filter:none; z-index: 2000;">
-            <div style="width: 92%; max-width: 760px; max-height: 92vh; display:flex; flex-direction:column; text-align: center;">
+        <!-- [J83] QUIZ 분석 리포트
+             · 문항별 결과는 내부 스크롤 없이 페이지 전체로 쭉 이어진다(마우스바 제거)
+             · 하단 '리포트 확인 및 퀴즈 종료' 버튼 삭제 → 우측 상단 X 하나로 통일
+             · X = 퀴즈 종료 + 완전 초기화 (플랫폼의 다른 X 버튼과 동일한 표기·동작) -->
+        <div id="quizSummaryOverlay" class="status-overlay quiz-report" style="background:#f1f5f9; color:#1e293b; backdrop-filter:none; z-index: 2000;">
+            <button class="qr-close" onclick="quizMgr.closeSummaryAndExit()" title="퀴즈 종료 및 초기화" aria-label="퀴즈 종료">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="qr-body">
                 <h2 style="font-size:30px; font-weight:800; color:var(--accent-color); margin:0 0 4px 0;">📊 QUIZ 분석 리포트</h2>
                 <p id="summarySubtitle" style="margin:0 0 20px 0; color:#64748b; font-size:14px; font-weight:600;"></p>
                 <div id="summaryStats" style="display:grid; grid-template-columns: 1fr 1fr; gap:14px; margin-bottom:22px;"></div>
                 <div style="text-align:left; margin:0 0 10px 2px; font-weight:800; color:#334155; font-size:16px;">📋 문항별 결과 <span style="font-weight:600; color:#94a3b8; font-size:13px;">(오답률 높은 순)</span></div>
-                <div id="questionBreakdown" style="text-align:left; overflow-y:auto; flex:1 1 auto; min-height:120px; max-height:44vh; padding-right:6px; margin-bottom:22px;"></div>
-                <button class="btn-action btn-primary" onclick="quizMgr.closeSummaryAndExit()">리포트 확인 및 퀴즈 종료</button>
+                <div id="questionBreakdown" style="text-align:left;"></div>
             </div>
         </div>
        
