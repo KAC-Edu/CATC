@@ -136,8 +136,9 @@
     </div>
     <!-- 컨트롤: 배경음 켜기/끄기 토글 (켜면 무작위로 끊김없이 계속 재생) -->
     <div style="display:flex; align-items:center; gap:7px; width:100%;">
-        <button id="bgmToggleBtn" onclick="bgmPlayer.toggleBgm()" style="flex:1; height:36px; background:#fff; color:#ea580c; border:none; border-radius:10px; font-size:13px; font-weight:900; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;">
-            <i id="bgmToggleIcon" class="fa-solid fa-music"></i> <span id="bgmToggleLabel">배경음 켜기</span>
+        <!-- [J88] ON/OFF가 색으로 확 구분되는 토글 (스타일은 admin.css 의 .bgm-on / .bgm-off) -->
+        <button id="bgmToggleBtn" class="bgm-off" onclick="bgmPlayer.toggleBgm()">
+            <i id="bgmToggleIcon" class="fa-solid fa-volume-xmark"></i> <span id="bgmToggleLabel">MUSIC <b>OFF</b></span>
         </button>
     </div>
     <!-- 볼륨 -->
