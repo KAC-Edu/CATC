@@ -4087,7 +4087,7 @@ showAlert: function(msg, onConfirm) {
             const userCount = uniqueNames.size;
             const isRoomActive = (st.roomStatus === 'active');
             const courseName = settings.courseName ? settings.courseName : "-";
-            const profName = st.professorName ? st.professorName : "-";
+            const profName = kacProfLabel(st) || "-";   // [J89] "장두석 외 2명"
             // isRealMyRoom: 오직 현재 세션ID 기준 (last_owned_room 제거 - 방 혼동 원인)
             const isRealMyRoom = isRoomActive && st.ownerSessionId === state.sessionId;
 
@@ -7217,10 +7217,11 @@ resetShuttleRequests: function() {
         room=String(room||'').trim(); name=String(name||'').trim();
         if(!room || !name) return;
         var updates={};
-        updates['courses/'+room+'/status/professorName']=name;
+        kacProfUpdates(updates, room, name);                       // [J89] "장두석,박호원"처럼 여러 명도 인식
         updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
-        // 오픈톡방 링크 동기화
-        try{ var ks=await firebase.database().ref('system/professorProfiles/'+name+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
+        // 오픈톡방 링크 동기화 (대표 기준)
+        var _mainP = kacProfList(name)[0] || name;
+        try{ var ks=await firebase.database().ref('system/professorProfiles/'+_mainP+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
         // 연간교육계획도 함께 수정: 이 방의 과정명·기간과 일치하는 계획 항목의 교수(prof) 갱신
         try{
             var cs=await firebase.database().ref('courses/'+room+'/settings').once('value');
@@ -7340,7 +7341,7 @@ resetShuttleRequests: function() {
             if(settings.hideFromBoard) return;
             var course=String(settings.courseName||'').trim();
             var period=String(settings.period||'');
-            var prof=String(st.professorName||'');
+            var prof=kacProfLabel(st);   // [J89] "장두석 외 2명"
             var ended=(ui._isEnded?ui._isEnded(period):false);
             var thisWeek=(ui._isThisWeek?ui._isThisWeek(period):false);
             var isActive=(st.roomStatus==='active');
@@ -7457,7 +7458,7 @@ resetShuttleRequests: function() {
         if(type==='active'){
             title.innerHTML=_statTitle('🏫 항공기술훈련원 운영 과정 현황', _wkRange+' 주차 <span style="color:#94a3b8;font-weight:700;">(현재 강의 중인 과정)</span>');
             const rows=weekRooms.filter(([,r])=>(r.status||{}).roomStatus==='active').map(([room,r])=>{
-                const prof=(r.status||{}).professorName||'-', course=(r.settings||{}).courseName||'-';
+                const prof=kacProfLabel(r.status||{})||'-', course=(r.settings||{}).courseName||'-';   // [J89]
                 const _isOnline=/온라인|zoom/i.test(String((r.settings||{}).roomDetailName||''));   // 대면/비대면 구분(강의실=온라인/Zoom 이면 비대면)
                 const _mode=_isOnline
                     ? '<span title="비대면(온라인·Zoom) 과정" style="display:inline-flex;align-items:center;gap:5px;flex:0 0 auto;padding:5px 12px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:clamp(12px,1.2vw,15px);font-weight:900;white-space:nowrap;"><i class="fa-solid fa-video"></i> 비대면</span>'
@@ -11029,6 +11030,7 @@ loadCurrentSettings: function() {
         const keepInput = document.getElementById('setup-keep-next-week');
         if (keepInput) keepInput.checked = !!s.autoAssignLocked;
         document.getElementById('setup-prof-select').value = st.professorName || "";
+        profMulti.set(kacProfAll(st), st.professorMain || '');   // [J89] 담임 여러 명
         // coordinatorName 매칭: 저장값("백유민"/"백유민 과장"/"백유민과장" 등)을 명단의 정식 이름으로 정규화해 드롭다운 자동 선택
         const savedCoordName = s.coordinatorName || '';
         const coordSel = document.getElementById('setup-coord-select');
@@ -11214,7 +11216,9 @@ saveAll: function() {
         // ★ 수정: 두 개의 날짜 대신 통합된 범위 입력창에서 값을 가져옵니다.
         const periodRange = document.getElementById('setup-period-range').value.trim();
         
-        const profName = document.getElementById('setup-prof-select').value;
+        // [J89] 담임 여러 명 — 칩으로 추가한 목록이 있으면 그것을 쓰고, 없으면 드롭다운 값 하나
+        const profArr  = profMulti.list.length ? profMulti.list.slice() : kacProfList(document.getElementById('setup-prof-select').value);
+        const profName = profMulti.list.length ? profMulti.mainName()   : (profArr[0] || '');
         const coordName = document.getElementById('setup-coord-select').value;
 
         const roomSelectVal = document.getElementById('setup-room-select').value;
@@ -11284,7 +11288,10 @@ saveAll: function() {
         updates[`courses/${state.room}/status/roomDetailManual`] = (roomName && String(roomName).trim()) ? true : null;   // 강사가 강의실 수동 지정 → 자동동기화가 덮어쓰지 않게 보존
         updates[`courses/${state.room}/settings/coordinatorName`] = coordName;
         updates[`courses/${state.room}/status/coordManual`] = (coordName && String(coordName).trim()) ? true : null;   // [J10] 강사가 담임 수동 지정 → 연간계획 자동동기화가 덮어쓰지 않게 보존
-        updates[`courses/${state.room}/status/professorName`] = profName;
+        updates[`courses/${state.room}/status/professorName`]  = profName;                       // 대표
+        updates[`courses/${state.room}/status/professorNames`] = profArr.length ? profArr : null; // 전체
+        updates[`courses/${state.room}/status/professorMain`]  = profMulti.main || null;          // 수동 대표(없으면 첫 번째)
+        updates[`courses/${state.room}/status/professorManual`] = profArr.length ? true : null;   // 수동 지정 → 연간계획 자동동기화가 덮어쓰지 않음
         updates[`courses/${state.room}/status/roomStatus`] = 'active';
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
@@ -11878,7 +11885,7 @@ const kiosk = {
                 _nm.forEach(function(nn){ var _kk=nn.replace(/\s+/g,''); if(_kk && !kiosk._idx[_kk]){ var _o={room:room, course:(s.courseName||'-'), place:_place, num:(_i+1), type:'student', name:nn}; kiosk._idx[_kk]=_o; kiosk._people.push(_o); } });
                 var _pf=String(st.professorName||'').trim(); if(_pf){ var _pk=_pf.replace(/\s+/g,''); if(_pk && !kiosk._idx[_pk]){ var _po={room:room, course:(s.courseName||'-'), place:_place, num:(_i+1), type:'prof', name:_pf}; kiosk._idx[_pk]=_po; kiosk._people.push(_po); } }
             }catch(e){}
-            const prof=(st.professorName||'').trim();
+            const prof=kacProfLabel(st);   // [J89] "장두석 외 2명"
             const coordRaw=(s.coordinatorName||'').trim();
             // 과정담당: 직책까지 합본 표시 (등록 명단과 매칭)
             const coord=(typeof coordMgr!=='undefined'&&coordMgr.matchName)?(coordMgr.matchName(coordRaw)||coordRaw):coordRaw;
@@ -12831,6 +12838,8 @@ const annualPlanMgr = {
             reset[`courses/${r}/settings/period`]     = '';
             reset[`courses/${r}/settings/coordinatorName`] = null;
             reset[`courses/${r}/status/professorName`] = '';
+            reset[`courses/${r}/status/professorNames`] = null;
+            reset[`courses/${r}/status/professorMain`] = null;
             reset[`courses/${r}/status/roomStatus`]   = 'idle';
             reset[`courses/${r}/status/ownerSessionId`] = null;
         }
@@ -12965,6 +12974,8 @@ const annualPlanMgr = {
                 updates[`courses/${r}/settings/period`] = null;
                 updates[`courses/${r}/settings/coordinatorName`] = null;
                 updates[`courses/${r}/status/professorName`] = '';
+                updates[`courses/${r}/status/professorNames`] = null;
+                updates[`courses/${r}/status/professorMain`] = null;
                 updates[`courses/${r}/status/roomStatus`] = 'idle';
                 wiped.push(`${r}(${_rnm} 중복→미개설·${keep} 유지)`);
             });
@@ -13026,6 +13037,8 @@ const annualPlanMgr = {
                     updates[`courses/${room}/settings/period`] = null;
                     updates[`courses/${room}/settings/coordinatorName`] = null;
                     updates[`courses/${room}/status/professorName`] = '';
+                    updates[`courses/${room}/status/professorNames`] = null;
+                    updates[`courses/${room}/status/professorMain`] = null;
                     updates[`courses/${room}/status/roomStatus`] = 'idle';
                     wiped.push(`${room}(${_nm} 폐강→미개설)`);
                 } else if (_act && _nm && _end && _end < targetMon) {
@@ -13034,6 +13047,8 @@ const annualPlanMgr = {
                     updates[`courses/${room}/settings/period`] = null;
                     updates[`courses/${room}/settings/coordinatorName`] = null;
                     updates[`courses/${room}/status/professorName`] = '';
+                    updates[`courses/${room}/status/professorNames`] = null;
+                    updates[`courses/${room}/status/professorMain`] = null;
                     updates[`courses/${room}/status/roomStatus`] = 'idle';
                     wiped.push(`${room}(${_nm} 종료→미개설)`);
                 }
@@ -13508,7 +13523,7 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
     const rp = 'courses/' + room;
     const upd = {};
     upd[rp + '/settings'] = { courseName: '', roomDetailName: '', period: null, coordinatorName: null, subjects: null, password: null };
-    upd[rp + '/status'] = { professorName: '', roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null };
+    upd[rp + '/status'] = { professorName: '', professorNames: null, professorMain: null, roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null };
     ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'attendanceOtp', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'gradPhoto', 'venuePick'].forEach(function (k) { upd[rp + '/' + k] = null; });
     if (typeof kacMedia !== 'undefined') kacMedia.nullPaths(upd, room || (rp.split('/')[1]));   // [J16] media/{room} 정리
     ['boardNotice', 'notice', 'coordNotice'].forEach(function (k) { upd[rp + '/' + k] = ''; });
@@ -13680,6 +13695,8 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
             updates[`courses/${r}/settings/password`]   = null;
             updates[`courses/${r}/settings/coordinatorName`] = null;
             updates[`courses/${r}/status/professorName`] = '';
+            updates[`courses/${r}/status/professorNames`] = null;
+            updates[`courses/${r}/status/professorMain`] = null;
             updates[`courses/${r}/status/professorManual`] = null;
             updates[`courses/${r}/status/coordManual`] = null;
             updates[`courses/${r}/status/roomDetailManual`] = null;
@@ -13729,6 +13746,8 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/settings/password`]   = null;  // [비번 옵션화] 방 비울 때 비번 제거(없음 상태)
         updates[`courses/${r}/settings/coordinatorName`] = null;
         updates[`courses/${r}/status/professorName`] = '';
+        updates[`courses/${r}/status/professorNames`] = null;
+        updates[`courses/${r}/status/professorMain`] = null;
         updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
         updates[`courses/${r}/status/coordManual`] = null;       // [J10] 담임 수동 플래그도 해제
         updates[`courses/${r}/status/roomDetailManual`] = null;  // 방 비우면 강의실 수동 플래그도 해제
@@ -13786,6 +13805,8 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 updates['courses/'+r+'/settings/roomDetailName']='';
                 updates['courses/'+r+'/settings/coordinatorName']=null;
                 updates['courses/'+r+'/status/professorName']='';
+                updates['courses/'+r+'/status/professorNames']=null;
+                updates['courses/'+r+'/status/professorMain']=null;
                 updates['courses/'+r+'/status/roomStatus']='idle';
                 updates['courses/'+r+'/status/ownerSessionId']=null;
             });
@@ -14233,7 +14254,7 @@ window.gradMgr = {
             name: set.courseName || '과정명 미설정',
             period: fmt(set.period || '') || '-',
             venue: set.roomDetailName || '-',
-            prof: (stt.professorName ? stt.professorName + ' 교수' : '-'),
+            prof: (kacProfLabel(stt, ' 교수') || '-'),   // [J89] "장두석 교수 외 2명"
             endDate: this._endDateOf(set.period)
         };
         return this._info;
@@ -14713,7 +14734,7 @@ window.kacExpireEndedCourses = async function(){
         kacMedia.nullPaths(updates, room);   // [J16] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
-        updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        updates[b+'status/professorName']=''; updates[b+'status/professorNames']=null; updates[b+'status/professorMain']=null; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
             var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
@@ -14853,9 +14874,9 @@ ui.saveFieldEdit = async function(){
     updates['courses/'+room+'/status/roomDetailManual']=(sv&&String(sv).trim())?true:null;
   } else if(f==='prof'){
     var pv=(document.getElementById('fe-val')||{}).value||'';
-    updates['courses/'+room+'/status/professorName']=pv;
+    var _mp = kacProfUpdates(updates, room, pv);               // [J89] "장두석,박호원"처럼 여러 명도 인식 (대표=맨 앞)
     updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
-    try{ var ks=await firebase.database().ref('system/professorProfiles/'+pv+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
+    try{ var ks=await firebase.database().ref('system/professorProfiles/'+_mp+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
   } else if(f==='coord'){
     updates['courses/'+room+'/settings/coordinatorName']=(document.getElementById('fe-val')||{}).value||'';
     updates['courses/'+room+'/status/coordManual']=(((document.getElementById('fe-val')||{}).value||'').trim())?true:null;   // [J10] 수동 지정 보존
