@@ -6770,8 +6770,9 @@
                         keptNames.add(nm);
                         if (inPlan) {
                             const pc = planByName[nm];
-                            updates[`courses/${r}/settings/period`] = pc.period;
-                            updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
+                            // [J90] 방에서 직접 고친 기간·담당은 자동 동기화가 되돌리지 않는다
+                            if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.periodManual)) updates[`courses/${r}/settings/period`] = pc.period;
+                            if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.coordManual))  updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
                             if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
                                 updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));
                             }
@@ -6784,8 +6785,9 @@
                     if (nm && inProgress && inPlan) {
                         keptNames.add(nm);
                         const pc = planByName[nm];
-                        updates[`courses/${r}/settings/period`] = pc.period;
-                        updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
+                        // [J90] 방에서 직접 고친 기간·담당은 자동 동기화가 되돌리지 않는다
+                        if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.periodManual)) updates[`courses/${r}/settings/period`] = pc.period;
+                        if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.coordManual))  updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
                         if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
                             updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));
                         }
@@ -6797,8 +6799,9 @@
                     if (nm && inPlan && pool.some(c => norm(c.name) === nm)) {
                         keptNames.add(nm);
                         const pc = planByName[nm];
-                        updates[`courses/${r}/settings/period`] = pc.period;
-                        updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
+                        // [J90] 방에서 직접 고친 기간·담당은 자동 동기화가 되돌리지 않는다
+                        if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.periodManual)) updates[`courses/${r}/settings/period`] = pc.period;
+                        if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.coordManual))  updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
                         if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
                             updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));
                         }
@@ -6844,6 +6847,8 @@
                     const _mainProf = kacProfUpdates(updates, room, course.prof);
                     updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준
                     updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
+                    updates[`courses/${room}/status/coordManual`] = null;       // [J90]
+                    updates[`courses/${room}/status/periodManual`] = null;      // [J90] 신규 배치는 계획 기간 기준
                     updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(_mainProf);
                     if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
                     updates[`courses/${room}/status/roomStatus`]   = 'active';
