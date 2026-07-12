@@ -58,3 +58,50 @@ function getYesterdayString() {
 
 // 오프라인 상태에서도 데이터를 임시로 저장하여 앱이 멈추지 않게 함
 firebase.database().goOnline();
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [팝업 오작동 방지] "글자를 드래그하다 팝업 밖에서 손을 떼면 팝업이 닫히는" 문제
+
+   원인 — 팝업 배경(어두운 오버레이)에는 보통 이렇게 걸려 있다:
+       onclick="if(event.target === this) 닫기()"      ← 배경을 클릭하면 닫기
+   그런데 브라우저는 '누른 곳'과 '뗀 곳'이 다르면, 그 둘의 공통 부모를 click 대상으로
+   잡는다. 그래서 팝업 안 글자를 드래그하다가 팝업 밖(배경)에서 손을 떼면
+   click 대상이 '배경'이 되어 버려 → 팝업이 닫혀 버린다. (본문 입력 중 특히 잦음)
+
+   해결 — 누르기 시작한 곳이 팝업 '안쪽'이었다면, 배경에서 손을 떼도 닫지 않는다.
+          (배경을 제대로 눌렀다 뗀 '진짜 배경 클릭'은 지금처럼 그대로 닫힌다)
+
+   이 파일은 모든 플랫폼(강사·교육운영부·교육지원부·영양사·기사·교육생 등)이
+   공통으로 불러오므로, 여기 한 번만 넣으면 전 화면에 동일하게 적용된다.
+   ══════════════════════════════════════════════════════════════════════════ */
+(function () {
+  if (window.__kacPopupDragGuard) return;   // 중복 설치 방지
+  window.__kacPopupDragGuard = true;
+
+  var pressedOn = null;
+
+  // 화면을 거의 다 덮는 fixed 요소 = 팝업 배경(오버레이)으로 본다
+  function isBackdrop(el) {
+    if (!el || el.nodeType !== 1) return false;
+    var cs;
+    try { cs = window.getComputedStyle(el); } catch (e) { return false; }
+    if (!cs || cs.position !== 'fixed') return false;
+    var r = el.getBoundingClientRect();
+    return r.width >= window.innerWidth * 0.9 && r.height >= window.innerHeight * 0.9;
+  }
+
+  document.addEventListener('mousedown', function (e) { pressedOn = e.target; }, true);
+  document.addEventListener('touchstart', function (e) { pressedOn = e.target; }, true);
+
+  document.addEventListener('click', function (e) {
+    var startedInside = pressedOn && pressedOn !== e.target &&
+                        e.target.contains && e.target.contains(pressedOn);
+    pressedOn = null;
+    // 배경에서 손을 뗐지만, 누르기는 팝업 안쪽에서 시작했다 → 닫기 취소
+    if (startedInside && isBackdrop(e.target)) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }
+  }, true);   // capture 단계 — 배경의 onclick 보다 먼저 가로챈다
+})();
