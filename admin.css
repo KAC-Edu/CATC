@@ -481,6 +481,32 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
     text-align: center; padding: 20px;
 }
 
+/* ══ [J88] 배경음악 ON/OFF 토글 — 켜짐/꺼짐이 색으로 즉시 구분되게 ══ */
+#bgmToggleBtn{
+    flex:1; height:44px; border:none; border-radius:12px; cursor:pointer;
+    font-size:14px; font-weight:900; letter-spacing:.2px;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    transition:background .15s, box-shadow .15s, transform .1s;
+}
+#bgmToggleBtn b{ font-weight:900; }
+#bgmToggleBtn:active{ transform:scale(.97); }
+/* 꺼짐 — 회색, 차분함 */
+#bgmToggleBtn.bgm-off{
+    background:#f1f5f9; color:#64748b;
+    box-shadow:inset 0 0 0 2px #cbd5e1;
+}
+#bgmToggleBtn.bgm-off:hover{ background:#e2e8f0; color:#475569; }
+#bgmToggleBtn.bgm-off b{ color:#94a3b8; }
+/* 켜짐 — 초록, 재생 중임을 확실히 */
+#bgmToggleBtn.bgm-on{
+    background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff;
+    box-shadow:0 4px 14px rgba(22,163,74,.45);
+}
+#bgmToggleBtn.bgm-on:hover{ background:linear-gradient(135deg,#16a34a,#15803d); }
+#bgmToggleBtn.bgm-on b{ color:#dcfce7; }
+#bgmToggleBtn.bgm-on i{ animation:bgmBtnPulse 1.2s ease-in-out infinite; }
+@keyframes bgmBtnPulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.18); opacity:.75; } }
+
 /* 퀴즈 리포트 관련 */
 #quizSummaryOverlay h2 { font-size: 42px !important; margin-bottom: 40px !important; }
 .summary-card { display: flex; flex-direction: column; gap: 10px; padding: 20px !important; background: #f8fafc; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
