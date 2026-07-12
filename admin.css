@@ -6609,11 +6609,13 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
     font-size: 16px;
     font-weight: 900;
 }
+/* 안내 이미지를 옆에서 빼고 OTP 블록이 화면 폭을 다 쓰게 되면서, 번호도 크게 키운다.
+   (화면 폭에 따라 자동 조절 — 좁으면 줄고 넓으면 커진다) */
 #internalOtpCode {
     margin-top: 0 !important;
-    font-size: 88px !important;
+    font-size: clamp(88px, 9vw, 150px) !important;
     line-height: 1.05 !important;
-    letter-spacing: 13px !important;
+    letter-spacing: clamp(13px, 1.4vw, 24px) !important;
 }
 @media (max-width: 900px) {
     #internalOtpCode {
