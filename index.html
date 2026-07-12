@@ -12,7 +12,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>KAC Training Platform</title>
+    <title>KAC Student Platform</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#f3f7fc">
@@ -462,9 +462,34 @@
 }
 
 /* ── 전역 로딩 스피너 ── */
-/* [vJ122] 옛 catc 사진 스플래시 폐지 — 어떤 경로로 들어와도 절대 뜨지 않는다.
-   전체화면 로딩은 #kacBootOv 하나로 통일했다. */
-#global-loader { display: none !important; }
+#global-loader {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%);
+    z-index: 99999;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 16px;
+    transition: opacity 0.4s ease;
+}
+#global-loader .loader-banner {
+    width: 80%; max-width: 320px;
+    border-radius: 16px;
+    margin-bottom: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+    border: 2px solid rgba(255,255,255,0.1);
+    display: block; object-fit: cover;
+}
+#global-loader .loader-spinner {
+    width: 44px; height: 44px;
+    border: 4px solid rgba(255,255,255,0.15);
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    animation: gl-spin 0.8s linear infinite;
+}
+#global-loader .loader-text {
+    color: #94a3b8; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
+}
+@keyframes gl-spin { to { transform: rotate(360deg); } }
 
 
 
@@ -473,8 +498,9 @@
     .amenity-chip { display:flex; align-items:center; gap:8px; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font-size:15px; font-weight:700; color:#334155; cursor:pointer; background:#fff; transition:all .15s; }
     .amenity-chip input { width:18px; height:18px; accent-color:#10b981; cursor:pointer; }
     .amenity-chip:has(input:checked) { border-color:#10b981; background:#f0fdf4; color:#047857; }
-    /* [vJ122] 카카오 진입도 배경색만 깔고 스플래시는 안 띄운다(위 #global-loader 폐지와 세트). */
+    /* 카카오 딥링크도 데이터가 준비될 때까지 같은 밝은 로딩 화면을 사용한다. */
     html.kac-kiosk-boot, html.kac-kiosk-boot body{ background:#f3f7fc !important; }
+    html.kac-kiosk-boot #global-loader{ display:flex; }
     </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
 <style id="student-ui-vh67">
@@ -490,7 +516,44 @@ body.kac-locked #mainApp{
   touch-action:pan-y;
 }
 
-/* [vJ122] 옛 catc 사진 스플래시 스타일 폐지 (전체화면 로딩은 #kacBootOv 하나로 통일) */
+#global-loader{
+  background:rgba(243,247,252,.98) !important;
+  gap:16px;
+  transition:opacity .6s ease, visibility .6s ease !important;
+}
+#global-loader .loader-banner{
+  width:150px !important;
+  height:68px !important;
+  object-fit:cover;
+  opacity:.2;
+  filter:saturate(.55);
+  border-radius:14px !important;
+  box-shadow:none !important;
+}
+#global-loader .loader-spinner{
+  width:48px;
+  height:48px;
+  border:4px solid #dbeafe;
+  border-top-color:#2563eb;
+}
+#global-loader .loader-text{
+  color:#334155 !important;
+  font-size:14px !important;
+  letter-spacing:0 !important;
+}
+#global-loader .loader-text::after{
+  content:"";
+  display:inline-block;
+  width:1.4em;
+  text-align:left;
+  animation:kac-loading-dots 1.2s steps(4,end) infinite;
+}
+@keyframes kac-loading-dots{
+  0%{content:"";}
+  25%{content:".";}
+  50%{content:"..";}
+  75%,100%{content:"...";}
+}
 
 .header{
   display:grid !important;
@@ -682,7 +745,7 @@ body.kac-quiz-active .quiz-overlay{ display:flex !important; }
 <style>
 #kacBootOv{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:24px;
  background:rgba(241,245,249,.42);backdrop-filter:blur(11px) saturate(1.15);-webkit-backdrop-filter:blur(11px) saturate(1.15);
- opacity:1;}   /* [vJ122] 페이드 전환 제거 — 교육생 플랫폼은 애니메이션 없이 단순하게 */
+ opacity:1;transition:opacity .45s ease;}
 #kacBootOv.out{opacity:0;pointer-events:none;}
 #kacBootOv .kb-card{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:230px;padding:30px 34px 26px;
  background:rgba(255,255,255,.94);border:1px solid rgba(226,232,240,.9);border-radius:24px;box-shadow:0 20px 55px rgba(15,23,42,.20);}
@@ -703,18 +766,11 @@ body.kac-quiz-active .quiz-overlay{ display:flex !important; }
     try{ if(msg){ var m=document.getElementById('kacBootMsg'); if(m) m.textContent=msg; } }catch(e){}
   };
   window.kacBootDone=function(){ if(done) return; done=true;
-    try{ if(window.kacBootCancel) window.kacBootCancel(); }catch(e){}   /* 아직 안 떴으면 아예 안 띄운다 */
     var o=el(); if(!o) return;
-    o.style.display='none';   /* [vJ122] 페이드 애니메이션 제거 — 즉시 사라진다 */
+    o.classList.add('out'); setTimeout(function(){ try{ o.style.display='none'; }catch(e){} },480);
   };
-  /* [vJ122] 예전엔 room 진입 시 '즉시' 로딩 화면을 띄웠다 → 빨라도 무조건 번쩍였다.
-     이제 0.35초 넘게 걸릴 때만 띄운다. 그 안에 화면이 뜨면 아무 로딩도 안 보인다. */
-  try{
-    if(new URLSearchParams(location.search).get('room')){
-      var _bt=setTimeout(function(){ if(!done) window.kacBootShow(); }, 350);
-      window.kacBootCancel=function(){ try{ clearTimeout(_bt); }catch(e){} };
-    }
-  }catch(e){}
+  // 메인 앱 진입(room 파라미터)일 때만 초기 표시 — 카카오 입교 화면 직행은 표시하지 않음
+  try{ if(new URLSearchParams(location.search).get('room')) window.kacBootShow(); }catch(e){}
   setTimeout(function(){ window.kacBootDone(); }, 8000);   // 안전장치
   // 입교/OTP/홈 카드가 화면에 뜨면 즉시 해제 (menu 직행 흐름 대비)
   var chk=setInterval(function(){
@@ -735,9 +791,12 @@ try{
 }catch(e){}
 </script>
 
-<!-- [vJ122] 옛 catc 사진 스플래시 폐지 — 전체화면 로딩은 #kacBootOv 하나로 통일.
-     (요소 자체는 남겨 두되 항상 숨김. showLoader/hideLoader가 kacBootOv로 넘긴다) -->
-<div id="global-loader" style="display:none !important;" aria-hidden="true"></div>
+<!-- 전역 로딩 스피너: 페이지 로드 즉시 표시, Firebase 데이터 준비 완료 시 fadeOut -->
+<div id="global-loader">
+    <img src="catc.webp" alt="" class="loader-banner" aria-hidden="true">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">과정을 연결하고 있습니다</div>
+</div>
 
 <!-- [수정] 개인정보 동의 절차가 추가된 프로필 등록 팝업 -->
 <div id="profileOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%); z-index:10000; flex-direction:column; align-items:center; justify-content:center; color:white; padding:20px; text-align:center;">
@@ -782,12 +841,13 @@ try{
     <div id="landingPage" class="landing-page">
         <div id="landingVer" style="position:absolute; top:10px; right:14px; font-size:10px; font-weight:600; color:rgba(100,116,139,.35); letter-spacing:.3px; pointer-events:none;"></div>
         <div class="landing-brand"><i class="fa-solid fa-plane-departure" style="color:#2563eb; font-size:17px;"></i><span>항공기술훈련원 교육생 플랫폼</span></div>
-        <!-- 단순화 — '환영합니다', 과정명, [입장하기] 버튼 제거. 화면(히어로)을 누르면 입장한다. -->
-        <div class="landing-hero" onclick="enterApp()" style="cursor:pointer;">
+        <div class="landing-hero">
             <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
+            <div class="landing-welcome"><i class="fa-solid fa-hand-sparkles"></i> 환영합니다</div>
             <div class="landing-room" id="landingBadge">Room ...</div>
         </div>
         <div class="landing-course" id="landingTitle" style="display:none;">Loading...</div>
+        <button class="btn-enter" onclick="enterApp()">입장하기 <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
         <div class="landing-foot">© KAC 한국공항공사 · 항공기술훈련원</div>
     </div>
 
@@ -1667,30 +1727,18 @@ function sendAns(idx) {
 
 
         
-/* ── [vJ122] 로딩 표시 일원화 ──────────────────────────────────────────
-   교육생 플랫폼은 '카카오 URL → 그 화면 하나'가 원칙이다. 화면마다 로딩 모양이
-   다르면 안 되므로, 전체화면 로딩은 kacBootOv 하나만 쓴다.
-   ─ 옛 catc 사진 스플래시(#global-loader)는 폐지. showLoader/hideLoader는
-     기존 호출부(6곳)를 그대로 살리기 위해 kacBootOv로 넘겨주는 껍데기로 둔다.
-   ─ '0.35초 넘게 걸릴 때만' 뜬다. 빠르면(대부분) 아무 로딩 화면도 안 보인다.
-   ─ 페이드 애니메이션 없음.                                                */
-const KAC_LOADER_DELAY = 350;
-let _loaderT = null;
+// ── 로딩 스피너 제어 헬퍼 ──
 function showLoader(msg) {
-    // 옛 스플래시가 혹시 남아 있으면 확실히 치운다
-    const old = document.getElementById('global-loader');
-    if (old) old.style.display = 'none';
-    if (_loaderT) clearTimeout(_loaderT);
-    _loaderT = setTimeout(() => {
-        _loaderT = null;
-        try { if (window.kacBootShow) window.kacBootShow(msg || '불러오는 중입니다…'); } catch (e) {}
-    }, KAC_LOADER_DELAY);
+    const el = document.getElementById('global-loader');
+    const txt = el && el.querySelector('.loader-text');
+    if (txt && msg) txt.textContent = msg;
+    if (el) { el.style.opacity = '1'; el.style.display = 'flex'; }
 }
 function hideLoader() {
-    if (_loaderT) { clearTimeout(_loaderT); _loaderT = null; }   // 아직 안 떴으면 그냥 안 띄우고 끝
-    const old = document.getElementById('global-loader');
-    if (old) old.style.display = 'none';
-    try { if (window.kacBootDone) window.kacBootDone(); } catch (e) {}
+    const el = document.getElementById('global-loader');
+    if (!el) return;
+    el.style.opacity = '0';
+    setTimeout(() => { el.style.display = 'none'; }, 400);
 }
 
 // ── public_codes 단축코드 → 실제 room 번호 변환 ──
@@ -1774,11 +1822,10 @@ async function resolveRoomFromCode(code) {
             window.closeMealMenu=function(){ closePanelSmooth('mealMenuModal'); };
         }
     }catch(e){}
-    /* 랜딩 배지 = ROOM 알약만 (단순하게). 과정명은 표시하지 않는다.
-       #landingCourseName 은 다른 코드가 값을 넣으므로 요소는 남기되 숨긴다. */
+    // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
     document.getElementById('landingBadge').innerHTML =
-        `<span class="room-pill"><i class="fa-solid fa-chalkboard-user"></i> ROOM ${currentRoom}</span>` +
-        `<span class="room-course" id="landingCourseName" style="display:none;"></span>`;
+        `<span class="room-pill"><i class="fa-solid fa-door-open"></i> ROOM ${currentRoom}</span>` +
+        `<span class="room-course" id="landingCourseName">강의실 확인 중...</span>`;
 
     const db = firebase.database();
     const rPath = `courses/${currentRoom}`;
@@ -3888,9 +3935,9 @@ function renderMyShuttleStatus(data){
     el.innerHTML='<div class="kac-shuttle-status-head">'
       +'<div class="ks-eyebrow"><span class="ks-status-dot"></span> 차량 신청 완료</div>'
       +'<div class="ks-title">나의 퇴교차량</div>'
-      /* [vJ122] "공지된 출발 시간을 확인해 주세요" 제거 — 어디를 보라는 건지 모호해 오해 소지 */
+      +'<div class="ks-sub">공지된 출발 시간을 확인해 주세요.</div>'
       +'</div><div class="kac-shuttle-status-body">'
-      +'<div class="kac-shuttle-status-row"><span>과정명</span><b>'+esc(course)+'</b></div>'
+      +'<div class="kac-shuttle-status-row"><span>과정</span><b>'+esc(course)+'</b></div>'
       +'<div class="kac-shuttle-status-row"><span>신청자</span><b>'+esc(name)+' <span style="color:#94a3b8;font-size:13px;">('+esc(sabun)+')</span></b></div>'
       +'<div class="kac-shuttle-status-row"><span>신청 장소</span><b style="font-size:18px !important; color:#1d4ed8 !important; font-weight:900 !important;">'+esc(data.typeText||'-')+'</b></div>'
       +'</div>';
@@ -4112,19 +4159,17 @@ window._kacFeatureBlockedCard=function(label){
   try{ document.body.classList.remove('kac-target-pending'); document.body.classList.remove('kac-cover'); }catch(e){}
   if(document.getElementById('kacFeatBlock')) return;
   var _close=function(){ var o=document.getElementById('kacFeatBlock'); try{ if(o) o.remove(); }catch(e){} try{ document.body.classList.remove('kac-target-pending'); document.body.classList.remove('kac-locked'); document.body.classList.remove('kac-cover'); }catch(e){} try{ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }catch(e){} };
-  /* [vJ122] 우측 상단 '✕ 닫기' 버튼과 '오른쪽 위 ✕ 닫기를 눌러 나가 주세요' 안내문 제거.
-     카카오 채널에서 그 화면 하나만 뜨는 구조라, 나가는 건 카카오 창을 닫으면 된다.
-     안내 카드는 '왜 안 되는지'만 알려 주면 충분하다. */
   var ov=document.createElement('div'); ov.id='kacFeatBlock';
-  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#fff7ed,#ffedd5);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:24px;padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px));';
-  ov.innerHTML='<div style="margin:auto;max-width:360px;width:100%;background:#fff;border-radius:22px;box-shadow:0 20px 60px rgba(180,83,9,.2);padding:34px 26px;text-align:center;box-sizing:border-box;">'
+  ov.style.cssText='position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#fff7ed,#ffedd5);display:flex;align-items:center;justify-content:center;padding:24px;';
+  ov.innerHTML='<button id="kacFeatBlockX" style="position:fixed;top:calc(14px + env(safe-area-inset-top));right:16px;z-index:2;border:1.5px solid #f0d9b5;background:#fff;color:#92400e;border-radius:12px;padding:10px 16px;font-size:15px;font-weight:900;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 6px 16px rgba(180,83,9,.15);">✕ 닫기</button>'
+    +'<div style="max-width:360px;width:100%;background:#fff;border-radius:22px;box-shadow:0 20px 60px rgba(180,83,9,.2);padding:34px 26px;text-align:center;box-sizing:border-box;">'
     +'<div style="width:74px;height:74px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,#f59e0b,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:34px;">🚫</div>'
-    +'<div style="font-size:19px;font-weight:900;color:#7c2d12;margin-bottom:10px;">이용할 수 없는 기능이에요</div>'
-    /* [vJ122] 기능명과 설명을 한 줄에 붙여 놓으니 지저분했다 → 기능명 한 줄, 설명 아랫줄. */
-    +'<div style="font-size:15px;font-weight:900;color:#b45309;line-height:1.5;">'+label+'<span style="font-weight:800;">은(는)</span></div>'
-    +'<div style="font-size:14px;color:#78350f;line-height:1.6;margin-top:4px;">본 과정에서 <b>제공되지 않습니다.</b></div>'
+    +'<div style="font-size:19px;font-weight:900;color:#7c2d12;margin-bottom:8px;">이용할 수 없는 기능이에요</div>'
+    +'<div style="font-size:14px;color:#78350f;line-height:1.6;margin-bottom:14px;"><b style="color:#b45309;">'+label+'</b>은(는) 본 과정에서 <b>제공되지 않습니다.</b></div>'
+    +'<div style="font-size:12.5px;color:#a16207;font-weight:800;">오른쪽 위 <b>✕ 닫기</b>를 눌러 나가 주세요.</div>'
     +'</div>';
   document.body.appendChild(ov);
+  var x=document.getElementById('kacFeatBlockX'); if(x) x.onclick=_close;
 };
 async function openAdminAction() {
     // [외출·외박 불가 과정] 강사가 외출/외박을 끈 과정이면 어떤 경로로 열려도 차단
@@ -4436,10 +4481,11 @@ function ensureAdminApplicantSummary(){
         box.style.cssText='margin-bottom:16px;padding:16px 17px;border-radius:18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;box-shadow:0 14px 30px rgba(37,99,235,.18);';
         step.insertBefore(box, step.firstChild);
     }
+    var course=(typeof getCurrentCourseTitle==='function' ? getCurrentCourseTitle() : ((document.getElementById('roomTitle')||{}).innerText||'과정명 확인 중')).trim();
     var name=(localStorage.getItem('kac_user_name')||'-').trim();
     var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
-    // 과정명 줄은 표시하지 않는다 (요청) — '신청자 확인' + 이름/사번만 남긴다
     box.innerHTML='<div style="font-size:12px;font-weight:900;color:#bfdbfe;margin-bottom:7px;"><i class="fa-solid fa-id-card"></i> 신청자 확인</div>'
+      +'<div style="font-size:18px;font-weight:950;line-height:1.35;word-break:keep-all;">'+course+'</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;">'
       +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">'+name+'</span>'
       +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">사번 '+sabun+'</span>'
@@ -4975,8 +5021,7 @@ async function saveProfile() {
         return;
     }
     
-    // [vJ122] 구(舊) 입교 경로도 동일 규칙 — 이름의 공백을 없앤 키를 쓴다 ('홍 길동' = '홍길동')
-    const newUToken = (window.kacToken ? window.kacToken(name, phone) : `${String(name||'').replace(/\s+/g,'')}_${phone}`);
+    const newUToken = `${name}_${phone}`;
 
     // 이름 재입력 시 오늘 날짜 출결 기록 초기화 (테스트/재등록 대응)
     const todayStr = (()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})();
@@ -6127,7 +6172,10 @@ function closeTabletLoan() {
 
 <style id="kac-theme-refresh-2026">
 /* ── 교육생 플랫폼 테마 리프레시 (포탈 톤: 산뜻·클린) ── */
-/* [vJ122] 옛 스플래시 스타일 폐지 (전체화면 로딩은 #kacBootOv 하나) */
+/* 첫 로딩 화면도 랜딩과 동일한 밝은 톤으로 통일 */
+#global-loader { background: linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%) !important; }
+#global-loader .loader-banner { border:1px solid rgba(255,255,255,.85) !important; box-shadow:0 16px 40px rgba(37,99,235,.20) !important; border-radius:18px !important; }
+#global-loader .loader-text { color:#1e40af !important; font-weight:700; }
 .menu-overlay { background: rgba(15,23,42,.55) !important; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 .menu-box { border-radius:22px !important; max-width:382px !important; padding:18px !important; box-shadow:0 24px 60px rgba(15,23,42,.35) !important; }
 .menu-box .menu-item {
@@ -6598,13 +6646,10 @@ html, body {
   to   { transform: translate3d(0,0,0); }
 }
 /* ── [우측 패널 흰색 상단바] 외출외박·차량·공지·설문 — 시안 적용 ── */
-/* [vJ122] 배경을 단색(#f6f9fe) → 입교등록·입교완료와 같은 '연한 파랑 그라데이션'으로 통일.
-   퇴교차량·외출외박만 밋밋해 보이던 문제. 패널이 길어져도 아래까지 색이 이어지도록 fixed 사용. */
 #shuttleModal>.menu-box, #noticeModal>.menu-box, #adminActionModal>.menu-box, #surveyModal>.menu-box{
   justify-content:flex-start !important;
   padding-top:0 !important;
-  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
-  background-attachment:fixed !important;
+  background:#f6f9fe !important;
 }
 .kac-pbar{
   position:sticky; top:0; z-index:8;
@@ -6862,16 +6907,8 @@ body.kac-locked #keduDone .kd-close{
 body.kac-locked #foodModal .food-bottombar{ grid-template-columns:1fr !important; }
 body.kac-locked #foodModal .food-add-btn{ width:100% !important; }
 /* vH54: 퇴교차량/외출외박 신청면 정돈 */
-/* [vJ122] 기존 그라데이션(#f8fbff→#eef4ff)이 너무 옅어 '그냥 흰색'으로 보였다.
-   입교등록·입교완료와 같은 톤(#eef5ff→#dbe9ff)으로 맞춘다. */
 #shuttleModal > .menu-box, #adminActionModal > .menu-box{
-  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
-}
-/* [vJ122] 외출외박(#adminActionModal)만 좌우로 꽉 차서 통일성이 없었다.
-   → 퇴교차량(#shuttleModal)과 동일한 카드 폭으로 맞춘다. */
-#adminActionModal > .menu-box{
-  width:88% !important;
-  max-width:400px !important;
+  background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%) !important;
 }
 #shuttleModal .kac-pbar, #adminActionModal .kac-pbar{
   margin:0 -20px 18px !important;
@@ -7402,9 +7439,7 @@ body.kac-quiz-active .quiz-overlay,
 }
 
 #adminActionModal .menu-box{
-  /* [vJ122] 흰색 그라데이션(#fff→#f8fbff)이라 사실상 흰 배경이었다.
-     → 퇴교차량·입교완료와 같은 연한 파랑으로 통일. */
-  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
+  background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%) !important;
   border:1px solid #dbeafe !important;
   justify-content:flex-start !important; /* 세로중앙 정렬 해제 → 상단바 위로 내용 넘침 방지 */
 }
@@ -7608,63 +7643,12 @@ body.kac-quiz-active .quiz-overlay,
 #keduHome .kh-rows{ text-align:left; margin:0 0 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:4px 12px; }
 #keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e8eef7; }
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
-/* [vJ122] 라벨(강의실·담임…)만 작게. 예전엔 그냥 'span'이라 값 안에 들어간 span까지 12px로 줄어
-   담임 이름만 다른 행보다 작아 보였다. → 행의 '직계' span(=라벨)에만 적용한다. */
-#keduHome .kh-rows > div > span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
-#keduHome .kh-rows b span{ font-size:inherit; font-weight:inherit; color:inherit; }   /* 값 안의 span은 값과 같은 크기 */
+#keduHome .kh-rows span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
 #keduHome .kh-rows b{ flex:1; min-width:0; font-size:15px; font-weight:800; color:#1e293b; word-break:keep-all; }
 /* [J89] 담임 여러 명이어도 이 행은 한 줄로 고정 — 이름이 길면 …으로 줄이고, 전화/외N명 버튼은 절대 안 밀린다.
    (행이 두 줄이 되면 아래 [출결하기] 버튼이 화면 밖으로 내려갈 수 있음) */
 #keduHome .kh-rows #khProf{ display:flex; align-items:center; min-width:0; overflow:hidden; }
 #keduAttProof .kap-row #kapProf{ display:flex; align-items:center; justify-content:flex-end; min-width:0; overflow:hidden; }
-
-/* [vJ122] 담임 = 색이 다른 두 블록이 나란히 붙은 알약 (입교안내 버튼과 같은 스타일)
-   ┌──────────────┬─────────┐
-   │ 👤 김정민 교수 │ 📞 전화 │      파랑 | 노랑, 사이에 살짝 틈
-   └──────────────┴─────────┘                                          */
-/* ⚠️ '#keduHome button{ width:100%; padding:12px !important; margin-top:7px !important }' 이
-   [출결하기]용 규칙이 이 알약(button)까지 잡아서 위아래 12px씩 붙어 행이 커졌었다.
-   → 같은 특이도 + !important 로 되돌린다. (아래 .kh-morepill 도 동일) */
-#keduHome .kh-rows b button.kh-profpill,
-#keduHome .kh-rows b button.kh-morepill{
-  width:auto !important; margin:0 !important; padding:0 !important;
-  border:none !important; border-radius:999px;
-}
-.kh-profpill{
-  display:inline-flex; align-items:stretch; gap:3px; min-width:0;
-  background:transparent; cursor:pointer;
-  font-family:inherit; line-height:1;
-  filter:drop-shadow(0 3px 8px rgba(15,23,42,.18));
-}
-/* 상하 패딩을 최소로 → 담임 행 높이가 강의실·과정·이름·생활관 행과 같아진다 */
-/* 높이를 22px로 고정 → 강의실·과정·이름·생활관 행과 완전히 같은 줄 높이가 된다.
-   색은 !important — 위쪽 '#keduHome .kh-rows b span{color:inherit}' 규칙(ID라 우선순위가 높다)이
-   알약의 흰 글씨를 덮어 하늘색으로 보이던 문제를 막는다. */
-#keduHome .kh-rows b .kh-profpill .khp-name{
-  display:flex; align-items:center; gap:6px; min-width:0;
-  height:22px; padding:0 12px 0 13px; box-sizing:border-box;
-  border-radius:999px 6px 6px 999px;
-  background:#1d4ed8;
-  color:#ffffff !important; font-size:13.5px !important; font-weight:900 !important; letter-spacing:-.2px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-#keduHome .kh-rows b .kh-profpill .khp-name i{ font-size:11px; color:#ffffff !important; opacity:.95; flex:0 0 auto; }
-#keduHome .kh-rows b .kh-profpill .khp-call{
-  display:flex; align-items:center; gap:5px; flex:0 0 auto;
-  height:22px; padding:0 13px 0 11px; box-sizing:border-box;
-  border-radius:6px 999px 999px 6px;
-  background:#facc15;
-  color:#3f2d00 !important; font-size:12.5px !important; font-weight:900 !important; letter-spacing:-.2px;
-}
-#keduHome .kh-rows b .kh-profpill .khp-call i{ font-size:11px; color:#3f2d00 !important; }
-.kh-profpill:active{ transform:scale(.97); }
-
-#keduHome .kh-rows b button.kh-morepill{
-  flex:0 0 auto; height:22px; padding:0 10px !important; box-sizing:border-box;
-  display:inline-flex; align-items:center;
-  background:#e0e7ff; color:#3730a3 !important; font-size:11.5px !important; font-weight:900 !important;
-  cursor:pointer; white-space:nowrap; font-family:inherit; line-height:1;
-}
 #keduHome .kh-leader{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 18px 44px rgba(15,23,42,.28); border:1px solid #fde68a; }
 #keduHome .khl-head{ font-size:14px; font-weight:900; color:#b45309; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
 #keduHome .khl-sec{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:11px 13px; margin-bottom:10px; }
@@ -7737,9 +7721,6 @@ body.kac-quiz-active .quiz-overlay,
 #keduOtp .ko-sub{ color:#64748b; font-size:13.5px; font-weight:800; line-height:1.45; }
 #keduOtp .ko-body{ padding:20px 16px; }
 #keduOtp .ko-room{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; padding:12px 14px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; font-size:13px; font-weight:900; }
-/* [vJ122] 'Room A' → 실제 과정명. 과정명이 길어도 칸이 깨지지 않게 라벨은 고정, 값은 줄바꿈 허용 */
-#keduOtp .ko-room > span{ flex:0 0 auto; color:#64748b; }
-#keduOtp .ko-room > b{ flex:1 1 auto; min-width:0; text-align:right; color:#0f172a; font-size:14.5px; line-height:1.35; word-break:keep-all; }
 #keduOtp .ko-inputs{ display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
 #keduOtp .ko-digit{ box-sizing:border-box; min-width:0; width:100%; padding:0; height:54px; border:2px solid #dbeafe; border-radius:14px; text-align:center; font-size:clamp(18px,5.5vw,24px); font-weight:800; line-height:1; color:#0f172a; background:#f8fbff; outline:none; }
 #keduOtp .ko-digit:focus{ border-color:#2563eb; background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,.12); }
@@ -7787,34 +7768,15 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         if(wrap && !wrap.querySelector('.kac-course-loading')){
           var ld=document.createElement('div'); ld.className='kac-course-loading';
           ld.style.cssText='position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:9px; background:rgba(240,247,255,.88); -webkit-backdrop-filter:blur(2.5px); backdrop-filter:blur(2.5px);border-radius:12px; z-index:4; pointer-events:none; padding:0 12px; opacity:0; transition:opacity .2s ease .42s;';
-          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">과정 목록을 불러오는 중…</div>';
+          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">접속이 많아 과정 목록을 불러오는 중이에요…</div>';
           wrap.appendChild(ld); requestAnimationFrame(function(){ try{ ld.style.opacity='1'; }catch(e){} });
         }
       }
     }catch(e){}
     var _done=function(){ try{ if(sel){ sel.disabled=false; sel.style.color=''; } var w=sel&&sel.parentElement; var l=w&&w.querySelector&&w.querySelector('.kac-course-loading'); if(l) l.remove(); }catch(e){} };
-
-    /* [vJ122] 무한 대기 차단.
-       예전엔 26개 방 × 2번 = 52번을 물어보고 '전부' 답이 와야 로딩이 걷혔다.
-       한 개라도 응답이 안 오면 Promise.all이 영원히 안 끝나서 '불러오는 중…'에 갇혔다.
-       → 방마다 6초 타임아웃. 못 받은 방은 '빈 방'으로 넘기고, 받은 것만으로 목록을 만든다. */
-    var _RTO=6000;
-    var _withTimeout=function(p, fb){
-      return new Promise(function(res){
-        var fin=false;
-        var t=setTimeout(function(){ if(!fin){ fin=true; res(fb); } }, _RTO);
-        p.then(function(v){ if(!fin){ fin=true; clearTimeout(t); res(v); } })
-         .catch(function(){ if(!fin){ fin=true; clearTimeout(t); res(fb); } });
-      });
-    };
-
     // [vJ117] 속도개선 — courses 전체(학생·출결·미디어·퀴즈 포함) 통째 로드 대신, 각 방의 settings·status만 병렬로 읽어 대폭 경량화
     var _db=firebase.database(); var _reads=[];
-    for(var _i=65;_i<=90;_i++){ (function(r){
-      var _one=Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')])
-        .then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; });
-      _reads.push(_withTimeout(_one, {room:r, s:{}, st:{}, timedOut:true}));
-    })(String.fromCharCode(_i)); }
+    for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')]).then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; }).catch(function(){ return {room:r, s:{}, st:{}}; })); })(String.fromCharCode(_i)); }
     return Promise.all(_reads).then(function(arr){
       var list=[];
       arr.forEach(function(rd){ var s=rd.s||{}, st=rd.st||{}; var nm=(s.courseName||'').trim();
@@ -7824,16 +7786,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         list.push({room:rd.room, name:nm, period:(s.period||'').trim(), detail:(s.roomDetailName||'').trim(), prof:(st.professorName||'').trim()});
       });
       sel.innerHTML='';
-      if(!list.length){
-        /* [vJ122] 응답을 못 받은 방이 있으면 '과정 없음'이 아니라 '못 불러옴'이다 — 구분해서 알린다. */
-        var _to = arr.filter(function(x){ return x.timedOut; }).length;
-        var o=document.createElement('option'); o.value='';
-        o.textContent = _to ? '과정을 불러오지 못했습니다 — 다시 시도해 주세요' : '지금 입교할 수 있는 과정이 없습니다';
-        sel.appendChild(o);
-        _done();
-        if(_to) _retryBtn(sel);
-        return;
-      }
+      if(!list.length){ var o=document.createElement('option'); o.value=''; o.textContent='진행 중인 과정이 없습니다'; sel.appendChild(o); _done(); return; }
       // [vJ119] 해당 주 과정이 2개 이상이면 "선택해 주세요" 안내 옵션을 기본 선택 → 다른 과정 사람이 실수로 잘못된 과정 등록 방지
       if(list.length>1){ var _ph=document.createElement('option'); _ph.value=''; _ph.textContent='📋 입교등록할 과정을 선택해 주세요'; _ph.disabled=true; _ph.selected=true; sel.appendChild(_ph); }
       list.forEach(function(c){
@@ -7843,24 +7796,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       });
       _done();
     }).catch(function(){
-      sel.innerHTML='<option value="">과정을 불러오지 못했습니다 — 다시 시도해 주세요</option>';
+      sel.innerHTML='<option value="">과정을 불러오지 못했습니다</option>';
       _done();
-      _retryBtn(sel);
     });
-  }
-  /* [vJ122] 못 불러왔을 때 갇히지 않도록 '다시 시도' 버튼을 드롭다운 아래에 붙인다 */
-  function _retryBtn(sel){
-    try{
-      var host = sel && sel.parentElement && sel.parentElement.parentElement;
-      if(!host || host.querySelector('.kac-course-retry')) return;
-      var b=document.createElement('button');
-      b.type='button'; b.className='kac-course-retry';
-      b.textContent='🔄 과정 목록 다시 불러오기';
-      b.style.cssText='width:100%; margin-top:8px; padding:11px; border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; color:#1d4ed8; font-size:13.5px; font-weight:800; cursor:pointer;';
-      b.onclick=function(){ b.remove(); loadCourses(sel); };
-      var wrap = sel.parentElement;                       // .kac-course-wrap
-      wrap.parentNode.insertBefore(b, wrap.nextSibling);
-    }catch(e){}
   }
   function showEnroll(menu, editMode){
     var ov=document.getElementById('keduEnroll'); if(!ov) return;
@@ -7893,89 +7831,12 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       if(home && localStorage.getItem('uToken')) home.style.display='flex';
       else if(history.length>1) history.back();
     };
-    /* [vJ122] '이미 등록했어요' — 수정 모드에선 필요 없으니 숨긴다 */
-    var _rb=document.getElementById('keduRestoreBtn');
-    if(_rb){
-      _rb.style.display = window._keduEditMode ? 'none' : 'block';
-      _rb.onclick=function(){ kacRestoreEnroll(menu); };
-    }
   }
-
-  /* ══ [vJ122] '이미 등록했어요' — 다른 브라우저에서 기존 등록 불러오기 ══════════
-     카카오 인앱 브라우저에서 등록해도, 그 주소를 사파리·크롬으로 옮겨 열면
-     기기에 저장된 정보(localStorage)가 없어 '처음 온 사람'이 된다.
-     식별키가 "이름_사번" 이므로, 이름·사번만 알면 서버에서 본인 기록을 찾을 수 있다.
-     → 찾으면 그 기록으로 바로 입장. 못 찾으면 그냥 새로 등록하면 된다.            */
-  async function kacRestoreEnroll(menu){
-    var name=(document.getElementById('keduName').value||'').trim();
-    var sabun=(document.getElementById('keduSabun').value||'').trim();
-    if(!name){ showKacAlert('이름을 입력한 뒤 눌러 주세요.'); return; }
-    if(!/^\d{4,5}$/.test(sabun)){ showKacAlert('사번(5자리) 또는 전화번호 뒤 4자리를 입력한 뒤 눌러 주세요.'); return; }
-
-    var btn=document.getElementById('keduRestoreBtn');
-    if(btn){ btn.disabled=true; btn.textContent='찾는 중…'; }
-    try{
-      var token=kacToken(name, sabun);
-      var found=null;
-      // 모든 방을 뒤져 본인 기록을 찾는다 (방마다 6초 타임아웃 — 무한 대기 방지)
-      var db=firebase.database(), jobs=[];
-      for(var i=65;i<=90;i++){ (function(r){
-        var p=db.ref('courses/'+r+'/students/'+token).once('value')
-               .then(function(s){ return s.val() ? {room:r, data:s.val()} : null; })
-               .catch(function(){ return null; });
-        jobs.push(new Promise(function(res){
-          var fin=false, t=setTimeout(function(){ if(!fin){ fin=true; res(null); } }, 6000);
-          p.then(function(v){ if(!fin){ fin=true; clearTimeout(t); res(v); } });
-        }));
-      })(String.fromCharCode(i)); }
-      var hits=(await Promise.all(jobs)).filter(Boolean);
-
-      if(!hits.length){
-        showKacAlert('등록된 기록을 찾지 못했습니다.\n\n· 이름·사번이 등록할 때와 똑같은지 확인해 주세요.\n· 아직 등록 전이라면 아래 [입교 등록]을 눌러 주세요.');
-        return;
-      }
-      found = hits[0];   // 한 사람이 여러 과정에 있을 일은 없다
-
-      // 기기에 정보 복원 → 다음부터는 바로 홈으로 들어간다
-      try{
-        localStorage.setItem('uToken', token);
-        localStorage.setItem('kac_user_name', (found.data.name||name));
-        localStorage.setItem('kac_user_phone', sabun);
-        localStorage.setItem('kac_last_visited_room', found.room);
-        localStorage.setItem('kac_last_visited_name', (found.data.name||name));
-        var _rk=(await db.ref('courses/'+found.room+'/status/resetKey').once('value')).val()||'init';
-        localStorage.setItem('kac_resetKey_'+found.room, _rk);
-        localStorage.setItem('kac_resetKey_'+String(found.room).toUpperCase(), _rk);
-        var _st=(await db.ref('courses/'+found.room+'/settings').once('value')).val()||{};
-        if(typeof saveKacEnrollmentMeta==='function') saveKacEnrollmentMeta(found.room, _st);
-        if(_st.courseName) localStorage.setItem('kac_current_course', _st.courseName);
-      }catch(e){}
-
-      showKacAlert('✅ 등록 정보를 불러왔습니다.\n\n'+(found.data.name||name)+' 님 · '+((await db.ref('courses/'+found.room+'/settings/courseName').once('value')).val()||('Room '+found.room)));
-      location.replace('index.html?room='+encodeURIComponent(found.room)+(menu?('&menu='+encodeURIComponent(menu)):''));
-    }catch(e){
-      showKacAlert('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
-    }finally{
-      if(btn){ btn.disabled=false; btn.textContent='이미 등록했어요 — 이름·사번으로 불러오기'; }
-    }
-  }
-  window.kacRestoreEnroll=kacRestoreEnroll;
-
   window.keduShowEnroll=showEnroll;
   window.keduEditInfo=function(){
     var h=document.getElementById('keduHome'); if(h) h.style.display='none';
     showEnroll('home', true);
   };
-  /* [vJ122] 식별키(uToken)는 "이름_사번" 이다. 그래서 '홍 길동'과 '홍길동'이 다른 사람이 돼 버렸다.
-     다른 브라우저(사파리 등)에서 다시 입력할 때 띄어쓰기 하나만 달라도 새 칸이 생기고,
-     그 사람의 차량신청·출결이 사라진 것처럼 보인다.
-     → 키를 만들 때만 이름의 모든 공백을 없앤다. 화면에 보이는 이름은 입력한 그대로 둔다.
-       (공백 없이 등록한 기존 교육생은 키가 그대로라 영향 없음) */
-  function kacToken(name, sabun){
-    return String(name||'').replace(/\s+/g,'') + '_' + String(sabun||'').trim();
-  }
-  window.kacToken = kacToken;
-
   async function submitEnroll(menu){
     var room=document.getElementById('keduCourse').value;
     var name=document.getElementById('keduName').value.trim();
@@ -7991,9 +7852,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       try{
         var _dupSnap = await firebase.database().ref('courses/'+room+'/students').once('value');
         var _dupAll = _dupSnap.val() || {};
-        var _myTok = kacToken(name, sabun);
-        var _nsp = function(x){ return String(x||'').replace(/\s+/g,''); };   // 공백 무시 비교
-        var _sameName = Object.keys(_dupAll).filter(function(tk){ var s=_dupAll[tk]||{}; var nm=_nsp(s.name||tk.split('_')[0]||''); return nm===_nsp(name) && tk!==_myTok; });
+        var _myTok = name+'_'+sabun;
+        var _sameName = Object.keys(_dupAll).filter(function(tk){ var s=_dupAll[tk]||{}; var nm=String((s.name||tk.split('_')[0]||'')).trim(); return nm===name && tk!==_myTok; });
         window._keduDupRemoveToken = null;
         if(_sameName.length>0){
           var _exTok=_sameName[0], _exData=_dupAll[_exTok]||{};
@@ -8010,7 +7870,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       ? '입력한 정보로 수정하시겠습니까?'
       : '"'+label.split(' · ')[0]+'" 과정으로 입교합니다.\n맞습니까?');
     if(!ok) return;
-    var token=kacToken(name, sabun);   // [vJ122] 공백 정규화 — '홍 길동'과 '홍길동'이 같은 사람
+    var token=name+'_'+sabun;
     try{
       localStorage.setItem('kac_user_name', name);
       localStorage.setItem('kac_user_phone', sabun);
@@ -8080,16 +7940,6 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   // 재진입(이미 입교) → 현재 정보만 간결히 표시
   // ===== [과정담임 표시 + 통화] =====
   function _hrEsc(t){ return String(t==null?'':t).replace(/[<>&\"']/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','\"':'&quot;',"'":'&#39;'}[c]);}); }
-  /* [vJ122] 교육기간 표기를 하이픈(-) → 점(.) 으로.
-       저장값:  2026-07-11 ~ 2026-08-28   (그대로 둔다 — 날짜 계산이 여기에 걸려 있다)
-       화면표시: 2026.07.11 ~ 2026.08.28
-     '~' 로 이어진 범위든 날짜 하나든 모두 처리한다. */
-  window.kacFmtPeriod = function(p){
-    var s = String(p == null ? '' : p).trim();
-    if(!s || s === '-') return s || '-';
-    return s.replace(/(\d{4})-(\d{2})-(\d{2})/g, '$1.$2.$3');
-  };
-
   /* [J89] 담임이 여러 명이어도 이 줄은 '항상 한 줄'로 끝난다.
      ─ 줄에는 대표 1명 + 전화버튼만 둔다 (행 높이가 절대 늘지 않음 → 아래 메뉴가 밀리지 않는다)
      ─ 나머지 교수 연락처는 '외 N명' 알약을 누르면 뜨는 별도 시트에서 본다 (오버레이라 레이아웃 영향 0) */
@@ -8103,21 +7953,15 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var rest = _hrRoster.length - 1;
     var mp   = String(main.phone||'').replace(/[^0-9+]/g,'');
 
-    /* [vJ122] 이름과 전화 아이콘이 따로 떨어져 있어 지저분했다.
-       → 하나의 '알약'으로 합친다. 왼쪽=이름 / 구분선 / 오른쪽=전화.
-         알약 전체가 통화 버튼이라 손가락으로 누르기도 쉽다. */
-    var html = '<span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">';
+    var html = '<span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">'
+             + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+_hrEsc(main.name)+'</span>';
     if(mp){
-      html += '<button type="button" class="kh-profpill" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="'+_hrEsc(main.name)+' 담임에게 전화">'
-            +   '<span class="khp-name"><i class="fa-solid fa-user-tie"></i>'+_hrEsc(main.name)+' 교수</span>'
-            +   '<span class="khp-call"><i class="fa-solid fa-phone"></i>전화</span>'
-            + '</button>';
-    } else {
-      // 연락처가 없으면 전화칸 없이 이름만 (알약 모양은 유지하지 않는다 — 누를 게 없으니)
-      html += '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+_hrEsc(main.name)+'</span>';
+      html += '<button type="button" class="kh-callbtn" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화"'
+            + ' style="flex:0 0 auto;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
     }
     if(rest > 0){
-      html += '<button type="button" class="kh-morepill" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기">외 '+rest+'명</button>';
+      html += '<button type="button" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
+            + ' style="flex:0 0 auto;padding:3px 10px;border:none;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">외 '+rest+'명</button>';
     }
     html += '</span>';
     el.innerHTML = html;
@@ -8371,7 +8215,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(eN) eN.textContent=nm; if(eS) eS.textContent=sb;
     var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom'), eD=document.getElementById('khDorm');
     if(homeRoom){
-      try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=kacFmtPeriod(v.period||'-'); if(eR) eR.textContent=(v.roomDetailName||v.roomDetail||('Room '+homeRoom)); }); }catch(e){}
+      try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); if(eR) eR.textContent=(v.roomDetailName||v.roomDetail||('Room '+homeRoom)); }); }catch(e){}
     }
     loadKakaoHomeDorm(nm, sb, eD);
     updateKakaoAttendanceButton(homeRoom);
@@ -8527,7 +8371,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       ctx.save(); ctx.beginPath(); ctx.rect(hx,hy,hw,hh); ctx.clip();
       ctx.drawImage(photo, hx-(nw-hw)/2, hy-(nh-hh)/2, nw, nh); ctx.restore();
       ctx.drawImage(frame,0,0,W,H);
-      var fmtP=(window.kacFmtPeriod ? kacFmtPeriod(set.period||'-') : String(set.period||'-'));   // [vJ122] 2026.07.11 ~ 2026.08.28
+      var fmtP=String(set.period||'-');
       var vals={ name:set.courseName||'-', period:fmtP, venue:set.roomDetailName||'-', prof:(prof?prof+' 교수':'-') };
       ctx.fillStyle='#0f2057'; ctx.textBaseline='middle'; ctx.textAlign='left';
       var BOX_R={ name:48.3, venue:48.3, period:89.3, prof:89.3 };   // [vJ102.1] 칸 경계 맞춤 자동 축소
@@ -8781,17 +8625,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(!room){ showKacAlert('과정 정보를 찾지 못했습니다. 입교/홈에서 과정을 다시 확인해 주세요.'); return; }
     var ov=document.getElementById('keduOtp');
     var roomEl=document.getElementById('keduOtpRoom');
-    /* [vJ122] 'Room A' 는 내부 코드라 교육생에겐 의미가 없다 → 실제 과정명을 보여준다.
-       기기에 저장된 과정명을 즉시 표시하고, 서버 값으로 한 번 더 확인해 갱신한다. */
-    if(roomEl){
-      var _cn=(localStorage.getItem('kac_current_course')||'').trim();
-      roomEl.textContent = _cn || '과정 확인 중…';
-      firebase.database().ref('courses/'+room+'/settings/courseName').once('value').then(function(s){
-        var nm=String(s.val()||'').trim();
-        if(nm){ roomEl.textContent=nm; try{ localStorage.setItem('kac_current_course', nm); }catch(e){} }
-        else if(!_cn){ roomEl.textContent='-'; }
-      }).catch(function(){ if(!_cn) roomEl.textContent='-'; });
-    }
+    if(roomEl) roomEl.textContent='Room '+room;
     if(ov) ov.style.display='flex';
     var msg=document.getElementById('keduOtpMsg');
     if(msg) msg.textContent='강사 화면에 표시된 6자리 OTP를 입력해 주세요.';
@@ -8812,14 +8646,11 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     var token=localStorage.getItem('uToken');
     if(token){
-      /* [vJ122] showLoader가 '0.35초 넘게 걸릴 때만' 뜨는 공용 로딩으로 통일됨.
-         빠르면(대부분) 교육생은 아무 로딩 화면도 못 보고 바로 도착한다. */
-      showLoader('과정 정보를 확인하는 중입니다…');
       recoverRoom(token, function(r){
-        if(r){ try{ localStorage.setItem('kac_last_visited_room', r); }catch(e){} location.replace('index.html?room='+encodeURIComponent(r)+'&menu='+encodeURIComponent(menu)); }
-        else { hideLoader(); showEnroll(menu); }
+        if(r){ try{ localStorage.setItem('kac_last_visited_room', r); }catch(e){} if(window.kacBootShow) kacBootShow('과정으로 이동 중입니다…'); location.replace('index.html?room='+encodeURIComponent(r)+'&menu='+encodeURIComponent(menu)); }
+        else { showEnroll(menu); }
       });
-    } else { hideLoader(); showEnroll(menu); }
+    } else { showEnroll(menu); }
   }
   function build(){
     if(!document.getElementById('keduEnroll')){
@@ -8831,9 +8662,6 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<label>이름</label><input id="keduName" placeholder="홍길동">'+
         '<label class="ke-consent" id="keduConsentBox"><input type="checkbox" id="keduPrivacyAgree"><span><b>(필수) 개인정보 수집 및 이용</b>에 동의합니다.<small>수집 항목: 성명·사번(또는 연락처 뒷자리)·소속, 외출외박 신청 시 연락처 · 목적: 교육운영, 출결, 수송, 생활관 배정 · 보유기간: 교육 종료 시까지(종료 다음 날 자동 파기)</small></span></label>'+
         '<div class="ke-actions"><button class="ke-back" id="keduBackBtn" type="button"><i class="fa-solid fa-arrow-left"></i> 뒤로가기</button><button class="ke-btn" id="keduEnrollBtn">정보 수정하기</button></div>'+
-        /* [vJ122] 다른 브라우저(사파리 등)로 열면 기기에 저장된 정보가 없어 '처음 온 사람'처럼 보인다.
-           이름·사번만으로 기존 등록을 찾아 바로 들어가게 해준다. (동의·과정선택 다시 안 해도 됨) */
-        '<button type="button" id="keduRestoreBtn" class="ke-restore">이미 등록했어요 — 이름·사번으로 불러오기</button>'+
         '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 과정 종료 다음 날 자동 파기됩니다. 시스템은 전 구간 암호화 통신(HTTPS)을 사용합니다.</div></div>';
       document.body.appendChild(d);
     }
@@ -8842,8 +8670,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       h.innerHTML='<div class="kh-card"><div class="kh-head">'+
         '<div class="kh-badge"><i class="fa-solid fa-circle-check"></i> 입교 완료</div>'+
         '<h3 id="khTitle">내 교육 과정</h3>'+
-        /* [vJ122] 안내 문구(.kh-course) 제거 — 불필요한 설명이라 뺐다 */
-        '</div>'+
+        '<div class="kh-course">카카오 채널 메뉴에서 바로 이용할 수 있습니다.</div></div>'+
         '<div class="kh-body"><div class="kh-rows">'+
           '<div><span>강의실</span><b id="khRoom">-</b></div>'+
           '<div><span>과정</span><b id="khCourse">-</b></div>'+
@@ -10063,21 +9890,10 @@ html.kac-core-screen #realUserCount::before{
 #keduEnroll .ke-actions{display:grid;grid-template-columns:.82fr 1.35fr;gap:10px;margin-top:12px}
 #keduEnroll .ke-actions .ke-btn{margin:0!important}
 #keduEnroll .ke-back{border:1px solid #cbd5e1;border-radius:14px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer}
-/* [vJ122] '이미 등록했어요' — 다른 브라우저로 옮겨 열었을 때 기존 등록 불러오기 */
-#keduEnroll .ke-restore{
-  display:block; width:100%; margin-top:10px; padding:12px;
-  border:1px dashed #bfdbfe; border-radius:14px;
-  background:#f8fbff; color:#1d4ed8;
-  font-size:13px; font-weight:800; cursor:pointer;
-}
-#keduEnroll .ke-restore:disabled{ opacity:.6; cursor:default; }
 .kac-confirm-box{width:min(390px,calc(100vw - 34px))!important;max-width:390px!important;overflow:hidden!important;border-radius:22px!important}
 .kac-confirm-box::before{content:'항공기술훈련원';display:block;padding:14px 18px;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;font-size:14px;font-weight:900;text-align:left}
 .landing-room{flex-direction:column!important;gap:7px!important;padding:10px 18px 12px!important}
 .landing-room .room-course{display:block!important;max-width:300px;text-align:center;white-space:normal!important;line-height:1.3}
-/* 랜딩 단순화 — 과정명은 표시하지 않는다. ID 선택자로 위 !important 규칙을 이긴다. */
-#landingCourseName{display:none!important}
-
 </style>
 <script>
 /* 구형 이름/사번 팝업을 신규 입교 카드로 단일화하고 소속 바인딩을 보강 */
@@ -10227,70 +10043,6 @@ html.kac-core-screen #realUserCount::before{
   #keduHome .kh-rows b{ font-size:14px !important; }
   #keduHome button{ margin-top:7px !important; padding:12px !important; font-size:14.5px !important; }
 }
-
-/* ══════════════════════════════════════════════════════════════════════════
-   [vJ122] 결과 화면 세로 배치 통일 — "가운데인데 절대 안 잘림"
-   ※ 반드시 이 파일의 '마지막' 스타일이어야 한다. vJ110 규칙(위쪽)이 뒤에 있으면 덮여 버린다.
-
-   지금까지 화면마다 제각각이었다.
-     · 입교등록·입교완료        → 위쪽 정렬
-     · 출결·등록완료·출결완료   → 가운데 정렬 + 스크롤 없음(↞ 아래 버튼이 잘려 못 누름)
-
-   'justify-content:center'는 내용이 화면보다 길어지면 위아래가 잘리고
-   그쪽으로 스크롤조차 못 간다.
-   → 가운데 정렬을 justify-content 가 아니라 카드의 'margin:auto' 로 한다.
-       · 공간이 남으면 → auto 여백이 위아래를 똑같이 밀어 '가운데'
-       · 내용이 넘치면 → auto 여백이 0이 되어 '맨 위부터' + 스크롤 (아무것도 안 잘림)
-   ══════════════════════════════════════════════════════════════════════════ */
-#keduEnroll, #keduHome, #keduOtp, #keduDone, #keduAttProof{
-  flex-direction:column !important;
-  align-items:center !important;
-  justify-content:flex-start !important;      /* center 금지 — 가운데정렬은 카드 margin:auto 가 한다 */
-  overflow-y:auto !important;
-  -webkit-overflow-scrolling:touch !important;
-  touch-action:pan-y !important;
-  overscroll-behavior:contain !important;
-  height:100dvh !important; max-height:100dvh !important;
-}
-/* 출결완료(#keduAttProof)는 그동안 이 처리에서 빠져 있어 잘림 위험이 있었다 */
-#keduAttProof{ padding:24px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
-#keduAttProof > *{ flex-shrink:0 !important; }
-
-#keduEnroll .ke-card,
-#keduHome    .kh-card,
-#keduOtp     .ko-card,
-#keduDone    .kd-card,
-#keduAttProof .kap-card{
-  margin:auto !important;         /* ★ 핵심: 남으면 가운데, 넘치면 위부터 */
-  flex:none !important;           /* 카드가 찌그러지지 않게 */
-}
-
-/* ══════════════════════════════════════════════════════════════════════════
-   [vJ122] 퇴교차량 · 외출외박 패널 통일 — 반드시 '파일의 마지막' 스타일이어야 한다.
-
-   왜 여기냐:
-     앞쪽에 같은 대상을 !important 로 잡는 규칙이 여러 개 흩어져 있어(총 11개),
-     중간에 넣으면 뒤 규칙에 덮여 아무 효과가 없다. 실제로 그래서 안 먹었다.
-       · #adminActionModal .menu-box{ background:#fff→#f8fbff }  ← 흰색으로 덮음
-       · body.kac-locked ... { width:100%; max-width:100% }      ← 카카오 진입 시 꽉 차게
-
-   무엇을 맞추나:
-     ① 배경  = 입교등록·입교완료와 같은 연한 파랑 (#eef5ff → #dbe9ff)
-     ② 폭    = 둘 다 카드형 (88% / 최대 400px) — 카카오로 들어와도 카드 유지
-   ══════════════════════════════════════════════════════════════════════════ */
-#shuttleModal > .menu-box,
-#adminActionModal > .menu-box,
-body.kac-locked #shuttleModal > .menu-box,
-body.kac-locked #adminActionModal > .menu-box{
-  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
-  width:88% !important;
-  max-width:400px !important;
-  height:100dvh !important;
-  max-height:100dvh !important;
-  margin:0 !important;
-  border-radius:18px 0 0 18px !important;
-  box-shadow:-16px 0 48px rgba(15,23,42,.34) !important;
-}
 </style>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
@@ -10352,159 +10104,34 @@ body.kac-locked #adminActionModal > .menu-box{
 #keduHome.kac-em-on #keduGradBtn{ display:none !important; }
 #kacEmBanner{ display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; border-radius:14px; padding:13px 15px; margin:0 0 12px; font-size:13.5px; font-weight:800; line-height:1.5; box-shadow:0 8px 22px rgba(185,28,28,.3); animation:kacEmPulse 1.8s ease-in-out infinite; }
 @keyframes kacEmPulse{ 0%,100%{box-shadow:0 8px 22px rgba(185,28,28,.3);} 50%{box-shadow:0 8px 22px rgba(185,28,28,.3),0 0 0 8px rgba(185,28,28,0);} }
-
-/* [vJ122] OTP 입력 화면에도 비상 모드를 반영한다.
-   예전엔 입교완료(#keduHome) 화면이 '보일 때만' 비상을 감시해서,
-   카카오 출결 링크로 바로 들어온 교육생은 아무 변화도 못 봤다. */
-#keduOtp.kac-em-on .ko-head{ background:linear-gradient(135deg,#7f1d1d,#b91c1c) !important; }
-#keduOtp.kac-em-on .ko-icon{ background:rgba(255,255,255,.18) !important; color:#fff !important; }
-#keduOtp.kac-em-on .ko-title::after{ content:' (비상)'; }
-#keduOtp.kac-em-on .ko-sub{ color:#fecaca !important; }
-#keduOtp.kac-em-on .ko-digit{ border-color:#fecdd3 !important; background:#fff5f5 !important; }
-#kacEmOtpBanner{ display:flex; align-items:center; gap:9px; margin:0 0 14px; padding:12px 14px; border-radius:13px;
-  background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; font-size:13px; font-weight:800; line-height:1.5;
-  box-shadow:0 8px 22px rgba(185,28,28,.3); animation:kacEmPulse 1.8s ease-in-out infinite; }
-
-/* ───────── [퇴교차량] 화면만 정리 (다른 화면은 절대 건드리지 않는다) ─────────
-   1) 위쪽 '퇴교 차량 신청' 타이틀바 제거  → 닫기는 맨 아래 [닫기] 버튼으로 한다
-   2) 어두운 스크림 + 우측 패널 모양 제거 → 뒤를 앱 배경색으로 화면 전체를 채운다
-   3) 파란 출발시간 블록과 이동수단 버튼들은 그대로 둔다                        */
-#shuttleModal,
-body.kac-locked #shuttleModal,
-html body.kac-locked #shuttleModal{
-  align-items:stretch !important;
-  justify-content:center !important;
-  padding:0 !important;
-  background:#f3f7fc !important;          /* 앱 배경과 동일 — 화면 전체를 채움 */
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-}
-#shuttleModal > .menu-box,
-body.kac-locked #shuttleModal > .menu-box,
-html body.kac-locked #shuttleModal > .menu-box{
-  box-sizing:border-box !important;
-  width:100% !important;
-  max-width:430px !important;
-  height:100dvh !important;
-  max-height:100dvh !important;
-  margin:0 auto !important;
-  padding:18px 18px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
-  background:transparent !important;      /* 흰 카드 배경 제거 */
-  border:none !important;
-  border-radius:0 !important;
-  box-shadow:none !important;
-  overflow-y:auto !important;
-  -webkit-overflow-scrolling:touch !important;
-  animation:none !important;
-  transform:none !important;
-}
-#shuttleModal .kac-pbar{ display:none !important; }   /* '퇴교 차량 신청' 상단바 제거 */
-
-/* ───────── [외출·외박] 화면만 정리 ─────────
-   1) 바깥 흰 카드 제거 → 뒤를 앱 배경색으로 화면 전체를 채운다 (퇴교차량과 동일)
-   2) '외출 · 외박 신청' 상단바는 남기되, 색을 퇴교차량의 파란 블록과 동일하게
-   3) '신청자 확인' 박스의 과정명 줄은 위 JS 에서 제거함                        */
-#adminActionModal,
-body.kac-locked #adminActionModal,
-html body.kac-locked #adminActionModal{
-  align-items:stretch !important;
-  justify-content:center !important;
-  padding:0 !important;
-  background:#f3f7fc !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-}
-#adminActionModal > .menu-box,
-body.kac-locked #adminActionModal > .menu-box,
-html body.kac-locked #adminActionModal > .menu-box{
-  box-sizing:border-box !important;
-  width:100% !important;
-  max-width:430px !important;
-  height:100dvh !important;
-  max-height:100dvh !important;
-  margin:0 auto !important;
-  padding:18px 18px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
-  background:transparent !important;
-  border:none !important;
-  border-radius:0 !important;
-  box-shadow:none !important;
-  overflow-y:auto !important;
-  -webkit-overflow-scrolling:touch !important;
-  animation:none !important;
-  transform:none !important;
-}
-/* 상단바 = 퇴교차량 파란 블록과 같은 색 */
-#adminActionModal .kac-pbar{
-  background:linear-gradient(135deg,#1d4ed8,#2563eb) !important;
-  border:none !important;
-  border-radius:16px !important;
-  box-shadow:0 8px 20px rgba(37,99,235,.28) !important;
-  padding:14px 16px !important;
-  margin-bottom:16px !important;
-  backdrop-filter:none !important;
-  -webkit-backdrop-filter:none !important;
-}
-#adminActionModal .kac-pbar .kac-pt{ color:#fff !important; }
-#adminActionModal .kac-pbar .kac-px{ color:#fff !important; background:rgba(255,255,255,.18) !important; border:none !important; }
 </style>
 <script>
 (function(){
-  var ref=null, cur='', emOn=false;
-
+  var ref=null, cur='';
   function apply(on){
-    emOn = !!on;
-    window.__kacEmergencyOn = emOn;   // 다른 코드에서도 참조 가능
-
-    /* ① 입교완료 홈 — 정보수정·기념사진 숨기고 빨간 안내 */
-    var home=document.getElementById('keduHome');
-    if(home){
-      home.classList.toggle('kac-em-on', emOn);
-      var b=document.getElementById('kacEmBanner');
-      if(emOn && !b){
+    var home=document.getElementById('keduHome'); if(!home) return;
+    home.classList.toggle('kac-em-on', !!on);
+    var b=document.getElementById('kacEmBanner');
+    if(on){
+      if(!b){
         b=document.createElement('div'); b.id='kacEmBanner';
         b.innerHTML='<span style="font-size:22px;flex-shrink:0;">🚨</span><span>비상 출결 모드입니다.<br><b>[출결하기]</b>를 눌러 강사 화면의 <b>비상번호</b>를 입력해 주세요.</span>';
         var att=document.getElementById('keduAttendBtn');
         if(att && att.parentNode) att.parentNode.insertBefore(b, att);
         else home.insertBefore(b, home.firstChild);
-      } else if(!emOn && b){ b.remove(); }
-    }
-
-    /* ② [vJ122] OTP 입력 화면 — 카카오 출결 링크로 바로 들어온 교육생은 여기만 본다.
-          예전엔 이 화면이 전혀 안 바뀌어서 '비상인지 아닌지' 알 수가 없었다. */
-    var otp=document.getElementById('keduOtp');
-    if(otp){
-      otp.classList.toggle('kac-em-on', emOn);
-      var ob=document.getElementById('kacEmOtpBanner');
-      if(emOn && !ob){
-        ob=document.createElement('div'); ob.id='kacEmOtpBanner';
-        ob.innerHTML='<span style="font-size:20px;flex-shrink:0;">🚨</span><span>비상 출결 모드입니다.<br>강사 화면의 <b>비상번호 6자리</b>를 입력해 주세요.</span>';
-        var body=otp.querySelector('.ko-body');
-        if(body) body.insertBefore(ob, body.firstChild);
-      } else if(!emOn && ob){ ob.remove(); }
-      var sub=otp.querySelector('.ko-sub');
-      if(sub){
-        if(emOn) sub.textContent='강사 화면에 표시된 비상번호 6자리를 입력해 주세요.';
-        else sub.textContent='강사 화면에 표시된 6자리 숫자를 순서대로 입력해 주세요.';
       }
-    }
+    } else if(b){ b.remove(); }
   }
-
-  /* [vJ122] 예전엔 '입교완료 화면이 보일 때만' 감시해서, 카카오 출결 링크로 바로
-     들어오면 감시 자체가 안 켜졌다(= 화면 변화 없음). 이제 화면과 무관하게 항상 감시한다. */
-  /* ⚠️ 전역에 이미 currentRoom 변수가 있으므로 다른 이름을 쓴다 */
-  function _emRoom(){
-    try{
-      var r='';
-      if(typeof getKakaoAttendanceRoom==='function') r=String(getKakaoAttendanceRoom()||'');
-      if(!r) r=String(localStorage.getItem('kac_last_visited_room')||'');
-      if(r && typeof normalizeKakaoRoom==='function') r=normalizeKakaoRoom(r)||r;
-      return r;
-    }catch(e){ return ''; }
-  }
-  function tick(){
+  setInterval(function(){
     try{
       if(typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length) return;
-      var room=_emRoom();
+      var home=document.getElementById('keduHome');
+      var visible=home && home.offsetParent!==null && home.style.display!=='none';
+      var room='';
+      if(visible && typeof getKakaoAttendanceRoom==='function'){
+        room=String(getKakaoAttendanceRoom()||'');
+        if(room && typeof normalizeKakaoRoom==='function') room=normalizeKakaoRoom(room)||'';
+      }
       if(room!==cur){
         if(ref){ try{ref.off();}catch(e){} ref=null; }
         cur=room;
@@ -10512,13 +10139,9 @@ html body.kac-locked #adminActionModal > .menu-box{
           ref=firebase.database().ref('courses/'+room+'/attendanceOtp/emergency');
           ref.on('value', function(snap){ var v=snap.val()||{}; apply(!!v.on); });
         } else apply(false);
-      } else if(cur){
-        apply(emOn);   // 화면이 새로 그려졌을 수 있으니 현재 상태를 다시 반영
       }
     }catch(e){}
-  }
-  setInterval(tick, 2500);
-  tick();
+  }, 2500);
 })();
 </script>
 </body>
