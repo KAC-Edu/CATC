@@ -462,34 +462,9 @@
 }
 
 /* ── 전역 로딩 스피너 ── */
-#global-loader {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%);
-    z-index: 99999;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 16px;
-    transition: opacity 0.4s ease;
-}
-#global-loader .loader-banner {
-    width: 80%; max-width: 320px;
-    border-radius: 16px;
-    margin-bottom: 8px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-    border: 2px solid rgba(255,255,255,0.1);
-    display: block; object-fit: cover;
-}
-#global-loader .loader-spinner {
-    width: 44px; height: 44px;
-    border: 4px solid rgba(255,255,255,0.15);
-    border-top: 4px solid #3b82f6;
-    border-radius: 50%;
-    animation: gl-spin 0.8s linear infinite;
-}
-#global-loader .loader-text {
-    color: #94a3b8; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;
-}
-@keyframes gl-spin { to { transform: rotate(360deg); } }
+/* [vJ122] 옛 catc 사진 스플래시 폐지 — 어떤 경로로 들어와도 절대 뜨지 않는다.
+   전체화면 로딩은 #kacBootOv 하나로 통일했다. */
+#global-loader { display: none !important; }
 
 
 
@@ -498,13 +473,8 @@
     .amenity-chip { display:flex; align-items:center; gap:8px; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font-size:15px; font-weight:700; color:#334155; cursor:pointer; background:#fff; transition:all .15s; }
     .amenity-chip input { width:18px; height:18px; accent-color:#10b981; cursor:pointer; }
     .amenity-chip:has(input:checked) { border-color:#10b981; background:#f0fdf4; color:#047857; }
-    /* [vJ122] 카카오 채널 버튼으로 들어올 때는 전체화면 스플래시(catc 사진)를 띄우지 않는다.
-       ─ 이 스플래시는 원래 '별도 플랫폼에서 사이드 메뉴로 이동할 때'용이었다.
-       ─ 카카오 → 입교등록 경로는 도착 화면(입교등록)이 이미 자기 로딩 표시를 갖고 있어서
-         (과정 목록 '불러오는 중...' 스피너, vJ116) 스플래시까지 띄우면 로딩이 두 번 보인다.
-       ─ 배경색만 같은 톤으로 깔아 흰 화면 깜빡임을 막고, 실제 대기 안내는 도착 화면이 맡는다. */
+    /* [vJ122] 카카오 진입도 배경색만 깔고 스플래시는 안 띄운다(위 #global-loader 폐지와 세트). */
     html.kac-kiosk-boot, html.kac-kiosk-boot body{ background:#f3f7fc !important; }
-    html.kac-kiosk-boot #global-loader{ display:none !important; }
     </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
 <style id="student-ui-vh67">
@@ -520,44 +490,7 @@ body.kac-locked #mainApp{
   touch-action:pan-y;
 }
 
-#global-loader{
-  background:rgba(243,247,252,.98) !important;
-  gap:16px;
-  transition:opacity .6s ease, visibility .6s ease !important;
-}
-#global-loader .loader-banner{
-  width:150px !important;
-  height:68px !important;
-  object-fit:cover;
-  opacity:.2;
-  filter:saturate(.55);
-  border-radius:14px !important;
-  box-shadow:none !important;
-}
-#global-loader .loader-spinner{
-  width:48px;
-  height:48px;
-  border:4px solid #dbeafe;
-  border-top-color:#2563eb;
-}
-#global-loader .loader-text{
-  color:#334155 !important;
-  font-size:14px !important;
-  letter-spacing:0 !important;
-}
-#global-loader .loader-text::after{
-  content:"";
-  display:inline-block;
-  width:1.4em;
-  text-align:left;
-  animation:kac-loading-dots 1.2s steps(4,end) infinite;
-}
-@keyframes kac-loading-dots{
-  0%{content:"";}
-  25%{content:".";}
-  50%{content:"..";}
-  75%,100%{content:"...";}
-}
+/* [vJ122] 옛 catc 사진 스플래시 스타일 폐지 (전체화면 로딩은 #kacBootOv 하나로 통일) */
 
 .header{
   display:grid !important;
@@ -749,7 +682,7 @@ body.kac-quiz-active .quiz-overlay{ display:flex !important; }
 <style>
 #kacBootOv{position:fixed;inset:0;z-index:2147482000;display:flex;align-items:center;justify-content:center;padding:24px;
  background:rgba(241,245,249,.42);backdrop-filter:blur(11px) saturate(1.15);-webkit-backdrop-filter:blur(11px) saturate(1.15);
- opacity:1;transition:opacity .45s ease;}
+ opacity:1;}   /* [vJ122] 페이드 전환 제거 — 교육생 플랫폼은 애니메이션 없이 단순하게 */
 #kacBootOv.out{opacity:0;pointer-events:none;}
 #kacBootOv .kb-card{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:230px;padding:30px 34px 26px;
  background:rgba(255,255,255,.94);border:1px solid rgba(226,232,240,.9);border-radius:24px;box-shadow:0 20px 55px rgba(15,23,42,.20);}
@@ -770,11 +703,18 @@ body.kac-quiz-active .quiz-overlay{ display:flex !important; }
     try{ if(msg){ var m=document.getElementById('kacBootMsg'); if(m) m.textContent=msg; } }catch(e){}
   };
   window.kacBootDone=function(){ if(done) return; done=true;
+    try{ if(window.kacBootCancel) window.kacBootCancel(); }catch(e){}   /* 아직 안 떴으면 아예 안 띄운다 */
     var o=el(); if(!o) return;
-    o.classList.add('out'); setTimeout(function(){ try{ o.style.display='none'; }catch(e){} },480);
+    o.style.display='none';   /* [vJ122] 페이드 애니메이션 제거 — 즉시 사라진다 */
   };
-  // 메인 앱 진입(room 파라미터)일 때만 초기 표시 — 카카오 입교 화면 직행은 표시하지 않음
-  try{ if(new URLSearchParams(location.search).get('room')) window.kacBootShow(); }catch(e){}
+  /* [vJ122] 예전엔 room 진입 시 '즉시' 로딩 화면을 띄웠다 → 빨라도 무조건 번쩍였다.
+     이제 0.35초 넘게 걸릴 때만 띄운다. 그 안에 화면이 뜨면 아무 로딩도 안 보인다. */
+  try{
+    if(new URLSearchParams(location.search).get('room')){
+      var _bt=setTimeout(function(){ if(!done) window.kacBootShow(); }, 350);
+      window.kacBootCancel=function(){ try{ clearTimeout(_bt); }catch(e){} };
+    }
+  }catch(e){}
   setTimeout(function(){ window.kacBootDone(); }, 8000);   // 안전장치
   // 입교/OTP/홈 카드가 화면에 뜨면 즉시 해제 (menu 직행 흐름 대비)
   var chk=setInterval(function(){
@@ -795,12 +735,9 @@ try{
 }catch(e){}
 </script>
 
-<!-- 전역 로딩 스피너: 페이지 로드 즉시 표시, Firebase 데이터 준비 완료 시 fadeOut -->
-<div id="global-loader">
-    <img src="catc.webp" alt="" class="loader-banner" aria-hidden="true">
-    <div class="loader-spinner"></div>
-    <div class="loader-text">과정을 연결하고 있습니다</div>
-</div>
+<!-- [vJ122] 옛 catc 사진 스플래시 폐지 — 전체화면 로딩은 #kacBootOv 하나로 통일.
+     (요소 자체는 남겨 두되 항상 숨김. showLoader/hideLoader가 kacBootOv로 넘긴다) -->
+<div id="global-loader" style="display:none !important;" aria-hidden="true"></div>
 
 <!-- [수정] 개인정보 동의 절차가 추가된 프로필 등록 팝업 -->
 <div id="profileOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%); z-index:10000; flex-direction:column; align-items:center; justify-content:center; color:white; padding:20px; text-align:center;">
@@ -1731,18 +1668,30 @@ function sendAns(idx) {
 
 
         
-// ── 로딩 스피너 제어 헬퍼 ──
+/* ── [vJ122] 로딩 표시 일원화 ──────────────────────────────────────────
+   교육생 플랫폼은 '카카오 URL → 그 화면 하나'가 원칙이다. 화면마다 로딩 모양이
+   다르면 안 되므로, 전체화면 로딩은 kacBootOv 하나만 쓴다.
+   ─ 옛 catc 사진 스플래시(#global-loader)는 폐지. showLoader/hideLoader는
+     기존 호출부(6곳)를 그대로 살리기 위해 kacBootOv로 넘겨주는 껍데기로 둔다.
+   ─ '0.35초 넘게 걸릴 때만' 뜬다. 빠르면(대부분) 아무 로딩 화면도 안 보인다.
+   ─ 페이드 애니메이션 없음.                                                */
+const KAC_LOADER_DELAY = 350;
+let _loaderT = null;
 function showLoader(msg) {
-    const el = document.getElementById('global-loader');
-    const txt = el && el.querySelector('.loader-text');
-    if (txt && msg) txt.textContent = msg;
-    if (el) { el.style.opacity = '1'; el.style.display = 'flex'; }
+    // 옛 스플래시가 혹시 남아 있으면 확실히 치운다
+    const old = document.getElementById('global-loader');
+    if (old) old.style.display = 'none';
+    if (_loaderT) clearTimeout(_loaderT);
+    _loaderT = setTimeout(() => {
+        _loaderT = null;
+        try { if (window.kacBootShow) window.kacBootShow(msg || '불러오는 중입니다…'); } catch (e) {}
+    }, KAC_LOADER_DELAY);
 }
 function hideLoader() {
-    const el = document.getElementById('global-loader');
-    if (!el) return;
-    el.style.opacity = '0';
-    setTimeout(() => { el.style.display = 'none'; }, 400);
+    if (_loaderT) { clearTimeout(_loaderT); _loaderT = null; }   // 아직 안 떴으면 그냥 안 띄우고 끝
+    const old = document.getElementById('global-loader');
+    if (old) old.style.display = 'none';
+    try { if (window.kacBootDone) window.kacBootDone(); } catch (e) {}
 }
 
 // ── public_codes 단축코드 → 실제 room 번호 변환 ──
@@ -6176,10 +6125,7 @@ function closeTabletLoan() {
 
 <style id="kac-theme-refresh-2026">
 /* ── 교육생 플랫폼 테마 리프레시 (포탈 톤: 산뜻·클린) ── */
-/* 첫 로딩 화면도 랜딩과 동일한 밝은 톤으로 통일 */
-#global-loader { background: linear-gradient(180deg,#eef5ff 0%,#dbe9ff 55%,#c7ddff 100%) !important; }
-#global-loader .loader-banner { border:1px solid rgba(255,255,255,.85) !important; box-shadow:0 16px 40px rgba(37,99,235,.20) !important; border-radius:18px !important; }
-#global-loader .loader-text { color:#1e40af !important; font-weight:700; }
+/* [vJ122] 옛 스플래시 스타일 폐지 (전체화면 로딩은 #kacBootOv 하나) */
 .menu-overlay { background: rgba(15,23,42,.55) !important; -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
 .menu-box { border-radius:22px !important; max-width:382px !important; padding:18px !important; box-shadow:0 24px 60px rgba(15,23,42,.35) !important; }
 .menu-box .menu-item {
@@ -8650,16 +8596,14 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     var token=localStorage.getItem('uToken');
     if(token){
-      /* [vJ122] 예전엔 전체화면 스플래시(catc 사진)가 이 조회를 통째로 가렸다.
-         → 이제 '0.35초 넘게 걸릴 때만' 가벼운 안내를 띄운다.
-           빠르면(대부분) 교육생은 아무 로딩 화면도 못 보고 바로 도착한다. */
-      var _slowT=setTimeout(function(){ try{ if(window.kacBootShow) kacBootShow('과정 정보를 확인하는 중입니다…'); }catch(e){} }, 350);
+      /* [vJ122] showLoader가 '0.35초 넘게 걸릴 때만' 뜨는 공용 로딩으로 통일됨.
+         빠르면(대부분) 교육생은 아무 로딩 화면도 못 보고 바로 도착한다. */
+      showLoader('과정 정보를 확인하는 중입니다…');
       recoverRoom(token, function(r){
-        try{ clearTimeout(_slowT); }catch(e){}
-        if(r){ try{ localStorage.setItem('kac_last_visited_room', r); }catch(e){} if(window.kacBootShow) kacBootShow('과정으로 이동 중입니다…'); location.replace('index.html?room='+encodeURIComponent(r)+'&menu='+encodeURIComponent(menu)); }
-        else { try{ if(window.kacBootDone) kacBootDone(); }catch(e){} showEnroll(menu); }
+        if(r){ try{ localStorage.setItem('kac_last_visited_room', r); }catch(e){} location.replace('index.html?room='+encodeURIComponent(r)+'&menu='+encodeURIComponent(menu)); }
+        else { hideLoader(); showEnroll(menu); }
       });
-    } else { showEnroll(menu); }
+    } else { hideLoader(); showEnroll(menu); }
   }
   function build(){
     if(!document.getElementById('keduEnroll')){
