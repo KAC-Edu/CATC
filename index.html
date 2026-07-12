@@ -12,7 +12,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-    <title>KAC Student Platform</title>
+    <title>KAC Training Platform</title>
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#f3f7fc">
@@ -7605,6 +7605,34 @@ body.kac-quiz-active .quiz-overlay,
    (행이 두 줄이 되면 아래 [출결하기] 버튼이 화면 밖으로 내려갈 수 있음) */
 #keduHome .kh-rows #khProf{ display:flex; align-items:center; min-width:0; overflow:hidden; }
 #keduAttProof .kap-row #kapProf{ display:flex; align-items:center; justify-content:flex-end; min-width:0; overflow:hidden; }
+
+/* [vJ122] 담임 = 이름 + 전화가 붙은 하나의 알약 (예전엔 이름과 동그란 전화버튼이 따로 놀았다) */
+.kh-profpill{
+  display:inline-flex; align-items:stretch; min-width:0;
+  border:none; padding:0; cursor:pointer;
+  border-radius:999px; overflow:hidden;
+  background:#eff6ff; box-shadow:0 2px 8px rgba(37,99,235,.16);
+  font-family:inherit;
+}
+.kh-profpill .khp-name{
+  display:flex; align-items:center;
+  padding:5px 11px; min-width:0;
+  font-size:15px; font-weight:800; color:#1e293b;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.kh-profpill .khp-call{
+  display:flex; align-items:center; justify-content:center;
+  flex:0 0 auto; width:32px;
+  background:#2563eb; color:#fff; font-size:12px;
+}
+.kh-profpill:active{ transform:scale(.97); }
+.kh-profpill:active .khp-call{ background:#1d4ed8; }
+
+.kh-morepill{
+  flex:0 0 auto; padding:4px 10px; border:none; border-radius:999px;
+  background:#e0e7ff; color:#3730a3; font-size:12px; font-weight:800;
+  cursor:pointer; white-space:nowrap; font-family:inherit;
+}
 #keduHome .kh-leader{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 18px 44px rgba(15,23,42,.28); border:1px solid #fde68a; }
 #keduHome .khl-head{ font-size:14px; font-weight:900; color:#b45309; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
 #keduHome .khl-sec{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:11px 13px; margin-bottom:10px; }
@@ -7677,6 +7705,9 @@ body.kac-quiz-active .quiz-overlay,
 #keduOtp .ko-sub{ color:#64748b; font-size:13.5px; font-weight:800; line-height:1.45; }
 #keduOtp .ko-body{ padding:20px 16px; }
 #keduOtp .ko-room{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:16px; padding:12px 14px; border-radius:16px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; font-size:13px; font-weight:900; }
+/* [vJ122] 'Room A' → 실제 과정명. 과정명이 길어도 칸이 깨지지 않게 라벨은 고정, 값은 줄바꿈 허용 */
+#keduOtp .ko-room > span{ flex:0 0 auto; color:#64748b; }
+#keduOtp .ko-room > b{ flex:1 1 auto; min-width:0; text-align:right; color:#0f172a; font-size:14.5px; line-height:1.35; word-break:keep-all; }
 #keduOtp .ko-inputs{ display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
 #keduOtp .ko-digit{ box-sizing:border-box; min-width:0; width:100%; padding:0; height:54px; border:2px solid #dbeafe; border-radius:14px; text-align:center; font-size:clamp(18px,5.5vw,24px); font-weight:800; line-height:1; color:#0f172a; background:#f8fbff; outline:none; }
 #keduOtp .ko-digit:focus{ border-color:#2563eb; background:#fff; box-shadow:0 0 0 4px rgba(37,99,235,.12); }
@@ -8030,15 +8061,21 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var rest = _hrRoster.length - 1;
     var mp   = String(main.phone||'').replace(/[^0-9+]/g,'');
 
-    var html = '<span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">'
-             + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+_hrEsc(main.name)+'</span>';
+    /* [vJ122] 이름과 전화 아이콘이 따로 떨어져 있어 지저분했다.
+       → 하나의 '알약'으로 합친다. 왼쪽=이름 / 구분선 / 오른쪽=전화.
+         알약 전체가 통화 버튼이라 손가락으로 누르기도 쉽다. */
+    var html = '<span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">';
     if(mp){
-      html += '<button type="button" class="kh-callbtn" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화"'
-            + ' style="flex:0 0 auto;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
+      html += '<button type="button" class="kh-profpill" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="'+_hrEsc(main.name)+' 담임에게 전화">'
+            +   '<span class="khp-name">'+_hrEsc(main.name)+'</span>'
+            +   '<span class="khp-call"><i class="fa-solid fa-phone"></i></span>'
+            + '</button>';
+    } else {
+      // 연락처가 없으면 전화칸 없이 이름만 (알약 모양은 유지하지 않는다 — 누를 게 없으니)
+      html += '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+_hrEsc(main.name)+'</span>';
     }
     if(rest > 0){
-      html += '<button type="button" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
-            + ' style="flex:0 0 auto;padding:3px 10px;border:none;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">외 '+rest+'명</button>';
+      html += '<button type="button" class="kh-morepill" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기">외 '+rest+'명</button>';
     }
     html += '</span>';
     el.innerHTML = html;
@@ -8702,7 +8739,17 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(!room){ showKacAlert('과정 정보를 찾지 못했습니다. 입교/홈에서 과정을 다시 확인해 주세요.'); return; }
     var ov=document.getElementById('keduOtp');
     var roomEl=document.getElementById('keduOtpRoom');
-    if(roomEl) roomEl.textContent='Room '+room;
+    /* [vJ122] 'Room A' 는 내부 코드라 교육생에겐 의미가 없다 → 실제 과정명을 보여준다.
+       기기에 저장된 과정명을 즉시 표시하고, 서버 값으로 한 번 더 확인해 갱신한다. */
+    if(roomEl){
+      var _cn=(localStorage.getItem('kac_current_course')||'').trim();
+      roomEl.textContent = _cn || '과정 확인 중…';
+      firebase.database().ref('courses/'+room+'/settings/courseName').once('value').then(function(s){
+        var nm=String(s.val()||'').trim();
+        if(nm){ roomEl.textContent=nm; try{ localStorage.setItem('kac_current_course', nm); }catch(e){} }
+        else if(!_cn){ roomEl.textContent='-'; }
+      }).catch(function(){ if(!_cn) roomEl.textContent='-'; });
+    }
     if(ov) ov.style.display='flex';
     var msg=document.getElementById('keduOtpMsg');
     if(msg) msg.textContent='강사 화면에 표시된 6자리 OTP를 입력해 주세요.';
@@ -8753,7 +8800,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       h.innerHTML='<div class="kh-card"><div class="kh-head">'+
         '<div class="kh-badge"><i class="fa-solid fa-circle-check"></i> 입교 완료</div>'+
         '<h3 id="khTitle">내 교육 과정</h3>'+
-        '<div class="kh-course">카카오 채널 메뉴에서 바로 이용할 수 있습니다.</div></div>'+
+        /* [vJ122] 안내 문구(.kh-course) 제거 — 불필요한 설명이라 뺐다 */
+        '</div>'+
         '<div class="kh-body"><div class="kh-rows">'+
           '<div><span>강의실</span><b id="khRoom">-</b></div>'+
           '<div><span>과정</span><b id="khCourse">-</b></div>'+
