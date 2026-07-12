@@ -10514,7 +10514,9 @@ html body.kac-locked #shuttleModal, html body.kac-locked #adminActionModal{
   align-items:center !important;
   justify-content:center !important;
   padding:18px 18px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
-  background:rgba(15,23,42,.42) !important;
+  /* 입교완료(#keduHome)와 '같은' 연한 파랑 배경. 어둡게 깔면 형제로 안 보인다.
+     카카오에서는 뒤에 아무것도 없으므로 어둡게 할 이유도 없다. */
+  background: var(--kacBg) !important;
   box-sizing:border-box !important;
 }
 /* 오버레이가 display:none 일 때는 안 보여야 하므로, 표시 전환은 JS 인라인 스타일을 따른다 */
@@ -10537,7 +10539,7 @@ html body.kac-locked #adminActionModal > .menu-box{
   padding:0 18px 18px !important;
   border-radius: var(--kacCardR) !important;   /* 네 모서리 모두 둥글게 */
   background:#fff !important;
-  box-shadow:0 24px 60px rgba(15,23,42,.32) !important;
+  box-shadow: var(--kacShadow) !important;     /* 입교완료 카드와 같은 그림자 */
   overflow-y:auto !important;
   animation:none !important;
   transform:none !important;
