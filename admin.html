@@ -2597,7 +2597,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
                         </div>
                     </div>
 
-                <div style="display: grid; grid-template-columns: 1.7fr 1fr; gap: 20px; margin-bottom:20px;">
+                <!-- 담임이 '여러 명'이 되면서 오른쪽 칸이 좁아 셀렉트가 찌그러지고 버튼이 넘쳤다.
+                     → 좌우 2단을 없애고, 강의실 상세 위치 아래에 담임 교수를 세로로 배치한다. -->
+                <div style="display: grid; grid-template-columns: 1fr; gap: 20px; margin-bottom:20px;">
                     <div class="setup-group">
                         <label style="display:block; font-size:12px; font-weight:800; color:#64748b; margin-bottom:8px;">강의실 상세 위치</label>
                         <div style="display:flex; gap:5px; align-items: center;">
