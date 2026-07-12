@@ -2112,7 +2112,16 @@
                     // 겹침 판정: startDt <= wkEnd && endDt >= wkStart
                     if (!(startDt <= wkEnd && endDt >= wkStart)) return;
                 }
-                const profName = (c.status && c.status.professorName) || '';
+                // [J89] 담임 여러 명 — 대표 + "외 N명"
+                const _pst = (c.status || {});
+                const _pAll = (function(raw){
+                    if(Object.prototype.toString.call(raw)==='[object Array]')
+                        return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
+                    return String(raw==null?'':raw).replace(/교수님?/g,' ')
+                        .split(/[,;\/·、|\n\r\t]+|\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+                })((_pst.professorNames && _pst.professorNames.length) ? _pst.professorNames : _pst.professorName);
+                const _pMain = (_pst.professorMain && _pAll.indexOf(_pst.professorMain)>=0) ? _pst.professorMain : (_pAll[0] || '');
+                const profName = _pMain ? (_pMain + (_pAll.length > 1 ? (' 외 ' + (_pAll.length-1) + '명') : '')) : '';
                 const resetKeyMatch = String((c.status && c.status.resetKey) || '').match(/(?:reset_|rk_)(\d{13})/);
                 const inferredCreatedAt = resetKeyMatch ? Number(resetKeyMatch[1]) : 0;
                 const notInPlan = !planNames.has((s.courseName || '').trim());
