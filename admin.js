@@ -13262,6 +13262,102 @@ annualPlanMgr._profOptions = function(cur){
     if(cur && !seen) opts += '<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>';
     return opts;
 };
+/* ══ [J89] 연간계획 담임 — 여러 명 선택 ═══════════════════════════════════
+   prof 값은 "장두석,박호원,김정민" 처럼 콤마로 저장한다(맨 앞 = 대표).
+   표에서는 버튼으로 보여주고, 누르면 체크 팝업이 뜬다. */
+annualPlanMgr._profCell = function(idx, cur, inpStyle, cancelStyle){
+    var esc = this._escapeHtml;
+    var arr = kacProfList(cur);
+    var label = arr.length
+        ? (esc(arr[0]) + (arr.length > 1 ? ' <b style="color:#b45309;">외 ' + (arr.length - 1) + '명</b>' : ''))
+        : '<span style="color:#94a3b8;">(선택)</span>';
+    return '<button type="button" onclick="annualPlanMgr.openProfPick(' + idx + ')" title="담임 선택 (여러 명 가능)" '
+         + 'style="' + inpStyle + ' ' + (cancelStyle||'') + ' cursor:pointer; text-align:left; background:#fff;">' + label + '</button>';
+};
+annualPlanMgr._profPick = { idx:-1, names:[] };
+annualPlanMgr.openProfPick = function(idx){
+    var c = this.currentEditingData[idx]; if(!c) return;
+    this._profPick = { idx: idx, names: kacProfList(c.prof || '') };
+    var m = document.getElementById('planProfPick');
+    if(m) m.remove();
+    m = document.createElement('div');
+    m.id = 'planProfPick';
+    m.style.cssText = 'position:fixed; inset:0; z-index:30000; display:flex; align-items:center; justify-content:center; background:rgba(15,23,42,.55); padding:16px;';
+    m.addEventListener('click', function(ev){ if(ev.target===m) m.remove(); });
+    m.innerHTML =
+        '<div onclick="event.stopPropagation();" style="width:460px; max-width:94vw; max-height:86vh; display:flex; flex-direction:column; background:#fff; border-radius:18px; box-shadow:0 30px 80px rgba(2,6,23,.4); padding:20px 22px;">'
+      + '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">'
+      +   '<h3 style="margin:0; font-size:19px; font-weight:900; color:#0f172a;">👥 담임 교수 선택</h3>'
+      +   '<button onclick="document.getElementById(\'planProfPick\').remove();" style="width:34px;height:34px;border:none;border-radius:50%;background:#f1f5f9;color:#334155;font-size:16px;cursor:pointer;">✕</button>'
+      + '</div>'
+      + '<p style="margin:0 0 12px; font-size:12.5px; font-weight:650; color:#64748b; line-height:1.55;">여러 명 선택할 수 있습니다. <b style="color:#b45309;">★ 대표</b>는 프로필·입교안내·교육생 앱에 표시됩니다.</p>'
+      + '<div id="planProfPickList" style="overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding:2px;"></div>'
+      + '<div style="display:flex; align-items:center; gap:10px; margin-top:14px; padding-top:13px; border-top:1px solid #eef2f7;">'
+      +   '<span id="planProfPickSum" style="flex:1; font-size:12.5px; font-weight:700; color:#475569;"></span>'
+      +   '<button onclick="annualPlanMgr.saveProfPick()" style="padding:10px 22px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-size:14px; font-weight:800; cursor:pointer;">저장</button>'
+      + '</div>'
+      + '</div>';
+    document.body.appendChild(m);
+    this.renderProfPick();
+};
+annualPlanMgr.renderProfPick = function(){
+    var box = document.getElementById('planProfPickList');
+    if(!box) return;
+    var esc = this._escapeHtml;
+    var sel = this._profPick;
+    var names = (typeof profMgr !== 'undefined' && profMgr.list) ? profMgr.list.map(function(p){return String(p.name).trim();}).filter(Boolean) : [];
+    sel.names.forEach(function(n){ if(names.indexOf(n) < 0) names.push(n); });   // 명단에 없는 기존 값도 유지
+    if(!names.length){
+        box.innerHTML = '<div style="padding:24px; text-align:center; color:#94a3b8; font-weight:700;">등록된 교수님이 없습니다.</div>';
+        return;
+    }
+    var main = sel.names[0] || '';
+    box.innerHTML = names.map(function(n){
+        var on = sel.names.indexOf(n) >= 0;
+        var isMain = on && (n === main);
+        var q = n.replace(/'/g, "\\'");
+        return '<div style="display:flex; align-items:center; gap:7px;">'
+             + '<button onclick="annualPlanMgr.toggleProfPick(\'' + q + '\')" '
+             +   'style="flex:1; display:flex; align-items:center; gap:10px; padding:11px 13px; border-radius:11px; cursor:pointer; text-align:left; font-size:15px; font-weight:800; '
+             +   (isMain ? 'background:#fef3c7; color:#7c2d12; border:1px solid #f59e0b;'
+                         : (on ? 'background:#eff6ff; color:#1d4ed8; border:1px solid #3b82f6;'
+                               : 'background:#fff; color:#334155; border:1px solid #e2e8f0;')) + '">'
+             +   '<span style="font-size:15px;">' + (isMain ? '★' : (on ? '☑' : '☐')) + '</span>'
+             +   '<span>' + esc(n) + '</span>'
+             +   (isMain ? '<span style="margin-left:auto; font-size:11px; font-weight:900;">대표</span>' : '')
+             + '</button>'
+             + (on && !isMain
+                ? '<button onclick="annualPlanMgr.setProfPickMain(\'' + q + '\')" title="대표로 지정" '
+                  + 'style="flex:0 0 auto; padding:10px 12px; border:1px solid #fcd34d; border-radius:10px; background:#fffbeb; color:#b45309; font-size:13px; font-weight:800; cursor:pointer;">☆ 대표로</button>'
+                : '')
+             + '</div>';
+    }).join('');
+    var sum = document.getElementById('planProfPickSum');
+    if(sum){
+        sum.innerHTML = !sel.names.length
+            ? '<span style="color:#94a3b8;">선택 없음 (담임 미지정으로 저장)</span>'
+            : ('★ <b style="color:#b45309;">' + esc(main) + '</b> 대표' + (sel.names.length > 1 ? (' · 총 ' + sel.names.length + '명') : ''));
+    }
+};
+annualPlanMgr.toggleProfPick = function(name){
+    var sel = this._profPick, i = sel.names.indexOf(name);
+    if(i >= 0) sel.names.splice(i, 1); else sel.names.push(name);
+    this.renderProfPick();
+};
+annualPlanMgr.setProfPickMain = function(name){           // 대표 = 맨 앞으로 이동
+    var sel = this._profPick;
+    if(sel.names.indexOf(name) < 0) return;
+    sel.names = [name].concat(sel.names.filter(function(n){ return n !== name; }));
+    this.renderProfPick();
+};
+annualPlanMgr.saveProfPick = function(){
+    var sel = this._profPick;
+    if(sel.idx < 0) return;
+    this.updateLocalData(sel.idx, 'prof', sel.names.join(','));   // "장두석,박호원,김정민"
+    var m = document.getElementById('planProfPick'); if(m) m.remove();
+    this.renderEditor(sel.idx);
+};
+
 annualPlanMgr._coordOptions = function(cur){
     cur = cur || '';
     var esc = this._escapeHtml;
@@ -13414,7 +13510,7 @@ annualPlanMgr.renderEditor = function(keepIdx) {
                 <td style="${cellStyle} text-align:center; color:#64748b;">${idx + 1}</td>
                 <td style="${cellStyle}"><input type="text" value="${esc(c.name)}" onchange="annualPlanMgr.updateLocalData(${idx},'name',this.value)" style="${inpStyle} font-weight:700; ${cancelStyle}"></td>
                 <td style="${cellStyle}"><input type="text" readonly data-idx="${idx}" value="${(c.startDate&&c.endDate)?esc(c.startDate+' ~ '+c.endDate):''}" placeholder="기간 선택" onclick="annualPlanMgr._openPeriodPicker(${idx}, this)" style="${inpStyle} cursor:pointer; background:#fff; text-align:center; ${cancelStyle}"></td>
-                <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'prof',this.value)" style="${inpStyle} cursor:pointer; background:#fff; ${cancelStyle}">${annualPlanMgr._profOptions(c.prof)}</select></td>
+                <td style="${cellStyle}">${annualPlanMgr._profCell(idx, c.prof || '', inpStyle, cancelStyle)}</td>
                 <td style="${cellStyle}"><select onchange="annualPlanMgr.updateLocalData(${idx},'coord',this.value)" style="${inpStyle} cursor:pointer; background:#fff; ${cancelStyle}">${annualPlanMgr._coordOptions(c.coord)}</select></td>
                 <td style="${cellStyle}">${classroomDetailSelectHtmlInstructor(c.roomDetail || '', "annualPlanMgr.onRoomPick(" + idx + ",this)", inpStyle + cancelStyle, annualPlanMgr._roomsInUse(idx))}</td>
                 <td style="${cellStyle} text-align:center;"><input type="checkbox" ${cancelled ? 'checked' : ''} onchange="annualPlanMgr.updateLocalData(${idx},'cancelled',this.checked); annualPlanMgr.renderEditor(${idx});" title="폐강 처리: 자동 배정과 운영 노출에서 제외" style="width:18px; height:18px; cursor:pointer; accent-color:#ef4444;"></td>
