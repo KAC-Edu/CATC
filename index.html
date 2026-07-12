@@ -7986,7 +7986,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
             + ' style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;line-height:1;box-sizing:border-box;padding:0 13px 0 12px;margin:0;border:none;border-radius:5px 999px 999px 5px;background:#facc15;color:#fff;font-size:13.5px;font-weight:900;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.18);white-space:nowrap;"><i class="fa-solid fa-phone" style="font-size:11px;"></i>전화</button>';
     }
     if(rest > 0){
-      html += '<button type="button" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
+      html += '<button type="button" class="kh-morepill" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
             + ' style="flex:0 0 auto;padding:3px 10px;border:none;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">외 '+rest+'명</button>';
     }
     html += '</span>';
@@ -10094,6 +10094,37 @@ html.kac-core-screen #realUserCount::before{
   #keduHome .kh-rows b{ font-size:14px !important; }
   #keduHome button{ margin-top:7px !important; padding:12px !important; font-size:14.5px !important; }
 }
+
+/* ───────── [담임 줄] '외 N명' 칩 · '전화' 알약 복구 ─────────
+   위의 '#keduHome button { width:100%; padding:12px !important; margin-top:7px !important }' 는
+   [출결하기] 같은 큰 버튼용 규칙인데, 담임 줄의 작은 알약·칩까지 같이 잡아버렸다.
+   → 칩이 가로 100%로 늘어나고 패딩이 커지면서 #khProf(overflow:hidden)에 글자가 잘려
+     '빈 상자'처럼 보였다. 여기서 그 규칙을 되돌린다. */
+#keduHome .kh-rows b button.kh-morepill,
+#keduHome .kh-rows b button.kh-callbtn2{
+  width:auto !important;
+  margin:0 !important;
+  padding:0 !important;
+  border:none !important;
+  box-sizing:border-box !important;
+  flex:0 0 auto !important;
+}
+#keduHome .kh-rows b button.kh-morepill{
+  height:28px !important;
+  padding:0 10px !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  background:#e0e7ff !important;
+  color:#3730a3 !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+  line-height:1 !important;
+  border-radius:999px !important;
+  white-space:nowrap !important;
+}
+/* 칩이 잘리지 않도록 담임 칸의 클리핑 해제 */
+#keduHome .kh-rows #khProf{ overflow:visible !important; }
 </style>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
