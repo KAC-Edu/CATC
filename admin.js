@@ -6902,6 +6902,7 @@ resetShuttleRequests: function() {
     enterCourseMode: function(room, mode, fs){
         ui._pendingEnterMode = mode || 'dashboard';
         ui._pendingGuideFullscreen = (!!fs && (mode === 'guide'));   // 입교안내는 진입 즉시 PDF 전체화면
+        try { state.quizStarted = false; } catch(e){}   // [J97] 다른 과정으로 옮기면 '퀴즈 진행 중' 표식 초기화
         try { dataMgr.switchRoomAttempt(String(room||'').toUpperCase()); }
         catch(e){ ui._pendingEnterMode = null; ui._pendingGuideFullscreen = false; }
     },
@@ -8394,6 +8395,7 @@ action: function(act) {
         // [J15] 강사가 실제로 문제를 여는 순간(open)에만 quizStep='live' — 교육생 화면 표시 시작점
         if (act === 'open') {
             firebase.database().ref(`courses/${state.room}/status/quizStep`).set('live');
+            state.quizStarted = true;   // [J97] '현재 퀴즈 시작'을 실제로 눌렀다 → 나갈 때 저장/초기화를 물어본다
         }
         firebase.database().ref(`courses/${state.room}/activeQuiz`).update({ status: act });
         
@@ -8937,15 +8939,42 @@ closeSummaryAndExit: function(silent) {
 
 
 // [최종 복구] 퀴즈 모드 종료 시도 (옵저버 여부 체크 포함)
-    closeQuizMode: function() { 
+    closeQuizMode: function() {
         // 옵저버는 데이터에 영향이 없으므로 그냥 나갑니다.
         if(state.isObserver) {
             ui.setMode('dashboard');
             return;
         }
-        // 강사는 팝업창을 띄워 선택하게 합니다.
+
+        /* [J97] '현재 퀴즈 시작'을 한 번도 안 눌렀으면 저장할 진행상황도, 지울 응답도 없다.
+           그런데도 "일시 중단 / 완전 초기화"를 묻던 것은 의미 없는 절차였다.
+           → 문항만 훑어보고 나가는 경우엔 팝업 없이 바로 과정현황으로 나간다.
+           '진행 중'의 판정 근거:
+             ① 이번에 '현재 퀴즈 시작'을 눌렀다(state.quizStarted)
+             ② 또는 예전에 진행하다 만 기록이 남아 있다(이어하기 마커/문항 인덱스)
+             ③ 또는 교육생 응답이 이미 들어왔다 */
+        var _started = false;
+        try {
+            if (state.quizStarted) _started = true;
+            if (!_started && state.room) {
+                if (localStorage.getItem('kac_quiz_resume_' + state.room)) _started = true;
+                var _idx = parseInt(localStorage.getItem('kac_quiz_idx_' + state.room) || '0', 10);
+                if (!_started && _idx > 0) _started = true;
+            }
+            if (!_started) {
+                var _ans = parseInt((document.getElementById('answeredCount') || {}).innerText || '0', 10);
+                if (_ans > 0) _started = true;
+            }
+        } catch (e) { _started = true; }   // 판정 실패 시엔 안전하게 물어본다
+
+        if (!_started) {
+            ui.setMode('dashboard');
+            return;
+        }
+
+        // 실제로 진행한 적이 있을 때만 팝업으로 선택하게 합니다.
         const exitModal = document.getElementById('quizExitModal');
-        if(exitModal) exitModal.style.display = 'flex'; 
+        if(exitModal) exitModal.style.display = 'flex';
     },
     
 
@@ -8959,9 +8988,10 @@ closeSummaryAndExit: function(silent) {
 
         if (type === 'reset') {
             // 1. [완전 초기화] 모든 내부 진행 데이터 삭제
-            state.currentQuizIdx = 0; 
-            state.isExternalFileLoaded = false; 
+            state.currentQuizIdx = 0;
+            state.isExternalFileLoaded = false;
             state.quizList = [];
+            state.quizStarted = false;   // [J97] 초기화했으니 '진행 중' 표식도 지운다 (다음엔 팝업 안 뜸)
             
             // 2. 브라우저에 저장된 문제 번호 기록 삭제 (새로고침 복구용 데이터 삭제)
             if (state.room) {
