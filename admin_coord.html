@@ -6277,6 +6277,53 @@ function classroomDetailSelectHtmlCoord(value, changeExpr, styleText, inUse) {
         '</select>';
 }
 
+/* ══ [J89] 담임 교수 여러 명 지원 ══════════════════════════════════════════
+   설계 원칙: 기존 코드 80여 곳이 status.professorName(문자열 하나)을 읽는다.
+             그 칸은 그대로 두고 '대표 교수'만 넣는다 → 기존 화면이 하나도 안 깨진다.
+             전체 명단은 professorNames(배열)에 따로 담는다.
+
+     status.professorName  = 대표 교수 (프로필·입교안내·교육생 앱에 나오는 사람)
+     status.professorNames = ["장두석","박호원","김정민"]   ← 전체
+     status.professorMain  = 수동으로 고른 대표 (없으면 목록 첫 번째가 자동 대표)
+
+   입력은 자유롭게: 쉼표 / 줄바꿈 / 중점 / 슬래시 / 세미콜론 / 공백 모두 구분자.
+     "장두석,박호원,김정민"   "장두석 박호원 김정민"   "장두석\n박호원\n김정민"  전부 인식 */
+function kacProfList(raw){
+  if(Array.isArray(raw)) return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
+  return String(raw==null?'':raw)
+    .replace(/교수님?/g, ' ')                    // '장두석 교수' 처럼 직함이 붙어도 제거
+    .split(/[,;\/·、|\n\r\t]+|\s+/)
+    .map(function(s){ return s.trim(); })
+    .filter(Boolean);
+}
+/* 대표 교수 — 수동 지정이 있으면 그것, 없으면 '맨 앞 사람' */
+function kacProfMain(st){
+  if(!st) return '';
+  var arr = kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
+  var m = st.professorMain;
+  if(m && arr.indexOf(m) >= 0) return m;
+  return arr[0] || '';
+}
+/* 화면 표시용 — "장두석 외 2명" */
+function kacProfLabel(st, suffix){
+  if(!st) return '';
+  var arr = kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
+  if(!arr.length) return '';
+  var main = kacProfMain(st);
+  var rest = arr.length - 1;
+  return main + (suffix || '') + (rest > 0 ? (' 외 ' + rest + '명') : '');
+}
+/* Firebase에 담임을 쓸 때 쓰는 공용 함수 — 대표/전체를 한 번에 세팅 */
+function kacProfUpdates(updates, room, rawProf, mainName){
+  var arr = kacProfList(rawProf);
+  var main = (mainName && arr.indexOf(mainName) >= 0) ? mainName : (arr[0] || '');
+  updates['courses/' + room + '/status/professorName']  = main;              // 대표 (기존 호환)
+  updates['courses/' + room + '/status/professorNames'] = arr.length ? arr : null;
+  updates['courses/' + room + '/status/professorMain']  = (mainName && arr.indexOf(mainName) >= 0) ? mainName : null;
+  return main;
+}
+try{ window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfLabel=kacProfLabel; }catch(e){}
+
 const annualPlanMgrCoord = {
     ROOMS: ['A', 'B', 'C'],
     PLAN_KEY: 'system/annualPlan',
