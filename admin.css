@@ -514,15 +514,39 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
     box-shadow:0 6px 18px rgba(15,23,42,.14); transition:.15s;
 }
 #quizSummaryOverlay .qr-close:hover{ background:#ef4444; color:#fff; transform:rotate(90deg); box-shadow:0 8px 22px rgba(239,68,68,.35); }
-/* [J83] 평균 점수 하나만 크게 — 나머지 수치는 다 뺐다 */
-#quizSummaryOverlay .qr-hero{
-    background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff;
-    border-radius:22px; padding:30px 24px; margin-bottom:26px;
-    box-shadow:0 14px 34px rgba(37,99,235,.30);
+/* [J86] 상단 요약 3종 — 총 문항 / 참여자 / 평균 점수 */
+#quizSummaryOverlay #summaryStats{ display:grid !important; grid-template-columns:repeat(3,1fr) !important; gap:14px; margin-bottom:26px; }
+#quizSummaryOverlay .qr-stat{ background:#fff; border:1px solid #e8edf3; border-radius:18px; padding:20px 14px;
+    box-shadow:0 3px 10px rgba(15,23,42,.06); }
+#quizSummaryOverlay .qr-stat-label{ font-size:15px; font-weight:800; color:#64748b; margin-bottom:6px; }
+#quizSummaryOverlay .qr-stat-val{ font-size:46px; font-weight:900; color:#1e293b; line-height:1.05; letter-spacing:-1.5px; }
+#quizSummaryOverlay .qr-stat-val span{ font-size:17px; font-weight:800; margin-left:4px; color:#94a3b8; }
+/* 평균 점수만 파랗게 강조 */
+#quizSummaryOverlay .qr-stat-hl{ background:linear-gradient(135deg,#3b82f6,#2563eb); border-color:transparent;
+    box-shadow:0 12px 28px rgba(37,99,235,.30); }
+#quizSummaryOverlay .qr-stat-hl .qr-stat-label{ color:#dbeafe; }
+#quizSummaryOverlay .qr-stat-hl .qr-stat-val{ color:#fff; }
+#quizSummaryOverlay .qr-stat-hl .qr-stat-val span{ color:rgba(255,255,255,.85); }
+
+/* [J86] 선택한 문항 하나만 보여주는 상세 카드 */
+#quizSummaryOverlay .qhm-cell.sel{ outline:4px solid #0f172a; outline-offset:2px; transform:translateY(-2px); }
+#quizSummaryOverlay .q-detail{ text-align:left; background:#fff; border:1px solid #e8edf3; border-radius:16px;
+    padding:18px 20px; margin-top:16px; box-shadow:0 4px 14px rgba(15,23,42,.07); }
+#quizSummaryOverlay .q-detail.flash{ animation:qdFlash .7s ease; }
+@keyframes qdFlash{ 0%{ box-shadow:0 0 0 4px rgba(59,130,246,.35); } 100%{ box-shadow:0 4px 14px rgba(15,23,42,.07); } }
+#quizSummaryOverlay .q-detail-head{ display:flex; align-items:center; gap:9px; margin-bottom:12px; }
+#quizSummaryOverlay .q-detail-acc{ margin-left:auto; font-size:17px; font-weight:900; }
+#quizSummaryOverlay .q-detail-q{ font-size:19px; font-weight:800; color:#1e293b; line-height:1.5; margin-bottom:14px; }
+#quizSummaryOverlay .q-detail .qbd-bar{ height:12px; background:#eef2f7; border-radius:999px; overflow:hidden; }
+#quizSummaryOverlay .q-detail .qbd-fill{ height:100%; border-radius:999px; transition:width .45s; }
+#quizSummaryOverlay .q-detail-meta{ display:flex; gap:10px; margin-top:12px; font-size:14px; font-weight:800; }
+#quizSummaryOverlay .qd-ok{ color:#0f766e; background:#ecfdf5; border:1px solid #a7f3d0; padding:5px 12px; border-radius:999px; }
+#quizSummaryOverlay .qd-no{ color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; padding:5px 12px; border-radius:999px; }
+#quizSummaryOverlay .qd-all{ color:#475569; background:#f1f5f9; border:1px solid #e2e8f0; padding:5px 12px; border-radius:999px; margin-left:auto; }
+@media(max-width:900px){
+    #quizSummaryOverlay #summaryStats{ grid-template-columns:1fr 1fr !important; }
+    #quizSummaryOverlay .qr-stat-val{ font-size:34px; }
 }
-#quizSummaryOverlay .qr-hero-label{ font-size:19px; font-weight:800; opacity:.92; margin-bottom:6px; }
-#quizSummaryOverlay .qr-hero-score{ font-size:76px; font-weight:900; line-height:1.05; letter-spacing:-2px; }
-#quizSummaryOverlay .qr-hero-score span{ font-size:28px; font-weight:800; margin-left:6px; opacity:.9; }
 /* 문항 카드 사이 간격 (스크롤이 없어졌으니 여백으로 구분) */
 #quizSummaryOverlay.quiz-report .qbd-row{ margin-bottom:14px; }
 @media(max-width:900px){ #quizSummaryOverlay .qr-hero-score{ font-size:56px; } }
