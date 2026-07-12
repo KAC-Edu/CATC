@@ -7936,13 +7936,13 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   // 재진입(이미 입교) → 현재 정보만 간결히 표시
   // ===== [과정담임 표시 + 통화] =====
   function _hrEsc(t){ return String(t==null?'':t).replace(/[<>&\"']/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','\"':'&quot;',"'":'&#39;'}[c]);}); }
-  function renderHomeroom(el, prof, phone){
+  function renderHomeroom(el, label, phone, callName){
     if(!el) return;
-    var name=_hrEsc(prof);
+    var name=_hrEsc(label);
     var html=name;   // 이름은 부모 <b> 스타일(다른 행과 동일)을 그대로 따른다
     var p=String(phone||'').replace(/[^0-9+]/g,'');
     if(p){
-      html+='<button type="button" class="kh-callbtn" data-phone="'+p+'" data-name="'+name+'" onclick="callHomeroom(this)" aria-label="담임에게 전화" style="margin-left:8px;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;vertical-align:middle;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
+      html+='<button type="button" class="kh-callbtn" data-phone="'+p+'" data-name="'+_hrEsc(callName||label)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화" style="margin-left:8px;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;vertical-align:middle;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
     }
     el.innerHTML=html;
   }
