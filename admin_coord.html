@@ -4495,6 +4495,9 @@ async function saveIntegratedSettings() {
     const updates = {};
     updates[`courses/${rid}/settings/courseName`] = name;
     updates[`courses/${rid}/settings/period`] = `${start} ~ ${end}`;
+    updates[`courses/${rid}/status/periodManual`] = true;      // [J90] 수동 지정 — 자동 동기화가 계획값으로 되돌리지 않음
+    updates[`courses/${rid}/status/coordManual`] = (coord && String(coord).trim()) ? true : null;   // [J90] 담당도 동일 보호
+    updates[`courses/${rid}/status/roomDetailManual`] = (loc && String(loc).trim()) ? true : null;  // [J90] 강의실도 동일 보호
     // 대표 = professorName(기존 호환) / 전체 = professorNames / 수동 대표 = professorMain
     updates[`courses/${rid}/status/professorName`]  = prof;
     updates[`courses/${rid}/status/professorNames`] = profArr.length ? profArr : null;
@@ -6705,12 +6708,14 @@ const annualPlanMgrCoord = {
     _profCell: function(idx, cur, locked, inp, op){
         const esc = this._escapeHtml;
         const arr = kacProfList(cur);
+        // 표는 흰 배경·진한 글씨(inp 스타일)다. 배경/글자색을 임의로 바꾸면 글자가 안 보인다.
         const label = arr.length
-            ? (esc(arr[0]) + (arr.length > 1 ? ' <b style="color:#f59e0b;">외 ' + (arr.length - 1) + '명</b>' : ''))
-            : '<span style="color:#7da2c9;">(선택)</span>';
-        if (locked) return `<div style="${inp} ${op} background:#0f1e33;">${label}</div>`;
+            ? (esc(arr[0]) + (arr.length > 1 ? ' <b style="color:#b45309;">외 ' + (arr.length - 1) + '명</b>' : ''))
+            : '<span style="color:#94a3b8;">(선택)</span>';
+        const one = 'white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left;';   // 한 줄 고정(줄바꿈 방지)
+        if (locked) return `<div style="${inp} ${op} ${one} background:#f1f5f9;">${label}</div>`;
         return `<button type="button" onclick="annualPlanMgrCoord.openProfPick(${idx})" title="담임 선택 (여러 명 가능)"
-                  style="${inp} ${op} cursor:pointer; text-align:left; background:#0f1e33;">${label}</button>`;
+                  style="${inp} ${op} ${one} cursor:pointer;">${label}</button>`;
     },
     _profPick: { idx:-1, names:[] },
     openProfPick: function(idx){
@@ -6927,11 +6932,14 @@ const annualPlanMgrCoord = {
         const planData = {};
         clean.forEach((c, i) => { planData[`c${i}`] = c; });
         await firebase.database().ref(this.PLAN_KEY).set(planData);
-        await this._syncRoomsLockAware(clean);
+        // [J89] 운영부가 직접 [저장 및 즉시 적용]을 누른 것 = 이 담임이 최신이라는 뜻.
+        //  → 강사가 수동 지정해 둔 담임(professorManual)이라도 이때는 계획값으로 덮어쓴다.
+        //    (반면 autoSync는 자동 실행이므로 기존대로 강사 수동 지정을 보존한다)
+        await this._syncRoomsLockAware(clean, true);
         return clean;
     },
 
-    _syncRoomsLockAware: async function(courses) {
+    _syncRoomsLockAware: async function(courses, forceProf) {
         const today = this._today();
         const targetMon = this._getTargetMonday(today);
         const targetSunObj = new Date(targetMon + 'T00:00:00Z');
@@ -6973,6 +6981,8 @@ const annualPlanMgrCoord = {
             updates[`courses/${r}/status/professorName`] = '';
             updates[`courses/${r}/status/professorNames`] = null;    // [J89] 담임 목록도 비움
             updates[`courses/${r}/status/professorMain`] = null;
+            updates[`courses/${r}/status/periodManual`] = null;      // [J90] 방 비우면 수동 플래그 해제
+            updates[`courses/${r}/status/coordManual`] = null;       // [J90]
             updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
             updates[`courses/${r}/status/roomStatus`]   = 'idle';
             updates[`courses/${r}/status/ownerSessionId`] = null;
@@ -7035,14 +7045,27 @@ const annualPlanMgrCoord = {
                 if (inPlan) {
                     const pc = planByName[nm];
                     const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
-                    updates[`courses/${r}/settings/period`] = pc.period;
-                    updates[`courses/${r}/settings/coordinatorName`] = coordFull;
-                    if (!(rd.status && rd.status.professorManual)) {   // 수동 지정 교수는 보존(덮어쓰지 않음)
-                        // [J89] 담임 여러 명 — 대표(맨 앞)는 professorName, 전체는 professorNames
-                        const _main = kacProfUpdates(updates, r, pc.prof, (rd.status || {}).professorMain);
-                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(_main);
+                    /* [J90] 방에서 직접 고친 기간·담당은 '자동' 동기화(autoSync)가 되돌리지 않는다.
+                       단, 운영부가 직접 [저장 및 즉시 적용]을 누른 경우(forceProf)는 계획이 최신이므로 덮어쓴다. */
+                    if (forceProf || !(rd.status && rd.status.periodManual)) {
+                        updates[`courses/${r}/settings/period`] = pc.period;
+                        if (forceProf) updates[`courses/${r}/status/periodManual`] = null;
                     }
-                    if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
+                    if (forceProf || !(rd.status && rd.status.coordManual)) {
+                        updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                        if (forceProf) updates[`courses/${r}/status/coordManual`] = null;
+                    }
+                    // [J89] 담임 여러 명 — 대표(맨 앞)는 professorName, 전체는 professorNames
+                    //  forceProf: 운영부가 직접 [저장 및 즉시 적용] → 강사 수동 지정도 덮어쓴다
+                    if (forceProf || !(rd.status && rd.status.professorManual)) {
+                        const _main = kacProfUpdates(updates, r, pc.prof, forceProf ? null : (rd.status || {}).professorMain);
+                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(_main);
+                        if (forceProf) updates[`courses/${r}/status/professorManual`] = null;
+                    }
+                    if (pc.roomDetail && (forceProf || !(rd.status && rd.status.roomDetailManual))) {   // 자동은 보존 / 명시적 저장은 반영
+                        updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                        if (forceProf) updates[`courses/${r}/status/roomDetailManual`] = null;
+                    }
                 }
                 return;
             }
@@ -7052,13 +7075,25 @@ const annualPlanMgrCoord = {
                 keptNames.add(nm);
                 const pc = planByName[nm];
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
-                updates[`courses/${r}/settings/period`] = pc.period;
-                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
-                if (!(rd.status && rd.status.professorManual)) {   // 수동 지정 교수는 보존(덮어쓰지 않음)
-                    updates[`courses/${r}/status/professorName`] = pc.prof;
-                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                /* [J90] 자동 동기화는 수동 수정을 보존, 운영부의 명시적 저장(forceProf)은 덮어쓴다 */
+                if (forceProf || !(rd.status && rd.status.periodManual)) {
+                    updates[`courses/${r}/settings/period`] = pc.period;
+                    if (forceProf) updates[`courses/${r}/status/periodManual`] = null;
                 }
-                    if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
+                if (forceProf || !(rd.status && rd.status.coordManual)) {
+                    updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                    if (forceProf) updates[`courses/${r}/status/coordManual`] = null;
+                }
+                // [J89] 담임 여러 명 — professorName(대표)·professorNames(전체) 동시 기록
+                if (forceProf || !(rd.status && rd.status.professorManual)) {
+                    const _main2 = kacProfUpdates(updates, r, pc.prof, forceProf ? null : (rd.status || {}).professorMain);
+                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(_main2);
+                    if (forceProf) updates[`courses/${r}/status/professorManual`] = null;
+                }
+                    if (pc.roomDetail && (forceProf || !(rd.status && rd.status.roomDetailManual))) {   // 자동은 보존 / 명시적 저장은 반영
+                        updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                        if (forceProf) updates[`courses/${r}/status/roomDetailManual`] = null;
+                    }
                 return;
             }
 
@@ -7067,13 +7102,25 @@ const annualPlanMgrCoord = {
                 keptNames.add(nm);
                 const pc = planByName[nm];
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
-                updates[`courses/${r}/settings/period`] = pc.period;
-                updates[`courses/${r}/settings/coordinatorName`] = coordFull;
-                if (!(rd.status && rd.status.professorManual)) {   // 수동 지정 교수는 보존(덮어쓰지 않음)
-                    updates[`courses/${r}/status/professorName`] = pc.prof;
-                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                /* [J90] 자동 동기화는 수동 수정을 보존, 운영부의 명시적 저장(forceProf)은 덮어쓴다 */
+                if (forceProf || !(rd.status && rd.status.periodManual)) {
+                    updates[`courses/${r}/settings/period`] = pc.period;
+                    if (forceProf) updates[`courses/${r}/status/periodManual`] = null;
                 }
-                if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
+                if (forceProf || !(rd.status && rd.status.coordManual)) {
+                    updates[`courses/${r}/settings/coordinatorName`] = coordFull;
+                    if (forceProf) updates[`courses/${r}/status/coordManual`] = null;
+                }
+                // [J89] 담임 여러 명 — professorName(대표)·professorNames(전체) 동시 기록
+                if (forceProf || !(rd.status && rd.status.professorManual)) {
+                    const _main3 = kacProfUpdates(updates, r, pc.prof, forceProf ? null : (rd.status || {}).professorMain);
+                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(_main3);
+                    if (forceProf) updates[`courses/${r}/status/professorManual`] = null;
+                }
+                if (pc.roomDetail && (forceProf || !(rd.status && rd.status.roomDetailManual))) {   // 자동은 보존 / 명시적 저장은 반영
+                    updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;
+                    if (forceProf) updates[`courses/${r}/status/roomDetailManual`] = null;
+                }
                 return;
             }
 
@@ -7107,6 +7154,8 @@ const annualPlanMgrCoord = {
             const _main = kacProfUpdates(updates, room, course.prof, null);
             updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준
             updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
+            updates[`courses/${room}/status/coordManual`] = null;       // [J90]
+            updates[`courses/${room}/status/periodManual`] = null;      // [J90] 신규 배치는 계획 기간 기준
             updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(_main);
             if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
