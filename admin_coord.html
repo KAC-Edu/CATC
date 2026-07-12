@@ -6393,9 +6393,14 @@ function kacProfList(raw){
     .filter(Boolean);
 }
 /* 대표 교수 — 수동 지정이 있으면 그것, 없으면 '맨 앞 사람' */
+/* 담임 전체 목록 (professorNames 우선, 없으면 professorName 파싱) */
+function kacProfAll(st){
+  if(!st) return [];
+  return kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
+}
 function kacProfMain(st){
   if(!st) return '';
-  var arr = kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
+  var arr = kacProfAll(st);
   var m = st.professorMain;
   if(m && arr.indexOf(m) >= 0) return m;
   return arr[0] || '';
@@ -6418,7 +6423,7 @@ function kacProfUpdates(updates, room, rawProf, mainName){
   updates['courses/' + room + '/status/professorMain']  = (mainName && arr.indexOf(mainName) >= 0) ? mainName : null;
   return main;
 }
-try{ window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfLabel=kacProfLabel; }catch(e){}
+try{ window.kacProfList=kacProfList; window.kacProfAll=kacProfAll; window.kacProfMain=kacProfMain; window.kacProfLabel=kacProfLabel; window.kacProfUpdates=kacProfUpdates; }catch(e){}
 
 const annualPlanMgrCoord = {
     ROOMS: ['A', 'B', 'C'],
@@ -8524,7 +8529,7 @@ function _courseOverviewHTML(){
     var c=_courseOverviewCount(r);
     var start=(''+(r.s.period||'')).split(' ~ ')[0]||'';
     var bigo=(start&&today>=start)?'<span style="color:#16a34a;font-weight:800;">진행중</span>':'<span style="color:#2563eb;font-weight:700;">예정</span>';
-    var prof=(r.st.professorName||'').trim()?(_esc(r.st.professorName.trim())+' 교수'):'-';
+    var prof=kacProfLabel(r.st||{},' 교수')||'-';   // [J89] "김정민 교수 외 2명"
     return '<tr>'
       +'<td style="text-align:center;font-weight:800;color:#0f172a;font-size:20px;">'+_esc(r.s.courseName||'-')+'</td>'
       +'<td style="font-size:17px;">'+_esc(r.s.roomDetailName||r.s.roomDetail||'-')+'</td>'
@@ -9608,7 +9613,7 @@ var coordKiosk={
       var stat=(r.order===2)?{t:'종료',c:'#94a3b8'}:((r.order===0)?{t:'진행중',c:'#34d399'}:{t:'예정',c:'#fbbf24'});
       var ended=(r.order===2);
       var numCell=ended?'—':String(++seq);  // 운영중(진행중·예정)만 번호 부여 → 종료는 카운트 제외
-      var prof=(st.professorName||'').trim()?(_esc(st.professorName.trim())+' 교수'):'-';
+      var prof=kacProfLabel(st||{},' 교수')||'-';   // [J89] "김정민 교수 외 2명"
       return '<tr class="ckrow" onclick="coordKiosk.notice(\''+_esc(r.rid)+'\')" style="border-bottom:1px solid rgba(255,255,255,.08);'+(ended?'opacity:.5;':'')+'">'
         +'<td style="padding:20px 14px;text-align:center;font-weight:900;color:'+(ended?'#64748b':'#60a5fa')+';white-space:nowrap;font-size:1.1em;">'+numCell+'</td>'
         +'<td style="padding:20px 14px;text-align:left;font-weight:800;color:#fff;">'+_esc(sset.courseName||'-')+'</td>'
@@ -9717,7 +9722,11 @@ var coordKiosk={
 coordKiosk.notice=function(rid){
   var room=((typeof globalAllData!=='undefined'&&globalAllData)?globalAllData:{})[rid]||{}; var st=room.settings||{}; var cur=room.coordNotice||'';
   var _stt=room.status||{};
-  var _prof=((_stt.professorName||'').trim())?((typeof _coordStripRank==='function'?(_coordStripRank(_stt.professorName.trim())||_stt.professorName.trim()):_stt.professorName.trim())+' 교수'):'-';
+  // [J89] 담임 여러 명 — 대표 + "외 N명"
+  var _pMain=kacProfMain(_stt||{});
+  if(_pMain && typeof _coordStripRank==='function') _pMain=(_coordStripRank(_pMain)||_pMain);
+  var _pRest=Math.max(0, kacProfAll(_stt||{}).length-1);
+  var _prof=_pMain ? (_pMain+' 교수'+(_pRest>0?(' 외 '+_pRest+'명'):'')) : '-';
   var _coord=((typeof _coordFullName==='function'?(_coordFullName(st.coordinatorName)||''):(st.coordinatorName||'')))||'-';
   var _ld=((typeof _studentsOf==='function'?_studentsOf(room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
   var _ldName=_ld?(_ld.name||''):''; var _ldNo=_ld?(_ld.empNo||_ld.sabun||_ld.id||_ld.studentId||''):'';
@@ -10147,7 +10156,9 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     var byFloor={}, unassigned=[];
     rooms.forEach(function(r){
       var pr=_coordRoomParse(r.s);
-      var prof=((r.st&&r.st.professorName)||'').trim(); prof=(typeof _coordStripRank==='function'?(_coordStripRank(prof)||prof):prof);
+      var prof=kacProfMain(r.st||{}); prof=(typeof _coordStripRank==='function'?(_coordStripRank(prof)||prof):prof);
+      var _rest=Math.max(0, kacProfAll(r.st||{}).length-1);   // [J89]
+      if(prof && _rest>0) prof=prof+' 외 '+_rest+'명';
       var coord=(typeof _coordStripRank==='function'?(_coordStripRank(r.s.coordinatorName)||''):((r.s.coordinatorName)||''));
       var ldr=((typeof _studentsOf==='function'?_studentsOf(r.room):[])||[]).filter(function(s){return s&&s.isLeader===true;})[0];
       var info={rid:r.rid, course:(r.s.courseName||'-'), prof:prof, coord:coord, leader:(ldr?(ldr.name||''):'')};
