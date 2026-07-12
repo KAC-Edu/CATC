@@ -13190,6 +13190,12 @@ const annualPlanMgr = {
                     updates[`courses/${room}/settings/coordinatorName`] = coordFull;
                     updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(kacProfUpdates(updates, room, course.prof));   // [J89] 담임 다수
                     updates[`courses/${room}/status/roomStatus`]   = 'active';
+                    /* [J90] 새 과정을 넣는 자리다 → 이전 과정에서 남은 '수동 지정' 플래그를 전부 해제한다.
+                       (안 지우면 새 과정이 옛 담임·옛 기간·옛 강의실에 묶여 계획대로 갱신되지 않는다) */
+                    updates[`courses/${room}/status/professorManual`]  = null;
+                    updates[`courses/${room}/status/coordManual`]      = null;
+                    updates[`courses/${room}/status/roomDetailManual`] = null;
+                    updates[`courses/${room}/status/periodManual`]     = null;
                     if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
                     else updates[`courses/${room}/settings/roomDetailName`] = '';
                     updates[`courses/${room}/status/ownerSessionId`] = null;
