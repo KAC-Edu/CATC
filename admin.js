@@ -7976,6 +7976,26 @@ renderScreen: function(q) {
         const qNum = document.getElementById('quizNumberLabel');
         const startBtn = document.getElementById('btnSmartNext');
 
+        /* [J85] 문항이 없을 때(q == null) 화면을 '완전히' 빈 상태로 만든다.
+           예전 문제: 이 함수는 q가 있다고 가정하고 q.text 를 읽어 터졌고,
+             그 위에 O/X 선택지(#d-options)는 이전 렌더 그대로 남아 있어서
+             '퀴즈 선택 → 닫기' 하면 문제 없는 O/X 카드만 덩그러니 떠 있었다.
+           이제 여기서 선택지·문항바·컨트롤을 모두 지우고 '진행할 퀴즈가 없습니다' 안내만 남긴다. */
+        if (!q) {
+            const oDiv0 = document.getElementById('d-options');
+            if (oDiv0) { oDiv0.innerHTML = ''; oDiv0.style.display = 'none'; oDiv0.classList.remove('is-ox'); }
+            const qqa0 = document.querySelector('#quizContent .quiz-question-area');
+            if (qqa0) qqa0.style.display = 'none';                       // Ready?/문항 바 숨김
+            const eg0 = document.getElementById('quizEmptyGuide');
+            if (eg0) eg0.style.display = 'flex';                          // '진행할 퀴즈가 없습니다' 안내만
+            const ctrl0 = document.getElementById('quizControls');
+            if (ctrl0) ctrl0.style.display = 'none';                      // 하단 진행 버튼 숨김
+            if (qNum) qNum.innerText = 'Q. --';
+            const ch0 = document.getElementById('d-chart'); if (ch0) ch0.innerHTML = '';
+            try { this.resetTimerUI(); } catch(e) {}
+            return;
+        }
+
         // 1. [유지] 시작 버튼 상태 초기화 (다음 문제 이동 시 파란색으로 복구)
         if(startBtn) {
             startBtn.disabled = false;
