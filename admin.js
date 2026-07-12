@@ -5760,6 +5760,23 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                         + cell('입교 완료', arrivedCount, '#2563eb', '#f8fafc', '#e8edf3')
                         + cell('입교율', rateDisp, '#2563eb', '#f8fafc', '#e8edf3');
                 }
+                /* [J81] 과정현황 '오늘의 운영 > 수강생 현황' 행에 같은 값을 그대로 내보낸다.
+                   ★ 입교율 기준은 여기(수강생 현황 화면)와 100% 동일하다:
+                       분모 = 업로드된 예정명단 수 (명단 외 자체입교자는 제외)
+                       분자 = 예정자 중 실제 입교한 수
+                       예정명단이 없으면 산출 불가 → '—'                                   */
+                try{
+                    document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = arrivedCount; });
+                    document.querySelectorAll('.opsStuSub').forEach(function(e){
+                        if(_plan > 0){
+                            e.textContent = '입교율 ' + percent + '%';
+                            e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
+                        } else {
+                            e.textContent = '예정명단 없음';
+                            e.style.color = '#94a3b8';
+                        }
+                    });
+                }catch(e){}
         }
 
         expectedRef.on('value', snap => { lastExpected = snap.val() || []; render(); });
