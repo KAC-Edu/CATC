@@ -1316,8 +1316,6 @@ try{
                         <span style="font-size:13px; font-weight:800; color:#64748b;">소속</span>
                         <span id="wzDeptText" style="font-size:16px; font-weight:900; color:#0f172a;">-</span>
                     </div>
-                    <input type="text" id="userDept" list="deptHistory" placeholder="소속 부서를 입력하세요" style="display:none; width:100%; margin-top:8px; padding:11px 12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
-                    <datalist id="deptHistory"></datalist>
                     <div class="outing-identity-actions" id="wzIdentityBtns">
                         <button type="button" onclick="editOutingDept()"><i class="fa-solid fa-building"></i> 소속 수정</button>
                         <button type="button" onclick="editOutingProfileInfo()"><i class="fa-solid fa-user-pen"></i> 이름·사번 수정</button>
@@ -1330,20 +1328,16 @@ try{
                 </div>
             </div>
 
-            <!-- STEP 3: 연락처 -->
-            <div class="admin-step" data-astep="3" style="display:none;">
-                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:6px;">비상 연락처</div>
-                <div style="font-size:12px; color:#94a3b8; text-align:center; margin-bottom:14px;">외출·외박 중 연락 가능한 번호를 입력해 주세요</div>
-                <input type="tel" id="fullPhone" placeholder="010-0000-0000" maxlength="13" oninput="formatPhoneInput(this)" style="width:100%; padding:14px; border:1.5px solid #e2e8f0; border-radius:12px; outline:none; font-size:18px; text-align:center; font-weight:800; letter-spacing:1px;">
-                <div style="display:flex; gap:8px; margin-top:16px;">
-                    <button type="button" onclick="showAdminStep(2)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
-                    <button type="button" onclick="adminStep3Next()" style="flex:2; padding:13px; background:#3b82f6; color:white; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer;">다음 →</button>
-                </div>
-            </div>
-
-            <!-- STEP 4: 행선지·사유·시간 -->
+            <!-- STEP 4: 소속·시간·행선지·사유·연락처 (한 화면 입력) -->
             <div class="admin-step" data-astep="4" style="display:none;">
-                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:12px;">상세 정보</div>
+                <div style="font-size:16px; font-weight:900; color:#0f172a; text-align:center; margin-bottom:12px;">신청 내역 입력</div>
+
+                <!-- 소속 -->
+                <div style="margin-bottom:12px;">
+                    <label style="font-size:12px; font-weight:800; color:#64748b;">소속</label>
+                    <input type="text" id="userDept" list="deptHistory" placeholder="소속 부서를 입력하세요" style="width:100%; margin-top:4px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                    <datalist id="deptHistory"></datalist>
+                </div>
 
                 <!-- 외출 시간 -->
                 <div id="outingTimeArea" style="background:#f8fafc; padding:14px 16px; border-radius:12px; border:1px solid #e2e8f0;">
@@ -1396,8 +1390,13 @@ try{
                     <datalist id="reasonHistory"></datalist>
                 </div>
 
+                <div style="margin-top:10px;">
+                    <label style="font-size:12px; font-weight:800; color:#64748b;">비상 연락처</label>
+                    <input type="tel" id="fullPhone" placeholder="010-0000-0000" maxlength="13" oninput="formatPhoneInput(this)" style="width:100%; margin-top:4px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; outline:none; font-size:15px;">
+                </div>
+
                 <div style="display:flex; gap:8px; margin-top:16px;">
-                    <button type="button" onclick="showAdminStep(3)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
+                    <button type="button" onclick="showAdminStep(1)" style="flex:1; padding:13px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:15px; font-weight:800; cursor:pointer;">이전</button>
                     <button type="button" onclick="submitAdminAction()" style="flex:2; padding:13px; background:#10b981; color:white; border:none; border-radius:12px; font-size:16px; font-weight:900; cursor:pointer;">신청서 제출</button>
                 </div>
             </div>
@@ -4034,21 +4033,10 @@ function formatDept(dept){
 window.formatDept = formatDept;
 
 function refreshOutingIdentity(nameOverride) {
+    // [vJ124] 소속(userDept)은 상세정보(STEP4)에서 직접 다룬다. 여기선 이름만 갱신.
     const name = String(nameOverride || localStorage.getItem('kac_user_name') || '').trim();
     const nameEl = document.getElementById('wzName');
-    const deptEl = document.getElementById('wzDeptText');
-    const deptInput = document.getElementById('userDept');
     if (nameEl) nameEl.textContent = name || '입교정보 확인 필요';
-    if (!deptInput) return;
-    const dept = String(window._myDept || deptInput.value || '').trim();
-    if (dept) {
-        deptInput.value = dept;
-        deptInput.style.display = 'none';
-        if (deptEl) { deptEl.style.display = ''; deptEl.textContent = formatDept(dept); }
-    } else {
-        deptInput.style.display = 'block';
-        if (deptEl) { deptEl.style.display = ''; deptEl.textContent = '직접 입력 필요'; }
-    }
 }
 
 function editOutingDept() {
@@ -4373,8 +4361,8 @@ function selectAdminType(type) {
         document.getElementById('startTime').value = '18:00';
         document.getElementById('endTime').value   = '20:00';
     }
-    showAdminStep(2);
-    fastPassAdmin();
+    // [vJ124] 기존 방식으로 복귀 — 유형 선택 후 '본인 확인' 단계 없이 바로 신청내역 입력(STEP4)으로.
+    showAdminStep(4);
 }
 
 // [패스트패스] 카카오 진입 시 소속이 이미 있으면 Step2(소속)만 생략 → Step3(연락처)로. 연락처는 항상 확인.
@@ -4395,15 +4383,9 @@ function showAdminStep(n){
     for(var i=0;i<steps.length;i++){
         steps[i].style.display = (parseInt(steps[i].getAttribute('data-astep'),10)===n) ? 'block' : 'none';
     }
+    // [vJ124] 단계 진행 점 표시 제거 — 단순 폼(유형선택 → 신청내역 입력)이라 불필요.
     var bar = document.getElementById('adminStepBar');
-    if(bar){
-        if(n>=1 && n<=4){
-            bar.style.display='flex';
-            var h='';
-            for(var k=1;k<=4;k++){ h += '<div style="width:26px; height:5px; border-radius:3px; background:'+(k<=n?'#3b82f6':'#e2e8f0')+';"></div>'; }
-            bar.innerHTML=h;
-        } else { bar.style.display='none'; }
-    }
+    if(bar){ bar.style.display='none'; bar.innerHTML=''; }
     if(n===2){
         var gb=document.getElementById('wzGroupBanner'), gt=document.getElementById('wzGroupBannerText');
         if(gb){
@@ -4431,24 +4413,9 @@ function showAdminStep(n){
 }
 
 function ensureAdminApplicantSummary(){
-    var step=document.querySelector('#adminActionForm .admin-step[data-astep="1"]');
-    if(!step) return;
+    // [vJ124] '신청자 확인' 상단 요약 박스 제거 — 기존 방식(바로 신청내역 입력)으로 복귀.
     var box=document.getElementById('adminApplicantSummary');
-    if(!box){
-        box=document.createElement('div');
-        box.id='adminApplicantSummary';
-        box.style.cssText='margin-bottom:16px;padding:16px 17px;border-radius:18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;box-shadow:0 14px 30px rgba(37,99,235,.18);';
-        step.insertBefore(box, step.firstChild);
-    }
-    var course=(typeof getCurrentCourseTitle==='function' ? getCurrentCourseTitle() : ((document.getElementById('roomTitle')||{}).innerText||'과정명 확인 중')).trim();
-    var name=(localStorage.getItem('kac_user_name')||'-').trim();
-    var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
-    box.innerHTML='<div style="font-size:12px;font-weight:900;color:#bfdbfe;margin-bottom:7px;"><i class="fa-solid fa-id-card"></i> 신청자 확인</div>'
-      +'<div style="font-size:18px;font-weight:950;line-height:1.35;word-break:keep-all;">'+course+'</div>'
-      +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;">'
-      +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">'+name+'</span>'
-      +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">사번 '+sabun+'</span>'
-      +'</div>';
+    if(box){ try{ box.remove(); }catch(e){} }
 }
 
 function adminStep2Next(){
