@@ -1017,8 +1017,11 @@ body.in-course #moreToggleTab{ display:flex !important; }
                     <div class="prof-details">
                         <span class="prof-label">과정 담임</span>
                         <div class="prof-name-row">
+                            <!-- [J89] 여기엔 '대표' 이름만 들어간다. 카드를 누르면 이 사람 프로필만 열린다. -->
                             <strong id="dashProfNameOnly">-</strong> <span>교수님</span>
                         </div>
+                        <!-- 담임이 여러 명이면 아랫줄에 '외 N명' — 누르면 전체 목록/대표 변경 -->
+                        <div id="dashProfMore" class="prof-more-row" style="display:none;"></div>
                     </div>
                 </div>
                 </div><!-- hero-right-row 끝 -->
