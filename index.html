@@ -8868,18 +8868,26 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     if(!document.getElementById('keduDone')){
       var dn=document.createElement('div'); dn.id='keduDone';
-      dn.innerHTML='<div class="kd-card"><h2 id="kdTitle">✅ 입교 완료</h2>'+
-        '<p id="kdMsg">등록되었습니다. 감사합니다.</p>'+
-        '<button class="kd-close" id="kdClose">닫기</button>'+
-        '<div class="kd-note" style="margin-top:14px;font-size:13.5px;color:#475569;font-weight:700;line-height:1.65;background:#f1f5f9;border-radius:10px;padding:11px 12px;">이 창은 <b style="color:#dc2626;">자동으로 닫히지 않습니다.</b><br>화면 <b>상단(맨 위)의 X 버튼</b>을 눌러 닫아 주세요.</div></div>';
+      /* [vJ123] 헤더가 없어 혼자 겉돌던 화면 — 다른 화면과 같은 '헤더 + 본문' 구조로 */
+      dn.innerHTML='<div class="kd-card">'+
+        '<div class="kd-head">'+
+          '<div class="kd-badge"><i class="fa-solid fa-circle-check"></i> 등록 완료</div>'+
+          '<div class="kd-title" id="kdTitle">입교 등록</div>'+
+        '</div>'+
+        '<div class="kd-body">'+
+          '<div class="kd-msg" id="kdMsg">등록되었습니다. 감사합니다.</div>'+
+          '<div class="kd-note">이 창은 <b>자동으로 닫히지 않습니다.</b><br>화면 <b>맨 위의 X 버튼</b>을 눌러 닫아 주세요.</div>'+
+          '<button class="kd-close" id="kdClose">닫기</button>'+
+        '</div></div>';
       document.body.appendChild(dn);
     }
     if(!document.getElementById('keduOtp')){
       var sc=document.createElement('div'); sc.id='keduOtp';
+      /* [vJ123] 다른 화면과 같은 규격 — 상태배지 + 제목 */
       sc.innerHTML='<div class="ko-card"><div class="ko-head">'+
-        '<div class="ko-icon"><i class="fa-solid fa-keyboard"></i></div>'+
+        '<div class="ko-icon"><i class="fa-solid fa-keyboard"></i> 출결</div>'+
         '<div class="ko-title">OTP 출결</div>'+
-        '<div class="ko-sub">강사 화면에 표시된 6자리 숫자를 순서대로 입력해 주세요.</div></div>'+
+        '<div class="ko-sub">강사 화면의 6자리 숫자를 입력해 주세요.</div></div>'+
         '<div class="ko-body"><div class="ko-room"><span>현재 과정</span><b id="keduOtpRoom">-</b></div>'+
         '<div class="ko-inputs">'+
         '<input class="ko-digit" inputmode="numeric" maxlength="1" aria-label="OTP 1">'+
@@ -8924,10 +8932,11 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     if(!document.getElementById('keduAttProof')){
       var ap=document.createElement('div'); ap.id='keduAttProof';
+      /* [vJ123] 다른 화면과 같은 규격 — 상태배지 + 제목 (헤더만 녹색) */
       ap.innerHTML='<div class="kap-card"><div class="kap-head">'+
-        '<div class="kap-icon"><i class="fa-solid fa-circle-check"></i></div>'+
-        '<div class="kap-title">출석 인증 완료</div>'+
-        '<div class="kap-sub">오늘 출결이 정상 처리되었습니다.</div></div>'+
+        '<div class="kap-icon"><i class="fa-solid fa-circle-check"></i> 출결 완료</div>'+
+        '<div class="kap-title">오늘 출결</div>'+
+        '<div class="kap-sub">정상 처리되었습니다.</div></div>'+
         '<div class="kap-body">'+
           '<div class="kap-row"><span>과정</span><b id="kapCourse">-</b></div>'+
           '<div class="kap-row"><span>이름</span><b id="kapName">-</b></div>'+
@@ -10290,6 +10299,244 @@ body.kac-locked #adminActionModal > .menu-box{
   border-radius:18px 0 0 18px !important;
   box-shadow:-16px 0 48px rgba(15,23,42,.34) !important;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   [vJ123]  교 육 생  플 랫 폼   디 자 인   통 일
+
+   왜 파일 맨 끝이냐:
+     앞쪽에 같은 요소를 !important 로 잡는 규칙이 수십 개 흩어져 있다.
+     중간에 넣으면 뒤 규칙에 조용히 덮여 '코드는 있는데 효과는 0'이 된다.
+     실제로 그 일이 반복됐다. 이 블록이 마지막이라 무조건 이긴다.
+
+   규칙은 넷뿐이다. 예외 없다.
+     ① 배경   = 연한 파랑 그라데이션 (#eef5ff → #dbe9ff)
+     ② 카드   = 화면당 흰 카드 하나. 화면 끝까지 붙는 헤더 바 금지.
+     ③ 헤더   = 카드 안에 딱 한 번. 남색→파랑 그라데이션 + 상태배지 + 제목.
+                (출결완료만 녹색 — 색이 '완료'를 말한다)
+     ④ 본문   = 회색 정보 상자(라벨 왼쪽 / 값 오른쪽) + 하단 버튼
+
+   ※ 질문하기의 하단 채팅 입력 블록(.input-dock)은 건드리지 않는다 — 지금 그대로.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 공통 토큰 ────────────────────────────────────────────────────────────── */
+:root{
+  --kacBg:      linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%);
+  --kacHead:    linear-gradient(135deg,#0f2c5c 0%,#1d4ed8 100%);
+  --kacHeadOk:  linear-gradient(135deg,#065f46 0%,#059669 100%);   /* 출결완료 */
+  --kacCardR:   20px;
+  --kacBoxR:    14px;
+  --kacShadow:  0 10px 30px rgba(15,23,42,.13);
+}
+
+/* ── ① 배경 — 여섯 화면 모두 동일 ─────────────────────────────────────────── */
+#keduEnroll, #keduHome, #keduOtp, #keduDone, #keduAttProof{
+  background: var(--kacBg) !important;
+}
+/* 질문하기·퀴즈는 mainApp 위에 그려진다 */
+html.kac-core-screen, html.kac-core-screen body,
+html.kac-core-screen #mainApp{
+  background: var(--kacBg) !important;
+}
+html.kac-core-screen #mainApp > .scroll-container,
+html.kac-core-screen #mainApp > .sort-bar,
+html.kac-core-screen #mainApp > .mini-notice-bar{
+  background: transparent !important;
+}
+
+/* ── ② 카드 — 모서리·그림자·폭 통일 ───────────────────────────────────────── */
+#keduEnroll .ke-card,
+#keduHome    .kh-card,
+#keduOtp     .ko-card,
+#keduDone    .kd-card,
+#keduAttProof .kap-card{
+  width:100% !important;
+  max-width:400px !important;
+  border-radius: var(--kacCardR) !important;
+  overflow:hidden !important;
+  background:#fff !important;
+  box-shadow: var(--kacShadow) !important;
+  border:none !important;
+  padding:0 !important;              /* 안쪽 여백은 head/body 가 가진다 */
+}
+
+/* ── ③ 헤더 — 카드 안, 딱 한 번 ───────────────────────────────────────────── */
+#keduHome .kh-head,
+#keduOtp  .ko-head,
+#keduDone .kd-head,
+#keduAttProof .kap-head{
+  background: var(--kacHead) !important;
+  color:#fff !important;
+  padding:18px 20px 16px !important;
+  text-align:left !important;
+  border-radius:0 !important;
+}
+#keduAttProof .kap-head{ background: var(--kacHeadOk) !important; }   /* 출결완료 = 녹색 */
+
+/* 헤더 안의 아이콘 원판 → 작은 상태 배지로 */
+#keduOtp .ko-icon,
+#keduAttProof .kap-icon{
+  width:auto !important; height:auto !important; margin:0 0 7px !important;
+  display:inline-flex !important; align-items:center !important; gap:5px !important;
+  padding:3px 10px !important; border-radius:999px !important;
+  background:rgba(255,255,255,.20) !important; color:#fff !important;
+  font-size:12px !important; font-weight:900 !important; box-shadow:none !important;
+}
+#keduOtp .ko-title, #keduAttProof .kap-title{
+  font-size:20px !important; font-weight:950 !important; color:#fff !important;
+  letter-spacing:-.3px !important; text-align:left !important;
+}
+#keduOtp .ko-sub, #keduAttProof .kap-sub{
+  margin-top:5px !important; font-size:12.5px !important; font-weight:800 !important;
+  color:rgba(255,255,255,.78) !important; text-align:left !important;
+}
+#keduAttProof .kap-sub{ color:#d1fae5 !important; }
+
+/* ── ④ 본문 — 회색 정보 상자 + 버튼 ───────────────────────────────────────── */
+#keduOtp .ko-body,
+#keduAttProof .kap-body,
+#keduHome .kh-body{
+  padding:16px 16px 18px !important;
+  background:#fff !important;
+}
+/* 정보 상자 (라벨/값 행 묶음) */
+#keduAttProof .kap-body{ }
+#keduAttProof .kap-row{
+  border-bottom:1px solid #eef2f7 !important;
+  padding:11px 0 !important; font-size:13.5px !important;
+}
+#keduAttProof .kap-row:last-of-type{ border-bottom:none !important; }
+#keduAttProof .kap-row span{ color:#94a3b8 !important; font-weight:900 !important; font-size:12px !important; }
+#keduAttProof .kap-row b{ color:#0f172a !important; font-weight:900 !important; }
+
+/* 하단 버튼 — 모든 화면 동일 규격 */
+#keduAttProof .kap-close,
+#keduOtp .ko-submit, #keduOtp .ko-cancel,
+#keduDone .kd-close{
+  height:50px !important; border-radius:14px !important;
+  font-size:15.5px !important; font-weight:950 !important; border:none !important;
+}
+#keduAttProof .kap-close{ background:#f1f5f9 !important; color:#475569 !important; margin-top:14px !important; }
+
+/* 입교등록 완료 — 헤더가 아예 없어 혼자 겉돌던 화면 */
+#keduDone .kd-badge{
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:999px;
+  background:rgba(255,255,255,.20); color:#fff;
+  font-size:12px; font-weight:900;
+}
+#keduDone .kd-title{
+  margin-top:7px; font-size:20px; font-weight:950; color:#fff; letter-spacing:-.3px;
+}
+#keduDone .kd-body{ padding:16px 16px 18px; background:#fff; text-align:left; }
+#keduDone .kd-msg{
+  background:#f8fafc; border:1px solid #e8eef5; border-radius:var(--kacBoxR);
+  padding:14px 14px; font-size:14.5px; font-weight:800; color:#0f172a; line-height:1.6;
+}
+#keduDone .kd-note{
+  margin-top:10px; padding:11px 12px; border-radius:var(--kacBoxR);
+  background:#fff7ed; border:1px solid #fed7aa;
+  font-size:12.5px; font-weight:800; color:#9a3412; line-height:1.6;
+}
+#keduDone .kd-note b{ color:#c2410c; }
+#keduDone .kd-close{
+  width:100% !important; margin-top:12px !important;
+  background:#1d4ed8 !important; color:#fff !important;
+}
+
+/* ── 질문하기 · 퀴즈 — 화면 끝까지 붙던 헤더 바를 '카드 안 헤더'로 ───────────── */
+html.kac-core-screen #mainApp > .header{
+  margin:14px 16px 0 !important;
+  border-radius: var(--kacCardR) var(--kacCardR) 0 0 !important;
+  background: var(--kacHead) !important;
+  box-shadow:none !important;
+  border:none !important;
+  padding:14px 16px !important;
+}
+/* 헤더 아래 본문을 흰 카드로 이어 붙인다 */
+html.kac-core-screen #mainApp > .sort-bar,
+html.kac-core-screen #mainApp > .scroll-container{
+  margin-left:16px !important; margin-right:16px !important;
+  background:#fff !important;
+}
+html.kac-core-screen #mainApp > .sort-bar{
+  padding:11px 14px 4px !important;
+  box-shadow:-1px 0 0 #fff, 1px 0 0 #fff !important;
+}
+html.kac-core-screen #mainApp > .scroll-container{
+  padding:8px 14px 14px !important;
+  border-radius:0 0 var(--kacCardR) var(--kacCardR) !important;
+  box-shadow: var(--kacShadow) !important;
+}
+/* 질문 카드 — 회색 정보 상자와 같은 톤 */
+html.kac-core-screen .q-card{
+  background:#f8fafc !important;
+  border:1px solid #e8eef5 !important;
+  border-radius: var(--kacBoxR) !important;
+  box-shadow:none !important;
+  padding:13px 14px !important;
+}
+/* 퀴즈 — 문항 상자 · O/X 카드도 같은 모서리 */
+html.kac-core-screen .quiz-box,
+html.kac-core-screen .quiz-question,
+html.kac-core-screen .quiz-opt,
+html.kac-core-screen .quiz-ox{
+  border-radius: var(--kacBoxR) !important;
+}
+
+/* ── 퇴교차량 · 외출외박 — '헤더 두 겹'을 하나로 ────────────────────────────
+   지금은 흰 상단바("퇴교 차량 신청") 아래에 카드 안 헤더("나의 퇴교차량")가
+   또 있어서 같은 말을 두 번 한다.
+   → 상단바를 시안의 그라데이션 헤더로 바꾸고, 카드 안 헤더는 없앤다.            */
+#shuttleModal .kac-pbar,
+#adminActionModal .kac-pbar{
+  margin:0 -20px 16px !important;
+  padding:18px 20px 16px !important;
+  background: var(--kacHead) !important;
+  border-bottom:none !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+#shuttleModal .kac-pbar .kac-pt,
+#adminActionModal .kac-pbar .kac-pt{
+  color:#fff !important; font-size:19px !important; font-weight:950 !important;
+  letter-spacing:-.3px !important;
+}
+#shuttleModal .kac-pbar .kac-px,
+#adminActionModal .kac-pbar .kac-px{
+  background:rgba(255,255,255,.18) !important; color:#fff !important;
+}
+/* 카드 안의 중복 헤더 제거 — 상태는 작은 배지로만 남긴다 */
+#shuttleModal .kac-shuttle-status-head{
+  background:transparent !important;
+  padding:0 0 10px !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+}
+#shuttleModal .kac-shuttle-status-head .ks-title{ display:none !important; }
+#shuttleModal .kac-shuttle-status-head .ks-sub{ display:none !important; }
+#shuttleModal .kac-shuttle-status-head .ks-eyebrow{
+  display:inline-flex !important; align-items:center !important; gap:6px !important;
+  padding:4px 11px !important; border-radius:999px !important;
+  background:#dcfce7 !important; color:#166534 !important;
+  font-size:12px !important; font-weight:900 !important;
+}
+/* 신청 결과 상자 — 다른 화면의 회색 정보 상자와 동일 */
+#shuttleModal .kac-shuttle-status-body{
+  background:#f8fafc !important;
+  border:1px solid #e8eef5 !important;
+  border-radius: var(--kacBoxR) !important;
+  padding:2px 13px !important;
+}
+#shuttleModal .kac-shuttle-status-row{
+  display:flex !important; justify-content:space-between !important; align-items:center !important;
+  padding:11px 0 !important; border-bottom:1px solid #eef2f7 !important;
+  font-size:13.5px !important;
+}
+#shuttleModal .kac-shuttle-status-row:last-child{ border-bottom:none !important; }
+#shuttleModal .kac-shuttle-status-row > span{
+  color:#94a3b8 !important; font-weight:900 !important; font-size:12px !important;
+}
+#shuttleModal .kac-shuttle-status-row > b{ color:#0f172a !important; font-weight:900 !important; }
 </style>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
