@@ -7403,7 +7403,9 @@ body.kac-quiz-active .quiz-overlay,
 }
 
 #adminActionModal .menu-box{
-  background:linear-gradient(180deg,#ffffff 0%,#f8fbff 100%) !important;
+  /* [vJ122] 흰색 그라데이션(#fff→#f8fbff)이라 사실상 흰 배경이었다.
+     → 퇴교차량·입교완료와 같은 연한 파랑으로 통일. */
+  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
   border:1px solid #dbeafe !important;
   justify-content:flex-start !important; /* 세로중앙 정렬 해제 → 상단바 위로 내용 넘침 방지 */
 }
@@ -10260,6 +10262,33 @@ html.kac-core-screen #realUserCount::before{
 #keduAttProof .kap-card{
   margin:auto !important;         /* ★ 핵심: 남으면 가운데, 넘치면 위부터 */
   flex:none !important;           /* 카드가 찌그러지지 않게 */
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [vJ122] 퇴교차량 · 외출외박 패널 통일 — 반드시 '파일의 마지막' 스타일이어야 한다.
+
+   왜 여기냐:
+     앞쪽에 같은 대상을 !important 로 잡는 규칙이 여러 개 흩어져 있어(총 11개),
+     중간에 넣으면 뒤 규칙에 덮여 아무 효과가 없다. 실제로 그래서 안 먹었다.
+       · #adminActionModal .menu-box{ background:#fff→#f8fbff }  ← 흰색으로 덮음
+       · body.kac-locked ... { width:100%; max-width:100% }      ← 카카오 진입 시 꽉 차게
+
+   무엇을 맞추나:
+     ① 배경  = 입교등록·입교완료와 같은 연한 파랑 (#eef5ff → #dbe9ff)
+     ② 폭    = 둘 다 카드형 (88% / 최대 400px) — 카카오로 들어와도 카드 유지
+   ══════════════════════════════════════════════════════════════════════════ */
+#shuttleModal > .menu-box,
+#adminActionModal > .menu-box,
+body.kac-locked #shuttleModal > .menu-box,
+body.kac-locked #adminActionModal > .menu-box{
+  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
+  width:88% !important;
+  max-width:400px !important;
+  height:100dvh !important;
+  max-height:100dvh !important;
+  margin:0 !important;
+  border-radius:18px 0 0 18px !important;
+  box-shadow:-16px 0 48px rgba(15,23,42,.34) !important;
 }
 </style>
 
