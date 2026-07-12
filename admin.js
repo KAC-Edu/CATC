@@ -8327,7 +8327,11 @@ showFinalSummary: async function() {
                 });
 
                 questionStats.push({
-                    no: totalQuestions,
+                    /* [버그수정] 번호는 '체크된 문항 순번(totalQuestions)'이 아니라
+                       퀴즈 화면에서 실제로 보여준 번호(인덱스+1)를 써야 한다.
+                       설문/미체크 문항이 섞이면 두 값이 어긋나서, 강사가 보는 Q번호와
+                       리포트의 Q번호가 서로 다른 문항을 가리키게 된다. */
+                    no: idx + 1,
                     title: q.text || '(제목 없음)',
                     answered: keys.length,
                     correct: corrCnt,
