@@ -3587,7 +3587,8 @@ function updateIndividualView() {
     document.getElementById('ind-room-id').innerText = currentRID;
     document.getElementById('ind-course-name').innerText = room.settings?.courseName || "과정명 미설정";
     document.getElementById('ind-period').innerText = periodStr;
-    document.getElementById('ind-prof').innerText = (room.status?.professorName || "-") + " 교수";
+    // [J89] 담임 여러 명이면 "장두석 교수 외 2명"
+    document.getElementById('ind-prof').innerText = (kacProfLabel(room.status, ' 교수') || "-");
     // [JDS260613] 과정담당 표시: 저장값에 직책이 없으면(예: "장영근") 관리 명단에서 직책 포함 이름으로 보강
     _coordRefreshCoordTitle(room);
     document.getElementById('ind-room-loc').innerText = room.settings?.roomDetailName || "-";
@@ -4148,7 +4149,7 @@ function renderCourseSelectors() {
 
             const cName = settings.courseName || `Room ${rid}`;
             const _profNm = (status.professorName||'').trim();
-            const _profTxt = _profNm ? (_profNm + ' 교수') : '';
+            const _profTxt = kacProfLabel(status, ' 교수') || '';   // [J89] "장두석 교수 외 2명"
             const _coordTxt = (typeof _coordFullName==='function') ? _coordFullName(settings.coordinatorName) : (settings.coordinatorName||'');
             const color = barColors[i % barColors.length]; // 알파벳 순서대로 컬러 배정
 
