@@ -782,13 +782,13 @@ try{
     <div id="landingPage" class="landing-page">
         <div id="landingVer" style="position:absolute; top:10px; right:14px; font-size:10px; font-weight:600; color:rgba(100,116,139,.35); letter-spacing:.3px; pointer-events:none;"></div>
         <div class="landing-brand"><i class="fa-solid fa-plane-departure" style="color:#2563eb; font-size:17px;"></i><span>항공기술훈련원 교육생 플랫폼</span></div>
-        <div class="landing-hero">
+        <!-- [vJ123] 단순화 — '환영합니다', 과정명, [입장하기] 버튼 제거.
+             ROOM 알약만 남긴다. 화면 아무 곳이나 누르면 입장한다(enterApp이 강의실 상태를 검사하는 관문이라 없애면 안 된다). -->
+        <div class="landing-hero" onclick="enterApp()" style="cursor:pointer;">
             <img src="catc.webp" alt="항공기술훈련원" class="landing-banner">
-            <div class="landing-welcome"><i class="fa-solid fa-hand-sparkles"></i> 환영합니다</div>
             <div class="landing-room" id="landingBadge">Room ...</div>
         </div>
         <div class="landing-course" id="landingTitle" style="display:none;">Loading...</div>
-        <button class="btn-enter" onclick="enterApp()">입장하기 <i class="fa-solid fa-arrow-right-to-bracket"></i></button>
         <div class="landing-foot">© KAC 한국공항공사 · 항공기술훈련원</div>
     </div>
 
@@ -1775,10 +1775,11 @@ async function resolveRoomFromCode(code) {
             window.closeMealMenu=function(){ closePanelSmooth('mealMenuModal'); };
         }
     }catch(e){}
-    // 랜딩 배지: ROOM 알약 + 과정명. 과정명은 settings 로드 후 채워진다.
+    /* [vJ123] 랜딩 배지 = ROOM 알약만. 과정명은 뺀다(단순하게).
+       #landingCourseName 은 다른 코드가 찾을 수 있으므로 요소는 남기되 숨긴다. */
     document.getElementById('landingBadge').innerHTML =
-        `<span class="room-pill"><i class="fa-solid fa-door-open"></i> ROOM ${currentRoom}</span>` +
-        `<span class="room-course" id="landingCourseName">강의실 확인 중...</span>`;
+        `<span class="room-pill"><i class="fa-solid fa-chalkboard-user"></i> ROOM ${currentRoom}</span>` +
+        `<span class="room-course" id="landingCourseName" style="display:none;"></span>`;
 
     const db = firebase.database();
     const rPath = `courses/${currentRoom}`;
