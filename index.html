@@ -10505,16 +10505,29 @@ html.kac-core-screen .quiz-ox{
    → 화면 가운데에 뜨는, 내용만큼만 높은 '카드'로 바꾼다.                       */
 /* 좌우 여백·카드 폭을 '입교완료(#keduHome)'와 픽셀 단위로 동일하게 맞춘다.
    기준: 바깥 padding 18px / 카드 width:100% · max-width:400px / radius 20px      */
-#shuttleModal, #adminActionModal{
+/* ⚠️ body.kac-locked(카카오 진입) 규칙이 오버레이를 padding:0 · stretch 로 되돌려
+   카드가 화면을 꽉 채우고 있었다. kac-locked 를 명시해서 확실히 이긴다. */
+#shuttleModal, #adminActionModal,
+body.kac-locked #shuttleModal, body.kac-locked #adminActionModal,
+html body.kac-locked #shuttleModal, html body.kac-locked #adminActionModal{
+  display:flex !important;
   align-items:center !important;
   justify-content:center !important;
   padding:18px 18px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
   background:rgba(15,23,42,.42) !important;
+  box-sizing:border-box !important;
+}
+/* 오버레이가 display:none 일 때는 안 보여야 하므로, 표시 전환은 JS 인라인 스타일을 따른다 */
+#shuttleModal[style*="display: none"], #adminActionModal[style*="display: none"],
+#shuttleModal[style*="display:none"],  #adminActionModal[style*="display:none"]{
+  display:none !important;
 }
 #shuttleModal > .menu-box,
 #adminActionModal > .menu-box,
 body.kac-locked #shuttleModal > .menu-box,
-body.kac-locked #adminActionModal > .menu-box{
+body.kac-locked #adminActionModal > .menu-box,
+html body.kac-locked #shuttleModal > .menu-box,
+html body.kac-locked #adminActionModal > .menu-box{
   box-sizing:border-box !important;
   width:100% !important;                  /* ← 88% 였다. 그래서 입교완료보다 좁았다 */
   max-width:400px !important;
@@ -10529,6 +10542,8 @@ body.kac-locked #adminActionModal > .menu-box{
   animation:none !important;
   transform:none !important;
   border:none !important;
+  align-self:center !important;            /* stretch 로 늘어나는 것 차단 */
+  flex:0 0 auto !important;
 }
 
 /* 헤더 두 겹 → 하나. 상단바를 카드 안 그라데이션 헤더로 */
