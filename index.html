@@ -7718,15 +7718,34 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         if(wrap && !wrap.querySelector('.kac-course-loading')){
           var ld=document.createElement('div'); ld.className='kac-course-loading';
           ld.style.cssText='position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:9px; background:rgba(240,247,255,.88); -webkit-backdrop-filter:blur(2.5px); backdrop-filter:blur(2.5px);border-radius:12px; z-index:4; pointer-events:none; padding:0 12px; opacity:0; transition:opacity .2s ease .42s;';
-          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">접속이 많아 과정 목록을 불러오는 중이에요…</div>';
+          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">과정 목록을 불러오는 중…</div>';
           wrap.appendChild(ld); requestAnimationFrame(function(){ try{ ld.style.opacity='1'; }catch(e){} });
         }
       }
     }catch(e){}
     var _done=function(){ try{ if(sel){ sel.disabled=false; sel.style.color=''; } var w=sel&&sel.parentElement; var l=w&&w.querySelector&&w.querySelector('.kac-course-loading'); if(l) l.remove(); }catch(e){} };
+
+    /* [vJ122] 무한 대기 차단.
+       예전엔 26개 방 × 2번 = 52번을 물어보고 '전부' 답이 와야 로딩이 걷혔다.
+       한 개라도 응답이 안 오면 Promise.all이 영원히 안 끝나서 '불러오는 중…'에 갇혔다.
+       → 방마다 6초 타임아웃. 못 받은 방은 '빈 방'으로 넘기고, 받은 것만으로 목록을 만든다. */
+    var _RTO=6000;
+    var _withTimeout=function(p, fb){
+      return new Promise(function(res){
+        var fin=false;
+        var t=setTimeout(function(){ if(!fin){ fin=true; res(fb); } }, _RTO);
+        p.then(function(v){ if(!fin){ fin=true; clearTimeout(t); res(v); } })
+         .catch(function(){ if(!fin){ fin=true; clearTimeout(t); res(fb); } });
+      });
+    };
+
     // [vJ117] 속도개선 — courses 전체(학생·출결·미디어·퀴즈 포함) 통째 로드 대신, 각 방의 settings·status만 병렬로 읽어 대폭 경량화
     var _db=firebase.database(); var _reads=[];
-    for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')]).then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; }).catch(function(){ return {room:r, s:{}, st:{}}; })); })(String.fromCharCode(_i)); }
+    for(var _i=65;_i<=90;_i++){ (function(r){
+      var _one=Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')])
+        .then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; });
+      _reads.push(_withTimeout(_one, {room:r, s:{}, st:{}, timedOut:true}));
+    })(String.fromCharCode(_i)); }
     return Promise.all(_reads).then(function(arr){
       var list=[];
       arr.forEach(function(rd){ var s=rd.s||{}, st=rd.st||{}; var nm=(s.courseName||'').trim();
@@ -7736,7 +7755,16 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         list.push({room:rd.room, name:nm, period:(s.period||'').trim(), detail:(s.roomDetailName||'').trim(), prof:(st.professorName||'').trim()});
       });
       sel.innerHTML='';
-      if(!list.length){ var o=document.createElement('option'); o.value=''; o.textContent='진행 중인 과정이 없습니다'; sel.appendChild(o); _done(); return; }
+      if(!list.length){
+        /* [vJ122] 응답을 못 받은 방이 있으면 '과정 없음'이 아니라 '못 불러옴'이다 — 구분해서 알린다. */
+        var _to = arr.filter(function(x){ return x.timedOut; }).length;
+        var o=document.createElement('option'); o.value='';
+        o.textContent = _to ? '과정을 불러오지 못했습니다 — 다시 시도해 주세요' : '지금 입교할 수 있는 과정이 없습니다';
+        sel.appendChild(o);
+        _done();
+        if(_to) _retryBtn(sel);
+        return;
+      }
       // [vJ119] 해당 주 과정이 2개 이상이면 "선택해 주세요" 안내 옵션을 기본 선택 → 다른 과정 사람이 실수로 잘못된 과정 등록 방지
       if(list.length>1){ var _ph=document.createElement('option'); _ph.value=''; _ph.textContent='📋 입교등록할 과정을 선택해 주세요'; _ph.disabled=true; _ph.selected=true; sel.appendChild(_ph); }
       list.forEach(function(c){
@@ -7746,9 +7774,24 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       });
       _done();
     }).catch(function(){
-      sel.innerHTML='<option value="">과정을 불러오지 못했습니다</option>';
+      sel.innerHTML='<option value="">과정을 불러오지 못했습니다 — 다시 시도해 주세요</option>';
       _done();
+      _retryBtn(sel);
     });
+  }
+  /* [vJ122] 못 불러왔을 때 갇히지 않도록 '다시 시도' 버튼을 드롭다운 아래에 붙인다 */
+  function _retryBtn(sel){
+    try{
+      var host = sel && sel.parentElement && sel.parentElement.parentElement;
+      if(!host || host.querySelector('.kac-course-retry')) return;
+      var b=document.createElement('button');
+      b.type='button'; b.className='kac-course-retry';
+      b.textContent='🔄 과정 목록 다시 불러오기';
+      b.style.cssText='width:100%; margin-top:8px; padding:11px; border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; color:#1d4ed8; font-size:13.5px; font-weight:800; cursor:pointer;';
+      b.onclick=function(){ b.remove(); loadCourses(sel); };
+      var wrap = sel.parentElement;                       // .kac-course-wrap
+      wrap.parentNode.insertBefore(b, wrap.nextSibling);
+    }catch(e){}
   }
   function showEnroll(menu, editMode){
     var ov=document.getElementById('keduEnroll'); if(!ov) return;
