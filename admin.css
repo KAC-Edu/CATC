@@ -6663,14 +6663,19 @@ body.night-mode .side-rail-lbl{ color:#cbd5e1; }
 .hsr-v2 .hsr2-seg button{display:inline-flex;align-items:center;border:none;border-radius:999px;padding:4px 12px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;background:transparent;color:#94a3b8;transition:all .12s;white-space:nowrap;}
 .hsr-v2 .hsr2-seg button.on{background:#fff;color:#1d4ed8;box-shadow:0 1px 4px rgba(15,23,42,.12);}
 .hsr-v2 .hsr2-right{flex-shrink:0;display:flex;align-items:center;gap:4px;}
-.hsr2-pill{display:flex;height:44px;min-width:250px;border-radius:999px;overflow:hidden;box-shadow:0 4px 14px rgba(37,99,235,.24);background:linear-gradient(103deg,#2563eb 0%,#1e40af 51%,#fff 51%,#fff 53%,#FFD900 53%,#FFEB3B 100%);}
-.hsr2-pill.no-kakao{background:linear-gradient(103deg,#2563eb 0%,#1e40af 51%,#fff 51%,#fff 53%,#dbeafe 53%,#eff6ff 100%);}
-.hsr2-pill button{border:none;background:transparent;cursor:pointer;font-family:inherit;font-weight:900;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:background .12s;}
-.hsr2-pill .hp-left{flex:1.12;color:#fff;font-size:14px;padding:0 8px 0 18px;}
-.hsr2-pill .hp-right{flex:1;color:#3A1D1D;font-size:13px;padding:0 16px 0 8px;}
-.hsr2-pill.no-kakao .hp-right{color:#1d4ed8;}
-.hsr2-pill .hp-left:hover{background:rgba(255,255,255,.14);}
-.hsr2-pill .hp-right:hover{background:rgba(255,255,255,.28);}
+/* [담임 여러 명] 예전엔 알약 '부모'에 103° 대각선 그라데이션을 51~53% 지점에 고정해 두고,
+   그 위에 버튼 두 개를 얹는 방식이었다. 그래서 담임이 '장두석 외 2명 교수'처럼 길어지면
+   버튼 경계는 밀리는데 색 경계는 51%에 그대로 있어 색이 어긋나 보였다.
+   → 색을 각 버튼에 직접 입힌다. 글자가 길어져도 색과 버튼이 항상 같이 움직인다. */
+.hsr2-pill{display:flex;height:44px;min-width:250px;max-width:100%;border-radius:999px;overflow:hidden;box-shadow:0 4px 14px rgba(37,99,235,.24);background:#fff;gap:3px;}
+.hsr2-pill button{border:none;cursor:pointer;font-family:inherit;font-weight:900;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:filter .12s;}
+.hsr2-pill .hp-left{flex:0 0 auto;color:#fff;font-size:14px;padding:0 18px;background:linear-gradient(100deg,#2563eb,#1e40af);}
+.hsr2-pill .hp-right{flex:1 1 auto;min-width:0;color:#3A1D1D;font-size:13px;padding:0 18px;background:linear-gradient(100deg,#FFD900,#FFEB3B);overflow:hidden;}
+.hsr2-pill.no-kakao .hp-right{color:#1d4ed8;background:linear-gradient(100deg,#dbeafe,#eff6ff);}
+/* 색을 버튼에 직접 입혔으므로, hover 는 배경을 바꾸지 말고 밝기만 살짝 올린다
+   (예전처럼 흰색 반투명을 덮으면 버튼 색이 지워진다) */
+.hsr2-pill .hp-left:hover{filter:brightness(1.12);}
+.hsr2-pill .hp-right:hover{filter:brightness(1.06);}
 .hsr2-pill .hp-x{font-size:10px;opacity:.7;}
 .hsr2-fold{flex-shrink:0;width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border:none;border-radius:9px;background:transparent;color:#94a3b8;font-size:14px;cursor:pointer;}
 .hsr2-fold:hover{color:#2563eb;}
