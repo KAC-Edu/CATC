@@ -854,6 +854,18 @@ transition: transform .12s ease, box-shadow .12s ease;
 .prof-swap-edit{ flex:0 0 auto; padding:10px 15px; border:none; border-radius:10px; background:#3b82f6; color:#fff; font-size:14px; font-weight:800; cursor:pointer; }
 .prof-swap-edit:hover{ filter:brightness(.94); }
 
+/* [J89] 담임 여러 명 — ★ 대표 표시 / 대표 지정 버튼 / 저장 바 */
+.prof-swap-item.is-main .prof-swap-pick{ border-color:#f59e0b; background:#fffbeb; }
+.prof-swap-item.is-main .prof-swap-pick i{ color:#f59e0b; }
+.prof-swap-item.is-main .prof-swap-badge{ color:#7c2d12; background:#fde68a; }
+.prof-swap-star{ flex:0 0 auto; padding:10px 13px; border:1px solid #fcd34d; border-radius:10px; background:#fffbeb; color:#b45309; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap; }
+.prof-swap-star:hover{ background:#fef3c7; }
+.prof-swap-foot{ display:flex; align-items:center; gap:12px; margin-top:14px; padding-top:13px; border-top:1px solid #eef2f7; }
+.prof-swap-sum{ flex:1; font-size:13px; font-weight:700; color:#475569; }
+.prof-swap-sum b{ color:#b45309; }
+.prof-swap-save{ flex:0 0 auto; padding:11px 26px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-size:15px; font-weight:800; cursor:pointer; }
+.prof-swap-save:hover{ filter:brightness(.94); }
+
 /* [Q&A 화면] 출강 강사·과목 즉석 추가 — 추가 버튼을 필터 칩과 같은 줄 맨 앞에 배치 */
 .qa-filters-line { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .qa-filters-line #subjectFilterBar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; }
