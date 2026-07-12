@@ -3082,23 +3082,9 @@ function setupAcc(btn){
     // [I14] 선택형 행(질문사항/전자기기) 값 미러
     try{
       var tab=num(document.getElementById('dashTabletLoanCount'));
-      /* [J81] 수강생 현황 행 — 입교 인원 + 입교율
-         입교율 = 실제 입실(dashArrivedCount) ÷ 총원(dashTotalCount = 예정명단 ∪ 입실자)
-         두 숫자 모두 Firebase 리스너가 실시간 갱신하므로, 이 요약바가 갱신될 때마다 같이 다시 계산된다.
-         (총원이 0이면 계산 불가 → '입교율 —') */
-      try{
-        var arrived=num(document.getElementById('dashArrivedCount'));
-        var totalN =num(document.getElementById('dashTotalCount'));
-        var a=(arrived==null?0:arrived), t=(totalN==null?0:totalN);
-        var rate = (t>0) ? Math.round(a/t*100) : null;
-        // 큰 숫자는 상단 '오늘 한눈에' 칩과 같은 값(총원)으로 맞춘다 — 두 곳이 다르면 헷갈린다
-        document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent=(students==null?0:students); });
-        document.querySelectorAll('.opsStuSub').forEach(function(e){
-          if(rate==null){ e.textContent='입교율 —'; e.style.color='#94a3b8'; return; }
-          e.textContent = '입교율 '+rate+'% · '+a+'/'+t+'명';
-          e.style.color = (rate>=100) ? '#16a34a' : (rate>=70 ? '#2563eb' : '#f59e0b');
-        });
-      }catch(e){}
+      /* [J81] 수강생 현황 행의 인원·입교율은 admin.js 의 수강생 현황 렌더러가 직접 채운다.
+         (분모=예정명단만, 명단 외 자체입교자 제외 — 수강생 현황 화면과 완전히 동일한 기준)
+         여기서 따로 계산하면 기준이 갈라지므로 계산하지 않는다. */
       document.querySelectorAll('.opsQaMirror').forEach(function(e){ e.textContent=(qa==null?0:qa); });
       document.querySelectorAll('.opsTabletMirror').forEach(function(e){ e.textContent=(tab==null?0:tab); });
       var qaRow=document.querySelector('.ops-row[data-key="qa"]'); if(qaRow) qaRow.classList.toggle('dash-zero', !(qa>0));
