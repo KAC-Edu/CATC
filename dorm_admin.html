@@ -2148,16 +2148,7 @@
                     // 겹침 판정: startDt <= wkEnd && endDt >= wkStart
                     if (!(startDt <= wkEnd && endDt >= wkStart)) return;
                 }
-                // [J89] 담임 여러 명 — 대표 + "외 N명"
-                const _pst = (c.status || {});
-                const _pAll = (function(raw){
-                    if(Object.prototype.toString.call(raw)==='[object Array]')
-                        return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
-                    return String(raw==null?'':raw).replace(/교수님?/g,' ')
-                        .split(/[,;\/·、|\n\r\t]+|\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
-                })((_pst.professorNames && _pst.professorNames.length) ? _pst.professorNames : _pst.professorName);
-                const _pMain = (_pst.professorMain && _pAll.indexOf(_pst.professorMain)>=0) ? _pst.professorMain : (_pAll[0] || '');
-                const profName = _pMain ? (_pMain + (_pAll.length > 1 ? (' 외 ' + (_pAll.length-1) + '명') : '')) : '';
+                const profName = kacProfLabel(c.status || {});   // [J89] 담임 여러 명 → "장두석 외 2명"
                 const resetKeyMatch = String((c.status && c.status.resetKey) || '').match(/(?:reset_|rk_)(\d{13})/);
                 const inferredCreatedAt = resetKeyMatch ? Number(resetKeyMatch[1]) : 0;
                 const notInPlan = !planNames.has((s.courseName || '').trim());
@@ -6727,6 +6718,8 @@
                     updates[`courses/${r}/settings/roomDetailName`] = '';
                     updates[`courses/${r}/settings/coordinatorName`] = null;
                     updates[`courses/${r}/status/professorName`] = '';
+                    updates[`courses/${r}/status/professorNames`] = null;
+                    updates[`courses/${r}/status/professorMain`] = null;
                     updates[`courses/${r}/status/roomStatus`]   = 'idle';
                     updates[`courses/${r}/status/ownerSessionId`] = null;
                     freeRooms.push(r);
@@ -6754,10 +6747,10 @@
                     updates[`courses/${room}/settings/courseName`] = course.name;
                     updates[`courses/${room}/settings/period`]     = course.period;
                     updates[`courses/${room}/settings/coordinatorName`] = course.coord || null;
-                    updates[`courses/${room}/status/professorName`] = course.prof;
+                    const _mainProf = kacProfUpdates(updates, room, course.prof);
                     updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준
                     updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
-                    updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
+                    updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(_mainProf);
                     if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
                     updates[`courses/${room}/status/roomStatus`]   = 'active';
                     updates[`courses/${room}/status/ownerSessionId`] = null;
@@ -6782,6 +6775,8 @@
                             updates['courses/'+r+'/settings/roomDetailName']='';
                             updates['courses/'+r+'/settings/coordinatorName']=null;
                             updates['courses/'+r+'/status/professorName']='';
+                            updates['courses/'+r+'/status/professorNames']=null;
+                            updates['courses/'+r+'/status/professorMain']=null;
                             updates['courses/'+r+'/status/roomStatus']='idle';
                             updates['courses/'+r+'/status/ownerSessionId']=null;
                         });
@@ -7148,7 +7143,7 @@ window.kacExpireEndedCourses = async function(){
         ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [2026-07-07] 이전된 미디어 저장소(media/{room})도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
-        updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        updates[b+'status/professorName']=''; updates[b+'status/professorNames']=null; updates[b+'status/professorMain']=null; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
             var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
@@ -7601,7 +7596,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       if(!rooms.length){ tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:70px;color:#94a3b8;font-size:24px;">현재 진행 중인 과정이 없습니다.</td></tr>'; return; }
       tb.innerHTML=rooms.map(function(e,_i){ var room=e[0], r=e[1]; var s=r.settings||{}, st=r.status||{}; var seq=_i+1;
         var planned=self._planned(s.courseName, room);
-        var prof=(st.professorName||'').trim();
+        var prof=kacProfLabel(st);   // [J89] "장두석 외 2명"
         var coord=(s.coordinatorName||'').trim();
         var roomNm=(s.roomDetailName||s.roomDetail||s.classroom||s.roomName||'').trim();
         var stt=self._status(s.period);
