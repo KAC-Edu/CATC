@@ -6863,8 +6863,16 @@ body.kac-locked #keduDone .kd-close{
 body.kac-locked #foodModal .food-bottombar{ grid-template-columns:1fr !important; }
 body.kac-locked #foodModal .food-add-btn{ width:100% !important; }
 /* vH54: 퇴교차량/외출외박 신청면 정돈 */
+/* [vJ122] 기존 그라데이션(#f8fbff→#eef4ff)이 너무 옅어 '그냥 흰색'으로 보였다.
+   입교등록·입교완료와 같은 톤(#eef5ff→#dbe9ff)으로 맞춘다. */
 #shuttleModal > .menu-box, #adminActionModal > .menu-box{
-  background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%) !important;
+  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
+}
+/* [vJ122] 외출외박(#adminActionModal)만 좌우로 꽉 차서 통일성이 없었다.
+   → 퇴교차량(#shuttleModal)과 동일한 카드 폭으로 맞춘다. */
+#adminActionModal > .menu-box{
+  width:88% !important;
+  max-width:400px !important;
 }
 #shuttleModal .kac-pbar, #adminActionModal .kac-pbar{
   margin:0 -20px 18px !important;
@@ -10314,34 +10322,77 @@ html.kac-core-screen #realUserCount::before{
 #keduHome.kac-em-on #keduGradBtn{ display:none !important; }
 #kacEmBanner{ display:flex; align-items:center; gap:10px; background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; border-radius:14px; padding:13px 15px; margin:0 0 12px; font-size:13.5px; font-weight:800; line-height:1.5; box-shadow:0 8px 22px rgba(185,28,28,.3); animation:kacEmPulse 1.8s ease-in-out infinite; }
 @keyframes kacEmPulse{ 0%,100%{box-shadow:0 8px 22px rgba(185,28,28,.3);} 50%{box-shadow:0 8px 22px rgba(185,28,28,.3),0 0 0 8px rgba(185,28,28,0);} }
+
+/* [vJ122] OTP 입력 화면에도 비상 모드를 반영한다.
+   예전엔 입교완료(#keduHome) 화면이 '보일 때만' 비상을 감시해서,
+   카카오 출결 링크로 바로 들어온 교육생은 아무 변화도 못 봤다. */
+#keduOtp.kac-em-on .ko-head{ background:linear-gradient(135deg,#7f1d1d,#b91c1c) !important; }
+#keduOtp.kac-em-on .ko-icon{ background:rgba(255,255,255,.18) !important; color:#fff !important; }
+#keduOtp.kac-em-on .ko-title::after{ content:' (비상)'; }
+#keduOtp.kac-em-on .ko-sub{ color:#fecaca !important; }
+#keduOtp.kac-em-on .ko-digit{ border-color:#fecdd3 !important; background:#fff5f5 !important; }
+#kacEmOtpBanner{ display:flex; align-items:center; gap:9px; margin:0 0 14px; padding:12px 14px; border-radius:13px;
+  background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; font-size:13px; font-weight:800; line-height:1.5;
+  box-shadow:0 8px 22px rgba(185,28,28,.3); animation:kacEmPulse 1.8s ease-in-out infinite; }
 </style>
 <script>
 (function(){
-  var ref=null, cur='';
+  var ref=null, cur='', emOn=false;
+
   function apply(on){
-    var home=document.getElementById('keduHome'); if(!home) return;
-    home.classList.toggle('kac-em-on', !!on);
-    var b=document.getElementById('kacEmBanner');
-    if(on){
-      if(!b){
+    emOn = !!on;
+    window.__kacEmergencyOn = emOn;   // 다른 코드에서도 참조 가능
+
+    /* ① 입교완료 홈 — 정보수정·기념사진 숨기고 빨간 안내 */
+    var home=document.getElementById('keduHome');
+    if(home){
+      home.classList.toggle('kac-em-on', emOn);
+      var b=document.getElementById('kacEmBanner');
+      if(emOn && !b){
         b=document.createElement('div'); b.id='kacEmBanner';
         b.innerHTML='<span style="font-size:22px;flex-shrink:0;">🚨</span><span>비상 출결 모드입니다.<br><b>[출결하기]</b>를 눌러 강사 화면의 <b>비상번호</b>를 입력해 주세요.</span>';
         var att=document.getElementById('keduAttendBtn');
         if(att && att.parentNode) att.parentNode.insertBefore(b, att);
         else home.insertBefore(b, home.firstChild);
+      } else if(!emOn && b){ b.remove(); }
+    }
+
+    /* ② [vJ122] OTP 입력 화면 — 카카오 출결 링크로 바로 들어온 교육생은 여기만 본다.
+          예전엔 이 화면이 전혀 안 바뀌어서 '비상인지 아닌지' 알 수가 없었다. */
+    var otp=document.getElementById('keduOtp');
+    if(otp){
+      otp.classList.toggle('kac-em-on', emOn);
+      var ob=document.getElementById('kacEmOtpBanner');
+      if(emOn && !ob){
+        ob=document.createElement('div'); ob.id='kacEmOtpBanner';
+        ob.innerHTML='<span style="font-size:20px;flex-shrink:0;">🚨</span><span>비상 출결 모드입니다.<br>강사 화면의 <b>비상번호 6자리</b>를 입력해 주세요.</span>';
+        var body=otp.querySelector('.ko-body');
+        if(body) body.insertBefore(ob, body.firstChild);
+      } else if(!emOn && ob){ ob.remove(); }
+      var sub=otp.querySelector('.ko-sub');
+      if(sub){
+        if(emOn) sub.textContent='강사 화면에 표시된 비상번호 6자리를 입력해 주세요.';
+        else sub.textContent='강사 화면에 표시된 6자리 숫자를 순서대로 입력해 주세요.';
       }
-    } else if(b){ b.remove(); }
+    }
   }
-  setInterval(function(){
+
+  /* [vJ122] 예전엔 '입교완료 화면이 보일 때만' 감시해서, 카카오 출결 링크로 바로
+     들어오면 감시 자체가 안 켜졌다(= 화면 변화 없음). 이제 화면과 무관하게 항상 감시한다. */
+  /* ⚠️ 전역에 이미 currentRoom 변수가 있으므로 다른 이름을 쓴다 */
+  function _emRoom(){
+    try{
+      var r='';
+      if(typeof getKakaoAttendanceRoom==='function') r=String(getKakaoAttendanceRoom()||'');
+      if(!r) r=String(localStorage.getItem('kac_last_visited_room')||'');
+      if(r && typeof normalizeKakaoRoom==='function') r=normalizeKakaoRoom(r)||r;
+      return r;
+    }catch(e){ return ''; }
+  }
+  function tick(){
     try{
       if(typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length) return;
-      var home=document.getElementById('keduHome');
-      var visible=home && home.offsetParent!==null && home.style.display!=='none';
-      var room='';
-      if(visible && typeof getKakaoAttendanceRoom==='function'){
-        room=String(getKakaoAttendanceRoom()||'');
-        if(room && typeof normalizeKakaoRoom==='function') room=normalizeKakaoRoom(room)||'';
-      }
+      var room=_emRoom();
       if(room!==cur){
         if(ref){ try{ref.off();}catch(e){} ref=null; }
         cur=room;
@@ -10349,9 +10400,13 @@ html.kac-core-screen #realUserCount::before{
           ref=firebase.database().ref('courses/'+room+'/attendanceOtp/emergency');
           ref.on('value', function(snap){ var v=snap.val()||{}; apply(!!v.on); });
         } else apply(false);
+      } else if(cur){
+        apply(emOn);   // 화면이 새로 그려졌을 수 있으니 현재 상태를 다시 반영
       }
     }catch(e){}
-  }, 2500);
+  }
+  setInterval(tick, 2500);
+  tick();
 })();
 </script>
 </body>
