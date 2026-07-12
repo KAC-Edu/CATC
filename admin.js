@@ -8296,6 +8296,15 @@ showFinalSummary: async function() {
             }; 
         });
         
+        /* [J84] 한 문제도 진행하지 않았으면(응답 0건) 리포트를 띄우지 않는다.
+           '무응답'만 13줄 나열된 화면은 아무 정보도 없고 짜증만 난다 → 그냥 종료. */
+        if (totalAnswerCount === 0) {
+            ui.showAlert("퀴즈를 종료합니다.\n\n진행된 응답이 없어 리포트는 생략합니다.", () => {
+                try { quizMgr.closeSummaryAndExit(true); } catch(e) {}
+            });
+            return;
+        }
+
         await firebase.database().ref(`courses/${state.room}/quizFinalResults`).set(finalRankingData);
         await firebase.database().ref(`courses/${state.room}/status`).update({ quizStep: 'summary' });
         
@@ -8329,6 +8338,9 @@ showFinalSummary: async function() {
             if(sortedQ.length === 0){
                 bdEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:26px 0;">집계된 응답이 없습니다.</div>`;
             } else {
+                /* [J84] 문항을 '가로바(아코디언)'로 — 한 줄짜리 바만 쭉 보이고,
+                   바를 누르면 그 아래로 문제 내용·정답률 막대·상세가 펼쳐진다.
+                   기본은 '최다 오답' 문항 하나만 펼쳐 둔다(강사가 가장 먼저 볼 것). */
                 bdEl.innerHTML = sortedQ.map((s,ri)=>{
                     const acc = (s.accuracy==null)?null:Math.round(s.accuracy);
                     const wrong = s.answered - s.correct;
@@ -8336,29 +8348,79 @@ showFinalSummary: async function() {
                     const accLab = (acc==null)?'무응답':`정답률 ${acc}%`;
                     const barW = (acc==null)?0:acc;
                     const worst = (ri===0 && acc!=null && acc<100 && s.answered>0);
-                    return `<div class="qbd-row${worst?' qbd-worst':''}">
-                        <div class="qbd-top">
+                    const open = worst;   // 최다 오답 문항만 펼친 채로 시작
+                    return `<div class="qbd-item${worst?' qbd-worst':''}${open?' open':''}">
+                        <button type="button" class="qbd-bar-btn" onclick="quizMgr.toggleQbd(this)">
                             <span class="qbd-rank">${ri+1}</span>
                             <span class="qbd-no">Q${s.no}</span>
+                            <span class="qbd-title">${escb(s.title)}</span>
                             ${worst?'<span class="qbd-tag">최다 오답</span>':''}
                             <span class="qbd-acc" style="color:${col};">${accLab}</span>
+                            <i class="fa-solid fa-chevron-down qbd-chev"></i>
+                        </button>
+                        <div class="qbd-panel">
+                            <div class="qbd-q">${escb(s.title)}</div>
+                            <div class="qbd-bar"><div class="qbd-fill" style="width:${barW}%; background:${col};"></div></div>
+                            <div class="qbd-meta"><b style="color:#10b981;">정답 ${s.correct}</b> · <b style="color:#ef4444;">오답 ${wrong}</b> · 응답 ${s.answered}명</div>
                         </div>
-                        <div class="qbd-q">${escb(s.title)}</div>
-                        <div class="qbd-bar"><div class="qbd-fill" style="width:${barW}%; background:${col};"></div></div>
-                        <div class="qbd-meta"><b style="color:#10b981;">정답 ${s.correct}</b> · <b style="color:#ef4444;">오답 ${wrong}</b> · 응답 ${s.answered}명</div>
                     </div>`;
                 }).join('');
+
+                /* [J84] 시각적 한눈 보기 — 문항별 정답률을 색으로 깐 히트맵.
+                   빨강=많이 틀림 / 주황=반반 / 초록=대부분 맞힘 / 회색=무응답.
+                   칸을 누르면 해당 문항이 펼쳐지며 그리로 스크롤된다. */
+                const cells = questionStats.map((s)=>{
+                    const acc = (s.accuracy==null)?null:Math.round(s.accuracy);
+                    const c = (acc==null)?'#cbd5e1':(acc>=80?'#16a34a':acc>=60?'#84cc16':acc>=40?'#f59e0b':acc>=20?'#f97316':'#ef4444');
+                    const lab = (acc==null)?'무응답':(acc+'%');
+                    return `<button type="button" class="qhm-cell" style="background:${c};" title="Q${s.no} · ${lab}" onclick="quizMgr.jumpQbd(${s.no})">
+                                <span class="qhm-no">Q${s.no}</span><span class="qhm-acc">${lab}</span>
+                            </button>`;
+                }).join('');
+                try{ const _old=document.querySelector('.qhm-wrap'); if(_old) _old.remove(); }catch(e){}   // 재진입 시 중복 방지
+                bdEl.insertAdjacentHTML('beforebegin', `
+                    <div class="qhm-wrap">
+                        <div class="qhm-head">🎯 문항별 정답률 한눈에 <span class="qhm-hint">칸을 누르면 해당 문항이 열립니다</span></div>
+                        <div class="qhm-grid">${cells}</div>
+                        <div class="qhm-legend">
+                            <span><i style="background:#ef4444;"></i>많이 틀림</span>
+                            <span><i style="background:#f59e0b;"></i>절반</span>
+                            <span><i style="background:#16a34a;"></i>대부분 맞힘</span>
+                            <span><i style="background:#cbd5e1;"></i>무응답</span>
+                        </div>
+                    </div>`);
             }
         }
-        
+
         const summaryOverlay = document.getElementById('quizSummaryOverlay');
-        if(summaryOverlay) summaryOverlay.style.display = 'flex';
+        if(summaryOverlay) summaryOverlay.style.display = 'block';
+    },
+
+    // [J84] 문항 가로바 펼치기/접기
+    toggleQbd: function(btn){
+        try{ btn.parentElement.classList.toggle('open'); }catch(e){}
+    },
+    // [J84] 히트맵 칸 → 해당 문항 열고 그리로 이동
+    jumpQbd: function(no){
+        try{
+            const items = document.querySelectorAll('#questionBreakdown .qbd-item');
+            for(const it of items){
+                const t = it.querySelector('.qbd-no');
+                if(t && t.textContent.trim() === ('Q'+no)){
+                    it.classList.add('open');
+                    it.scrollIntoView({behavior:'smooth', block:'center'});
+                    it.classList.add('qbd-flash');
+                    setTimeout(()=>it.classList.remove('qbd-flash'), 1200);
+                    break;
+                }
+            }
+        }catch(e){}
     },
 
 
 
 // [수정본] 퀴즈 리포트 창을 닫고 모든 데이터를 초기화하며 종료하는 함수
-closeSummaryAndExit: function() {
+closeSummaryAndExit: function(silent) {
         const summaryOverlay = document.getElementById('quizSummaryOverlay');
         if (summaryOverlay) summaryOverlay.style.display = 'none';
 
@@ -8382,7 +8444,8 @@ closeSummaryAndExit: function() {
             firebase.database().ref(`courses/${state.room}/status/mode`).set('qa');
         }
         ui.setMode('dashboard');
-        alert("퀴즈가 종료되었습니다. 데이터가 초기화되고 과정 현황 화면으로 이동합니다.");
+        // [J84] 응답이 없어 리포트를 건너뛴 경우엔 이미 안내했으므로 알림을 또 띄우지 않는다
+        if (!silent) alert("퀴즈가 종료되었습니다. 데이터가 초기화되고 과정 현황 화면으로 이동합니다.");
     },
 
 
