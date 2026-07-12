@@ -11983,7 +11983,30 @@ const kiosk = {
     openTemp: function(){
         this.open();
         this._autoBackArm();
+        this._exitBtnOn();      // [J95] 좌측 상단 브랜드로 들어온 경우엔 하단에 큰 [닫기]를 보여준다
     },
+    /* [J95] 키오스크가 갑자기 뜨면 당황할 수 있으므로, 브랜드 버튼으로 들어왔을 때만
+       화면 하단 가운데에 크고 분명한 닫기(✕) 버튼을 띄운다.
+       (원래 진입로인 '비행기 아이콘 5초 꾹'은 의도적으로 들어온 것이므로 안 띄운다) */
+    _exitBtnOn: function(){
+        var m=document.getElementById('kioskModal'); if(!m) return;
+        var old=document.getElementById('kioskExitBtn'); if(old) old.remove();
+        var b=document.createElement('button');
+        b.id='kioskExitBtn';
+        b.type='button';
+        b.innerHTML='<span style="font-size:26px;line-height:1;">✕</span><span>닫기</span>';
+        b.style.cssText=
+            'position:absolute; left:50%; bottom:calc(26px + env(safe-area-inset-bottom, 0px)); transform:translateX(-50%);'
+          + 'z-index:100004; display:inline-flex; align-items:center; gap:12px;'
+          + 'padding:16px 42px; border:2px solid rgba(255,255,255,.35); border-radius:999px;'
+          + 'background:rgba(15,23,42,.72); color:#fff; font-size:20px; font-weight:900; letter-spacing:.5px;'
+          + 'cursor:pointer; box-shadow:0 12px 34px rgba(0,0,0,.45); backdrop-filter:blur(6px);';
+        b.onmouseover=function(){ b.style.background='#ef4444'; b.style.borderColor='#fca5a5'; };
+        b.onmouseout =function(){ b.style.background='rgba(15,23,42,.72)'; b.style.borderColor='rgba(255,255,255,.35)'; };
+        b.onclick=function(e){ e.stopPropagation(); kiosk.close(); };
+        m.appendChild(b);
+    },
+    _exitBtnOff: function(){ var b=document.getElementById('kioskExitBtn'); if(b) b.remove(); },
     _autoBackArm: function(){
         const self=this;
         this._autoBackClear();
@@ -12036,6 +12059,7 @@ const kiosk = {
     close: function() {
         this._active=false;
         this._autoBackClear();                        // [J92] 자동 복귀 타이머 정리
+        this._exitBtnOff();                           // [J95] 하단 닫기 버튼 제거(다음에 비행기로 들어오면 안 나오게)
         if(this._searchTimer){ clearTimeout(this._searchTimer); this._searchTimer=null; }
         try{ if(typeof this.closeSearch==='function') this.closeSearch(); }catch(e){}
         const m=document.getElementById('kioskModal'); if(m) m.style.display='none';
