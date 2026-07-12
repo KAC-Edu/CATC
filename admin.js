@@ -11322,10 +11322,8 @@ const lectureMonitor = {
     _updateToggleButton: function() {
         const btn = document.getElementById('micMonitorToggleBtn');
         if (!btn) return;
-        // 개별 강의실에 입장했을 때(body.in-course)만 노출 — 통합 현황판/홈에선 숨김
-        const inCourse = document.body.classList.contains('in-course');
-        const shouldShow = !!(this.currentRoom && !state.isObserver && inCourse);
-        btn.style.display = shouldShow ? 'flex' : 'none';
+        // [J88] 상단 마이크 버튼은 화면에서 제거(요청). 모니터링 로직 자체는 그대로 두고 버튼만 항상 숨김.
+        btn.style.display = 'none';
         btn.classList.toggle('is-off', !this.micReady);
         btn.title = this.micReady ? '강의 음성 모니터링 끄기' : '강의 음성 모니터링 켜기';
         btn.innerHTML = this.micReady
