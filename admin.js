@@ -8308,16 +8308,17 @@ showFinalSummary: async function() {
             Object.keys(userScoreMap).forEach(k => { sumPct += (userScoreMap[k].score / totalQuestions) * 100; });
             avgScore = Math.round(sumPct / totalParticipants.size);
         }
+        /* [J83] 리포트 단순화 — 강사가 한눈에 봐야 하는 건 '평균 점수' 하나다.
+           문항당 배점(7.7점) 같은 건 아무도 안 본다 → 없앤다.
+           남기는 것: 과정 평균 점수(크게) + 참여 인원(작게) + 문항별 결과(오답 확인용). */
         const subEl = document.getElementById('summarySubtitle');
-        if(subEl) subEl.textContent = `총 ${totalQuestions}문항 · 문항당 ${ptStr}점 · 100점 만점`;
+        if(subEl) subEl.textContent = `총 ${totalQuestions}문항 · 100점 만점 · 참여 ${totalParticipants.size}명`;
         const grid = document.getElementById('summaryStats');
         if(grid) {
-            grid.innerHTML = `
-                <div class="summary-card summary-hl"><span>과정 평균 점수</span><b>${avgScore}<i>점</i></b></div>
-                <div class="summary-card"><span>참여 인원</span><b>${totalParticipants.size}<i>명</i></b></div>
-                <div class="summary-card"><span>평균 정답률</span><b>${avgAcc}<i>%</i></b></div>
-                <div class="summary-card"><span>문항 / 배점</span><b>${totalQuestions}<i>개 · ${ptStr}점</i></b></div>
-            `;
+            grid.innerHTML = `<div class="qr-hero">
+                    <div class="qr-hero-label">과정 평균 점수</div>
+                    <div class="qr-hero-score">${avgScore}<span>점</span></div>
+                </div>`;
         }
         const bdEl = document.getElementById('questionBreakdown');
         if(bdEl){
@@ -8341,7 +8342,6 @@ showFinalSummary: async function() {
                             <span class="qbd-no">Q${s.no}</span>
                             ${worst?'<span class="qbd-tag">최다 오답</span>':''}
                             <span class="qbd-acc" style="color:${col};">${accLab}</span>
-                            <span class="qbd-pt">배점 ${ptStr}점</span>
                         </div>
                         <div class="qbd-q">${escb(s.title)}</div>
                         <div class="qbd-bar"><div class="qbd-fill" style="width:${barW}%; background:${col};"></div></div>
