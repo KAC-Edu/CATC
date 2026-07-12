@@ -4715,6 +4715,10 @@ setMode: function(mode) {
                 document.getElementById('quizSelectModal').style.display = 'flex';
                 var _qeg0 = document.getElementById('quizEmptyGuide'); if(_qeg0) _qeg0.style.display='flex';   // [J60] 모달 닫아도 안내가 보이게
                 var _qqa0 = document.querySelector('#quizContent .quiz-question-area'); if(_qqa0) _qqa0.style.display='none';   // [J60.1] 문항 없을 땐 Ready? 바 숨김
+                // [J82] 퀴즈 탭에 들어온 시점엔 아직 고른 문항이 없다 → 하단 진행 컨트롤을 확실히 잠근다.
+                //  (모달을 [닫기]로 그냥 닫아도 시작 버튼이 눌리지 않아야 한다. 문항을 고르면 그때 다시 켜진다)
+                var _qc0 = document.getElementById('quizControls');
+                if(_qc0) _qc0.style.display = (state.quizList && state.quizList.length) ? 'flex' : 'none';
                 quizMgr.loadSavedQuizList();
             }
             
