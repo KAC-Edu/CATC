@@ -3007,6 +3007,19 @@ loadDashboardStats: function() {
         }
     });
 
+    /* [방 전환 시 이전 방 숫자 잔상 제거]
+       과정현황 '오늘의 운영 > 수강생 현황' 줄(.opsStuMirror/.opsStuSub)은 예전엔
+       '수강생 현황' 화면을 열 때만 채워졌다. 그래서 방을 옮겨도 값이 초기화되지 않아
+       이전 방의 인원(예: D방 1명)이 그대로 남아 있다가, 수강생 현황을 한 번 열고
+       나와야 제 방 값(A방 2명)으로 바뀌었다.
+       → 방에 들어오는 즉시 비우고, 아래 리스너가 이 방 값으로 직접 채운다. */
+    try{
+        state._dashStudentsCache = {};
+        state._dashExpectedCache = [];
+        document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = '-'; });
+        document.querySelectorAll('.opsStuSub').forEach(function(e){ e.textContent = '확인 중…'; e.style.color = '#94a3b8'; });
+    }catch(e){}
+
     // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
     //  최신 expected 명단을 캐시해 두고, 학생 입장(actual)·명단(expected) 어느 쪽이 바뀌어도 분모를 다시 계산한다.
     let _expectedNamesCache = [];
@@ -3025,6 +3038,7 @@ loadDashboardStats: function() {
         // [J48] 셔틀 자차 디폴트용 학생 캐시 — 입교 인원이 바뀌면 셔틀 카운트(미신청=자차)도 즉시 재계산
         state._dashStudentsCache = data;
         ui._recalcDashShuttle(room);
+        ui._syncOpsStuRow(room);      // 과정현황 '수강생 현황' 줄을 이 방 값으로 갱신
         
         // 온라인(isOnline) 여부와 상관없이 이름이 등록된 모든 학생 필터링
         const arrivedStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
@@ -3061,6 +3075,8 @@ loadDashboardStats: function() {
         try { const _rn = await ui._gatherRosterNames(room); if (_rn && _rn.length) _names = Array.from(new Set([..._names, ..._rn])); } catch(e){}
         if (state.room !== room) return;
         _expectedNamesCache = _names;
+        state._dashExpectedCache = _names;           // 대시보드 '수강생 현황' 줄 계산용
+        ui._syncOpsStuRow(room);
         firebase.database().ref(`courses/${room}/students`).once('value', snap => {
             recalcTotal(snap.val() || {});
         });
@@ -3191,6 +3207,41 @@ _recalcDashShuttle: function(room) {
     if (document.getElementById('total-car')) document.getElementById('total-car').innerText = m.counts.car;
     const totalEl = document.getElementById('dashShuttleTotal');
     if (totalEl) { totalEl.innerText = m.total + "명"; totalEl.style.color = "#003366"; }
+},
+
+/* 과정현황 '오늘의 운영 > 수강생 현황' 줄을 이 방의 값으로 직접 계산해 채운다.
+   (예전엔 '수강생 현황' 화면을 열어야만 채워져서, 방을 옮기면 이전 방 숫자가 남았다)
+   ★ 입교율 기준은 수강생 현황 화면과 동일:
+       분모 = 예정명단 수 (없으면 '예정명단 없음')
+       분자 = 예정자 중 실제 입교한 수                                        */
+_syncOpsStuRow: function(room) {
+    if (state.room !== room) return;
+    try{
+        const data = state._dashStudentsCache || {};
+        const actualNames = Object.values(data)
+            .map(s => s && s.name)
+            .filter(n => n && n !== 'undefined')
+            .map(n => String(n).trim());
+        const arrivedCount = actualNames.length;
+
+        const expected = (state._dashExpectedCache || [])
+            .map(n => String(n || '').trim())
+            .filter(Boolean);
+        const _plan = expected.length;
+        const arrivedOnPlan = expected.filter(n => actualNames.includes(n)).length;
+        const percent = _plan > 0 ? Math.round((arrivedOnPlan / _plan) * 100) : 0;
+
+        document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = arrivedCount; });
+        document.querySelectorAll('.opsStuSub').forEach(function(e){
+            if(_plan > 0){
+                e.textContent = '입교율 ' + percent + '%';
+                e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
+            } else {
+                e.textContent = '예정명단 없음';
+                e.style.color = '#94a3b8';
+            }
+        });
+    }catch(e){}
 },
 
 /* [J74] 질문 '읽음' 관리 ─────────────────────────────────────────────
