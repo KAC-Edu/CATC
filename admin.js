@@ -7233,10 +7233,30 @@ resetShuttleRequests: function() {
         const esc=function(s){return (s==null?'':String(s)).replace(/[&<>"]/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]);});};
         // 이번 주 월~금 정확한 기간(토·일은 차주 월요일 기준)
         const _wkRange=(function(){ var now=new Date(); var dow=now.getDay(); var off=(dow===0)?1:(dow===6)?2:(1-dow); var mon=new Date(now); mon.setDate(now.getDate()+off); mon.setHours(0,0,0,0); var fri=new Date(mon); fri.setDate(mon.getDate()+4); var W=['일','월','화','수','목','금','토']; var f=function(dt){ return (dt.getMonth()+1)+'.'+dt.getDate()+'('+W[dt.getDay()]+')'; }; return f(mon)+' ~ '+f(fri); })();
-        // [통일된 제목 구조] 좌측정렬 · 메인 제목("항공기술훈련원 ~ 현황") + 파란 부제목(주차·부속정보) — 3개 팝업 공통
+        /* [J80] 통일된 제목 — '한 줄'로 정리
+           예전엔 제목과 부제가 2줄로 쌓여서 위쪽 여백만 잡아먹었다.
+           이제 한 줄에: 「제목」 · 「주차(알약)」 · 「설명(회색 알약)」 로 붙인다.
+           좁은 화면에선 자연스럽게 줄바꿈된다(flex-wrap).                       */
         const _statTitle=function(main, sub){
-            return '<div style="text-align:left;font-weight:900;line-height:1.3;">'+main+'</div>'
-                +(sub?'<div style="text-align:left;font-size:clamp(13px,1.5vw,18px);color:#2563eb;font-weight:800;margin-top:7px;">'+sub+'</div>':'');
+            var pills='';
+            if(sub){
+                // 부제 안의 (괄호 설명)은 회색 알약으로 따로 뽑아 뒤에 붙인다
+                var s=String(sub);
+                var note='';
+                var m=s.match(/<span[^>]*>\s*\(([^<]*)\)\s*<\/span>/);
+                if(m){ note=m[1]; s=s.replace(m[0],'').trim(); }
+                else { var m2=s.match(/\(([^)]*)\)\s*$/); if(m2){ note=m2[1]; s=s.replace(m2[0],'').trim(); } }
+                if(s) pills += '<span style="display:inline-flex;align-items:center;padding:5px 13px;border-radius:999px;'
+                             + 'background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;'
+                             + 'font-size:clamp(12px,1.25vw,15px);font-weight:900;white-space:nowrap;">'+s+'</span>';
+                if(note) pills += '<span style="display:inline-flex;align-items:center;padding:5px 13px;border-radius:999px;'
+                             + 'background:#f1f5f9;border:1px solid #e2e8f0;color:#64748b;'
+                             + 'font-size:clamp(11.5px,1.15vw,14px);font-weight:800;white-space:nowrap;">'+note+'</span>';
+            }
+            return '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;text-align:left;line-height:1.25;">'
+                 + '<span style="font-weight:900;">'+main+'</span>'
+                 + pills
+                 + '</div>';
         };
         // 카드 집계와 동일 기준: 현재 과정이 배정된 active 방 OR 이번 주와 겹치는 과정
         const weekRooms=Object.entries(d).filter(([,r])=>{
