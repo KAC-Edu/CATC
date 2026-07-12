@@ -507,6 +507,36 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
 #bgmToggleBtn.bgm-on i{ animation:bgmBtnPulse 1.2s ease-in-out infinite; }
 @keyframes bgmBtnPulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.18); opacity:.75; } }
 
+/* ══ [J89] 담임 교수 여러 명 — "외 N명" 배지 + 대표 선택 ══ */
+.prof-name-row .prof-more{
+    margin-left:8px; border:none; cursor:pointer;
+    background:rgba(255,255,255,.22); color:#fff;
+    border-radius:999px; padding:4px 11px;
+    font-size:12px; font-weight:900; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:5px;
+    transition:background .15s;
+}
+.prof-name-row .prof-more:hover{ background:rgba(255,255,255,.38); }
+.prof-name-row .prof-more i{ font-size:9px; opacity:.85; }
+
+/* 대표 선택 모달의 줄 */
+.prof-pick-row{
+    display:flex; align-items:center; gap:12px; width:100%;
+    padding:14px 16px; margin-bottom:8px; cursor:pointer;
+    background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:14px;
+    font-family:inherit; text-align:left; transition:.14s;
+}
+.prof-pick-row:hover{ background:#eff6ff; border-color:#bfdbfe; }
+.prof-pick-row.is-main{ background:#fefce8; border-color:#facc15; box-shadow:0 3px 10px rgba(250,204,21,.28); }
+.prof-pick-star{ font-size:19px; color:#cbd5e1; flex-shrink:0; }
+.prof-pick-row.is-main .prof-pick-star{ color:#eab308; }
+.prof-pick-name{ flex:1; font-size:16px; font-weight:900; color:#0f172a; }
+.prof-pick-name small{ font-size:12px; font-weight:700; color:#94a3b8; margin-left:2px; }
+.prof-pick-tag{ flex-shrink:0; background:#facc15; color:#422006; font-size:11.5px; font-weight:900;
+    padding:4px 11px; border-radius:999px; }
+.prof-pick-set{ flex-shrink:0; color:#94a3b8; font-size:12px; font-weight:800; }
+.prof-pick-row:hover .prof-pick-set{ color:#2563eb; }
+
 /* 퀴즈 리포트 관련 */
 #quizSummaryOverlay h2 { font-size: 42px !important; margin-bottom: 40px !important; }
 .summary-card { display: flex; flex-direction: column; gap: 10px; padding: 20px !important; background: #f8fafc; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
