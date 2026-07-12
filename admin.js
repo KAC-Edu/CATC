@@ -2913,7 +2913,7 @@ loadDashboardStats: function() {
         if (state.room !== room) return;
         const st = snap.val() || {};
         const profOnlyEl = document.getElementById('dashProfNameOnly');
-        if (profOnlyEl) profOnlyEl.innerText = st.professorName || "미지정";
+        if (profOnlyEl) profOnlyEl.innerText = kacProfLabel(st) || "미지정";   // [J89] "장두석 외 2명"
     });
 
     // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
@@ -6988,7 +6988,12 @@ resetShuttleRequests: function() {
                 +'<div class="course-hero-banner">'
                 +'<div class="hero-left"><div class="hero-tag">NOW TRAINING</div><h2>'+esc(settings.courseName||'과정명 미정')+'</h2>'
                 +'<div class="hero-info-row"><span class="info-pill"><i class="fa-solid fa-calendar-check"></i> <b>'+esc(settings.period||'-')+'</b></span><span class="info-pill"><i class="fa-solid fa-map-location-dot"></i> <b>'+esc(settings.roomDetailName||settings.roomDetail||('Room '+room))+'</b></span></div></div>'
-                +'<div class="hero-right"><div class="prof-glass-card" style="position:relative;"><div class="prof-avatar"><i class="fa-solid fa-user-tie"></i></div><div class="prof-details"><span class="prof-label">과정 담임</span><div class="prof-name-row"><strong>'+esc(status.professorName||'-')+'</strong> <span>교수님</span></div></div></div>'
+                // [J89] 담임 여러 명이면 "외 N명" 배지 → 누르면 대표를 바꾸는 메뉴가 뜬다
+                +'<div class="hero-right"><div class="prof-glass-card" style="position:relative;"><div class="prof-avatar"><i class="fa-solid fa-user-tie"></i></div><div class="prof-details"><span class="prof-label">과정 담임</span><div class="prof-name-row"><strong>'+esc(kacProfMain(status)||'-')+'</strong> <span>교수님</span>'
+                + (kacProfAll(status).length > 1
+                    ? '<button class="prof-more" onclick="event.stopPropagation(); ui.openProfPicker();" title="담임 교수 전체 보기 · 대표 변경">외 '+(kacProfAll(status).length-1)+'명 <i class="fa-solid fa-chevron-down"></i></button>'
+                    : '')
+                +'</div></div></div>'
                 +'<div class="date-minimal-box" style="color:rgba(255,255,255,0.9)!important; font-weight:800;"><i class="fa-solid fa-user-tie"></i> 과정담당: <span style="margin-left:5px;">'+esc(coordMgr.displayName(settings.coordinatorName||'')||'-')+'</span></div></div>'
                 +'</div>'
                 +'<div class="dash-premium-grid">'
@@ -7083,6 +7088,60 @@ resetShuttleRequests: function() {
         modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
         document.body.appendChild(modal);
     },
+    /* [J89] 담임이 여러 명일 때 — 전체를 보여주고 '대표(★)'를 고르게 한다.
+       대표 = 프로필 사진·입교안내·교육생 앱에 나오는 그 사람. */
+    openProfPicker: function(){
+        if (state.isObserver) { ui.showAlert("👁️ 옵저버는 변경할 수 없습니다."); return; }
+        const room = state.room;
+        if (!room) return;
+        firebase.database().ref('courses/' + room + '/status').once('value', function(snap){
+            const st = snap.val() || {};
+            const all = kacProfAll(st);
+            const main = kacProfMain(st);
+            if (!all.length) { ui.showAlert("지정된 담임 교수가 없습니다."); return; }
+
+            const esc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]); }); };
+            const rows = all.map(function(n){
+                const on = (n === main);
+                return '<button class="prof-pick-row' + (on ? ' is-main' : '') + '" onclick="ui.setProfMain(\'' + esc(n).replace(/'/g,"\\'") + '\')">'
+                     + '<span class="prof-pick-star">' + (on ? '★' : '☆') + '</span>'
+                     + '<span class="prof-pick-name">' + esc(n) + ' <small>교수</small></span>'
+                     + (on ? '<span class="prof-pick-tag">대표</span>' : '<span class="prof-pick-set">대표로</span>')
+                     + '</button>';
+            }).join('');
+
+            const old = document.getElementById('profPickModal');
+            if (old) old.remove();
+            const modal = document.createElement('div');
+            modal.id = 'profPickModal';
+            modal.className = 'prof-swap-modal';
+            modal.innerHTML =
+                '<div class="prof-swap-box" onclick="event.stopPropagation();">'
+              + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-group"></i> 담임 교수 ' + all.length + '명</h3>'
+              + '<button class="prof-swap-close" onclick="document.getElementById(\'profPickModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
+              + '<p class="prof-swap-desc"><b>★ 대표</b> 교수님이 프로필·입교안내·교육생 앱에 표시됩니다. 바꾸려면 이름을 누르세요.</p>'
+              + '<div class="prof-swap-list">' + rows + '</div>'
+              + '</div>';
+            modal.addEventListener('click', function(ev){ if (ev.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
+        });
+    },
+    /* 대표 교수 변경 — professorName(대표)만 바꾸고 전체 목록은 그대로 둔다 */
+    setProfMain: async function(name){
+        const room = state.room;
+        if (!room || !name) return;
+        const updates = {};
+        updates['courses/' + room + '/status/professorName'] = name;   // 대표 (기존 코드가 읽는 칸)
+        updates['courses/' + room + '/status/professorMain'] = name;   // 수동 지정 기록
+        try {
+            const ks = await firebase.database().ref('system/professorProfiles/' + name + '/kakaoLink').get();
+            updates['courses/' + room + '/settings/kakaoLink'] = ks.val() || '';
+        } catch(e) {}
+        await firebase.database().ref().update(updates);
+        try { document.getElementById('profPickModal').remove(); } catch(e) {}
+        ui.showAlert('★ ' + name + ' 교수님이 대표로 지정되었습니다.\n\n프로필·입교안내·교육생 앱에 이분이 표시됩니다.');
+    },
+
     // [담임교수 배정] 방 status + 연간계획(system/annualPlan) 함께 갱신
     _assignProfToRoom: async function(room, name){
         room=String(room||'').trim(); name=String(name||'').trim();
