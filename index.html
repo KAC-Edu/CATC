@@ -7980,10 +7980,10 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var _pillGap = mp ? 2 : 0;
     var _nameRadius = mp ? '999px 5px 5px 999px' : '999px';
     var html = '<span style="flex:0 0 auto; display:inline-flex; align-items:stretch; gap:'+_pillGap+'px; flex-wrap:nowrap; min-width:0; filter:drop-shadow(0 3px 8px rgba(15,23,42,.16));">'
-             + '<span style="flex:0 0 auto; width:auto; display:inline-flex; align-items:center; gap:6px; height:28px; line-height:1; max-width:100%; overflow:hidden; box-sizing:border-box; padding:0 12px 0 13px; background:#2563eb; color:#fff; border-radius:'+_nameRadius+'; font-size:13.5px; font-weight:800; white-space:nowrap; text-overflow:ellipsis;"><i class="fa-solid fa-user" style="font-size:11px;"></i>'+_hrEsc(main.name)+'</span>';
+             + '<span class="khp-nm" style="flex:0 0 auto; width:auto; display:inline-flex; align-items:center; justify-content:center; gap:6px; height:28px; line-height:1; max-width:100%; overflow:hidden; box-sizing:border-box; padding:0 12px 0 13px; background:#2563eb; color:#fff; border-radius:'+_nameRadius+'; font-size:13.5px; font-weight:800; white-space:nowrap; text-overflow:ellipsis;"><i class="fa-solid fa-user" style="font-size:11px;"></i>'+_hrEsc(main.name)+'</span>';
     if(mp){
       html += '<button type="button" class="kh-callbtn2" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화"'
-            + ' style="flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;line-height:1;box-sizing:border-box;padding:0 13px 0 12px;margin:0;border:none;border-radius:5px 999px 999px 5px;background:#facc15;color:#fff;font-size:13.5px;font-weight:900;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.18);white-space:nowrap;"><i class="fa-solid fa-phone" style="font-size:11px;"></i>전화</button>';
+            + ' style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:28px;line-height:1;box-sizing:border-box;padding:0 13px 0 12px;margin:0;border:none;border-radius:5px 999px 999px 5px;background:#facc15;color:#fff;font-size:13.5px;font-weight:900;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.18);white-space:nowrap;"><i class="fa-solid fa-phone" style="font-size:11px;"></i>전화</button>';
     }
     if(rest > 0){
       html += '<button type="button" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
@@ -7991,6 +7991,18 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     html += '</span>';
     el.innerHTML = html;
+
+    /* [폭 맞춤] 노란 '전화' 블록이 파란 '이름' 블록보다 길어 보여서 균형이 깨졌다.
+       → 이름 블록의 실제 폭을 재서 전화 블록을 같은 폭으로 고정한다. */
+    if(mp){
+      requestAnimationFrame(function(){
+        var n = el.querySelector('.khp-nm');
+        var c = el.querySelector('.kh-callbtn2');
+        if(!n || !c) return;
+        var w = Math.round(n.getBoundingClientRect().width);
+        if(w > 0){ c.style.width = w + 'px'; c.style.padding = '0'; }
+      });
+    }
   }
 
   /* 담임 전체 연락처 시트 — 화면 위에 떠서 열리므로 하단 메뉴를 가리거나 밀지 않는다.
