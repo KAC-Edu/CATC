@@ -18,7 +18,7 @@
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=false; }   /* [보안] 저장이 막힌 환경(시크릿 창 등)에서 코드 없이 통과되던 구멍 차단 */
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');
@@ -32,7 +32,7 @@
       +'<button id="catcBtn">입장</button><div id="catcMsg"></div></div>';
     (document.body||document.documentElement).appendChild(o);
     var inp=o.querySelector('#catcInp'),btn=o.querySelector('#catcBtn'),msg=o.querySelector('#catcMsg');
-    function go(){ if(inp.value==='catc1234'){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    function go(){ if(inp.value==='catc1234'){ var _saved=false; try{ localStorage.setItem('catc_gate_ok',String(Date.now())); _saved=true; }catch(e){} if(_saved){ location.reload(); } else { try{ o.remove(); }catch(e){} document.documentElement.classList.remove('catc-locked'); window.__catcUnlocked=true; } } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
     btn.addEventListener('click',go);
     inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
     setTimeout(function(){ try{inp.focus();}catch(e){} },120);
