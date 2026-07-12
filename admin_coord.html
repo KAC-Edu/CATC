@@ -6780,6 +6780,8 @@ const annualPlanMgrCoord = {
             updates[`courses/${r}/settings/coordinatorName`] = null;
             updates[`courses/${r}/settings/kakaoLink`] = null;
             updates[`courses/${r}/status/professorName`] = '';
+            updates[`courses/${r}/status/professorNames`] = null;    // [J89] 담임 목록도 비움
+            updates[`courses/${r}/status/professorMain`] = null;
             updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
             updates[`courses/${r}/status/roomStatus`]   = 'idle';
             updates[`courses/${r}/status/ownerSessionId`] = null;
@@ -6845,8 +6847,9 @@ const annualPlanMgrCoord = {
                     updates[`courses/${r}/settings/period`] = pc.period;
                     updates[`courses/${r}/settings/coordinatorName`] = coordFull;
                     if (!(rd.status && rd.status.professorManual)) {   // 수동 지정 교수는 보존(덮어쓰지 않음)
-                        updates[`courses/${r}/status/professorName`] = pc.prof;
-                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                        // [J89] 담임 여러 명 — 대표(맨 앞)는 professorName, 전체는 professorNames
+                        const _main = kacProfUpdates(updates, r, pc.prof, (rd.status || {}).professorMain);
+                        updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(_main);
                     }
                     if (pc.roomDetail && !(rd.status && rd.status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실은 보존
                 }
@@ -6909,10 +6912,11 @@ const annualPlanMgrCoord = {
             updates[`courses/${room}/settings/courseName`] = course.name;
             updates[`courses/${room}/settings/period`]     = course.period;
             updates[`courses/${room}/settings/coordinatorName`] = coordFull;
-            updates[`courses/${room}/status/professorName`] = course.prof;
+            // [J89] 담임 여러 명 — 대표(맨 앞)만 professorName, 전체는 professorNames
+            const _main = kacProfUpdates(updates, room, course.prof, null);
             updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준
             updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
-            updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
+            updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(_main);
             if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
             updates[`courses/${room}/status/roomStatus`]   = 'active';
             updates[`courses/${room}/status/ownerSessionId`] = null;
