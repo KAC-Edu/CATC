@@ -4713,12 +4713,15 @@ setMode: function(mode) {
                     firebase.database().ref(`courses/${state.room}/status/mode`).onDisconnect().set('qa');
                 } catch(e){}
                 document.getElementById('quizSelectModal').style.display = 'flex';
-                var _qeg0 = document.getElementById('quizEmptyGuide'); if(_qeg0) _qeg0.style.display='flex';   // [J60] 모달 닫아도 안내가 보이게
-                var _qqa0 = document.querySelector('#quizContent .quiz-question-area'); if(_qqa0) _qqa0.style.display='none';   // [J60.1] 문항 없을 땐 Ready? 바 숨김
-                // [J82] 퀴즈 탭에 들어온 시점엔 아직 고른 문항이 없다 → 하단 진행 컨트롤을 확실히 잠근다.
-                //  (모달을 [닫기]로 그냥 닫아도 시작 버튼이 눌리지 않아야 한다. 문항을 고르면 그때 다시 켜진다)
-                var _qc0 = document.getElementById('quizControls');
-                if(_qc0) _qc0.style.display = quizMgr._hasQuiz() ? 'flex' : 'none';
+                // [J85] 아직 고른 문항이 없으면 뒤 화면을 '빈 상태'로 완전히 정리한다.
+                //  (예전엔 O/X 선택지가 남아 있어서 모달을 닫으면 문제 없는 O/X 카드만 떠 있었다)
+                //  문항을 실제로 고르면 completeQuizLoading → showQuiz 가 정상 화면을 다시 그린다.
+                if (!quizMgr._hasQuiz()) {
+                    quizMgr.renderScreen(null);
+                } else {
+                    var _qc0 = document.getElementById('quizControls');
+                    if(_qc0) _qc0.style.display = 'flex';
+                }
                 quizMgr.loadSavedQuizList();
             }
             
