@@ -12325,11 +12325,21 @@ const bgmPlayer = {
                 }
             }
         }
-        // 켜기/끄기 토글 버튼 라벨·아이콘 동기화
+        /* [J88] 켜짐/꺼짐이 눈에 확 들어오게 — 색·글자·아이콘을 통째로 바꾼다.
+           켜짐 = 초록 MUSIC ON (▶) / 꺼짐 = 회색 MUSIC OFF (음소거 아이콘) */
+        const tBtn   = document.getElementById('bgmToggleBtn');
         const tLabel = document.getElementById('bgmToggleLabel');
         const tIcon  = document.getElementById('bgmToggleIcon');
-        if (tLabel) tLabel.innerText = this._isPlaying ? '배경음 끄기' : '배경음 켜기';
-        if (tIcon)  tIcon.className  = this._isPlaying ? 'fa-solid fa-stop' : 'fa-solid fa-music';
+        const on = !!this._isPlaying;
+        if (tLabel) tLabel.innerHTML = on
+            ? 'MUSIC <b style="letter-spacing:.5px;">ON</b>'
+            : 'MUSIC <b style="letter-spacing:.5px;">OFF</b>';
+        if (tIcon)  tIcon.className  = on ? 'fa-solid fa-circle-play' : 'fa-solid fa-volume-xmark';
+        if (tBtn) {
+            tBtn.classList.toggle('bgm-on',  on);
+            tBtn.classList.toggle('bgm-off', !on);
+            tBtn.title = on ? '배경음악 끄기' : '배경음악 켜기';
+        }
     },
 
     _renderPanel: function() {
