@@ -6506,7 +6506,7 @@ window.kacExpireEndedCourses = async function(){
         ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [vJ106] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
-        updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        updates[b+'status/professorName']=''; updates[b+'status/professorNames']=null; updates[b+'status/professorMain']=null; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
         try{ var s=pd.indexOf(' ~ ')>=0?pd.split(' ~ ')[0].trim():(pd.split('~')[0]||'').trim();
           if(s){ var d=new Date(s+'T00:00:00'); if(!isNaN(d)){ var dw=(d.getDay()+6)%7; var mo=new Date(d); mo.setDate(d.getDate()-dw);
             var u=mo.toISOString().slice(0,10); var l=mo.getFullYear()+'-'+String(mo.getMonth()+1).padStart(2,'0')+'-'+String(mo.getDate()).padStart(2,'0');
@@ -7644,7 +7644,11 @@ body.kac-quiz-active .quiz-overlay,
 #keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e8eef7; }
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
 #keduHome .kh-rows span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
-#keduHome .kh-rows b{ flex:1; font-size:15px; font-weight:800; color:#1e293b; word-break:keep-all; }
+#keduHome .kh-rows b{ flex:1; min-width:0; font-size:15px; font-weight:800; color:#1e293b; word-break:keep-all; }
+/* [J89] 담임 여러 명이어도 이 행은 한 줄로 고정 — 이름이 길면 …으로 줄이고, 전화/외N명 버튼은 절대 안 밀린다.
+   (행이 두 줄이 되면 아래 [출결하기] 버튼이 화면 밖으로 내려갈 수 있음) */
+#keduHome .kh-rows #khProf{ display:flex; align-items:center; min-width:0; overflow:hidden; }
+#keduAttProof .kap-row #kapProf{ display:flex; align-items:center; justify-content:flex-end; min-width:0; overflow:hidden; }
 #keduHome .kh-leader{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 18px 44px rgba(15,23,42,.28); border:1px solid #fde68a; }
 #keduHome .khl-head{ font-size:14px; font-weight:900; color:#b45309; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
 #keduHome .khl-sec{ background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:11px 13px; margin-bottom:10px; }
@@ -7936,16 +7940,71 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   // 재진입(이미 입교) → 현재 정보만 간결히 표시
   // ===== [과정담임 표시 + 통화] =====
   function _hrEsc(t){ return String(t==null?'':t).replace(/[<>&\"']/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','\"':'&quot;',"'":'&#39;'}[c]);}); }
-  function renderHomeroom(el, label, phone, callName){
+  /* [J89] 담임이 여러 명이어도 이 줄은 '항상 한 줄'로 끝난다.
+     ─ 줄에는 대표 1명 + 전화버튼만 둔다 (행 높이가 절대 늘지 않음 → 아래 메뉴가 밀리지 않는다)
+     ─ 나머지 교수 연락처는 '외 N명' 알약을 누르면 뜨는 별도 시트에서 본다 (오버레이라 레이아웃 영향 0) */
+  var _hrRoster=[];   // [{name, phone}] — 대표가 항상 맨 앞
+  function renderHomeroom(el, roster){
     if(!el) return;
-    var name=_hrEsc(label);
-    var html=name;   // 이름은 부모 <b> 스타일(다른 행과 동일)을 그대로 따른다
-    var p=String(phone||'').replace(/[^0-9+]/g,'');
-    if(p){
-      html+='<button type="button" class="kh-callbtn" data-phone="'+p+'" data-name="'+_hrEsc(callName||label)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화" style="margin-left:8px;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;vertical-align:middle;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
+    _hrRoster = roster || [];
+    if(!_hrRoster.length){ el.textContent='미지정'; return; }
+
+    var main = _hrRoster[0];
+    var rest = _hrRoster.length - 1;
+    var mp   = String(main.phone||'').replace(/[^0-9+]/g,'');
+
+    var html = '<span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">'
+             + '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+_hrEsc(main.name)+'</span>';
+    if(mp){
+      html += '<button type="button" class="kh-callbtn" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화"'
+            + ' style="flex:0 0 auto;width:28px;height:28px;border:none;border-radius:50%;background:#2563eb;color:#fff;font-size:12px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 8px rgba(37,99,235,.30);"><i class="fa-solid fa-phone"></i></button>';
     }
-    el.innerHTML=html;
+    if(rest > 0){
+      html += '<button type="button" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
+            + ' style="flex:0 0 auto;padding:3px 10px;border:none;border-radius:999px;background:#e0e7ff;color:#3730a3;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;">외 '+rest+'명</button>';
+    }
+    html += '</span>';
+    el.innerHTML = html;
   }
+
+  /* 담임 전체 연락처 시트 — 화면 위에 떠서 열리므로 하단 메뉴를 가리거나 밀지 않는다.
+     목록이 길어도 시트 안에서만 스크롤되고, 휴대폰 하단 홈바(safe-area)까지 피한다. */
+  window.openHomeroomSheet=function(){
+    try{
+      if(!_hrRoster.length) return;
+      var old=document.getElementById('khProfSheet'); if(old) old.remove();
+      var ov=document.createElement('div');
+      ov.id='khProfSheet';
+      /* z-index는 통화 확인 팝업(kac-confirm-overlay: 20001~20002)보다 반드시 낮아야 한다.
+         안 그러면 시트에서 [전화]를 눌러도 확인창이 시트 밑에 깔려 안 보인다. */
+      ov.style.cssText='position:fixed; inset:0; z-index:19500; display:flex; align-items:flex-end; justify-content:center; background:rgba(15,23,42,.55); backdrop-filter:blur(2px);';
+      var rows=_hrRoster.map(function(p,i){
+        var ph=String(p.phone||'').replace(/[^0-9+]/g,'');
+        return '<div style="display:flex; align-items:center; gap:10px; padding:13px 4px; border-bottom:1px solid #f1f5f9;">'
+             + (i===0 ? '<span style="flex:0 0 auto; font-size:11px; font-weight:900; color:#7c2d12; background:#fde68a; padding:3px 8px; border-radius:999px;">대표</span>' : '<span style="flex:0 0 auto; width:34px;"></span>')
+             + '<span style="flex:1; min-width:0; font-size:17px; font-weight:800; color:#1e293b; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+_hrEsc(p.name)+' <small style="font-weight:700; color:#94a3b8;">교수</small></span>'
+             + (ph
+                ? '<button type="button" class="kh-callbtn" data-phone="'+ph+'" data-name="'+_hrEsc(p.name)+'" onclick="callHomeroom(this)"'
+                  + ' style="flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; padding:9px 15px; border:none; border-radius:999px; background:#2563eb; color:#fff; font-size:14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-phone"></i> 전화</button>'
+                : '<span style="flex:0 0 auto; font-size:12.5px; font-weight:700; color:#cbd5e1;">번호 없음</span>')
+             + '</div>';
+      }).join('');
+      ov.innerHTML =
+        '<div onclick="event.stopPropagation();" style="width:100%; max-width:520px; max-height:76vh; display:flex; flex-direction:column;'
+        + ' background:#fff; border-radius:20px 20px 0 0; box-shadow:0 -12px 40px rgba(2,6,23,.35);'
+        + ' padding:18px 20px calc(18px + env(safe-area-inset-bottom, 0px));">'
+      +   '<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">'
+      +     '<h3 style="margin:0; font-size:18px; font-weight:900; color:#0f172a;">담임 교수 '+_hrRoster.length+'명</h3>'
+      +     '<button type="button" onclick="document.getElementById(\'khProfSheet\').remove();" aria-label="닫기"'
+      +       ' style="width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#334155; font-size:16px; cursor:pointer;">✕</button>'
+      +   '</div>'
+      +   '<p style="margin:0 0 6px; font-size:12.5px; font-weight:650; color:#94a3b8;">전화 버튼을 누르면 통화 확인 창이 뜹니다.</p>'
+      +   '<div style="flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch;">'+rows+'</div>'
+      + '</div>';
+      ov.addEventListener('click', function(ev){ if(ev.target===ov) ov.remove(); });
+      document.body.appendChild(ov);
+    }catch(e){}
+  };
   /* [J89] 담임이 여러 명일 수 있다.
      status.professorName = 대표 / status.professorNames = 전체 목록.
      교육생 화면엔 "장두석 외 2명"으로 보여주고, 전화는 대표에게 건다. */
@@ -7955,28 +8014,56 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     return String(raw==null?'':raw).replace(/교수님?/g,' ')
       .split(/[,;\/·、|\n\r\t]+|\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
   }
-  var _hrRef=null, _hrCb=null;
+  var _hrRef=null, _hrCb=null, _hrLast='';
+  /* [사용량 주의] status 노드 전체를 구독하면 ownerLastSeen 하트비트(20초)·퀴즈상태 변화마다
+     노드가 통째로 다시 내려온다(교육생 수만큼 곱해짐). 그래서 필요한 3개 필드만 따로 구독한다. */
+  var _hrSubs=[], _hrSt={};
   function loadHomeroom(room, el, live){
     if(!el) return;
     if(!room){ el.textContent='-'; return; }
     el.textContent='확인 중...';
-    var handler=function(s){
-      var st=(s&&s.val())||{};
+    _hrLast=''; _hrSt={};
+
+    var paint=function(){
+      var st=_hrSt;
       var all=_hrList((st.professorNames && st.professorNames.length) ? st.professorNames : st.professorName);
-      if(!all.length){ el.textContent='미지정'; return; }
+      if(!all.length){ _hrLast=''; _hrRoster=[]; el.textContent='미지정'; return; }
       var main=(st.professorMain && all.indexOf(st.professorMain)>=0) ? st.professorMain : all[0];
-      var label=main + (all.length>1 ? (' 외 '+(all.length-1)+'명') : '');
-      firebase.database().ref('system/professorProfiles/'+main+'/phone').once('value').then(function(ps){
-        renderHomeroom(el, label, String((ps&&ps.val())||'').trim(), main);
-      }).catch(function(){ renderHomeroom(el, label, '', main); });
+      var key=main+'|'+all.join(',');
+      if(key===_hrLast) return;          // 담임이 실제로 바뀐 게 아니면 아무 것도 안 함
+      _hrLast=key;
+
+      // [정렬] 대표를 항상 맨 앞에, 나머지는 지정 순서 그대로 (전화는 대표부터 걸리게)
+      var order=[main].concat(all.filter(function(n){ return n!==main; }));
+      Promise.all(order.map(function(n){
+        return firebase.database().ref('system/professorProfiles/'+n+'/phone').once('value')
+          .then(function(ps){ return { name:n, phone:String((ps&&ps.val())||'').trim() }; })
+          .catch(function(){ return { name:n, phone:'' }; });
+      })).then(function(roster){
+        if(key!==_hrLast) return;        // 그 사이 담임이 또 바뀌었으면 늦은 응답은 버린다
+        renderHomeroom(el, roster);
+      });
     };
-    var ref=firebase.database().ref('courses/'+room+'/status');
+
+    var FIELDS=['professorName','professorNames','professorMain'];
+    // 이전 구독 정리
+    _hrSubs.forEach(function(x){ try{ x.ref.off('value', x.cb); }catch(e){} });
+    _hrSubs=[];
+
     if(live){
-      if(_hrRef && _hrCb){ try{ _hrRef.off('value', _hrCb); }catch(e){} }
-      _hrRef=ref; _hrCb=handler;
-      ref.on('value', handler, function(){ if(el) el.textContent='-'; });
+      FIELDS.forEach(function(f){
+        var ref=firebase.database().ref('courses/'+room+'/status/'+f);
+        var cb=function(s){ _hrSt[f]=(s&&s.val()); paint(); };
+        ref.on('value', cb, function(){ if(el && !_hrLast) el.textContent='-'; });
+        _hrSubs.push({ref:ref, cb:cb});
+      });
     } else {
-      ref.once('value').then(handler).catch(function(){ el.textContent='-'; });
+      Promise.all(FIELDS.map(function(f){
+        return firebase.database().ref('courses/'+room+'/status/'+f).once('value');
+      })).then(function(ss){
+        FIELDS.forEach(function(f,i){ _hrSt[f]=(ss[i]&&ss[i].val()); });
+        paint();
+      }).catch(function(){ el.textContent='-'; });
     }
   }
   window.callHomeroom=function(btn){
