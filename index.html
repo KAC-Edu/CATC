@@ -7946,19 +7946,31 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     el.innerHTML=html;
   }
+  /* [J89] 담임이 여러 명일 수 있다.
+     status.professorName = 대표 / status.professorNames = 전체 목록.
+     교육생 화면엔 "장두석 외 2명"으로 보여주고, 전화는 대표에게 건다. */
+  function _hrList(raw){
+    if(Object.prototype.toString.call(raw)==='[object Array]')
+      return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
+    return String(raw==null?'':raw).replace(/교수님?/g,' ')
+      .split(/[,;\/·、|\n\r\t]+|\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+  }
   var _hrRef=null, _hrCb=null;
   function loadHomeroom(room, el, live){
     if(!el) return;
     if(!room){ el.textContent='-'; return; }
     el.textContent='확인 중...';
     var handler=function(s){
-      var prof=String((s&&s.val())||'').trim();
-      if(!prof){ el.textContent='미지정'; return; }
-      firebase.database().ref('system/professorProfiles/'+prof+'/phone').once('value').then(function(ps){
-        renderHomeroom(el, prof, String((ps&&ps.val())||'').trim());
-      }).catch(function(){ renderHomeroom(el, prof, ''); });
+      var st=(s&&s.val())||{};
+      var all=_hrList((st.professorNames && st.professorNames.length) ? st.professorNames : st.professorName);
+      if(!all.length){ el.textContent='미지정'; return; }
+      var main=(st.professorMain && all.indexOf(st.professorMain)>=0) ? st.professorMain : all[0];
+      var label=main + (all.length>1 ? (' 외 '+(all.length-1)+'명') : '');
+      firebase.database().ref('system/professorProfiles/'+main+'/phone').once('value').then(function(ps){
+        renderHomeroom(el, label, String((ps&&ps.val())||'').trim(), main);
+      }).catch(function(){ renderHomeroom(el, label, '', main); });
     };
-    var ref=firebase.database().ref('courses/'+room+'/status/professorName');
+    var ref=firebase.database().ref('courses/'+room+'/status');
     if(live){
       if(_hrRef && _hrCb){ try{ _hrRef.off('value', _hrCb); }catch(e){} }
       _hrRef=ref; _hrCb=handler;
