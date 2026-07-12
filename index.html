@@ -10161,7 +10161,12 @@ html.kac-core-screen #realUserCount::before{
 #shuttleModal, #adminActionModal, #noticeModal {
   position: fixed !important;
   inset: 0 !important;
-  display: flex !important;
+  /* ⚠️ display 는 절대 !important 로 고정하지 말 것.
+     이 세 모달은 평소 JS 가 인라인 style.display='none' 으로 숨긴다.
+     CSS !important 가 인라인을 이겨버려서, 모달이 항상 떠 있는 채로
+     앱 전체를 덮어 아무것도 눌리지 않았다(= '연동 안 됨'의 원인).
+     열 때 JS 가 style.display='flex' 를 직접 넣으므로
+     아래 flex 정렬 규칙들은 그대로 적용된다. */
   flex-direction: column !important;
   align-items: center !important;
   justify-content: flex-start !important;
