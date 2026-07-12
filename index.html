@@ -4436,11 +4436,10 @@ function ensureAdminApplicantSummary(){
         box.style.cssText='margin-bottom:16px;padding:16px 17px;border-radius:18px;background:linear-gradient(135deg,#0f172a,#1d4ed8);color:#fff;box-shadow:0 14px 30px rgba(37,99,235,.18);';
         step.insertBefore(box, step.firstChild);
     }
-    var course=(typeof getCurrentCourseTitle==='function' ? getCurrentCourseTitle() : ((document.getElementById('roomTitle')||{}).innerText||'과정명 확인 중')).trim();
     var name=(localStorage.getItem('kac_user_name')||'-').trim();
     var sabun=(localStorage.getItem('kac_user_phone')||'-').trim();
+    // 과정명 줄은 표시하지 않는다 (요청) — '신청자 확인' + 이름/사번만 남긴다
     box.innerHTML='<div style="font-size:12px;font-weight:900;color:#bfdbfe;margin-bottom:7px;"><i class="fa-solid fa-id-card"></i> 신청자 확인</div>'
-      +'<div style="font-size:18px;font-weight:950;line-height:1.35;word-break:keep-all;">'+course+'</div>'
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px;">'
       +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">'+name+'</span>'
       +'<span style="padding:7px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:850;">사번 '+sabun+'</span>'
@@ -10365,6 +10364,88 @@ body.kac-locked #adminActionModal > .menu-box{
 #kacEmOtpBanner{ display:flex; align-items:center; gap:9px; margin:0 0 14px; padding:12px 14px; border-radius:13px;
   background:linear-gradient(135deg,#7f1d1d,#b91c1c); color:#fff; font-size:13px; font-weight:800; line-height:1.5;
   box-shadow:0 8px 22px rgba(185,28,28,.3); animation:kacEmPulse 1.8s ease-in-out infinite; }
+
+/* ───────── [퇴교차량] 화면만 정리 (다른 화면은 절대 건드리지 않는다) ─────────
+   1) 위쪽 '퇴교 차량 신청' 타이틀바 제거  → 닫기는 맨 아래 [닫기] 버튼으로 한다
+   2) 어두운 스크림 + 우측 패널 모양 제거 → 뒤를 앱 배경색으로 화면 전체를 채운다
+   3) 파란 출발시간 블록과 이동수단 버튼들은 그대로 둔다                        */
+#shuttleModal,
+body.kac-locked #shuttleModal,
+html body.kac-locked #shuttleModal{
+  align-items:stretch !important;
+  justify-content:center !important;
+  padding:0 !important;
+  background:#f3f7fc !important;          /* 앱 배경과 동일 — 화면 전체를 채움 */
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#shuttleModal > .menu-box,
+body.kac-locked #shuttleModal > .menu-box,
+html body.kac-locked #shuttleModal > .menu-box{
+  box-sizing:border-box !important;
+  width:100% !important;
+  max-width:430px !important;
+  height:100dvh !important;
+  max-height:100dvh !important;
+  margin:0 auto !important;
+  padding:18px 18px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+  background:transparent !important;      /* 흰 카드 배경 제거 */
+  border:none !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch !important;
+  animation:none !important;
+  transform:none !important;
+}
+#shuttleModal .kac-pbar{ display:none !important; }   /* '퇴교 차량 신청' 상단바 제거 */
+
+/* ───────── [외출·외박] 화면만 정리 ─────────
+   1) 바깥 흰 카드 제거 → 뒤를 앱 배경색으로 화면 전체를 채운다 (퇴교차량과 동일)
+   2) '외출 · 외박 신청' 상단바는 남기되, 색을 퇴교차량의 파란 블록과 동일하게
+   3) '신청자 확인' 박스의 과정명 줄은 위 JS 에서 제거함                        */
+#adminActionModal,
+body.kac-locked #adminActionModal,
+html body.kac-locked #adminActionModal{
+  align-items:stretch !important;
+  justify-content:center !important;
+  padding:0 !important;
+  background:#f3f7fc !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#adminActionModal > .menu-box,
+body.kac-locked #adminActionModal > .menu-box,
+html body.kac-locked #adminActionModal > .menu-box{
+  box-sizing:border-box !important;
+  width:100% !important;
+  max-width:430px !important;
+  height:100dvh !important;
+  max-height:100dvh !important;
+  margin:0 auto !important;
+  padding:18px 18px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+  background:transparent !important;
+  border:none !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch !important;
+  animation:none !important;
+  transform:none !important;
+}
+/* 상단바 = 퇴교차량 파란 블록과 같은 색 */
+#adminActionModal .kac-pbar{
+  background:linear-gradient(135deg,#1d4ed8,#2563eb) !important;
+  border:none !important;
+  border-radius:16px !important;
+  box-shadow:0 8px 20px rgba(37,99,235,.28) !important;
+  padding:14px 16px !important;
+  margin-bottom:16px !important;
+  backdrop-filter:none !important;
+  -webkit-backdrop-filter:none !important;
+}
+#adminActionModal .kac-pbar .kac-pt{ color:#fff !important; }
+#adminActionModal .kac-pbar .kac-px{ color:#fff !important; background:rgba(255,255,255,.18) !important; border:none !important; }
 </style>
 <script>
 (function(){
