@@ -8448,6 +8448,21 @@ showFinalSummary: async function() {
             const rank = (this._qStats || []).findIndex(x => x.no === no) + 1;
             const worst = (rank === 1 && acc != null && acc < 100 && s.answered > 0);
 
+            /* [J87] 선택지별 응답 분포 — 몇 명이 어디를 골랐는지 막대로 */
+            let choices = '';
+            if (Array.isArray(s.dist) && s.dist.length) {
+                choices = '<div class="qc-list">' + s.dist.map(d => {
+                    const pct = s.answered > 0 ? Math.round(d.count / s.answered * 100) : 0;
+                    return `<div class="qc-row${d.correct ? ' is-correct' : ''}${(!d.correct && d.count > 0) ? ' is-wrong' : ''}">
+                        <span class="qc-mark">${d.correct ? '<i class="fa-solid fa-circle-check"></i>' : (d.count > 0 ? '<i class="fa-solid fa-xmark"></i>' : '')}</span>
+                        <span class="qc-label">${esc(d.label)}</span>
+                        <span class="qc-track"><span class="qc-fill" style="width:${pct}%;"></span></span>
+                        <span class="qc-cnt">${d.count}명<small>${pct}%</small></span>
+                    </div>`;
+                }).join('') + '</div>';
+            }
+            const noAns = s.answered === 0;
+
             box.innerHTML = `
                 <div class="q-detail-head">
                     <span class="qbd-no">Q${s.no}</span>
@@ -8460,7 +8475,9 @@ showFinalSummary: async function() {
                     <span class="qd-ok">정답 ${s.correct}명</span>
                     <span class="qd-no">오답 ${wrong}명</span>
                     <span class="qd-all">응답 ${s.answered}명</span>
-                </div>`;
+                </div>
+                <div class="qc-head">📝 답변 분포 <span class="qc-answer">정답: <b>${esc(s.correctLabel)}</b></span></div>
+                ${noAns ? '<div class="qc-empty">아무도 응답하지 않은 문항입니다.</div>' : choices}`;
             box.classList.add('flash');
             setTimeout(()=>box.classList.remove('flash'), 700);
         }catch(e){}
