@@ -2690,13 +2690,15 @@ body.night-mode .header-room-badge { background-color: #003366 !important; borde
     justify-content: space-between;
     align-items: center;
     /* 검정계열에서 주신 딥블루 계열 그라데이션으로 교체 */
-    background: linear-gradient(135deg, #003366 0%, #0055aa 100%) !important; 
-    padding: 40px 50px;
+    background: linear-gradient(135deg, #003366 0%, #0055aa 100%) !important;
+    /* [J96] 높이 살짝 축소 — 위아래 패딩 40px → 30px (좌우는 그대로) */
+    padding: 30px 50px;
     border-radius: 24px;
     color: white;
     position: relative;
     overflow: hidden;
-    margin-bottom: 30px;
+    /* [J96] '오늘 한눈에' 위 여백을 아래 여백(14px)과 동일하게 맞춤 (기존 30px → 위아래 비대칭이었다) */
+    margin-bottom: 14px;
     border: 1px solid rgba(255,255,255,0.1); /* 테두리에 아주 얇은 빛 추가 */
 }
 
