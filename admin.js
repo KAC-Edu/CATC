@@ -8343,14 +8343,16 @@ showFinalSummary: async function() {
         /* [J83] 리포트 단순화 — 강사가 한눈에 봐야 하는 건 '평균 점수' 하나다.
            문항당 배점(7.7점) 같은 건 아무도 안 본다 → 없앤다.
            남기는 것: 과정 평균 점수(크게) + 참여 인원(작게) + 문항별 결과(오답 확인용). */
+        /* [J86] 상단 요약 — 총 문항 / 참여 인원 / 평균 점수 세 개만 */
         const subEl = document.getElementById('summarySubtitle');
-        if(subEl) subEl.textContent = `총 ${totalQuestions}문항 · 100점 만점 · 참여 ${totalParticipants.size}명`;
+        if(subEl) subEl.textContent = `100점 만점`;
         const grid = document.getElementById('summaryStats');
         if(grid) {
-            grid.innerHTML = `<div class="qr-hero">
-                    <div class="qr-hero-label">과정 평균 점수</div>
-                    <div class="qr-hero-score">${avgScore}<span>점</span></div>
-                </div>`;
+            grid.innerHTML = `
+                <div class="qr-stat"><div class="qr-stat-label">총 문항</div><div class="qr-stat-val">${totalQuestions}<span>문항</span></div></div>
+                <div class="qr-stat"><div class="qr-stat-label">퀴즈 참여자</div><div class="qr-stat-val">${totalParticipants.size}<span>명</span></div></div>
+                <div class="qr-stat qr-stat-hl"><div class="qr-stat-label">평균 점수</div><div class="qr-stat-val">${avgScore}<span>점</span></div></div>
+            `;
         }
         const bdEl = document.getElementById('questionBreakdown');
         if(bdEl){
