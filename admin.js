@@ -2622,7 +2622,16 @@ function kacProfLabel(st, suffix){
     var rest = arr.length - 1;
     return kacProfMain(st) + (suffix || '') + (rest > 0 ? (' 외 ' + rest + '명') : '');
 }
-try { window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfAll=kacProfAll; window.kacProfLabel=kacProfLabel; } catch(e){}
+/* 연간계획 prof 문자열("장두석,박호원") → status 3개 필드 기록. 대표 이름 반환. */
+function kacProfUpdates(updates, room, profRaw){
+    var arr = kacProfList(profRaw);
+    var main = arr[0] || '';
+    updates['courses/' + room + '/status/professorName']  = main;
+    updates['courses/' + room + '/status/professorNames'] = arr.length ? arr : null;
+    updates['courses/' + room + '/status/professorMain']  = null;   // 계획 기준 = 자동(첫 번째)
+    return main;
+}
+try { window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfAll=kacProfAll; window.kacProfLabel=kacProfLabel; window.kacProfUpdates=kacProfUpdates; } catch(e){}
 
 const ui = {
 
@@ -12930,9 +12939,8 @@ const annualPlanMgr = {
                     updates[`courses/${room}/settings/period`]     = course.period;
                     const coordFull = coordMgr.matchName(course.coord) || (course.coord || '');
                     updates[`courses/${room}/settings/coordinatorName`] = coordFull;
-                    updates[`courses/${room}/status/professorName`] = course.prof;
+                    updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(kacProfUpdates(updates, room, course.prof));   // [J89] 담임 다수
                     updates[`courses/${room}/status/roomStatus`]   = 'active';
-                    updates[`courses/${room}/settings/kakaoLink`]  = _kakaoOf(course.prof);
                     if (course.roomDetail) updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail;
                     else updates[`courses/${room}/settings/roomDetailName`] = '';
                     updates[`courses/${room}/status/ownerSessionId`] = null;
@@ -13646,8 +13654,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
                 updates[`courses/${r}/settings/period`] = pc.period;
                 if (!st.coordManual) updates[`courses/${r}/settings/coordinatorName`] = coordFull;   // [J10] 수동 지정한 담임은 자동동기화에서 보존
                 if (!st.professorManual) {                                  // 수동 지정한 교수는 자동동기화에서 보존(덮어쓰지 않음)
-                    updates[`courses/${r}/status/professorName`] = pc.prof;
-                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                    updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));   // [J89] 담임 다수
                 }
                 if (pc.roomDetail && !st.roomDetailManual) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사가 강의실 수동 지정 시 계획값으로 덮어쓰지 않음
             }
