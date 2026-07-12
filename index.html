@@ -8674,7 +8674,29 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(!room){ showKacAlert('과정 정보를 찾지 못했습니다. 입교/홈에서 과정을 다시 확인해 주세요.'); return; }
     var ov=document.getElementById('keduOtp');
     var roomEl=document.getElementById('keduOtpRoom');
-    if(roomEl) roomEl.textContent='Room '+room;
+    /* '현재 과정'에 'Room A' 같은 내부 코드가 아니라 실제 과정명이 나오게 한다.
+       과정명은 파이어베이스에서 읽어오므로, 먼저 알고 있는 값(입교완료 화면/캐시)으로
+       바로 채워 두고, 받아오면 정확한 이름으로 교체한다. */
+    if(roomEl){
+      var _known = '';
+      try{
+        var _kh = document.getElementById('khCourse');
+        _known = (_kh && _kh.textContent || '').trim();
+        if(!_known) _known = (localStorage.getItem('kac_last_course_name')||'').trim();
+      }catch(e){}
+      roomEl.textContent = _known || '과정 확인 중…';
+      try{
+        firebase.database().ref('courses/'+room+'/settings/courseName').once('value').then(function(s){
+          var cn=String((s && s.val())||'').trim();
+          if(cn){
+            roomEl.textContent = cn;
+            try{ localStorage.setItem('kac_last_course_name', cn); }catch(e){}
+          } else if(!_known){
+            roomEl.textContent = '-';
+          }
+        }).catch(function(){ if(!_known) roomEl.textContent='-'; });
+      }catch(e){ if(!_known) roomEl.textContent='-'; }
+    }
     if(ov) ov.style.display='flex';
     var msg=document.getElementById('keduOtpMsg');
     if(msg) msg.textContent='강사 화면에 표시된 6자리 OTP를 입력해 주세요.';
