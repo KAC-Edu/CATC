@@ -526,6 +526,55 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
 /* 문항 카드 사이 간격 (스크롤이 없어졌으니 여백으로 구분) */
 #quizSummaryOverlay.quiz-report .qbd-row{ margin-bottom:14px; }
 @media(max-width:900px){ #quizSummaryOverlay .qr-hero-score{ font-size:56px; } }
+
+/* ══ [J84] 문항별 정답률 히트맵 — 색으로 한눈에 ══
+   빨강=많이 틀림 / 주황=절반 / 초록=대부분 맞힘 / 회색=무응답 */
+.qhm-wrap{ text-align:left; margin:0 0 18px; }
+.qhm-head{ font-weight:800; color:#334155; font-size:16px; margin:0 0 10px 2px; }
+.qhm-hint{ font-weight:600; color:#94a3b8; font-size:12.5px; margin-left:6px; }
+.qhm-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(74px,1fr)); gap:8px; }
+.qhm-cell{ border:none; border-radius:12px; padding:11px 6px; cursor:pointer; color:#fff;
+           display:flex; flex-direction:column; align-items:center; gap:2px;
+           box-shadow:0 3px 8px rgba(15,23,42,.14); transition:.14s; }
+.qhm-cell:hover{ transform:translateY(-2px); box-shadow:0 7px 16px rgba(15,23,42,.24); filter:brightness(1.06); }
+.qhm-no{ font-size:12px; font-weight:900; opacity:.95; }
+.qhm-acc{ font-size:17px; font-weight:900; letter-spacing:-.5px; }
+.qhm-legend{ display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:12px; font-weight:700; color:#64748b; }
+.qhm-legend span{ display:inline-flex; align-items:center; gap:5px; }
+.qhm-legend i{ width:13px; height:13px; border-radius:4px; display:inline-block; }
+
+/* ══ [J84] 문항 = 가로바(아코디언). 바를 누르면 아래로 상세가 펼쳐진다 ══ */
+#questionBreakdown .qbd-item{ background:#fff; border:1px solid #e8edf3; border-radius:14px;
+    margin-bottom:10px; overflow:hidden; box-shadow:0 2px 6px rgba(15,23,42,.05); }
+#questionBreakdown .qbd-item.qbd-worst{ border-color:#fecaca; box-shadow:0 4px 12px rgba(239,68,68,.14); }
+#questionBreakdown .qbd-bar-btn{ width:100%; display:flex; align-items:center; gap:10px;
+    padding:14px 16px; background:none; border:none; cursor:pointer; text-align:left; }
+#questionBreakdown .qbd-bar-btn:hover{ background:#f8fafc; }
+#questionBreakdown .qbd-rank{ flex:0 0 auto; width:26px; height:26px; border-radius:8px; background:#eef2ff; color:#4338ca;
+    font-size:12.5px; font-weight:900; display:flex; align-items:center; justify-content:center; }
+#questionBreakdown .qbd-no{ flex:0 0 auto; background:#0f172a; color:#fff; font-size:12px; font-weight:900;
+    padding:4px 10px; border-radius:999px; }
+#questionBreakdown .qbd-title{ flex:1 1 auto; min-width:0; font-size:15px; font-weight:800; color:#1e293b;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#questionBreakdown .qbd-tag{ flex:0 0 auto; background:#fee2e2; color:#b91c1c; font-size:11px; font-weight:900;
+    padding:3px 9px; border-radius:999px; }
+#questionBreakdown .qbd-acc{ flex:0 0 auto; font-size:14px; font-weight:900; white-space:nowrap; }
+#questionBreakdown .qbd-chev{ flex:0 0 auto; color:#94a3b8; font-size:13px; transition:transform .2s; }
+#questionBreakdown .qbd-item.open .qbd-chev{ transform:rotate(180deg); }
+/* 펼침 영역 */
+#questionBreakdown .qbd-panel{ display:none; padding:2px 18px 16px; border-top:1px dashed #e8edf3; }
+#questionBreakdown .qbd-item.open .qbd-panel{ display:block; }
+#questionBreakdown .qbd-panel .qbd-q{ font-size:15px; font-weight:700; color:#334155; margin:12px 0 10px; line-height:1.5; }
+#questionBreakdown .qbd-panel .qbd-bar{ height:10px; background:#eef2f7; border-radius:999px; overflow:hidden; }
+#questionBreakdown .qbd-panel .qbd-fill{ height:100%; border-radius:999px; transition:width .4s; }
+#questionBreakdown .qbd-panel .qbd-meta{ margin-top:8px; font-size:13px; font-weight:700; color:#64748b; text-align:right; }
+/* 히트맵에서 점프했을 때 반짝 */
+#questionBreakdown .qbd-item.qbd-flash{ animation:qbdFlash 1.2s ease; }
+@keyframes qbdFlash{ 0%,100%{ box-shadow:0 2px 6px rgba(15,23,42,.05); } 30%{ box-shadow:0 0 0 4px rgba(59,130,246,.35); } }
+@media(max-width:900px){
+    #questionBreakdown .qbd-title{ font-size:13.5px; }
+    .qhm-grid{ grid-template-columns:repeat(auto-fill, minmax(62px,1fr)); }
+}
 @media(max-width:900px){
     #quizSummaryOverlay.quiz-report{ padding:20px 0 48px; }
     #quizSummaryOverlay .qr-close{ top:12px; right:14px; width:44px; height:44px; font-size:22px; }
