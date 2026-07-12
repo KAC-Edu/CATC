@@ -9960,8 +9960,12 @@ html.kac-core-screen #realUserCount::before{
 /* 입교 카드와 공통 확인창을 동일한 청색 상단바 규격으로 통일 */
 #keduEnroll .ke-consent{display:flex!important;align-items:flex-start;gap:10px;margin:14px 0;padding:13px;border:1px solid #dbeafe;border-radius:14px;background:#f8fbff;color:#475569;font-size:12px;line-height:1.45;cursor:pointer}
 #keduEnroll .ke-consent input{width:20px!important;height:20px!important;flex:none;accent-color:#2563eb;box-shadow:none!important}
-#keduEnroll .ke-consent b,#keduEnroll .ke-consent small{display:block}
-#keduEnroll .ke-consent small{margin-top:4px;color:#64748b;font-weight:700}
+/* b 를 block 으로 두면 "(필수) 개인정보 수집 및 이용" 뒤의 "에 동의합니다."가
+   다음 줄로 밀려 2줄이 됐다 → b 는 inline 으로 두어 한 줄로 붙인다.
+   (아래 상세 안내 small 만 블록으로 내린다) */
+#keduEnroll .ke-consent b{display:inline}
+#keduEnroll .ke-consent span{display:block;min-width:0}
+#keduEnroll .ke-consent small{display:block;margin-top:4px;color:#64748b;font-weight:700;white-space:normal}
 #keduEnroll .ke-actions{display:grid;grid-template-columns:.82fr 1.35fr;gap:10px;margin-top:12px}
 #keduEnroll .ke-actions .ke-btn{margin:0!important}
 #keduEnroll .ke-back{border:1px solid #cbd5e1;border-radius:14px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer}
