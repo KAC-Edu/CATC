@@ -11472,6 +11472,32 @@ saveAll: function() {
         });
         updates[`courses/${state.room}/settings/menuFeatures`] = menuFeatures;
 
+        /* [담임 다중 반영] 여기서 고른 담임(여러 명)을 방 status 에만 저장하면
+           연간교육계획 편집기 · 교육운영부 · 생활관(지원부) 화면에는 반영되지 않는다.
+           그 화면들은 모두 system/annualPlan 의 prof 값을 읽기 때문이다.
+           → 방과 같은 과정명·기간을 가진 연간계획 항목의 prof 도 함께 갱신한다.
+             (profSwap 의 _assignProfToRoom 이 하던 것과 동일한 처리) */
+        const _syncPlanProf = async () => {
+            try{
+                if(!name) return;                                   // 과정명이 없으면 매칭 불가
+                const profStr = profArr.join(',');                  // "장두석,박현일,김정민"
+                const ps = await firebase.database().ref('system/annualPlan').once('value');
+                const pdata = ps.val();
+                if(!pdata) return;
+                const keys = Array.isArray(pdata) ? pdata.map((_, i) => i) : Object.keys(pdata);
+                const norm = (x) => String(x || '').replace(/\s+/g, '').toLowerCase();
+                const period = String(periodRange || '').replace(/\s+/g, '');
+                keys.forEach((k) => {
+                    const c = pdata[k]; if(!c) return;
+                    if(norm(c.name) !== norm(name)) return;
+                    const cPeriod = String(c.period || ((c.startDate && c.endDate) ? (c.startDate + ' ~ ' + c.endDate) : '')).replace(/\s+/g, '');
+                    // 같은 과정명이 여러 주차에 있을 수 있으니, 기간까지 있으면 기간도 맞는 것만
+                    if(period && cPeriod && cPeriod !== period) return;
+                    updates['system/annualPlan/' + k + '/prof'] = profStr;
+                });
+            }catch(e){ console.warn('[설정저장] 연간계획 담임 반영 실패:', e); }
+        };
+
         const self = this;
         const commitUpdates = () => {
             const _room = state.room;
@@ -11523,15 +11549,18 @@ saveAll: function() {
 
         // [자동 적용] 톡방 칸이 비어있고 담임 교수가 지정돼 있으면,
         //  그 교수 프로필의 오픈톡방 링크를 자동으로 채워서 저장한다.
-        if (!kakaoLinkVal && profName) {
-            firebase.database().ref(`system/professorProfiles/${profName}/kakaoLink`).once('value', s => {
-                const profLink = (s.val() || '').trim();
-                if (profLink) updates[`courses/${state.room}/settings/kakaoLink`] = profLink;
+        // ※ 저장 직전에 연간계획(annualPlan) 담임도 updates 에 함께 담는다.
+        _syncPlanProf().then(() => {
+            if (!kakaoLinkVal && profName) {
+                firebase.database().ref(`system/professorProfiles/${profName}/kakaoLink`).once('value', s => {
+                    const profLink = (s.val() || '').trim();
+                    if (profLink) updates[`courses/${state.room}/settings/kakaoLink`] = profLink;
+                    commitUpdates();
+                }, () => commitUpdates());
+            } else {
                 commitUpdates();
-            }, () => commitUpdates());
-        } else {
-            commitUpdates();
-        }
+            }
+        });
     }
 }; // <--- setupMgr 객체를 닫아주는 아주 중요한 마침표입니다.
 
