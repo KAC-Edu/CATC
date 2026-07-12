@@ -299,6 +299,20 @@
 /* ========== 강사 모바일 vD — 과정 블록형 홈 + 과정별 상세 모니터링 (운영부 모바일 방식) ========== */
 var db=firebase.database();
 var DATA={}, curRID='', EDU={}, curView='home';
+
+/* [J89] 담임 교수 여러 명 — status.professorName=대표, professorNames=전체, professorMain=수동 대표 */
+function kacProfList(raw){
+  if(Object.prototype.toString.call(raw)==='[object Array]')
+    return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
+  return String(raw==null?'':raw).replace(/교수님?/g,' ')
+    .split(/[,;\/·、|\n\r\t]+|\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function kacProfAll(st){ return kacProfList((st&&st.professorNames&&st.professorNames.length)?st.professorNames:(st&&st.professorName)); }
+function kacProfMain(st){ var a=kacProfAll(st); if(!a.length) return ''; var m=st&&st.professorMain; return (m&&a.indexOf(m)>=0)?m:a[0]; }
+function kacProfLabel(st, suffix){
+  var a=kacProfAll(st); if(!a.length) return '';
+  return kacProfMain(st)+(suffix||'')+(a.length>1?(' 외 '+(a.length-1)+'명'):'');
+}
 function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n){ return String(n).padStart(2,'0'); }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
@@ -378,7 +392,7 @@ function renderHome(){
   if(!list.length){ el.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
   el.innerHTML=list.map(function(rid){
     var room=DATA[rid]||{}, s=room.settings||{}, st=room.status||{};
-    var prof=((st.professorName||'').trim())||'-';
+    var prof=kacProfLabel(st)||'-';   // [J89] 담임 여러 명 → "장두석 외 2명"
     var cnt=studentsOf(room).length, q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;
     return '<div class="cblock" onclick="openCourse(\''+rid+'\')">'
       +'<div class="cb-top"><span class="cb-room"><i class="fa-solid fa-door-closed"></i> #'+rid+'</span>'
@@ -414,7 +428,7 @@ function goHome(){ curView='home';
 function renderDetail(){
   var room=DATA[curRID]; if(!room){ goHome(); return; }
   var s=room.settings||{}, st=room.status||{};
-  var prof=((st.professorName||'').trim())?(st.professorName.trim()+' 교수'):'-';
+  var prof=kacProfLabel(st,' 교수')||'-';   // [J89] "장두석 교수 외 2명"
   var count=studentsOf(room).length;
   var setT=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
   setT('hRoom','ROOM #'+curRID); setT('hCourse',s.courseName||'과정명 미설정');
