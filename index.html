@@ -8004,8 +8004,10 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         if(!n || !c) return;                       // 그 사이 다시 그려졌으면 중단
         var w = Math.round(n.getBoundingClientRect().width);
         if(w > 0){
-          c.style.width   = w + 'px';
-          c.style.padding = '0';
+          /* 아래 CSS 에 'width:auto !important' 가 걸려 있어서(출결하기 버튼용 규칙 되돌리기)
+             일반 인라인 스타일로는 못 이긴다 → 인라인 !important 로 지정한다. */
+          c.style.setProperty('width',   w + 'px', 'important');
+          c.style.setProperty('padding', '0',      'important');
           return;                                  // 적용 완료
         }
         if(++_tries < 40) setTimeout(_fit, 150);   // 최대 6초까지 기다렸다 적용
