@@ -2631,7 +2631,68 @@ function kacProfUpdates(updates, room, profRaw){
     updates['courses/' + room + '/status/professorMain']  = null;   // 계획 기준 = 자동(첫 번째)
     return main;
 }
-try { window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfAll=kacProfAll; window.kacProfLabel=kacProfLabel; window.kacProfUpdates=kacProfUpdates; } catch(e){}
+/* 과정설정 모달의 담임 다중 선택 위젯 (운영부 admin_coord.html의 profMulti와 동일 동작) */
+var profMulti = {
+    list: [],       // ["장두석","박호원","김정민"]
+    main: '',       // 수동으로 고른 대표 (비어 있으면 list[0])
+
+    set: function(names, mainName){
+        this.list = kacProfList(names);
+        this.main = (mainName && this.list.indexOf(mainName) >= 0) ? mainName : '';
+        this.render();
+    },
+    add: function(){
+        var sel = document.getElementById('setup-prof-select');
+        var v = sel ? String(sel.value || '').trim() : '';
+        if (!v) return;
+        if (this.list.indexOf(v) < 0) this.list.push(v);
+        this.render();
+    },
+    del: function(name, ev){
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        this.list = this.list.filter(function(n){ return n !== name; });
+        if (this.main === name) this.main = '';      // 대표를 지우면 맨 앞이 다시 대표
+        this.render();
+    },
+    pick: function(name){                            // 이름 클릭 = 대표 지정
+        this.main = (this.main === name) ? '' : name;
+        this.render();
+    },
+    mainName: function(){
+        if (this.main && this.list.indexOf(this.main) >= 0) return this.main;
+        return this.list[0] || '';
+    },
+    render: function(){
+        var box = document.getElementById('setup-prof-chips');
+        var hint = document.getElementById('setup-prof-hint');
+        if (!box) return;
+        var main = this.mainName();
+        if (!this.list.length){
+            box.innerHTML = '';
+            if (hint) hint.innerHTML = '교수를 고르고 [＋ 추가]. 이름을 누르면 대표(★)가 됩니다.';
+            return;
+        }
+        box.innerHTML = this.list.map(function(n){
+            var isMain = (n === main);
+            var esc = n.replace(/'/g, "\\'");
+            return '<span onclick="profMulti.pick(\'' + esc + '\')" title="클릭하면 대표(★)가 됩니다" '
+                + 'style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 11px; border-radius:999px; font-size:13px; font-weight:800; '
+                + (isMain
+                    ? 'background:#facc15; color:#422006; box-shadow:0 2px 8px rgba(250,204,21,.4);'
+                    : 'background:#e2e8f0; color:#334155; border:1px solid #cbd5e1;')
+                + '">'
+                + (isMain ? '★ ' : '') + n
+                + '<b onclick="profMulti.del(\'' + esc + '\', event)" style="margin-left:2px; opacity:.6; font-size:14px;">×</b>'
+                + '</span>';
+        }).join('');
+        if (hint){
+            hint.innerHTML = (this.list.length > 1)
+                ? ('★ <b>' + main + '</b> 교수가 대표입니다 — 프로필·입교안내·교육생 앱에 이 분이 나옵니다. (총 ' + this.list.length + '명)')
+                : '담임 1명. 여러 명이면 [＋ 추가]로 더 넣으세요.';
+        }
+    }
+};
+try { window.profMulti=profMulti; window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfAll=kacProfAll; window.kacProfLabel=kacProfLabel; window.kacProfUpdates=kacProfUpdates; } catch(e){}
 
 const ui = {
 
@@ -13697,12 +13758,11 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/settings/courseCreatedAt`] = firebase.database.ServerValue.TIMESTAMP;
         updates[`courses/${room}/settings/period`]     = course.period;
         updates[`courses/${room}/settings/coordinatorName`] = coordFull;
-        updates[`courses/${room}/status/professorName`] = course.prof;
+        updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(kacProfUpdates(updates, room, course.prof));   // [J89] 담임 다수
         updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준(자동동기화 대상)
         updates[`courses/${room}/status/coordManual`] = null;        // [J10] 신규 배치는 계획 담임 기준
         updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
         updates[`courses/${room}/status/roomStatus`]   = 'active';
-        updates[`courses/${room}/settings/kakaoLink`]  = kakaoOf(course.prof);
         updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail || '';
         updates[`courses/${room}/status/ownerSessionId`] = null;
     }
