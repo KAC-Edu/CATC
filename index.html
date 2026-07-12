@@ -498,9 +498,13 @@
     .amenity-chip { display:flex; align-items:center; gap:8px; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font-size:15px; font-weight:700; color:#334155; cursor:pointer; background:#fff; transition:all .15s; }
     .amenity-chip input { width:18px; height:18px; accent-color:#10b981; cursor:pointer; }
     .amenity-chip:has(input:checked) { border-color:#10b981; background:#f0fdf4; color:#047857; }
-    /* 카카오 딥링크도 데이터가 준비될 때까지 같은 밝은 로딩 화면을 사용한다. */
+    /* [vJ122] 카카오 채널 버튼으로 들어올 때는 전체화면 스플래시(catc 사진)를 띄우지 않는다.
+       ─ 이 스플래시는 원래 '별도 플랫폼에서 사이드 메뉴로 이동할 때'용이었다.
+       ─ 카카오 → 입교등록 경로는 도착 화면(입교등록)이 이미 자기 로딩 표시를 갖고 있어서
+         (과정 목록 '불러오는 중...' 스피너, vJ116) 스플래시까지 띄우면 로딩이 두 번 보인다.
+       ─ 배경색만 같은 톤으로 깔아 흰 화면 깜빡임을 막고, 실제 대기 안내는 도착 화면이 맡는다. */
     html.kac-kiosk-boot, html.kac-kiosk-boot body{ background:#f3f7fc !important; }
-    html.kac-kiosk-boot #global-loader{ display:flex; }
+    html.kac-kiosk-boot #global-loader{ display:none !important; }
     </style>
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
 <style id="student-ui-vh67">
@@ -8646,9 +8650,14 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }
     var token=localStorage.getItem('uToken');
     if(token){
+      /* [vJ122] 예전엔 전체화면 스플래시(catc 사진)가 이 조회를 통째로 가렸다.
+         → 이제 '0.35초 넘게 걸릴 때만' 가벼운 안내를 띄운다.
+           빠르면(대부분) 교육생은 아무 로딩 화면도 못 보고 바로 도착한다. */
+      var _slowT=setTimeout(function(){ try{ if(window.kacBootShow) kacBootShow('과정 정보를 확인하는 중입니다…'); }catch(e){} }, 350);
       recoverRoom(token, function(r){
+        try{ clearTimeout(_slowT); }catch(e){}
         if(r){ try{ localStorage.setItem('kac_last_visited_room', r); }catch(e){} if(window.kacBootShow) kacBootShow('과정으로 이동 중입니다…'); location.replace('index.html?room='+encodeURIComponent(r)+'&menu='+encodeURIComponent(menu)); }
-        else { showEnroll(menu); }
+        else { try{ if(window.kacBootDone) kacBootDone(); }catch(e){} showEnroll(menu); }
       });
     } else { showEnroll(menu); }
   }
