@@ -6894,3 +6894,26 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 #view-quiz .qtb-partpill .qtb-seg-sub b{ color:#10b981; font-size:27px; }
 #view-quiz .qtb-partpill .qtb-seg-wait b{ color:#ef4444; font-size:27px; }
 @media(max-width:900px){ #view-quiz .qtb-partpill .qtb-part-main{ font-size:16px; padding:2px 11px; } #view-quiz .qtb-partpill .qtb-part-main b{ font-size:20px; } #view-quiz .qtb-partpill .qtb-part-seg{ font-size:15px; padding:2px 11px; } #view-quiz .qtb-partpill .qtb-seg-sub b, #view-quiz .qtb-partpill .qtb-seg-wait b{ font-size:20px; } }
+
+/* ═══ 교육과정 통합 환경 설정 모달 — 스크롤 없이 한 화면에 다 보이게 ═══
+   담임 교수를 강의실 아래로 내리면서 왼쪽 열이 더 길어졌다.
+   → 세로 여백을 압축하고 모달 높이를 키워 드래그(스크롤) 없이 전부 보이게 한다.
+   내용이 더 늘어날 때를 대비해 overflow 자체는 남겨 둔다(안전장치). */
+#courseSetupModal .setup-modal-box{
+  max-height:96vh !important;
+  padding:16px 24px !important;
+}
+#courseSetupModal .setup-modal-box .modal-header{ margin-bottom:10px !important; }
+#courseSetupModal .setup-modal-box .modal-header h3{ font-size:18px !important; }
+#courseSetupModal .setup-modal-box .setup-group{ margin-bottom:10px !important; }
+#courseSetupModal .setup-modal-box .setup-group label{ margin-bottom:4px !important; }
+#courseSetupModal .setup-modal-box .setup-input{ padding:8px 12px !important; }
+#courseSetupModal .setup-modal-box .modal-actions{ padding-top:12px !important; }
+/* 체크박스 두 줄(현황판 노출 / 차주 유지)이 세로를 많이 먹는다 → 패딩 축소 */
+#courseSetupModal #setup-show-on-board + span,
+#courseSetupModal #setup-keep-next-week + span{ line-height:1.35; }
+#courseSetupModal label[for="setup-show-on-board"],
+#courseSetupModal label[for="setup-keep-next-week"]{ padding:9px 12px !important; }
+/* 담임 교수 줄 — 이제 한 줄을 통째로 쓰므로 셀렉트가 충분히 넓어진다 */
+#courseSetupModal #setup-prof-select{ min-width:0; }
+#courseSetupModal #setup-prof-hint{ margin-top:4px !important; }
