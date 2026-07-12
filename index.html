@@ -3888,9 +3888,9 @@ function renderMyShuttleStatus(data){
     el.innerHTML='<div class="kac-shuttle-status-head">'
       +'<div class="ks-eyebrow"><span class="ks-status-dot"></span> 차량 신청 완료</div>'
       +'<div class="ks-title">나의 퇴교차량</div>'
-      +'<div class="ks-sub">공지된 출발 시간을 확인해 주세요.</div>'
+      /* [vJ122] "공지된 출발 시간을 확인해 주세요" 제거 — 어디를 보라는 건지 모호해 오해 소지 */
       +'</div><div class="kac-shuttle-status-body">'
-      +'<div class="kac-shuttle-status-row"><span>과정</span><b>'+esc(course)+'</b></div>'
+      +'<div class="kac-shuttle-status-row"><span>과정명</span><b>'+esc(course)+'</b></div>'
       +'<div class="kac-shuttle-status-row"><span>신청자</span><b>'+esc(name)+' <span style="color:#94a3b8;font-size:13px;">('+esc(sabun)+')</span></b></div>'
       +'<div class="kac-shuttle-status-row"><span>신청 장소</span><b style="font-size:18px !important; color:#1d4ed8 !important; font-weight:900 !important;">'+esc(data.typeText||'-')+'</b></div>'
       +'</div>';
@@ -4974,7 +4974,8 @@ async function saveProfile() {
         return;
     }
     
-    const newUToken = `${name}_${phone}`;
+    // [vJ122] 구(舊) 입교 경로도 동일 규칙 — 이름의 공백을 없앤 키를 쓴다 ('홍 길동' = '홍길동')
+    const newUToken = (window.kacToken ? window.kacToken(name, phone) : `${String(name||'').replace(/\s+/g,'')}_${phone}`);
 
     // 이름 재입력 시 오늘 날짜 출결 기록 초기화 (테스트/재등록 대응)
     const todayStr = (()=>{const _d=new Date();return `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`;})();
@@ -7593,7 +7594,10 @@ body.kac-quiz-active .quiz-overlay,
 #keduHome .kh-rows{ text-align:left; margin:0 0 16px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:4px 12px; }
 #keduHome .kh-rows > div{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e8eef7; }
 #keduHome .kh-rows > div:last-child{ border-bottom:none; }
-#keduHome .kh-rows span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
+/* [vJ122] 라벨(강의실·담임…)만 작게. 예전엔 그냥 'span'이라 값 안에 들어간 span까지 12px로 줄어
+   담임 이름만 다른 행보다 작아 보였다. → 행의 '직계' span(=라벨)에만 적용한다. */
+#keduHome .kh-rows > div > span{ flex:0 0 62px; font-size:12px; font-weight:900; color:#64748b; }
+#keduHome .kh-rows b span{ font-size:inherit; font-weight:inherit; color:inherit; }   /* 값 안의 span은 값과 같은 크기 */
 #keduHome .kh-rows b{ flex:1; min-width:0; font-size:15px; font-weight:800; color:#1e293b; word-break:keep-all; }
 /* [J89] 담임 여러 명이어도 이 행은 한 줄로 고정 — 이름이 길면 …으로 줄이고, 전화/외N명 버튼은 절대 안 밀린다.
    (행이 두 줄이 되면 아래 [출결하기] 버튼이 화면 밖으로 내려갈 수 있음) */
@@ -7824,12 +7828,89 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       if(home && localStorage.getItem('uToken')) home.style.display='flex';
       else if(history.length>1) history.back();
     };
+    /* [vJ122] '이미 등록했어요' — 수정 모드에선 필요 없으니 숨긴다 */
+    var _rb=document.getElementById('keduRestoreBtn');
+    if(_rb){
+      _rb.style.display = window._keduEditMode ? 'none' : 'block';
+      _rb.onclick=function(){ kacRestoreEnroll(menu); };
+    }
   }
+
+  /* ══ [vJ122] '이미 등록했어요' — 다른 브라우저에서 기존 등록 불러오기 ══════════
+     카카오 인앱 브라우저에서 등록해도, 그 주소를 사파리·크롬으로 옮겨 열면
+     기기에 저장된 정보(localStorage)가 없어 '처음 온 사람'이 된다.
+     식별키가 "이름_사번" 이므로, 이름·사번만 알면 서버에서 본인 기록을 찾을 수 있다.
+     → 찾으면 그 기록으로 바로 입장. 못 찾으면 그냥 새로 등록하면 된다.            */
+  async function kacRestoreEnroll(menu){
+    var name=(document.getElementById('keduName').value||'').trim();
+    var sabun=(document.getElementById('keduSabun').value||'').trim();
+    if(!name){ showKacAlert('이름을 입력한 뒤 눌러 주세요.'); return; }
+    if(!/^\d{4,5}$/.test(sabun)){ showKacAlert('사번(5자리) 또는 전화번호 뒤 4자리를 입력한 뒤 눌러 주세요.'); return; }
+
+    var btn=document.getElementById('keduRestoreBtn');
+    if(btn){ btn.disabled=true; btn.textContent='찾는 중…'; }
+    try{
+      var token=kacToken(name, sabun);
+      var found=null;
+      // 모든 방을 뒤져 본인 기록을 찾는다 (방마다 6초 타임아웃 — 무한 대기 방지)
+      var db=firebase.database(), jobs=[];
+      for(var i=65;i<=90;i++){ (function(r){
+        var p=db.ref('courses/'+r+'/students/'+token).once('value')
+               .then(function(s){ return s.val() ? {room:r, data:s.val()} : null; })
+               .catch(function(){ return null; });
+        jobs.push(new Promise(function(res){
+          var fin=false, t=setTimeout(function(){ if(!fin){ fin=true; res(null); } }, 6000);
+          p.then(function(v){ if(!fin){ fin=true; clearTimeout(t); res(v); } });
+        }));
+      })(String.fromCharCode(i)); }
+      var hits=(await Promise.all(jobs)).filter(Boolean);
+
+      if(!hits.length){
+        showKacAlert('등록된 기록을 찾지 못했습니다.\n\n· 이름·사번이 등록할 때와 똑같은지 확인해 주세요.\n· 아직 등록 전이라면 아래 [입교 등록]을 눌러 주세요.');
+        return;
+      }
+      found = hits[0];   // 한 사람이 여러 과정에 있을 일은 없다
+
+      // 기기에 정보 복원 → 다음부터는 바로 홈으로 들어간다
+      try{
+        localStorage.setItem('uToken', token);
+        localStorage.setItem('kac_user_name', (found.data.name||name));
+        localStorage.setItem('kac_user_phone', sabun);
+        localStorage.setItem('kac_last_visited_room', found.room);
+        localStorage.setItem('kac_last_visited_name', (found.data.name||name));
+        var _rk=(await db.ref('courses/'+found.room+'/status/resetKey').once('value')).val()||'init';
+        localStorage.setItem('kac_resetKey_'+found.room, _rk);
+        localStorage.setItem('kac_resetKey_'+String(found.room).toUpperCase(), _rk);
+        var _st=(await db.ref('courses/'+found.room+'/settings').once('value')).val()||{};
+        if(typeof saveKacEnrollmentMeta==='function') saveKacEnrollmentMeta(found.room, _st);
+        if(_st.courseName) localStorage.setItem('kac_current_course', _st.courseName);
+      }catch(e){}
+
+      showKacAlert('✅ 등록 정보를 불러왔습니다.\n\n'+(found.data.name||name)+' 님 · '+((await db.ref('courses/'+found.room+'/settings/courseName').once('value')).val()||('Room '+found.room)));
+      location.replace('index.html?room='+encodeURIComponent(found.room)+(menu?('&menu='+encodeURIComponent(menu)):''));
+    }catch(e){
+      showKacAlert('불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    }finally{
+      if(btn){ btn.disabled=false; btn.textContent='이미 등록했어요 — 이름·사번으로 불러오기'; }
+    }
+  }
+  window.kacRestoreEnroll=kacRestoreEnroll;
+
   window.keduShowEnroll=showEnroll;
   window.keduEditInfo=function(){
     var h=document.getElementById('keduHome'); if(h) h.style.display='none';
     showEnroll('home', true);
   };
+  /* [vJ122] 식별키(uToken)는 "이름_사번" 이다. 그래서 '홍 길동'과 '홍길동'이 다른 사람이 돼 버렸다.
+     다른 브라우저(사파리 등)에서 다시 입력할 때 띄어쓰기 하나만 달라도 새 칸이 생기고,
+     그 사람의 차량신청·출결이 사라진 것처럼 보인다.
+     → 키를 만들 때만 이름의 모든 공백을 없앤다. 화면에 보이는 이름은 입력한 그대로 둔다.
+       (공백 없이 등록한 기존 교육생은 키가 그대로라 영향 없음) */
+  function kacToken(name, sabun){
+    return String(name||'').replace(/\s+/g,'') + '_' + String(sabun||'').trim();
+  }
+  window.kacToken = kacToken;
+
   async function submitEnroll(menu){
     var room=document.getElementById('keduCourse').value;
     var name=document.getElementById('keduName').value.trim();
@@ -7845,8 +7926,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       try{
         var _dupSnap = await firebase.database().ref('courses/'+room+'/students').once('value');
         var _dupAll = _dupSnap.val() || {};
-        var _myTok = name+'_'+sabun;
-        var _sameName = Object.keys(_dupAll).filter(function(tk){ var s=_dupAll[tk]||{}; var nm=String((s.name||tk.split('_')[0]||'')).trim(); return nm===name && tk!==_myTok; });
+        var _myTok = kacToken(name, sabun);
+        var _nsp = function(x){ return String(x||'').replace(/\s+/g,''); };   // 공백 무시 비교
+        var _sameName = Object.keys(_dupAll).filter(function(tk){ var s=_dupAll[tk]||{}; var nm=_nsp(s.name||tk.split('_')[0]||''); return nm===_nsp(name) && tk!==_myTok; });
         window._keduDupRemoveToken = null;
         if(_sameName.length>0){
           var _exTok=_sameName[0], _exData=_dupAll[_exTok]||{};
@@ -7863,7 +7945,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       ? '입력한 정보로 수정하시겠습니까?'
       : '"'+label.split(' · ')[0]+'" 과정으로 입교합니다.\n맞습니까?');
     if(!ok) return;
-    var token=name+'_'+sabun;
+    var token=kacToken(name, sabun);   // [vJ122] 공백 정규화 — '홍 길동'과 '홍길동'이 같은 사람
     try{
       localStorage.setItem('kac_user_name', name);
       localStorage.setItem('kac_user_phone', sabun);
@@ -8658,6 +8740,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<label>이름</label><input id="keduName" placeholder="홍길동">'+
         '<label class="ke-consent" id="keduConsentBox"><input type="checkbox" id="keduPrivacyAgree"><span><b>(필수) 개인정보 수집 및 이용</b>에 동의합니다.<small>수집 항목: 성명·사번(또는 연락처 뒷자리)·소속, 외출외박 신청 시 연락처 · 목적: 교육운영, 출결, 수송, 생활관 배정 · 보유기간: 교육 종료 시까지(종료 다음 날 자동 파기)</small></span></label>'+
         '<div class="ke-actions"><button class="ke-back" id="keduBackBtn" type="button"><i class="fa-solid fa-arrow-left"></i> 뒤로가기</button><button class="ke-btn" id="keduEnrollBtn">정보 수정하기</button></div>'+
+        /* [vJ122] 다른 브라우저(사파리 등)로 열면 기기에 저장된 정보가 없어 '처음 온 사람'처럼 보인다.
+           이름·사번만으로 기존 등록을 찾아 바로 들어가게 해준다. (동의·과정선택 다시 안 해도 됨) */
+        '<button type="button" id="keduRestoreBtn" class="ke-restore">이미 등록했어요 — 이름·사번으로 불러오기</button>'+
         '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 과정 종료 다음 날 자동 파기됩니다. 시스템은 전 구간 암호화 통신(HTTPS)을 사용합니다.</div></div>';
       document.body.appendChild(d);
     }
@@ -9886,10 +9971,50 @@ html.kac-core-screen #realUserCount::before{
 #keduEnroll .ke-actions{display:grid;grid-template-columns:.82fr 1.35fr;gap:10px;margin-top:12px}
 #keduEnroll .ke-actions .ke-btn{margin:0!important}
 #keduEnroll .ke-back{border:1px solid #cbd5e1;border-radius:14px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer}
+/* [vJ122] '이미 등록했어요' — 다른 브라우저로 옮겨 열었을 때 기존 등록 불러오기 */
+#keduEnroll .ke-restore{
+  display:block; width:100%; margin-top:10px; padding:12px;
+  border:1px dashed #bfdbfe; border-radius:14px;
+  background:#f8fbff; color:#1d4ed8;
+  font-size:13px; font-weight:800; cursor:pointer;
+}
+#keduEnroll .ke-restore:disabled{ opacity:.6; cursor:default; }
 .kac-confirm-box{width:min(390px,calc(100vw - 34px))!important;max-width:390px!important;overflow:hidden!important;border-radius:22px!important}
 .kac-confirm-box::before{content:'항공기술훈련원';display:block;padding:14px 18px;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;font-size:14px;font-weight:900;text-align:left}
 .landing-room{flex-direction:column!important;gap:7px!important;padding:10px 18px 12px!important}
 .landing-room .room-course{display:block!important;max-width:300px;text-align:center;white-space:normal!important;line-height:1.3}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [vJ122] 결과 화면 세로 배치 통일 — "가운데인데 절대 안 잘림"
+
+   지금까지 화면마다 제각각이었다.
+     · 입교등록(keduEnroll) / 입교완료(keduHome) → 위쪽 정렬
+     · 출결(keduOtp) / 등록완료(keduDone)        → 가운데 정렬 + 스크롤 없음(↞ 잘림 위험)
+
+   'justify-content:center'는 내용이 화면보다 길어지면 위아래가 잘리고
+   그 부분으로 스크롤조차 못 간다 (버튼이 화면 밖으로 나가 안 눌림).
+
+   그래서 가운데 정렬을 justify-content 가 아니라 카드의 'margin:auto' 로 한다.
+     · 공간이 남으면  → auto 여백이 위아래를 똑같이 밀어 '가운데'
+     · 내용이 넘치면  → auto 여백이 0이 되어 '맨 위부터' + 스크롤 (아무것도 안 잘림)
+   ══════════════════════════════════════════════════════════════════════════ */
+#keduEnroll, #keduHome, #keduOtp, #keduDone{
+  display:none;                       /* 표시 전환은 기존 JS(style.display='flex')가 담당 */
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;   /* ← center 금지. 가운데정렬은 카드 margin:auto 가 한다 */
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch;
+  /* 아래 메뉴·버튼이 홈바에 가리지 않도록 하단 안전여백 */
+  padding-bottom:calc(24px + env(safe-area-inset-bottom, 0px)) !important;
+}
+#keduEnroll .ke-card,
+#keduHome  .kh-card,
+#keduOtp   .ko-card,
+#keduDone  .kd-card{
+  margin:auto !important;             /* ★ 핵심: 남으면 가운데, 넘치면 위부터 */
+  flex:0 0 auto;                      /* 카드가 찌그러지지 않게 */
+}
 </style>
 <script>
 /* 구형 이름/사번 팝업을 신규 입교 카드로 단일화하고 소속 바인딩을 보강 */
