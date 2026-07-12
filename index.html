@@ -10144,5 +10144,136 @@ html.kac-core-screen #realUserCount::before{
   }, 2500);
 })();
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════════
+     [모더니스트 리디자인 오버라이드 · kac-modernist-2026]
+     ─ 외형(CSS)만 조정. 마크업·id·class·onclick·JS 로직은 전혀 건드리지 않음.
+     ─ 문제 발생 시 이 <style> 블록만 통째로 삭제하면 100% 원상복구.
+     ─ 범위: 퇴교차량 / 외출·외박 / 입교완료(담임) / 퀴즈 상단바 / 공지 팝업
+     ════════════════════════════════════════════════════════════════════ -->
+<style id="kac-modernist-2026">
+/* ───────────────────────────────────────────────
+   1) 퇴교차량 · 외출외박 · 공지 목록 → 모더니스트 카드
+      + 하단 버튼이 어떤 기기/확대비율에서도 스크롤로 항상 닿도록
+        (오버레이 자체가 스크롤 컨테이너, 카드는 세로 가운데,
+         하단 세이프에어리어 여백 확보)
+   ─────────────────────────────────────────────── */
+#shuttleModal, #adminActionModal, #noticeModal {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  background: #eef1f6 !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  padding: 22px 14px calc(22px + env(safe-area-inset-bottom)) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  contain: none !important;
+}
+#shuttleModal > .menu-box,
+#adminActionModal > .menu-box,
+#noticeModal > .menu-box {
+  position: relative !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: auto 0 !important;
+  background: #ffffff !important;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 4px !important;
+  box-shadow: 0 14px 40px rgba(15,23,42,.15) !important;
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom)) !important;
+  overflow: hidden !important;
+  display: block !important;
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  will-change: auto !important;
+}
+
+/* 청명한 파랑 상단바 — 세 화면 공통(외출외박은 기존에도 파랑) */
+#shuttleModal .kac-pbar,
+#adminActionModal .kac-pbar,
+#noticeModal .kac-pbar {
+  min-height: 56px !important;
+  margin: 0 -20px 18px !important;
+  padding: 15px 20px !important;
+  background: linear-gradient(135deg,#1d4ed8,#2563eb) !important;
+  border-radius: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-shadow: none !important;
+}
+#shuttleModal .kac-pbar .kac-pt,
+#adminActionModal .kac-pbar .kac-pt,
+#noticeModal .kac-pbar .kac-pt {
+  color: #fff !important;
+  font-size: 18px !important;
+  font-weight: 900 !important;
+}
+#shuttleModal .kac-pbar .kac-px,
+#adminActionModal .kac-pbar .kac-px,
+#noticeModal .kac-pbar .kac-px {
+  background: rgba(255,255,255,.18) !important;
+  color: #fff !important;
+}
+
+/* ───────────────────────────────────────────────
+   2) 입교완료(keduHome) — 담임 연락처를 알약(pill)으로,
+      표(행) 높이 균등하게
+   ─────────────────────────────────────────────── */
+#keduHome .kh-rows > div {
+  min-height: 46px !important;
+}
+#keduHome .kh-rows .kh-callbtn {
+  width: auto !important;
+  min-width: 0 !important;
+  height: 26px !important;
+  padding: 0 11px !important;
+  border-radius: 999px !important;
+  gap: 5px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+  flex: 0 0 auto !important;
+}
+#keduHome .kh-rows .kh-callbtn::after {
+  content: "전화";
+}
+
+/* ───────────────────────────────────────────────
+   3) 퀴즈 — 레이아웃/폭은 그대로, 상단 "LIVE QUIZ" 바만 청명한 파랑
+   ─────────────────────────────────────────────── */
+#quizActiveBox::before {
+  background: #2563eb !important;
+  color: #ffffff !important;
+}
+
+/* ───────────────────────────────────────────────
+   4) 공지 팝업(강의 안내 / 과정별·센터 공지 자동 팝업) → 모더니스트
+   ─────────────────────────────────────────────── */
+#lectureBoardOverlay > div {
+  border: 1px solid #dbe4ef !important;
+  border-top: 3px solid #2563eb !important;
+  border-radius: 4px !important;
+  box-shadow: 0 14px 40px rgba(15,23,42,.15) !important;
+}
+#lectureBoardBody {
+  background: #f8fbff !important;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 3px !important;
+}
+#lectureBoardOverlay > div > button {
+  border-radius: 3px !important;
+  background: #2563eb !important;
+  color: #fff !important;
+  border: none !important;
+}
+</style>
 </body>
 </html>
