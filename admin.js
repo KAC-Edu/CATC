@@ -2989,8 +2989,22 @@ loadDashboardStats: function() {
     refs.status.on('value', snap => {
         if (state.room !== room) return;
         const st = snap.val() || {};
+        /* [J89] 이름칸에는 '대표'만 넣는다.
+           (여기 innerText를 프로필 조회·교체 모달이 그대로 쓰기 때문에 "외 2명"이 섞이면 프로필이 안 열린다)
+           나머지 인원은 바로 아랫줄 '외 N명' 배지로 표시하고, 그 배지를 눌러야 전체 목록이 뜬다. */
         const profOnlyEl = document.getElementById('dashProfNameOnly');
-        if (profOnlyEl) profOnlyEl.innerText = kacProfLabel(st) || "미지정";   // [J89] "장두석 외 2명"
+        if (profOnlyEl) profOnlyEl.innerText = kacProfMain(st) || "미지정";
+        const moreEl = document.getElementById('dashProfMore');
+        if (moreEl) {
+            const rest = kacProfAll(st).length - 1;
+            if (rest > 0) {
+                moreEl.style.display = '';
+                moreEl.innerHTML = '<button type="button" class="prof-more" onclick="event.stopPropagation(); ui.openProfPicker();" title="담임 교수 전체 보기 · 대표 변경">외 ' + rest + '명 <i class="fa-solid fa-chevron-down"></i></button>';
+            } else {
+                moreEl.style.display = 'none';
+                moreEl.innerHTML = '';
+            }
+        }
     });
 
     // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
@@ -4357,6 +4371,7 @@ updateObserverButton: function() {
         try { var _gb = document.getElementById('dashGradBtn'); if (_gb) _gb.classList.remove('is-visible'); } catch (e) {}   // [M9]
         clear('dashCoordName', '-');
         clear('dashProfNameOnly', '-');
+        try { var _pm = document.getElementById('dashProfMore'); if (_pm) { _pm.style.display='none'; _pm.innerHTML=''; } } catch(e){}   // [J89] 방 전환 시 "외 N명" 잔상 제거
         clear('dashArrivedCount', '0');
         clear('dashAttendCount', '0');
         clear('dashTotalCount', '0');
@@ -11348,6 +11363,8 @@ saveAll: function() {
         
         // ★ 수정: 호텔 예약 방식으로 선택된 날짜 범위 ("시작일 ~ 종료일")를 그대로 저장합니다.
         updates[`courses/${state.room}/settings/period`] = periodRange;
+        // [J90] 여기서 고친 기간은 '수동 지정'이다 → 다른 플랫폼의 자동 동기화가 계획값으로 되돌리지 못하게 보호
+        updates[`courses/${state.room}/status/periodManual`] = (periodRange && String(periodRange).trim()) ? true : null;
         
         updates[`courses/${state.room}/settings/roomDetailName`] = roomName;
         updates[`courses/${state.room}/status/roomDetailManual`] = (roomName && String(roomName).trim()) ? true : null;   // 강사가 강의실 수동 지정 → 자동동기화가 덮어쓰지 않게 보존
@@ -13684,7 +13701,7 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
     const rp = 'courses/' + room;
     const upd = {};
     upd[rp + '/settings'] = { courseName: '', roomDetailName: '', period: null, coordinatorName: null, subjects: null, password: null };
-    upd[rp + '/status'] = { professorName: '', professorNames: null, professorMain: null, roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null };
+    upd[rp + '/status'] = { professorName: '', professorNames: null, professorMain: null, roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null, coordManual: null, periodManual: null };   // [J90] 리셋 시 수동 플래그 전부 해제
     ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'attendanceOtp', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'gradPhoto', 'venuePick'].forEach(function (k) { upd[rp + '/' + k] = null; });
     if (typeof kacMedia !== 'undefined') kacMedia.nullPaths(upd, room || (rp.split('/')[1]));   // [J16] media/{room} 정리
     ['boardNotice', 'notice', 'coordNotice'].forEach(function (k) { upd[rp + '/' + k] = ''; });
@@ -13861,6 +13878,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
             updates[`courses/${r}/status/professorManual`] = null;
             updates[`courses/${r}/status/coordManual`] = null;
             updates[`courses/${r}/status/roomDetailManual`] = null;
+            updates[`courses/${r}/status/periodManual`] = null;   // [J90]
             updates[`courses/${r}/status/roomStatus`]   = 'idle';
             updates[`courses/${r}/status/ownerSessionId`] = null;
             console.log(`[annualPlanMgr] 폐강 방 정리: ${r}(${nm})`);
@@ -13890,7 +13908,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
             if (!locked && planByName[nm]) {
                 const pc = planByName[nm];
                 const coordFull = (typeof coordMgr !== 'undefined' && coordMgr.matchName ? coordMgr.matchName(pc.coord) : '') || (pc.coord || '');
-                updates[`courses/${r}/settings/period`] = pc.period;
+                if (!st.periodManual) updates[`courses/${r}/settings/period`] = pc.period;   // [J90] 방에서 직접 고친 기간은 보존
                 if (!st.coordManual) updates[`courses/${r}/settings/coordinatorName`] = coordFull;   // [J10] 수동 지정한 담임은 자동동기화에서 보존
                 if (!st.professorManual) {                                  // 수동 지정한 교수는 자동동기화에서 보존(덮어쓰지 않음)
                     updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));   // [J89] 담임 다수
@@ -13911,6 +13929,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${r}/status/professorMain`] = null;
         updates[`courses/${r}/status/professorManual`] = null;   // 방 비우면 수동 플래그 해제
         updates[`courses/${r}/status/coordManual`] = null;       // [J10] 담임 수동 플래그도 해제
+        updates[`courses/${r}/status/periodManual`] = null;      // [J90] 기간 수동 플래그도 해제(새 과정이 옛 기간에 묶이지 않게)
         updates[`courses/${r}/status/roomDetailManual`] = null;  // 방 비우면 강의실 수동 플래그도 해제
         updates[`courses/${r}/status/roomStatus`]   = 'idle';
         updates[`courses/${r}/status/ownerSessionId`] = null;
@@ -13942,6 +13961,7 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
         updates[`courses/${room}/status/professorManual`] = null;   // 신규 배치는 계획값 기준(자동동기화 대상)
         updates[`courses/${room}/status/coordManual`] = null;        // [J10] 신규 배치는 계획 담임 기준
         updates[`courses/${room}/status/roomDetailManual`] = null;  // 신규 배치는 계획 강의실 기준
+        updates[`courses/${room}/status/periodManual`] = null;      // [J90] 신규 배치는 계획 기간 기준
         updates[`courses/${room}/status/roomStatus`]   = 'active';
         updates[`courses/${room}/settings/roomDetailName`] = course.roomDetail || '';
         updates[`courses/${room}/status/ownerSessionId`] = null;
@@ -15025,6 +15045,7 @@ ui.saveFieldEdit = async function(){
     if(!ds.length){ if(msg)msg.textContent='기간을 선택하세요.'; return; }
     var fmt=function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
     updates['courses/'+room+'/settings/period']=fmt(ds[0])+' ~ '+fmt(ds[ds.length-1]);
+    updates['courses/'+room+'/status/periodManual']=true;   // [J90] 수동 수정 — 자동 동기화가 되돌리지 않게 보호
   } else if(f==='roomDetail'){
     var sv=(document.getElementById('fe-val')||{}).value||'';
     if(sv==='direct'){ sv=((document.getElementById('fe-direct')||{}).value||'').trim(); if(!sv){ if(msg)msg.textContent='장소를 입력하세요.'; return; } }
