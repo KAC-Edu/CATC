@@ -7974,11 +7974,16 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var rest = _hrRoster.length - 1;
     var mp   = String(main.phone||'').replace(/[^0-9+]/g,'');
 
-    var html = '<span style="flex:0 0 auto; display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">'
-             + '<span style="flex:0 0 auto; width:auto; display:inline-flex; align-items:center; gap:6px; height:28px; line-height:1; max-width:100%; overflow:hidden; padding:0 12px; background:#2563eb; color:#fff; border-radius:6px; font-size:13.5px; font-weight:800; white-space:nowrap; text-overflow:ellipsis;"><i class="fa-solid fa-user" style="font-size:11px;"></i>'+_hrEsc(main.name)+'</span>';
+    /* 담임 = 두 색이 맞붙은 '하나의 알약'.
+       왼쪽(파랑) 이름 | 오른쪽(노랑) 전화 — 바깥쪽만 둥글고, 맞닿는 안쪽은 각지게.
+       (블록 두 개가 따로 떨어져 보이지 않도록 gap 을 2px 로 좁힌다) */
+    var _pillGap = mp ? 2 : 0;
+    var _nameRadius = mp ? '999px 5px 5px 999px' : '999px';
+    var html = '<span style="flex:0 0 auto; display:inline-flex; align-items:stretch; gap:'+_pillGap+'px; flex-wrap:nowrap; min-width:0; filter:drop-shadow(0 3px 8px rgba(15,23,42,.16));">'
+             + '<span style="flex:0 0 auto; width:auto; display:inline-flex; align-items:center; gap:6px; height:28px; line-height:1; max-width:100%; overflow:hidden; box-sizing:border-box; padding:0 12px 0 13px; background:#2563eb; color:#fff; border-radius:'+_nameRadius+'; font-size:13.5px; font-weight:800; white-space:nowrap; text-overflow:ellipsis;"><i class="fa-solid fa-user" style="font-size:11px;"></i>'+_hrEsc(main.name)+'</span>';
     if(mp){
       html += '<button type="button" class="kh-callbtn2" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="담임에게 전화"'
-            + ' style="flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;line-height:1;padding:0 12px;border:none;border-radius:6px;background:#facc15;color:#fff;font-size:13.5px;font-weight:900;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.18);white-space:nowrap;"><i class="fa-solid fa-phone" style="font-size:11px;"></i>전화</button>';
+            + ' style="flex:0 0 auto;display:inline-flex;align-items:center;gap:6px;height:28px;line-height:1;box-sizing:border-box;padding:0 13px 0 12px;margin:0;border:none;border-radius:5px 999px 999px 5px;background:#facc15;color:#fff;font-size:13.5px;font-weight:900;cursor:pointer;text-shadow:0 1px 2px rgba(0,0,0,.18);white-space:nowrap;"><i class="fa-solid fa-phone" style="font-size:11px;"></i>전화</button>';
     }
     if(rest > 0){
       html += '<button type="button" onclick="openHomeroomSheet()" aria-label="담임 교수 전체 보기"'
@@ -9728,7 +9733,9 @@ html.kac-core-screen #roomBadge{
 .kac-shuttle-status-row span{ flex-basis:58px !important; font-size:11.5px !important; }
 .kac-shuttle-status-row b{ font-size:14px !important; }
 #shuttleCancelArea > button{
-  margin:0 17px 16px !important;
+  /* 위 정보 카드에 딱 붙어 있어서 답답했다 → 위쪽에 여백을 줘서 떼어 놓는다.
+     구분선까지 넣어 '카드'와 '취소 동작'이 분리돼 보이게 한다. */
+  margin:16px 17px 16px !important;
   width:calc(100% - 34px) !important;
   padding:12px !important;
   border:1px solid #fecaca !important;
@@ -9736,6 +9743,8 @@ html.kac-core-screen #roomBadge{
   color:#dc2626 !important;
   box-shadow:none !important;
 }
+/* 정보 카드(신청 완료 내역)와 취소 버튼 사이를 확실히 띄운다 */
+#shuttleCancelArea #myCurrentShuttleText{ margin-bottom:6px !important; }
 
 /* 맛집: 소개·필터·하단을 압축해 목록 가시 영역 확대 */
 .food-hero{
