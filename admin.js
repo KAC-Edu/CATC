@@ -4561,6 +4561,8 @@ setMode: function(mode) {
         try { document.body.classList.toggle('in-course', !!state.room && mode !== 'waiting' && mode !== 'home' && mode !== 'prof-presentation'); } catch(e){}
         // 마이크 모니터링 버튼도 in-course 상태에 맞춰 표시/숨김 갱신 (현황판에선 숨김)
         try { lectureMonitor._updateToggleButton(); } catch(e){}
+        // [J88] 퀴즈·질문사항 화면에선 배경음악을 잠시 끄고, 나가면 스스로 다시 켠다
+        try { bgmPlayer.applyModeMute(mode); } catch(e){}
         // [QR] 현황판(waiting)에선 입장 QR 숨김, 과정현황(dashboard)에선 표시(사용자가 X로 닫지 않은 경우)
         try {
             var _qr = document.getElementById('floatingQR');
@@ -12269,6 +12271,10 @@ const bgmPlayer = {
     // 배경음 켜기/끄기 토글 (켜면 무작위로 끊김없이 계속 재생)
     toggleBgm: function() {
         if (!this._audio) this.init();
+        // [J88] 강사가 직접 누른 것이므로, 자동 음소거 상태는 해제한다
+        //  (안 그러면 퀴즈 화면을 나갈 때 강사가 껐던 음악이 멋대로 다시 켜진다)
+        this._ducked = false;
+        this._duckResume = false;
         if (this._isPlaying) {
             this.stop();
         } else if (this._currentNum > 0) {
@@ -12357,6 +12363,50 @@ const bgmPlayer = {
             this._syncBadge();
             this._saveState();
         }).catch(() => {});
+    },
+
+    /* ══ [J88] 화면별 일시 음소거 ══════════════════════════════════════
+       입교안내 전체화면 · 퀴즈모드 · 질문사항(Q&A) 화면에서는 배경음악이 방해가 된다.
+       → '끄는' 게 아니라 잠시 '멈춰 두었다가', 그 화면을 벗어나면 스스로 다시 켠다.
+       (강사가 직접 끈 경우와 구분해야 하므로 _duckResume 플래그로 기억)          */
+    _ducked: false,        // 지금 일시 음소거 상태인가
+    _duckResume: false,    // 원래 재생 중이었나 (나가면 다시 켜야 하나)
+    duck: function(reason) {
+        try {
+            if (this._ducked) return;                     // 이미 멈춰둠
+            if (!this._audio || !this._isPlaying) return; // 애초에 안 켜져 있으면 할 일 없음
+            this._duckResume = true;
+            this._ducked = true;
+            this._audio.pause();                          // 곡 위치는 그대로 두고 일시정지만
+            this._isPlaying = false;
+            this._syncBadge();
+            console.log('[배경음] 일시 음소거 —', reason || '');
+        } catch (e) {}
+    },
+    unduck: function() {
+        try {
+            if (!this._ducked) return;
+            this._ducked = false;
+            if (!this._duckResume) return;                // 원래 꺼져 있었으면 그대로 둔다
+            this._duckResume = false;
+            if (!this._audio) return;
+            this._audio.play().then(() => {
+                this._isPlaying = true;
+                this._syncBadge();
+            }).catch(() => {});
+            console.log('[배경음] 음소거 해제 — 이어서 재생');
+        } catch (e) {}
+    },
+    /* 이 모드에선 배경음악을 잠시 끈다 */
+    _MUTE_MODES: ['quiz', 'qa'],
+    applyModeMute: function(mode) {
+        try {
+            const fs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+            const isGuideFull = (mode === 'guide' && fs);          // 입교안내 전체화면
+            const need = isGuideFull || this._MUTE_MODES.indexOf(mode) >= 0;
+            if (need) this.duck(mode + (isGuideFull ? '(전체화면)' : ''));
+            else this.unduck();
+        } catch (e) {}
     },
 
     pause: function() {
@@ -16417,6 +16467,16 @@ function kacShuttleMerge(reqObj, stuObj){
   return { items: items, nonApp: nonApp, counts: counts, total: total };
 }
 try { window.kacShuttleMerge = kacShuttleMerge; } catch(e){}
+
+/* [J88] 입교안내는 '전체화면일 때만' 배경음을 끈다 → 전체화면 진입/해제를 감지해 반영.
+   (전체화면을 빠져나오면 다시 배경음이 살아난다) */
+try {
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(function (ev) {
+        document.addEventListener(ev, function () {
+            try { bgmPlayer.applyModeMute(state.currentMode); } catch (e) {}
+        });
+    });
+} catch (e) {}
 
 /* [J46/J47 복구] 파일 말미 전역 노출 — const 선언(ui/state/dataMgr/guideMgr)은 window 속성이
    되지 않아, admin.html 옵저버 동기화 모듈(hookQa 등)이 window.ui 등으로 존재를 확인하는데
