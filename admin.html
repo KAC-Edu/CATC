@@ -483,6 +483,23 @@
   }
   #kacBrandBtn:hover{ color:#93c5fd; text-shadow:0 0 18px rgba(147,197,253,.55); }
   body.in-course #kacBrandBtn{ display:none; }
+
+  /* [J93] 과정 안(과정운영현황·소메뉴)에서도 좌측 상단에 마우스를 올리면
+     현황판 브랜드와 '똑같은' 파란 글로우가 나오게 한다.
+     그 자리는 클릭하면 뒤로 가는 곳이므로, 누를 수 있다는 신호를 동일하게 준다. */
+  #headerCourseInfo{ transition:color .16s, text-shadow .16s; }
+  #headerCourseInfo:hover #headerBackBtn,
+  #headerCourseInfo:hover .header-title,
+  #headerCourseInfo:hover .header-title #displayRoomName,
+  #headerCourseInfo:hover .header-title .course-sub-name{
+      color:#93c5fd !important;
+      text-shadow:0 0 18px rgba(147,197,253,.55);
+  }
+  #headerCourseInfo:hover .header-title .course-sub-name{ opacity:1; }
+  #headerCourseInfo #headerBackBtn,
+  #headerCourseInfo .header-title,
+  #headerCourseInfo .header-title #displayRoomName,
+  #headerCourseInfo .header-title .course-sub-name{ transition:color .16s, text-shadow .16s, opacity .16s; }
 </style>
 <header class="header" style="position:relative;">
     <!-- [J92] 현황판 좌측 상단 브랜드 → 누르면 키오스크 화면 -->
