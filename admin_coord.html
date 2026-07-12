@@ -2651,7 +2651,16 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
                   </select>
                   <input type="text" id="setup-location-direct" class="navy-input" style="margin-top:5px; display:none;" placeholder="위치 직접 작성">
               </div>
-              <div><label class="setup-label">담당 교수</label><select id="setup-prof-select" class="navy-select"></select></div>
+              <!-- [J89] 담임 교수 여러 명 지정 가능. ★ 표시가 대표(프로필·입교안내에 나오는 사람) -->
+              <div>
+                  <label class="setup-label">담임 교수 <span style="font-weight:600; color:#7da2c9; font-size:11px;">(여러 명 선택 가능 · ★ = 대표)</span></label>
+                  <div style="display:flex; gap:5px;">
+                      <select id="setup-prof-select" class="navy-select" style="flex:1;"></select>
+                      <button type="button" onclick="profMulti.add()" style="flex-shrink:0; padding:0 14px; border:none; border-radius:8px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">＋ 추가</button>
+                  </div>
+                  <div id="setup-prof-chips" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:7px;"></div>
+                  <div id="setup-prof-hint" style="font-size:11px; color:#7da2c9; margin-top:5px;">교수를 고르고 [＋ 추가]. 이름을 누르면 대표(★)가 됩니다.</div>
+              </div>
               <div>
                   <label class="setup-label">과정 운영 담당자 (행정)</label>
                   <div style="display:flex; gap:5px;">
@@ -4377,7 +4386,14 @@ async function loadRoomSettings(rid) {
 
     // 3. 기본 정보 대입
     document.getElementById('setup-course-name').value = settings.courseName || "";
-    document.getElementById('setup-prof-select').value = status.professorName || "";
+    // [J89] 담임 여러 명 — 저장된 목록(없으면 대표 1명)을 칩으로 복원
+    try{
+        profMulti.set(
+            (status.professorNames && status.professorNames.length) ? status.professorNames : (status.professorName || ''),
+            status.professorMain || ''
+        );
+    }catch(e){}
+    document.getElementById('setup-prof-select').value = "";
     
     // 4. 담당자 값 선택 (옵션이 이미 그려진 상태여야 함)
     const coordSelect = document.getElementById('setup-coord-select');
@@ -4466,23 +4482,33 @@ async function saveIntegratedSettings() {
     const name = document.getElementById('setup-course-name').value.trim(); 
     const start = document.getElementById('setup-start').value; 
     const end = document.getElementById('setup-end').value; 
-    const prof = document.getElementById('setup-prof-select').value; 
-    const coord = document.getElementById('setup-coord-select').value; 
-    const dropLoc = document.getElementById('setup-room-dropdown').value; 
-    const loc = (dropLoc === 'direct') ? document.getElementById('setup-location-direct').value.trim() : dropLoc; 
-    
-    if(!rid || !name || !start || !end || !prof || !loc) return showKacAlert("필수 항목 입력 필요"); 
-    
-    const updates = {}; 
-    updates[`courses/${rid}/settings/courseName`] = name; 
-    updates[`courses/${rid}/settings/period`] = `${start} ~ ${end}`; 
-    updates[`courses/${rid}/status/professorName`] = prof; 
-    updates[`courses/${rid}/settings/coordinatorName`] = coord; 
-    updates[`courses/${rid}/settings/roomDetailName`] = loc; 
-    updates[`courses/${rid}/status/roomStatus`] = "active"; 
-    
-    await firebase.database().ref().update(updates).then(()=>showKacAlert("저장 완료")); 
-    closeSetupModal(); 
+    // [J89] 담임은 칩 목록에서 가져온다 (드롭다운은 '추가용'일 뿐)
+    const profArr = profMulti.list.slice();
+    const prof = profMulti.mainName();          // 대표
+    const coord = document.getElementById('setup-coord-select').value;
+    const dropLoc = document.getElementById('setup-room-dropdown').value;
+    const loc = (dropLoc === 'direct') ? document.getElementById('setup-location-direct').value.trim() : dropLoc;
+
+    if(!rid || !name || !start || !end || !prof || !loc) return showKacAlert("필수 항목 입력 필요 (담임 교수를 1명 이상 추가하세요)");
+
+    const updates = {};
+    updates[`courses/${rid}/settings/courseName`] = name;
+    updates[`courses/${rid}/settings/period`] = `${start} ~ ${end}`;
+    // 대표 = professorName(기존 호환) / 전체 = professorNames / 수동 대표 = professorMain
+    updates[`courses/${rid}/status/professorName`]  = prof;
+    updates[`courses/${rid}/status/professorNames`] = profArr.length ? profArr : null;
+    updates[`courses/${rid}/status/professorMain`]  = profMulti.main || null;
+    updates[`courses/${rid}/status/professorManual`] = true;   // 운영부가 직접 지정 → 계획 자동동기화가 덮어쓰지 않음
+    updates[`courses/${rid}/settings/coordinatorName`] = coord;
+    updates[`courses/${rid}/settings/roomDetailName`] = loc;
+    updates[`courses/${rid}/status/roomStatus`] = "active";
+
+    await firebase.database().ref().update(updates).then(()=>showKacAlert(
+        profArr.length > 1
+            ? `저장 완료 — 담임 ${profArr.length}명 (대표: ${prof} 교수)`
+            : "저장 완료"
+    ));
+    closeSetupModal();
 }
 
 
@@ -6276,6 +6302,72 @@ function classroomDetailSelectHtmlCoord(value, changeExpr, styleText, inUse) {
         '<option value="__direct__">✏️ 직접 입력…</option>' +
         '</select>';
 }
+
+/* ══ [J89] 과정 설정 모달 — 담임 여러 명 선택 + 대표(★) 지정 ══════════════
+   · [＋ 추가]로 여러 명을 담는다 (중복 무시)
+   · 칩(이름)을 클릭하면 그 사람이 대표(★)가 된다
+   · 대표를 따로 안 고르면 '맨 앞 사람'이 자동 대표
+   · 대표 = 교육생 앱·입교안내·프로필에 나오는 사람                             */
+var profMulti = {
+  list: [],       // ["장두석","박호원","김정민"]
+  main: '',       // 수동으로 고른 대표 (비어 있으면 list[0])
+
+  set: function(names, mainName){
+    this.list = kacProfList(names);
+    this.main = (mainName && this.list.indexOf(mainName) >= 0) ? mainName : '';
+    this.render();
+  },
+  add: function(){
+    var sel = document.getElementById('setup-prof-select');
+    var v = sel ? String(sel.value || '').trim() : '';
+    if(!v) return;
+    if(this.list.indexOf(v) < 0) this.list.push(v);
+    this.render();
+  },
+  del: function(name, ev){
+    if(ev && ev.stopPropagation) ev.stopPropagation();
+    this.list = this.list.filter(function(n){ return n !== name; });
+    if(this.main === name) this.main = '';      // 대표를 지우면 맨 앞이 다시 대표
+    this.render();
+  },
+  pick: function(name){                          // 이름 클릭 = 대표 지정
+    this.main = (this.main === name) ? '' : name;
+    this.render();
+  },
+  mainName: function(){
+    if(this.main && this.list.indexOf(this.main) >= 0) return this.main;
+    return this.list[0] || '';
+  },
+  render: function(){
+    var box = document.getElementById('setup-prof-chips');
+    var hint = document.getElementById('setup-prof-hint');
+    if(!box) return;
+    var self = this, main = this.mainName();
+    if(!this.list.length){
+      box.innerHTML = '<span style="font-size:12px; color:#7da2c9;">아직 담임이 없습니다.</span>';
+      if(hint) hint.innerHTML = '교수를 고르고 [＋ 추가]. 이름을 누르면 대표(★)가 됩니다.';
+      return;
+    }
+    box.innerHTML = this.list.map(function(n){
+      var isMain = (n === main);
+      return '<span onclick="profMulti.pick(\'' + n.replace(/'/g,"\\'") + '\')" title="클릭하면 대표(★)가 됩니다" '
+        + 'style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; padding:6px 11px; border-radius:999px; font-size:13px; font-weight:800; '
+        + (isMain
+            ? 'background:#facc15; color:#422006; box-shadow:0 2px 8px rgba(250,204,21,.4);'
+            : 'background:#1e3a5f; color:#cbd5e1; border:1px solid #2d5580;')
+        + '">'
+        + (isMain ? '★ ' : '') + n
+        + '<b onclick="profMulti.del(\'' + n.replace(/'/g,"\\'") + '\', event)" style="margin-left:2px; opacity:.6; font-size:14px;">×</b>'
+        + '</span>';
+    }).join('');
+    if(hint){
+      hint.innerHTML = (this.list.length > 1)
+        ? ('★ <b>' + main + '</b> 교수가 대표입니다 — 프로필·입교안내·교육생 앱에 이 분이 나옵니다. (총 ' + this.list.length + '명)')
+        : '담임 1명. 여러 명이면 [＋ 추가]로 더 넣으세요.';
+    }
+  }
+};
+try{ window.profMulti = profMulti; }catch(e){}
 
 /* ══ [J89] 담임 교수 여러 명 지원 ══════════════════════════════════════════
    설계 원칙: 기존 코드 80여 곳이 status.professorName(문자열 하나)을 읽는다.
