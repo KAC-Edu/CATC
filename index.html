@@ -7992,16 +7992,25 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     html += '</span>';
     el.innerHTML = html;
 
-    /* [폭 맞춤] 노란 '전화' 블록이 파란 '이름' 블록보다 길어 보여서 균형이 깨졌다.
-       → 이름 블록의 실제 폭을 재서 전화 블록을 같은 폭으로 고정한다. */
+    /* [폭 맞춤] 노란 '전화' 블록이 파란 '이름' 블록보다 길어서 균형이 깨졌다.
+       → 이름 블록의 실제 폭을 재서 전화 블록을 같은 폭으로 맞춘다.
+       ※ 입교완료 화면이 아직 숨겨진(display:none) 상태에서 그려지면 폭이 0으로 나온다.
+         그래서 폭이 잡힐 때까지(화면에 보일 때까지) 잠깐씩 재시도한다. */
     if(mp){
-      requestAnimationFrame(function(){
+      var _tries = 0;
+      var _fit = function(){
         var n = el.querySelector('.khp-nm');
         var c = el.querySelector('.kh-callbtn2');
-        if(!n || !c) return;
+        if(!n || !c) return;                       // 그 사이 다시 그려졌으면 중단
         var w = Math.round(n.getBoundingClientRect().width);
-        if(w > 0){ c.style.width = w + 'px'; c.style.padding = '0'; }
-      });
+        if(w > 0){
+          c.style.width   = w + 'px';
+          c.style.padding = '0';
+          return;                                  // 적용 완료
+        }
+        if(++_tries < 40) setTimeout(_fit, 150);   // 최대 6초까지 기다렸다 적용
+      };
+      requestAnimationFrame(_fit);
     }
   }
 
