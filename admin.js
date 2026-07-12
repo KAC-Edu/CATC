@@ -10078,7 +10078,16 @@ init: function() {
                 this._cgAudio.preload = 'auto';
                 this._cgAudio.addEventListener('error', function(){});  // start.mp3 없으면 조용히 무시
             }
-            // 초기 음량 = 전체 과정 공통 저장값(system/sharedGuide/channelAudioVolume), 없으면 20%
+            /* [J94] 음량 = 저장값(system/sharedGuide/channelAudioVolume), 없으면 20%.
+               아직 서버값을 못 읽었으면(_cgVolLoaded=false) 읽어와서 그때 적용한다.
+               예전엔 못 읽은 상태에서 기본 20%로 덮어써 '설정이 풀린' 것처럼 보였다. */
+            var self = this;
+            if (ui && !ui._cgVolLoaded && ui._loadChannelVol) {
+                ui._loadChannelVol(function(){
+                    try { self._cgAudio.volume = Math.max(0, Math.min(1, ui._cgVol)); } catch(e){}
+                    try { self._setChannelVolume(ui._cgVol); } catch(e){}   // 슬라이더·아이콘도 맞춤
+                });
+            }
             var _vol = (ui && ui._cgVol != null && isFinite(ui._cgVol)) ? ui._cgVol : 0.2;
             this._cgAudio.volume = Math.max(0, Math.min(1, _vol));
             this._cgAudio.currentTime = 0;
@@ -10089,16 +10098,23 @@ init: function() {
     _stopChannelAudio: function() {
         try { if (this._cgAudio) { this._cgAudio.pause(); this._cgAudio.currentTime = 0; } } catch(e){}
     },
-    // [음량] 현재 재생 음량 설정 + 아이콘/슬라이더 갱신 (저장은 3초 롱프레스에서만)
-    _setChannelVolume: function(v) {
+    /* [J94] 음량 설정이 자꾸 풀리던 문제.
+       원인 ① 슬라이더를 움직여도 오디오 볼륨만 바뀌고 기억값(ui._cgVol)은 그대로였다.
+              → 안내 페이지가 다시 그려질 때 apply()가 '옛 값'으로 되돌려 놓았다.
+       원인 ② _playChannelAudio()가 음악을 다시 틀 때마다 ui._cgVol 로 볼륨을 덮어썼다.
+       → 이제 음량을 바꾸면 기억값도 같이 바뀌고, 손을 떼면 자동 저장된다(롱프레스 불필요). */
+    _setChannelVolume: function(v, opts) {
         v = Math.max(0, Math.min(1, Number(v)||0));
         try { if (this._cgAudio) this._cgAudio.volume = v; } catch(e){}
+        try { if (typeof ui !== 'undefined') ui._cgVol = v; } catch(e){}   // ★ 기억값도 같이 갱신 → 다시 그려도 안 되돌아감
         try {
             var ico = document.getElementById('cgVolIco');
             if (ico) ico.className = 'fa-solid ' + (v <= 0 ? 'fa-volume-xmark' : (v < 0.5 ? 'fa-volume-low' : 'fa-volume-high'));
             var sl = document.getElementById('cgVolSlider');
             if (sl && String(Math.round(v*100)) !== sl.value) sl.value = Math.round(v*100);
         } catch(e){}
+        // 슬라이더에서 손을 뗐을 때(commit) 서버에 저장 → 다음에 들어와도 그대로
+        if (opts && opts.commit) { try { ui._saveChannelVol(v); } catch(e){} }
     },
     _channelGuideHTML: function() {
         // [영상 대체] 카카오채널 입교/출결 등록방법 안내를 GitHub에 올린 start.mp4 영상으로 상영.
@@ -10115,10 +10131,11 @@ init: function() {
             <div class="cg-count-label">현재 입교등록</div>
             <div class="cg-count-num"><b id="cgCountNum">0</b><span class="cg-count-unit">명</span></div>
           </div>
-          <div id="cgVolWrap" class="cg-vol-wrap" title="클릭: 음량 조절  ·  3초 꾹: 지금 음량을 모든 과정 초기값으로 저장">
+          <div id="cgVolWrap" class="cg-vol-wrap" title="음량을 조절하면 자동 저장됩니다 (모든 과정 공통)  ·  3초 꾹: 위치 이동">
             <button id="cgVolBtn" class="cg-vol-btn" type="button"><i id="cgVolIco" class="fa-solid fa-volume-low"></i></button>
             <input id="cgVolSlider" class="cg-vol-slider" type="range" min="0" max="100" value="20"
-                   oninput="try{guideMgr._setChannelVolume(this.value/100);}catch(e){}">
+                   oninput="try{guideMgr._setChannelVolume(this.value/100);}catch(e){}"
+                   onchange="try{guideMgr._setChannelVolume(this.value/100,{commit:true});}catch(e){}">
           </div>
         </div>`;
     },
@@ -16029,8 +16046,12 @@ ui._initChannelVolUI = function(){
       if(dragMode){
         dragMode=false; if(wrap) wrap.classList.remove('cg-vol-dragging');
         ui._saveVolPos();
-        // 위치와 함께 현재 음량도 초기값으로 저장 (같이 저장)
-        var vol=(guideMgr._cgAudio?guideMgr._cgAudio.volume:((ui._cgVol!=null)?ui._cgVol:ui._cgVolDefault));
+        /* [J94] 음량은 슬라이더에서 손을 뗄 때 이미 저장된다.
+           여기서는 '지금 실제로 나고 있는 소리'를 기준으로 한 번 더 확정한다.
+           (예전엔 _cgAudio가 없으면 옛 값(ui._cgVol)을 그대로 다시 써서 방금 조절한 값이 되돌아갔다) */
+        var _sl=document.getElementById('cgVolSlider');
+        var vol = (guideMgr._cgAudio && isFinite(guideMgr._cgAudio.volume)) ? guideMgr._cgAudio.volume
+                : (_sl ? (Number(_sl.value)/100) : ((ui._cgVol!=null) ? ui._cgVol : ui._cgVolDefault));
         ui._saveChannelVol(vol);
         if(ui.showAlert) ui.showAlert('📍 스피커 위치와 음량('+Math.round(vol*100)+'%)을 저장했습니다. ('+(ui._isGuideFs()?'전체화면':'창 모드')+' · 모든 과정 공통)');
       } else if(!moved && wrap){
