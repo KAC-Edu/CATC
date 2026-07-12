@@ -488,6 +488,49 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
 .summary-card b { font-size: 36px !important; color: #1e293b; }
 #quizSummaryOverlay .btn-action { font-size: 20px !important; padding: 15px 40px !important; margin-top: 30px; }
 
+/* [J83] QUIZ 분석 리포트 — 내부 스크롤 제거 + 우측 상단 X
+   · 예전엔 문항별 결과에만 스크롤바가 생겨 답답했다 → 리포트 전체가 페이지처럼 아래로 쭉 흐른다.
+   · 하단 '리포트 확인 및 퀴즈 종료' 버튼을 없애고, 플랫폼 공통 표기인 우측 상단 X로 통일.  */
+#quizSummaryOverlay.quiz-report{
+    display:block;                 /* flex 중앙정렬 해제 — 위에서부터 자연스럽게 흐르도록 */
+    overflow-y:auto;               /* 리포트가 길면 화면 전체가 스크롤 */
+    -webkit-overflow-scrolling:touch;
+    padding:34px 0 60px;
+}
+#quizSummaryOverlay.quiz-report .qr-body{
+    width:92%; max-width:860px; margin:0 auto; text-align:center;
+}
+/* 문항별 결과: 내부 스크롤 없음 — 있는 만큼 그대로 아래로 */
+#quizSummaryOverlay.quiz-report #questionBreakdown{
+    overflow:visible !important; max-height:none !important; min-height:0 !important;
+    padding-right:0 !important; margin-bottom:0 !important; flex:none !important;
+}
+/* 우측 상단 X — 퀴즈 종료 + 초기화 */
+#quizSummaryOverlay .qr-close{
+    position:absolute; top:18px; right:22px; z-index:5;
+    width:52px; height:52px; border-radius:50%; border:none; cursor:pointer;
+    background:#fff; color:#475569; font-size:26px; line-height:1;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 18px rgba(15,23,42,.14); transition:.15s;
+}
+#quizSummaryOverlay .qr-close:hover{ background:#ef4444; color:#fff; transform:rotate(90deg); box-shadow:0 8px 22px rgba(239,68,68,.35); }
+/* [J83] 평균 점수 하나만 크게 — 나머지 수치는 다 뺐다 */
+#quizSummaryOverlay .qr-hero{
+    background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff;
+    border-radius:22px; padding:30px 24px; margin-bottom:26px;
+    box-shadow:0 14px 34px rgba(37,99,235,.30);
+}
+#quizSummaryOverlay .qr-hero-label{ font-size:19px; font-weight:800; opacity:.92; margin-bottom:6px; }
+#quizSummaryOverlay .qr-hero-score{ font-size:76px; font-weight:900; line-height:1.05; letter-spacing:-2px; }
+#quizSummaryOverlay .qr-hero-score span{ font-size:28px; font-weight:800; margin-left:6px; opacity:.9; }
+/* 문항 카드 사이 간격 (스크롤이 없어졌으니 여백으로 구분) */
+#quizSummaryOverlay.quiz-report .qbd-row{ margin-bottom:14px; }
+@media(max-width:900px){ #quizSummaryOverlay .qr-hero-score{ font-size:56px; } }
+@media(max-width:900px){
+    #quizSummaryOverlay.quiz-report{ padding:20px 0 48px; }
+    #quizSummaryOverlay .qr-close{ top:12px; right:14px; width:44px; height:44px; font-size:22px; }
+}
+
 /* Floating QR Style */
 .floating-qr-box {
     position: absolute; bottom: 30px; left: 30px;
