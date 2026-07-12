@@ -6914,6 +6914,13 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 #courseSetupModal #setup-keep-next-week + span{ line-height:1.35; }
 #courseSetupModal label[for="setup-show-on-board"],
 #courseSetupModal label[for="setup-keep-next-week"]{ padding:9px 12px !important; }
-/* 담임 교수 줄 — 이제 한 줄을 통째로 쓰므로 셀렉트가 충분히 넓어진다 */
-#courseSetupModal #setup-prof-select{ min-width:0; }
+/* 담임 교수 줄 — 셀렉트가 찌그러지고 [＋추가]가 늘어나 기어 버튼이 밖으로 밀려났었다.
+   → 셀렉트만 늘어나고 버튼 두 개는 제 크기를 지키게 고정한다. */
+#courseSetupModal #setup-prof-row{ width:100% !important; flex-wrap:nowrap !important; }
+#courseSetupModal #setup-prof-row > select{ flex:1 1 auto !important; min-width:0 !important; width:auto !important; }
+#courseSetupModal #setup-prof-row > button{ flex:0 0 auto !important; width:auto !important; }
+#courseSetupModal #setup-prof-row > button.btn-dark{ width:46px !important; }
 #courseSetupModal #setup-prof-hint{ margin-top:4px !important; }
+
+/* 두 열이 위에서부터 나란히 시작하도록 (오른쪽 칸이 늘어나 세로가 커지는 것 방지) */
+#courseSetupModal .setup-flex-layout{ align-items:flex-start !important; }
