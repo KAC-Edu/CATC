@@ -4680,6 +4680,16 @@ setMode: function(mode) {
         // [J74] 질문사항(Q&A) 화면을 열면 → 지금 있는 질문을 모두 '읽음' → 빨간 배지 사라짐
         //  (다음에 새 질문이 올라오면 그 질문만 미확인이 되어 배지가 다시 뜬다)
         if (mode === 'qa') { try { setTimeout(() => ui.markQaAllRead(), 0); } catch(e){} }
+        /* [J91] 소메뉴로 들어갈 때 브라우저 히스토리에 한 칸을 쌓는다.
+           → 브라우저 뒤로가기(또는 마우스 4번 버튼)를 눌러도 사이트를 벗어나지 않고
+             '과정 운영 현황'으로 한 단계만 돌아간다. */
+        try {
+            const _isSub = !!(state.room && mode && mode !== 'dashboard' && mode !== 'home' && mode !== 'waiting');
+            if (_isSub && !history.state?.kacSub) {
+                history.pushState({ kacSub: true }, '');
+            }
+        } catch(e) {}
+        try { setTimeout(() => ui._syncBackLabel(), 0); } catch(e) {}
         // [U턴 버튼] 과정(방)에 들어가 있고 현황판/홈이 아닐 때만 표시
         try { document.body.classList.toggle('in-course', !!state.room && mode !== 'waiting' && mode !== 'home' && mode !== 'prof-presentation'); } catch(e){}
         // 마이크 모니터링 버튼도 in-course 상태에 맞춰 표시/숨김 갱신 (현황판에선 숨김)
@@ -6667,6 +6677,32 @@ resetShuttleRequests: function() {
         else { ui.goHomePortal(); }
     },
 
+    /* ══ [J91] 뒤로가기는 '한 단계씩' ══════════════════════════════════════
+       Q&A·퀴즈·출결 같은 소메뉴 → (뒤로) → 과정 운영 현황 → (뒤로) → 통합 현황판.
+       예전엔 어디서 눌러도 곧장 통합 현황판으로 튀어나가 다시 들어가야 했다. */
+    _isSubMenu: function() {
+        // 과정에 들어와 있고, 지금 화면이 '과정 운영 현황'이 아니면 = 소메뉴 안이다
+        return !!(state.room && state.currentMode && state.currentMode !== 'dashboard');
+    },
+    goBackStep: function() {
+        if (ui._isSubMenu()) {
+            ui.setMode('dashboard');          // 1단계: 소메뉴 → 과정 운영 현황
+            ui._syncBackLabel();
+            return;
+        }
+        ui.goHomePortal();                    // 2단계: 과정 운영 현황 → 통합 현황판
+    },
+    /* 헤더 뒤로가기 버튼의 안내문구를 지금 위치에 맞게 바꿔준다 */
+    _syncBackLabel: function() {
+        try {
+            const box = document.getElementById('headerCourseInfo');
+            if (!box) return;
+            box.title = ui._isSubMenu()
+                ? '뒤로 — 과정 운영 현황으로'
+                : '뒤로 — 항공기술훈련원 통합 교육 현황판으로';
+        } catch(e) {}
+    },
+
     // [사이드바 파란 버튼] 통합 현황판(홈)=교수 프로필 관리 / 과정 화면=교육과정 환경 설정
     sidebarPrimaryAction: function() {
         if (!state.room) { try { profMgr.openManageModal(); } catch(e){} }
@@ -7261,7 +7297,7 @@ resetShuttleRequests: function() {
             if (old) old.remove();
             const modal = document.createElement('div');
             modal.id = 'profPickModal';
-            modal.className = 'prof-swap-modal';
+            modal.className = 'prof-swap-overlay';   // ← 'prof-swap-modal'은 존재하지 않는 클래스였다(스타일이 하나도 안 먹어 화면 우측에 늘어져 보임)
             modal.innerHTML =
                 '<div class="prof-swap-box" onclick="event.stopPropagation();">'
               + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-group"></i> 담임 교수 ' + all.length + '명</h3>'
@@ -11922,8 +11958,67 @@ const kiosk = {
         kiosk._bindSearch();
         if(typeof kiosk.closeSearch==='function') kiosk.closeSearch();
     },
+    /* ══ [J92] 현황판 좌측 상단 'KAC Training Platform' → 키오스크 미리보기 ══
+       클릭 즉시 키오스크가 뜨고, 5초 뒤 현황판으로 스스로 돌아온다.
+       단, 그 사이 키오스크를 만지면(터치·클릭·키 입력) 5초를 다시 센다.
+       → 잠깐 띄워 보는 용도로도, 실제로 검색하는 용도로도 둘 다 쓸 수 있다. */
+    AUTO_BACK_MS: 5000,
+    openTemp: function(){
+        this.open();
+        this._autoBackArm();
+    },
+    _autoBackArm: function(){
+        const self=this;
+        this._autoBackClear();
+        const m=document.getElementById('kioskModal');
+        // 화면을 만지면 카운트다운을 처음부터 다시 (검색하다 갑자기 닫히지 않게)
+        this._autoBackReset = function(){
+            if(!self._active) return;
+            if(self._autoBackT) clearTimeout(self._autoBackT);
+            self._autoBackT = setTimeout(function(){ if(self._active) self.close(); }, self.AUTO_BACK_MS);
+            self._autoBackHint();
+        };
+        ['pointerdown','keydown','wheel','touchstart'].forEach(function(ev){
+            if(m) m.addEventListener(ev, self._autoBackReset, true);
+        });
+        this._autoBackEvents = m;
+        this._autoBackReset();
+    },
+    _autoBackHint: function(){
+        // 남은 시간 안내 배지 (키오스크 우상단)
+        let h=document.getElementById('kioskAutoBackHint');
+        if(!h){
+            const m=document.getElementById('kioskModal'); if(!m) return;
+            h=document.createElement('div');
+            h.id='kioskAutoBackHint';
+            h.style.cssText='position:absolute; top:14px; left:50%; transform:translateX(-50%); z-index:100003;'
+                + 'padding:7px 16px; border-radius:999px; background:rgba(148,163,184,.18); border:1px solid rgba(148,163,184,.35);'
+                + 'color:#cbd5e1; font-size:13px; font-weight:800; pointer-events:none;';
+            m.appendChild(h);
+        }
+        const self=this;
+        let left=Math.ceil(this.AUTO_BACK_MS/1000);
+        h.textContent='현황판으로 자동 복귀 '+left+'초 · 화면을 만지면 계속 사용';
+        if(this._autoBackTick) clearInterval(this._autoBackTick);
+        this._autoBackTick=setInterval(function(){
+            left--;
+            if(!self._active || left<0){ clearInterval(self._autoBackTick); self._autoBackTick=null; return; }
+            h.textContent='현황판으로 자동 복귀 '+left+'초 · 화면을 만지면 계속 사용';
+        },1000);
+    },
+    _autoBackClear: function(){
+        if(this._autoBackT){ clearTimeout(this._autoBackT); this._autoBackT=null; }
+        if(this._autoBackTick){ clearInterval(this._autoBackTick); this._autoBackTick=null; }
+        const m=this._autoBackEvents;
+        if(m && this._autoBackReset){
+            ['pointerdown','keydown','wheel','touchstart'].forEach(ev=>{ try{ m.removeEventListener(ev, this._autoBackReset, true); }catch(e){} });
+        }
+        this._autoBackEvents=null; this._autoBackReset=null;
+        const h=document.getElementById('kioskAutoBackHint'); if(h) h.remove();
+    },
     close: function() {
         this._active=false;
+        this._autoBackClear();                        // [J92] 자동 복귀 타이머 정리
         if(this._searchTimer){ clearTimeout(this._searchTimer); this._searchTimer=null; }
         try{ if(typeof this.closeSearch==='function') this.closeSearch(); }catch(e){}
         const m=document.getElementById('kioskModal'); if(m) m.style.display='none';
@@ -16844,6 +16939,28 @@ try { window.state = state; } catch(e){}
 try { window.kacQaUnread = function(){ try { return ui.qaUnreadCount(); } catch(e){ return null; } }; } catch(e){}
 try { window.dataMgr = dataMgr; } catch(e){}
 try { window.guideMgr = guideMgr; } catch(e){}
+
+/* ══ [J91] 브라우저 뒤로가기도 '한 단계씩' ═══════════════════════════════════
+   소메뉴(Q&A·퀴즈·출결…)에 들어갈 때 setMode가 히스토리를 한 칸 쌓아둔다.
+   그래서 뒤로가기를 누르면 사이트를 빠져나가는 대신 여기로 들어오고,
+   과정 운영 현황으로만 한 단계 돌아간다.
+   과정 운영 현황에서 한 번 더 누르면 그때 통합 현황판으로 나간다. */
+try {
+    window.addEventListener('popstate', function(){
+        try {
+            if (ui._isSubMenu && ui._isSubMenu()) {
+                ui.setMode('dashboard');      // 1단계: 소메뉴 → 과정 운영 현황
+                ui._syncBackLabel();
+                return;
+            }
+            if (state.room) {                 // 2단계: 과정 운영 현황 → 통합 현황판
+                ui.goHomePortal();
+                return;
+            }
+            // 통합 현황판에서 또 누르면 브라우저 기본 동작(이전 페이지)에 맡긴다
+        } catch(e) {}
+    });
+} catch(e){}
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
  
