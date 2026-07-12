@@ -4625,9 +4625,9 @@ setMode: function(mode) {
                 }
             });
             // [J82] 여기서 무조건 켜던 것이 '퀴즈 없는데 시작 버튼이 눌리던' 원인.
-            //  → 진행할 문항이 있을 때만 켠다. 없으면 계속 숨김.
+            //  → 사용자가 실제로 퀴즈를 고른 경우에만 켠다(샘플 기본값은 '고른 것'이 아님).
             const quizCtrl = document.getElementById('quizControls');
-            if(quizCtrl) quizCtrl.style.display = (state.quizList && state.quizList.length) ? 'flex' : 'none';
+            if(quizCtrl) quizCtrl.style.display = quizMgr._hasQuiz() ? 'flex' : 'none';
         }
 
         // [J22] 출결 메뉴에서 다른 메뉴로 이동 시: OTP 자동 전체화면 예약 취소 + 열려 있는 전체화면 닫기(기존 화면 흐름 복귀)
@@ -4718,7 +4718,7 @@ setMode: function(mode) {
                 // [J82] 퀴즈 탭에 들어온 시점엔 아직 고른 문항이 없다 → 하단 진행 컨트롤을 확실히 잠근다.
                 //  (모달을 [닫기]로 그냥 닫아도 시작 버튼이 눌리지 않아야 한다. 문항을 고르면 그때 다시 켜진다)
                 var _qc0 = document.getElementById('quizControls');
-                if(_qc0) _qc0.style.display = (state.quizList && state.quizList.length) ? 'flex' : 'none';
+                if(_qc0) _qc0.style.display = quizMgr._hasQuiz() ? 'flex' : 'none';
                 quizMgr.loadSavedQuizList();
             }
             
@@ -7928,7 +7928,7 @@ prevNext: function(d) {
            예전엔 '진행할 퀴즈가 없습니다' 화면인데도 [현재 퀴즈 시작]·[◀▶]·[종료]가 눌렸고,
            빈 문항(undefined)이 Firebase activeQuiz 에 그대로 써져서 교육생 화면이 깨질 수 있었다.
            → 문항이 없으면: 컨트롤 숨김 + Firebase 쓰기 안 함 + 빈 상태 화면만 표시하고 종료. */
-        const _empty = !(state.quizList && state.quizList.length);
+        const _empty = !this._hasQuiz();   // 샘플 기본값(DEFAULT_QUIZ_DATA)은 '고른 퀴즈'가 아니다
         if (_empty) {
             this.resetTimerUI();
             this.renderScreen(null);                                  // '진행할 퀴즈가 없습니다' 화면
@@ -8127,8 +8127,15 @@ action: function(act) {
 
 
     
-    // [J82] 진행할 문항이 없으면 시작 자체를 막는다 (버튼이 어떤 경로로든 눌렸을 때의 최종 방어선)
-    _hasQuiz: function() { return !!(state.quizList && state.quizList.length); },
+    /* [J82] 진행할 퀴즈가 '실제로' 있는가?
+       ★ 주의: 앱이 뜰 때 state.quizList 에 DEFAULT_QUIZ_DATA(샘플 문항)가 미리 채워진다.
+         그래서 quizList.length 만 보면 "퀴즈가 있다"고 잘못 판정된다 —
+         바로 이것 때문에 '진행할 퀴즈가 없습니다' 화면인데도 시작 버튼이 살아 있었다.
+       → 사용자가 실제로 고르거나 업로드했을 때만 켜지는 isExternalFileLoaded 를 기준으로 삼는다.
+         (파일 업로드 / 저장된 퀴즈 선택 / 샘플 문항 사용 시 true) */
+    _hasQuiz: function() {
+        return !!(state.isExternalFileLoaded && state.quizList && state.quizList.length);
+    },
 
     smartNext: function() {
         if (!this._hasQuiz()) { ui.showAlert("진행할 퀴즈가 없습니다.\n\n먼저 [📋 퀴즈 선택하기]로 문항을 불러오세요."); return; }
