@@ -8290,12 +8290,37 @@ showFinalSummary: async function() {
             });
             {
                 const corrCnt = keys.filter(k => answers[k].choice === q.correct).length;
+
+                /* [J87] 선택지별 응답 분포 — "몇 명이 어디를 골랐는지"
+                   OX 문항이면 O/X, 객관식이면 각 보기(options)별로 센다.
+                   교육생이 아무것도 못 고른(무응답) 경우는 분모에서 빠진다. */
+                const opts = q.isOX ? ['O', 'X'] : (Array.isArray(q.options) ? q.options.slice() : []);
+                const dist = opts.map((label, oi) => {
+                    // 저장된 choice 값이 '보기 텍스트'일 수도, '인덱스/번호'일 수도 있어 둘 다 인정
+                    const cnt = keys.filter(k => {
+                        const ch = answers[k].choice;
+                        if (ch === label) return true;
+                        if (typeof ch === 'number' && ch === oi) return true;
+                        if (String(ch) === String(oi)) return true;
+                        if (String(ch) === String(oi + 1)) return true;
+                        return false;
+                    }).length;
+                    const isCorrect = (q.correct === label) || (String(q.correct) === String(oi)) || (String(q.correct) === String(oi + 1));
+                    return { label: String(label), count: cnt, correct: isCorrect };
+                });
+
                 questionStats.push({
                     no: totalQuestions,
                     title: q.text || '(제목 없음)',
                     answered: keys.length,
                     correct: corrCnt,
-                    accuracy: keys.length > 0 ? (corrCnt / keys.length) * 100 : null
+                    accuracy: keys.length > 0 ? (corrCnt / keys.length) * 100 : null,
+                    isOX: !!q.isOX,
+                    correctLabel: (function(){
+                        const hit = dist.find(d => d.correct);
+                        return hit ? hit.label : String(q.correct == null ? '-' : q.correct);
+                    })(),
+                    dist: dist
                 });
             }
         });
