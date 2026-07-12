@@ -8949,18 +8949,19 @@ closeSummaryAndExit: function(silent) {
         /* [J97] '현재 퀴즈 시작'을 한 번도 안 눌렀으면 저장할 진행상황도, 지울 응답도 없다.
            그런데도 "일시 중단 / 완전 초기화"를 묻던 것은 의미 없는 절차였다.
            → 문항만 훑어보고 나가는 경우엔 팝업 없이 바로 과정현황으로 나간다.
-           '진행 중'의 판정 근거:
-             ① 이번에 '현재 퀴즈 시작'을 눌렀다(state.quizStarted)
-             ② 또는 예전에 진행하다 만 기록이 남아 있다(이어하기 마커/문항 인덱스)
-             ③ 또는 교육생 응답이 이미 들어왔다 */
+
+           '진행 중'의 판정 근거 — 지울 것이 실제로 있는가:
+             ① 이번에 '현재 퀴즈 시작'(open)을 눌렀다        → state.quizStarted
+             ② 예전에 진행하다 만 '이어하기' 기록이 있다      → kac_quiz_resume_
+             ③ 교육생 응답이 이미 들어왔다                    → answeredCount > 0
+
+           ⚠️ kac_quiz_idx_ 는 쓰지 않는다.
+              그 값은 '퀴즈를 시작하지 않고 ▶▶로 문항만 넘겨도' 저장되기 때문에,
+              그걸 근거로 삼으면 정확히 이 문제(문항만 봤는데 팝업이 뜸)가 그대로 재현된다. */
         var _started = false;
         try {
             if (state.quizStarted) _started = true;
-            if (!_started && state.room) {
-                if (localStorage.getItem('kac_quiz_resume_' + state.room)) _started = true;
-                var _idx = parseInt(localStorage.getItem('kac_quiz_idx_' + state.room) || '0', 10);
-                if (!_started && _idx > 0) _started = true;
-            }
+            if (!_started && state.room && localStorage.getItem('kac_quiz_resume_' + state.room)) _started = true;
             if (!_started) {
                 var _ans = parseInt((document.getElementById('answeredCount') || {}).innerText || '0', 10);
                 if (_ans > 0) _started = true;
@@ -8968,6 +8969,8 @@ closeSummaryAndExit: function(silent) {
         } catch (e) { _started = true; }   // 판정 실패 시엔 안전하게 물어본다
 
         if (!_started) {
+            // 훑어보기만 했으니 지울 게 없다 → 문항 번호 흔적만 정리하고 조용히 나간다
+            try { if (state.room) localStorage.removeItem('kac_quiz_idx_' + state.room); } catch(e) {}
             ui.setMode('dashboard');
             return;
         }
