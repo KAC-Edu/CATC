@@ -543,6 +543,33 @@ body.night-mode .q-card.status-pin .q-content { color: #fecaca; }
 #quizSummaryOverlay .qd-ok{ color:#0f766e; background:#ecfdf5; border:1px solid #a7f3d0; padding:5px 12px; border-radius:999px; }
 #quizSummaryOverlay .qd-no{ color:#b91c1c; background:#fef2f2; border:1px solid #fecaca; padding:5px 12px; border-radius:999px; }
 #quizSummaryOverlay .qd-all{ color:#475569; background:#f1f5f9; border:1px solid #e2e8f0; padding:5px 12px; border-radius:999px; margin-left:auto; }
+
+/* [J87] 선택지별 응답 분포 — 몇 명이 어디를 골랐는지 */
+#quizSummaryOverlay .qc-head{ display:flex; align-items:center; gap:8px; margin:18px 0 10px;
+    font-size:15px; font-weight:800; color:#334155; border-top:1px dashed #e8edf3; padding-top:14px; }
+#quizSummaryOverlay .qc-answer{ margin-left:auto; font-size:13.5px; font-weight:800; color:#0f766e;
+    background:#ecfdf5; border:1px solid #a7f3d0; padding:4px 12px; border-radius:999px; }
+#quizSummaryOverlay .qc-answer b{ color:#065f46; }
+#quizSummaryOverlay .qc-list{ display:flex; flex-direction:column; gap:8px; }
+#quizSummaryOverlay .qc-row{ display:flex; align-items:center; gap:10px; padding:9px 12px;
+    border:1px solid #e8edf3; border-radius:12px; background:#f8fafc; }
+#quizSummaryOverlay .qc-row.is-correct{ border-color:#a7f3d0; background:#f0fdf4; }
+#quizSummaryOverlay .qc-row.is-wrong{ border-color:#fecaca; background:#fef7f7; }
+#quizSummaryOverlay .qc-mark{ flex:0 0 auto; width:20px; text-align:center; font-size:14px; }
+#quizSummaryOverlay .qc-row.is-correct .qc-mark{ color:#16a34a; }
+#quizSummaryOverlay .qc-row.is-wrong .qc-mark{ color:#ef4444; }
+#quizSummaryOverlay .qc-label{ flex:0 0 auto; min-width:120px; max-width:44%; font-size:15px; font-weight:800; color:#1e293b;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#quizSummaryOverlay .qc-track{ flex:1 1 auto; height:12px; background:#e8edf3; border-radius:999px; overflow:hidden; }
+#quizSummaryOverlay .qc-fill{ display:block; height:100%; border-radius:999px; background:#94a3b8; transition:width .45s; }
+#quizSummaryOverlay .qc-row.is-correct .qc-fill{ background:#16a34a; }
+#quizSummaryOverlay .qc-row.is-wrong .qc-fill{ background:#ef4444; }
+#quizSummaryOverlay .qc-cnt{ flex:0 0 auto; min-width:74px; text-align:right; font-size:14px; font-weight:900; color:#334155; }
+#quizSummaryOverlay .qc-cnt small{ display:block; font-size:11.5px; font-weight:700; color:#94a3b8; }
+#quizSummaryOverlay .qc-empty{ text-align:center; color:#94a3b8; font-weight:700; padding:16px 0; }
+@media(max-width:900px){
+    #quizSummaryOverlay .qc-label{ min-width:70px; font-size:13.5px; }
+}
 @media(max-width:900px){
     #quizSummaryOverlay #summaryStats{ grid-template-columns:1fr 1fr !important; }
     #quizSummaryOverlay .qr-stat-val{ font-size:34px; }
