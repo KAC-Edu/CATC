@@ -27,7 +27,7 @@
 <script>
 (function(){
   window.catcLock=function(){ try{localStorage.removeItem('catc_gate_ok');}catch(e){} location.reload(); };
-  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=true; }
+  var ok=false; try{ ok=(function(){var t=parseInt(localStorage.getItem('catc_gate_ok'),10);return !!t&&(Date.now()-t)<86400000;})(); }catch(e){ ok=false; }   /* [보안] 저장이 막힌 환경(시크릿 창 등)에서 코드 없이 통과되던 구멍 차단 */
   if(ok){ window.__catcUnlocked=true; return; }
   window.__catcUnlocked=false;
   document.documentElement.classList.add('catc-locked');
@@ -45,7 +45,7 @@
     function kacHash(s){var K=[1116352408,1899447441,3049323471,3921009573,961987163,1508970993,2453635748,2870763221,3624381080,310598401,607225278,1426881987,1925078388,2162078206,2614888103,3248222580,3835390401,4022224774,264347078,604807628,770255983,1249150122,1555081692,1996064986,2554220882,2821834349,2952996808,3210313671,3336571891,3584528711,113926993,338241895,666307205,773529912,1294757372,1396182291,1695183700,1986661051,2177026350,2456956037,2730485921,2820302411,3259730800,3345764771,3516065817,3600352804,4094571909,275423344,430227734,506948616,659060556,883997877,958139571,1322822218,1537002063,1747873779,1955562222,2024104815,2227730452,2361852424,2428436474,2756734187,3204031479,3329325298];function rr(v,n){return(v>>>n)|(v<<(32-n));}var b=unescape(encodeURIComponent(s)),l=b.length,w=[],i;for(i=0;i<l;i++)w[i>>2]=(w[i>>2]||0)|(b.charCodeAt(i)<<((3-i%4)*8));w[l>>2]=(w[l>>2]||0)|(128<<((3-l%4)*8));var N=((l+8>>6)+1)*16;w[N-1]=l*8;var H=[1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225],W=[],a,c,d,e,f,g,h,t1,t2,j,x;for(i=0;i<N;i+=16){a=H[0];c=H[1];d=H[2];e=H[3];f=H[4];g=H[5];h=H[6];x=H[7];for(j=0;j<64;j++){if(j<16)W[j]=w[i+j]|0;else{var s0=rr(W[j-15],7)^rr(W[j-15],18)^(W[j-15]>>>3),s1=rr(W[j-2],17)^rr(W[j-2],19)^(W[j-2]>>>10);W[j]=(W[j-16]+s0+W[j-7]+s1)|0;}var S1=rr(f,6)^rr(f,11)^rr(f,25),ch=(f&g)^(~f&h),T1=(x+S1+ch+K[j]+W[j])|0,S0=rr(a,2)^rr(a,13)^rr(a,22),mj=(a&c)^(a&d)^(c&d),T2=(S0+mj)|0;x=h;h=g;g=f;f=(e+T1)|0;e=d;d=c;c=a;a=(T1+T2)|0;}H[0]=(H[0]+a)|0;H[1]=(H[1]+c)|0;H[2]=(H[2]+d)|0;H[3]=(H[3]+e)|0;H[4]=(H[4]+f)|0;H[5]=(H[5]+g)|0;H[6]=(H[6]+h)|0;H[7]=(H[7]+x)|0;}var out='';for(i=0;i<8;i++)out+=('00000000'+((H[i]>>>0).toString(16))).slice(-8);return out;}
     window.kacHash = kacHash;   /* 다른 스크립트(초기화 비번 대조 등)에서도 사용 */
     var GATE_H='2c2a36d9c576e849da596e7888abc2d8f4059ee9fd21d89f502b3495a1e12512';
-    function go(){ if(kacHash(inp.value)===GATE_H){ try{localStorage.setItem('catc_gate_ok',String(Date.now()));}catch(e){} location.reload(); } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
+    function go(){ if(kacHash(inp.value)===GATE_H){ var _saved=false; try{ localStorage.setItem('catc_gate_ok',String(Date.now())); _saved=true; }catch(e){} if(_saved){ location.reload(); } else { try{ o.remove(); }catch(e){} document.documentElement.classList.remove('catc-locked'); window.__catcUnlocked=true; } } else { msg.textContent='접속 코드가 올바르지 않습니다.'; inp.value=''; inp.focus(); } }
     btn.addEventListener('click',go);
     inp.addEventListener('keyup',function(e){ if(e.key==='Enter') go(); });
     setTimeout(function(){ try{inp.focus();}catch(e){} },120);
