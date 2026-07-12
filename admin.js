@@ -1313,7 +1313,14 @@ fetchCodeAndRenderQr: function(room) {
         updates[`courses/${state.room}/settings/courseName`] = newName;
         updates[`courses/${state.room}/settings/password`] = encryptedPw;
         updates[`courses/${state.room}/status/roomStatus`] = statusVal;
-        updates[`courses/${state.room}/status/professorName`] = (statusVal === 'active' ? selectedProf : "");
+        // [J89] 교수를 여기서 바꾸면 다중 담임 목록도 함께 갱신해야 한다.
+        //  (안 그러면 professorNames에 옛 목록이 남아 "외 N명"이 계속 붙는다)
+        if (statusVal === 'active') { kacProfUpdates(updates, state.room, selectedProf); }
+        else {
+            updates[`courses/${state.room}/status/professorName`]  = "";
+            updates[`courses/${state.room}/status/professorNames`] = null;
+            updates[`courses/${state.room}/status/professorMain`]  = null;
+        }
         updates[`courses/${state.room}/status/professorManual`] = (statusVal === 'active' ? true : null);   // 설정에서 교수 지정 시 보존
         // 사용중으로 저장할 때만 세션ID 등록
         updates[`courses/${state.room}/status/ownerSessionId`] = (statusVal === 'active' ? state.sessionId : null);
@@ -7121,42 +7128,97 @@ resetShuttleRequests: function() {
             }
         }catch(err){ try{ console.error('[프로필 열기 실패]', err); alert('프로필 편집 창을 여는 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
-    // [담임교수 교체] 교수 배지 클릭 → 교수 리스트 팝업(다른 교수 클릭 시 배정 / 옆 프로필 버튼으로 편집)
+    /* [담임교수 배정] 교수 배지 클릭 → 팝업.
+       [J89] 여러 명 선택 가능 — 체크로 담임을 고르고, ★ 로 대표를 정한 뒤 [저장].
+             대표 = 프로필 사진·입교안내·교육생 앱에 표시되는 그 사람. */
+    _profSwap: { room:'', names:[], main:'' },
     _openProfSwap: function(room, currentName, ev){
         try{ if(ev){ ev.stopPropagation(); ev.preventDefault(); } }catch(_){}
         room = String(room||'').trim(); if(!room) return;
-        var cur = String(currentName||'').trim();
+        // ※ currentName 은 화면 표시용("김정민 외 2명")이라 못 믿는다 → 실제 저장값을 읽는다.
+        firebase.database().ref('courses/'+room+'/status').once('value').then(function(snap){
+            var st = snap.val() || {};
+            ui._profSwap = { room: room, names: kacProfAll(st), main: kacProfMain(st) };
+
+            var old = document.getElementById('profSwapModal'); if(old) old.remove();
+            var modal = document.createElement('div'); modal.id='profSwapModal'; modal.className='prof-swap-overlay';
+            modal.innerHTML =
+                '<div class="prof-swap-box" onclick="event.stopPropagation();">'
+              + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-pen"></i> 담임교수 배정</h3>'
+              + '<button class="prof-swap-close" onclick="document.getElementById(\'profSwapModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
+              + '<p class="prof-swap-desc">담임을 <b>여러 명</b> 고를 수 있습니다. 체크한 뒤 <b>★</b> 로 대표를 정하세요. '
+              + '대표 교수님이 프로필·입교안내·교육생 앱에 표시되며, <b>연간교육계획에도 함께 반영</b>됩니다.</p>'
+              + '<div class="prof-swap-list" id="profSwapList"></div>'
+              + '<div class="prof-swap-foot">'
+              + '<span id="profSwapSum" class="prof-swap-sum"></span>'
+              + '<button class="prof-swap-save" onclick="ui._profSwapSave()">저장</button>'
+              + '</div>'
+              + '</div>';
+            modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
+            document.body.appendChild(modal);
+            ui._profSwapRender();
+        }).catch(function(err){ console.error('[담임교수 배정] 상태 조회 실패', err); });
+    },
+    _profSwapRender: function(){
+        var box = document.getElementById('profSwapList');
+        if(!box) return;
         var e = ui._esc;
+        var sel = ui._profSwap;
         var list = (typeof profMgr!=='undefined' && Array.isArray(profMgr.list)) ? profMgr.list.slice() : [];
-        // 기존 팝업 제거
-        var old = document.getElementById('profSwapModal'); if(old) old.remove();
-        var modal = document.createElement('div'); modal.id='profSwapModal'; modal.className='prof-swap-overlay';
-        var rows = '';
+        // 명단에 없지만 이미 배정된 이름도 빠지지 않게 합친다
+        sel.names.forEach(function(n){ if(!list.some(function(p){ return String(p.name).trim()===n; })) list.push({name:n}); });
+
         if(!list.length){
-            rows = '<div class="prof-swap-empty">등록된 교수님이 없습니다. 먼저 [교수님 명단 관리]에서 추가하세요.</div>';
-        } else {
-            list.forEach(function(p){
-                var nm = e(p.name);
-                var isCur = (String(p.name).trim()===cur);
-                rows += '<div class="prof-swap-item'+(isCur?' is-current':'')+'">'
-                      + '<button class="prof-swap-pick" onclick="ui._assignProfToRoom(\''+e(room)+'\',\''+nm+'\')" title="이 교수로 담임 배정">'
-                      + (isCur?'<i class="fa-solid fa-circle-check"></i>':'<i class="fa-regular fa-circle"></i>')
-                      + '<span class="prof-swap-name">'+nm+'</span>'
-                      + (isCur?'<span class="prof-swap-badge">현재</span>':'')
-                      + '</button>'
-                      + '<button class="prof-swap-edit" onclick="var m=document.getElementById(\'profSwapModal\'); if(m) m.remove(); ui._openProfFromSearch(\''+nm+'\');" title="프로필 편집">프로필</button>'
-                      + '</div>';
-            });
+            box.innerHTML = '<div class="prof-swap-empty">등록된 교수님이 없습니다. 먼저 [교수님 명단 관리]에서 추가하세요.</div>';
+            return;
         }
-        modal.innerHTML =
-            '<div class="prof-swap-box" onclick="event.stopPropagation();">'
-          + '<div class="prof-swap-head"><h3><i class="fa-solid fa-user-pen"></i> 담임교수 교체</h3>'
-          + '<button class="prof-swap-close" onclick="document.getElementById(\'profSwapModal\').remove();" aria-label="닫기"><i class="fa-solid fa-xmark"></i></button></div>'
-          + '<p class="prof-swap-desc">다른 교수님을 누르면 이 과정의 담임으로 배정됩니다. <b>연간교육계획에도 함께 반영</b>됩니다.</p>'
-          + '<div class="prof-swap-list">'+rows+'</div>'
-          + '</div>';
-        modal.addEventListener('click', function(ev2){ if(ev2.target===modal) modal.remove(); });
-        document.body.appendChild(modal);
+        var mainNm = (sel.main && sel.names.indexOf(sel.main)>=0) ? sel.main : (sel.names[0]||'');
+        box.innerHTML = list.map(function(p){
+            var raw = String(p.name).trim();
+            var nm  = e(raw);
+            var q   = raw.replace(/'/g, "\\'");
+            var on  = sel.names.indexOf(raw) >= 0;
+            var isMain = on && (raw === mainNm);
+            return '<div class="prof-swap-item'+(on?' is-current':'')+(isMain?' is-main':'')+'">'
+                 + '<button class="prof-swap-pick" onclick="ui._profSwapToggle(\''+q+'\')" title="담임으로 지정/해제">'
+                 +   (on?'<i class="fa-solid fa-square-check"></i>':'<i class="fa-regular fa-square"></i>')
+                 +   '<span class="prof-swap-name">'+nm+'</span>'
+                 +   (isMain?'<span class="prof-swap-badge">★ 대표</span>':'')
+                 + '</button>'
+                 + (on && !isMain
+                     ? '<button class="prof-swap-star" onclick="ui._profSwapMain(\''+q+'\')" title="대표로 지정">☆ 대표로</button>'
+                     : '')
+                 + '<button class="prof-swap-edit" onclick="var m=document.getElementById(\'profSwapModal\'); if(m) m.remove(); ui._openProfFromSearch(\''+q+'\');" title="프로필 편집">프로필</button>'
+                 + '</div>';
+        }).join('');
+
+        var sum = document.getElementById('profSwapSum');
+        if(sum){
+            sum.innerHTML = !sel.names.length
+                ? '<span style="color:#ef4444;">담임을 1명 이상 선택하세요</span>'
+                : ('★ <b>'+e(mainNm)+'</b> 교수 대표' + (sel.names.length>1 ? (' · 총 '+sel.names.length+'명') : ''));
+        }
+    },
+    _profSwapToggle: function(name){
+        var sel = ui._profSwap, i = sel.names.indexOf(name);
+        if(i>=0){ sel.names.splice(i,1); if(sel.main===name) sel.main=''; }
+        else sel.names.push(name);
+        ui._profSwapRender();
+    },
+    _profSwapMain: function(name){
+        var sel = ui._profSwap;
+        if(sel.names.indexOf(name)<0) return;
+        sel.main = name;
+        ui._profSwapRender();
+    },
+    _profSwapSave: function(){
+        var sel = ui._profSwap;
+        if(!sel.room) return;
+        if(!sel.names.length){ ui.showAlert('담임 교수를 1명 이상 선택해 주세요.'); return; }
+        // 대표를 맨 앞으로 → professorName(대표)·연간계획 prof 문자열 모두 자연스럽게 정렬된다
+        var main = (sel.main && sel.names.indexOf(sel.main)>=0) ? sel.main : sel.names[0];
+        var ordered = [main].concat(sel.names.filter(function(n){ return n!==main; }));
+        ui._assignProfToRoom(sel.room, ordered.join(','));
     },
     /* [J89] 담임이 여러 명일 때 — 전체를 보여주고 '대표(★)'를 고르게 한다.
        대표 = 프로필 사진·입교안내·교육생 앱에 나오는 그 사람. */
@@ -7248,9 +7310,12 @@ resetShuttleRequests: function() {
         try{
             await firebase.database().ref().update(updates);
             var m=document.getElementById('profSwapModal'); if(m) m.remove();
-            if(ui.showAlert) ui.showAlert('✅ 담임교수를 '+name+' 교수로 교체했습니다. (연간계획 반영)');
-            // 검색창을 새 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
-            try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=name; ui.renderHomeSearch(name); } }catch(e){}
+            var _arr=kacProfList(name), _mn=_arr[0]||name;
+            if(ui.showAlert) ui.showAlert(_arr.length>1
+                ? ('✅ 담임교수 '+_arr.length+'명을 배정했습니다.\n\n'+_arr.join(' · ')+'\n★ 대표: '+_mn+' 교수\n(연간교육계획에도 반영)')
+                : ('✅ 담임교수를 '+_mn+' 교수로 교체했습니다. (연간계획 반영)'));
+            // 검색창을 대표 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
+            try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=_mn; ui.renderHomeSearch(_mn); } }catch(e){}
         }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
     // [과정담당 교체] 담당자 목록 팝업 (교수 교체와 동일 UX · 프로필 버튼 없음)
@@ -14821,13 +14886,11 @@ ui.openFieldEdit = async function(field){
     modal.style.display='flex'; return;
   }
 
+  // [J89] 담임은 여러 명일 수 있으므로 단일 드롭다운 대신 '담임교수 배정' 다중선택 팝업을 쓴다
   if(field==='prof'){
-    titleEl.textContent='담임 교수 수정';
-    var opts='<option value="">(선택 안함)</option>';
-    (profMgr.list||[]).forEach(function(pp){ opts+='<option value="'+pp.name+'">'+pp.name+' 교수</option>'; });
-    bodyEl.innerHTML='<select id="fe-val" style="'+selStyle+'">'+opts+'</select>';
-    var cur2=get('dashProfNameOnly'); if(cur2 && cur2!=='-') document.getElementById('fe-val').value=cur2;
-    modal.style.display='flex'; return;
+    modal.style.display='none';
+    ui._openProfSwap(state.room, '', null);
+    return;
   }
 
   if(field==='coord'){
@@ -14873,10 +14936,9 @@ ui.saveFieldEdit = async function(){
     // [J6] 수동 지정 보호 — 연간계획 자동동기화가 온라인(Zoom) 설정을 원래 강의실로 되돌리지 않도록
     updates['courses/'+room+'/status/roomDetailManual']=(sv&&String(sv).trim())?true:null;
   } else if(f==='prof'){
-    var pv=(document.getElementById('fe-val')||{}).value||'';
-    var _mp = kacProfUpdates(updates, room, pv);               // [J89] "장두석,박호원"처럼 여러 명도 인식 (대표=맨 앞)
-    updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
-    try{ var ks=await firebase.database().ref('system/professorProfiles/'+_mp+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
+    // [J89] 담임은 '담임교수 배정'(ui._openProfSwap) 다중선택 팝업에서만 저장한다.
+    //  여기로 오면 fe-val 이 없어 빈 값으로 담임을 지워버릴 수 있으므로 아무 것도 하지 않는다.
+    return;
   } else if(f==='coord'){
     updates['courses/'+room+'/settings/coordinatorName']=(document.getElementById('fe-val')||{}).value||'';
     updates['courses/'+room+'/status/coordManual']=(((document.getElementById('fe-val')||{}).value||'').trim())?true:null;   // [J10] 수동 지정 보존
