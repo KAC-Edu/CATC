@@ -7606,32 +7606,40 @@ body.kac-quiz-active .quiz-overlay,
 #keduHome .kh-rows #khProf{ display:flex; align-items:center; min-width:0; overflow:hidden; }
 #keduAttProof .kap-row #kapProf{ display:flex; align-items:center; justify-content:flex-end; min-width:0; overflow:hidden; }
 
-/* [vJ122] 담임 = 이름 + 전화가 붙은 하나의 알약 (예전엔 이름과 동그란 전화버튼이 따로 놀았다) */
+/* [vJ122] 담임 = 색이 다른 두 블록이 나란히 붙은 알약 (입교안내 버튼과 같은 스타일)
+   ┌──────────────┬─────────┐
+   │ 👤 김정민 교수 │ 📞 전화 │      파랑 | 노랑, 사이에 살짝 틈
+   └──────────────┴─────────┘                                          */
 .kh-profpill{
-  display:inline-flex; align-items:stretch; min-width:0;
-  border:none; padding:0; cursor:pointer;
-  border-radius:999px; overflow:hidden;
-  background:#eff6ff; box-shadow:0 2px 8px rgba(37,99,235,.16);
-  font-family:inherit;
+  display:inline-flex; align-items:stretch; gap:3px; min-width:0;
+  border:none; padding:0; background:transparent; cursor:pointer;
+  font-family:inherit; line-height:1;
+  filter:drop-shadow(0 3px 8px rgba(15,23,42,.18));
 }
+/* 상하 패딩을 최소로 → 담임 행 높이가 강의실·과정·이름·생활관 행과 같아진다 */
 .kh-profpill .khp-name{
-  display:flex; align-items:center;
-  padding:5px 11px; min-width:0;
-  font-size:15px; font-weight:800; color:#1e293b;
+  display:flex; align-items:center; gap:6px; min-width:0;
+  padding:4px 12px 4px 13px;
+  border-radius:999px 6px 6px 999px;
+  background:linear-gradient(135deg,#2f56e0,#1d4ed8);
+  color:#fff; font-size:14px; font-weight:900; letter-spacing:-.2px;
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
+.kh-profpill .khp-name i{ font-size:11px; opacity:.9; flex:0 0 auto; }
 .kh-profpill .khp-call{
-  display:flex; align-items:center; justify-content:center;
-  flex:0 0 auto; width:32px;
-  background:#2563eb; color:#fff; font-size:12px;
+  display:flex; align-items:center; gap:5px; flex:0 0 auto;
+  padding:4px 13px 4px 11px;
+  border-radius:6px 999px 999px 6px;
+  background:linear-gradient(135deg,#fde047,#facc15);
+  color:#3f2d00; font-size:13px; font-weight:900; letter-spacing:-.2px;
 }
+.kh-profpill .khp-call i{ font-size:11px; }
 .kh-profpill:active{ transform:scale(.97); }
-.kh-profpill:active .khp-call{ background:#1d4ed8; }
 
 .kh-morepill{
   flex:0 0 auto; padding:4px 10px; border:none; border-radius:999px;
-  background:#e0e7ff; color:#3730a3; font-size:12px; font-weight:800;
-  cursor:pointer; white-space:nowrap; font-family:inherit;
+  background:#e0e7ff; color:#3730a3; font-size:12px; font-weight:900;
+  cursor:pointer; white-space:nowrap; font-family:inherit; line-height:1;
 }
 #keduHome .kh-leader{ width:100%; max-width:380px; background:#fff; border-radius:20px; padding:16px 18px; box-shadow:0 18px 44px rgba(15,23,42,.28); border:1px solid #fde68a; }
 #keduHome .khl-head{ font-size:14px; font-weight:900; color:#b45309; margin-bottom:12px; display:flex; align-items:center; gap:7px; }
@@ -8067,8 +8075,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var html = '<span style="display:inline-flex; align-items:center; gap:6px; flex-wrap:nowrap; min-width:0;">';
     if(mp){
       html += '<button type="button" class="kh-profpill" data-phone="'+mp+'" data-name="'+_hrEsc(main.name)+'" onclick="callHomeroom(this)" aria-label="'+_hrEsc(main.name)+' 담임에게 전화">'
-            +   '<span class="khp-name">'+_hrEsc(main.name)+'</span>'
-            +   '<span class="khp-call"><i class="fa-solid fa-phone"></i></span>'
+            +   '<span class="khp-name"><i class="fa-solid fa-user-tie"></i>'+_hrEsc(main.name)+' 교수</span>'
+            +   '<span class="khp-call"><i class="fa-solid fa-phone"></i>전화</span>'
             + '</button>';
     } else {
       // 연락처가 없으면 전화칸 없이 이름만 (알약 모양은 유지하지 않는다 — 누를 게 없으니)
