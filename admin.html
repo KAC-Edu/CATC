@@ -491,7 +491,9 @@
             <div class="control-icon-btn" onclick="ui.toggleMiniQR()" title="Join QR">
                 <i class="fa-solid fa-qrcode"></i>
             </div>
-            <div class="control-icon-btn mic-monitor-toggle" id="micMonitorToggleBtn" onclick="lectureMonitor.toggleMic()" title="강의 음성 모니터링 끄기" style="display:none;">
+            <!-- [J88] 상단 마이크 버튼 제거 (요청). lectureMonitor 로직이 이 요소를 참조하므로
+                 삭제 대신 '항상 숨김'으로 남겨 둔다 — 없애면 참조 오류가 난다. -->
+            <div class="control-icon-btn mic-monitor-toggle" id="micMonitorToggleBtn" onclick="lectureMonitor.toggleMic()" title="강의 음성 모니터링" style="display:none !important;">
                 <i class="fa-solid fa-microphone"></i>
             </div>
             <!-- 배경음악 버튼 -->
