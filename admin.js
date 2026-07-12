@@ -8292,21 +8292,38 @@ showFinalSummary: async function() {
                 const corrCnt = keys.filter(k => answers[k].choice === q.correct).length;
 
                 /* [J87] 선택지별 응답 분포 — "몇 명이 어디를 골랐는지"
-                   OX 문항이면 O/X, 객관식이면 각 보기(options)별로 센다.
-                   교육생이 아무것도 못 고른(무응답) 경우는 분모에서 빠진다. */
+                   ★ 채점(answers[k].choice === q.correct)과 '똑같은 표현'으로 세야 정확하다.
+                     저장된 choice 값이 보기 텍스트일 수도, 인덱스(0/1-based)일 수도 있으므로
+                     추측으로 여러 형태를 다 인정하면 정답이 2개로 잡히는 사고가 난다.
+                     → 실제 저장된 값을 그대로 집계한 뒤, 그 값을 보기 이름으로 '역매핑'한다. */
                 const opts = q.isOX ? ['O', 'X'] : (Array.isArray(q.options) ? q.options.slice() : []);
+
+                // 저장된 원본 값 그대로 집계
+                const rawCount = {};
+                keys.forEach(k => {
+                    const ch = answers[k].choice;
+                    const key = String(ch);
+                    rawCount[key] = (rawCount[key] || 0) + 1;
+                });
+
+                // 이 문항의 choice 표현 방식 판별 (텍스트 / 0-based / 1-based)
+                const rawKeys = Object.keys(rawCount).concat(q.correct == null ? [] : [String(q.correct)]);
+                const allNum = rawKeys.length > 0 && rawKeys.every(v => /^\d+$/.test(v));
+                let mode = 'label';
+                if (allNum && opts.length) {
+                    const nums = rawKeys.map(Number);
+                    // 0이 나오면 0-based, 아니면 보기 개수와 같은 값이 있으면 1-based
+                    mode = nums.some(n => n === 0) ? 'idx0' : (nums.some(n => n === opts.length) ? 'idx1' : 'idx0');
+                }
+                const valueOf = (oi, label) => (mode === 'idx0') ? String(oi) : (mode === 'idx1') ? String(oi + 1) : String(label);
+
                 const dist = opts.map((label, oi) => {
-                    // 저장된 choice 값이 '보기 텍스트'일 수도, '인덱스/번호'일 수도 있어 둘 다 인정
-                    const cnt = keys.filter(k => {
-                        const ch = answers[k].choice;
-                        if (ch === label) return true;
-                        if (typeof ch === 'number' && ch === oi) return true;
-                        if (String(ch) === String(oi)) return true;
-                        if (String(ch) === String(oi + 1)) return true;
-                        return false;
-                    }).length;
-                    const isCorrect = (q.correct === label) || (String(q.correct) === String(oi)) || (String(q.correct) === String(oi + 1));
-                    return { label: String(label), count: cnt, correct: isCorrect };
+                    const v = valueOf(oi, label);
+                    return {
+                        label: String(label),
+                        count: rawCount[v] || 0,
+                        correct: String(q.correct) === v
+                    };
                 });
 
                 questionStats.push({
