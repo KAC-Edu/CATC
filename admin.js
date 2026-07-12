@@ -7708,7 +7708,9 @@ resetShuttleRequests: function() {
                 + _unknownNote
                 + `</div>`;
             body.innerHTML = `<div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">`
-                + `<div style="flex:1.4 1 330px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">👩‍🎓 과정별 교육생 현황</div>${_listHtml}</div>`
+                /* 위 팝업 제목('항공기술훈련원 교육생 현황')과 겹쳐서 소제목('과정별 교육생 현황')은 뺀다.
+                   대신 오른쪽 지도 제목만큼 위를 띄워서 두 칸의 시작선을 맞춘다. */
+                + `<div style="flex:1.4 1 330px;min-width:0;padding-top:calc(clamp(17px,1.9vw,23px) * 1.25 + 12px);">${_listHtml}</div>`
                 + `<div style="flex:1 1 340px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">📊 전체 교육생 소속 분포</div>${_mapPanel}</div>`
                 + `</div>`
                 + `<div class="screen-hint" style="margin-top:18px;">`
