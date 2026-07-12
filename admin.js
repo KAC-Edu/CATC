@@ -2593,6 +2593,37 @@ function showPasswordPrompt(message) {
     });
 }
 
+/* ══ [J89] 담임 교수 여러 명 지원 (강사 플랫폼) ══════════════════════════
+   status.professorName  = 대표 (기존 코드가 읽는 칸 — 그대로 둔다)
+   status.professorNames = 전체 배열
+   status.professorMain  = 수동으로 고른 대표 (없으면 목록 맨 앞이 자동 대표)     */
+function kacProfList(raw){
+    if (Array.isArray(raw)) return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
+    return String(raw==null?'':raw)
+        .replace(/교수님?/g, ' ')
+        .split(/[,;\/·、|\n\r\t]+|\s+/)
+        .map(function(s){ return s.trim(); })
+        .filter(Boolean);
+}
+function kacProfMain(st){
+    if (!st) return '';
+    var arr = kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
+    var m = st.professorMain;
+    if (m && arr.indexOf(m) >= 0) return m;
+    return arr[0] || '';
+}
+function kacProfAll(st){
+    if (!st) return [];
+    return kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
+}
+function kacProfLabel(st, suffix){
+    var arr = kacProfAll(st);
+    if (!arr.length) return '';
+    var rest = arr.length - 1;
+    return kacProfMain(st) + (suffix || '') + (rest > 0 ? (' 외 ' + rest + '명') : '');
+}
+try { window.kacProfList=kacProfList; window.kacProfMain=kacProfMain; window.kacProfAll=kacProfAll; window.kacProfLabel=kacProfLabel; } catch(e){}
+
 const ui = {
 
 
