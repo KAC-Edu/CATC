@@ -4624,10 +4624,12 @@ setMode: function(mode) {
                     btn.style.cursor = 'pointer';    // 마우스 커서 복구 유지
                 }
             });
+            // [J82] 여기서 무조건 켜던 것이 '퀴즈 없는데 시작 버튼이 눌리던' 원인.
+            //  → 진행할 문항이 있을 때만 켠다. 없으면 계속 숨김.
             const quizCtrl = document.getElementById('quizControls');
-            if(quizCtrl) quizCtrl.style.display = 'flex';
+            if(quizCtrl) quizCtrl.style.display = (state.quizList && state.quizList.length) ? 'flex' : 'none';
         }
-        
+
         // [J22] 출결 메뉴에서 다른 메뉴로 이동 시: OTP 자동 전체화면 예약 취소 + 열려 있는 전체화면 닫기(기존 화면 흐름 복귀)
         if (state.currentMode === 'attendance' && mode !== 'attendance') {
             try { if (ui._otpAutoFsTimer) { clearTimeout(ui._otpAutoFsTimer); ui._otpAutoFsTimer = null; } } catch(e){}
@@ -7885,6 +7887,7 @@ loadFile: function(e) {
     },
     
 prevNext: function(d) {
+        if (!this._hasQuiz()) { ui.showAlert("진행할 퀴즈가 없습니다."); return; }   // [J82]
         let n = state.currentQuizIdx + d;
         if (n < 0 || n >= state.quizList.length) {
             return ui.showAlert(n < 0 ? "첫 번째 문항입니다." : "마지막 문항입니다.");
@@ -7916,8 +7919,24 @@ prevNext: function(d) {
         const card = document.querySelector('.quiz-card');
         if(card) card.classList.remove('result-mode');
         this.applyZoomFix();
+
+        /* [J82] 퀴즈가 하나도 없으면 진행 컨트롤을 아예 잠근다.
+           예전엔 '진행할 퀴즈가 없습니다' 화면인데도 [현재 퀴즈 시작]·[◀▶]·[종료]가 눌렸고,
+           빈 문항(undefined)이 Firebase activeQuiz 에 그대로 써져서 교육생 화면이 깨질 수 있었다.
+           → 문항이 없으면: 컨트롤 숨김 + Firebase 쓰기 안 함 + 빈 상태 화면만 표시하고 종료. */
+        const _empty = !(state.quizList && state.quizList.length);
+        if (_empty) {
+            this.resetTimerUI();
+            this.renderScreen(null);                                  // '진행할 퀴즈가 없습니다' 화면
+            const ctrl0 = document.getElementById('quizControls');
+            if (ctrl0) ctrl0.style.display = 'none';                  // 하단 버튼 전체 숨김
+            try { this.stopAnswerMonitor && this.stopAnswerMonitor(); } catch(e){}
+            try { firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none'); } catch(e){}
+            return;                                                    // ★ 여기서 끝 — activeQuiz 안 씀
+        }
+
         const q = state.quizList[state.currentQuizIdx];
-        this.resetTimerUI(); 
+        this.resetTimerUI();
         this.renderScreen(q);
         const pauseBtn = document.getElementById('btnPause');
         if(pauseBtn) pauseBtn.style.display = 'none';
@@ -8104,8 +8123,12 @@ action: function(act) {
 
 
     
-    smartNext: function() { 
-        this.action('open'); 
+    // [J82] 진행할 문항이 없으면 시작 자체를 막는다 (버튼이 어떤 경로로든 눌렸을 때의 최종 방어선)
+    _hasQuiz: function() { return !!(state.quizList && state.quizList.length); },
+
+    smartNext: function() {
+        if (!this._hasQuiz()) { ui.showAlert("진행할 퀴즈가 없습니다.\n\n먼저 [📋 퀴즈 선택하기]로 문항을 불러오세요."); return; }
+        this.action('open');
     },
     
     togglePause: function() {
