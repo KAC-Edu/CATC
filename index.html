@@ -6599,10 +6599,13 @@ html, body {
   to   { transform: translate3d(0,0,0); }
 }
 /* ── [우측 패널 흰색 상단바] 외출외박·차량·공지·설문 — 시안 적용 ── */
+/* [vJ122] 배경을 단색(#f6f9fe) → 입교등록·입교완료와 같은 '연한 파랑 그라데이션'으로 통일.
+   퇴교차량·외출외박만 밋밋해 보이던 문제. 패널이 길어져도 아래까지 색이 이어지도록 fixed 사용. */
 #shuttleModal>.menu-box, #noticeModal>.menu-box, #adminActionModal>.menu-box, #surveyModal>.menu-box{
   justify-content:flex-start !important;
   padding-top:0 !important;
-  background:#f6f9fe !important;
+  background:linear-gradient(180deg,#eef5ff 0%,#dbe9ff 100%) !important;
+  background-attachment:fixed !important;
 }
 .kac-pbar{
   position:sticky; top:0; z-index:8;
@@ -8068,6 +8071,16 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   // 재진입(이미 입교) → 현재 정보만 간결히 표시
   // ===== [과정담임 표시 + 통화] =====
   function _hrEsc(t){ return String(t==null?'':t).replace(/[<>&\"']/g,function(c){return ({'<':'&lt;','>':'&gt;','&':'&amp;','\"':'&quot;',"'":'&#39;'}[c]);}); }
+  /* [vJ122] 교육기간 표기를 하이픈(-) → 점(.) 으로.
+       저장값:  2026-07-11 ~ 2026-08-28   (그대로 둔다 — 날짜 계산이 여기에 걸려 있다)
+       화면표시: 2026.07.11 ~ 2026.08.28
+     '~' 로 이어진 범위든 날짜 하나든 모두 처리한다. */
+  window.kacFmtPeriod = function(p){
+    var s = String(p == null ? '' : p).trim();
+    if(!s || s === '-') return s || '-';
+    return s.replace(/(\d{4})-(\d{2})-(\d{2})/g, '$1.$2.$3');
+  };
+
   /* [J89] 담임이 여러 명이어도 이 줄은 '항상 한 줄'로 끝난다.
      ─ 줄에는 대표 1명 + 전화버튼만 둔다 (행 높이가 절대 늘지 않음 → 아래 메뉴가 밀리지 않는다)
      ─ 나머지 교수 연락처는 '외 N명' 알약을 누르면 뜨는 별도 시트에서 본다 (오버레이라 레이아웃 영향 0) */
@@ -8349,7 +8362,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(eN) eN.textContent=nm; if(eS) eS.textContent=sb;
     var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'), eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom'), eD=document.getElementById('khDorm');
     if(homeRoom){
-      try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=(v.period||'-'); if(eR) eR.textContent=(v.roomDetailName||v.roomDetail||('Room '+homeRoom)); }); }catch(e){}
+      try{ if(eR) eR.textContent='Room '+homeRoom; firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){ var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom)); if(eT) eT.textContent=cn; if(eC) eC.textContent=cn; if(eP) eP.textContent=kacFmtPeriod(v.period||'-'); if(eR) eR.textContent=(v.roomDetailName||v.roomDetail||('Room '+homeRoom)); }); }catch(e){}
     }
     loadKakaoHomeDorm(nm, sb, eD);
     updateKakaoAttendanceButton(homeRoom);
@@ -8505,7 +8518,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       ctx.save(); ctx.beginPath(); ctx.rect(hx,hy,hw,hh); ctx.clip();
       ctx.drawImage(photo, hx-(nw-hw)/2, hy-(nh-hh)/2, nw, nh); ctx.restore();
       ctx.drawImage(frame,0,0,W,H);
-      var fmtP=String(set.period||'-');
+      var fmtP=(window.kacFmtPeriod ? kacFmtPeriod(set.period||'-') : String(set.period||'-'));   // [vJ122] 2026.07.11 ~ 2026.08.28
       var vals={ name:set.courseName||'-', period:fmtP, venue:set.roomDetailName||'-', prof:(prof?prof+' 교수':'-') };
       ctx.fillStyle='#0f2057'; ctx.textBaseline='middle'; ctx.textAlign='left';
       var BOX_R={ name:48.3, venue:48.3, period:89.3, prof:89.3 };   // [vJ102.1] 칸 경계 맞춤 자동 축소
