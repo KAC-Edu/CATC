@@ -378,6 +378,20 @@
 var db = firebase.database();
 var DATA = {};          // courses 전체
 var EDU = {};           // system/eduLocations
+
+/* [J89] 담임 교수 여러 명 — status.professorName=대표, professorNames=전체, professorMain=수동 대표 */
+function kacProfList(raw){
+  if(Object.prototype.toString.call(raw)==='[object Array]')
+    return raw.map(function(s){ return String(s==null?'':s).trim(); }).filter(Boolean);
+  return String(raw==null?'':raw).replace(/교수님?/g,' ')
+    .split(/[,;\/·、|\n\r\t]+|\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function kacProfAll(st){ return kacProfList((st&&st.professorNames&&st.professorNames.length)?st.professorNames:(st&&st.professorName)); }
+function kacProfMain(st){ var a=kacProfAll(st); if(!a.length) return ''; var m=st&&st.professorMain; return (m&&a.indexOf(m)>=0)?m:a[0]; }
+function kacProfLabel(st, suffix){
+  var a=kacProfAll(st); if(!a.length) return '';
+  return kacProfMain(st)+(suffix||'')+(a.length>1?(' 외 '+(a.length-1)+'명'):'');
+}
 var CUSTOM_ROOMS = {};  // system/classrooms (건물별)
 var curRID = '';
 var eduType = '';
@@ -455,7 +469,7 @@ function renderList(){
   if(!rooms.length){ el.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
   el.innerHTML=rooms.map(function(r){
     var L=leaderOf(r.room);
-    var prof=((r.st.professorName||'').trim())?(r.st.professorName.trim()+' 교수'):'담임 미지정';
+    var prof=kacProfLabel(r.st,' 교수')||'담임 미지정';   // [J89] "장두석 교수 외 2명"
     var coord=coordFull(r.s.coordinatorName)||'담당 미지정';
     var ldHtml=L?('<span class="ld on"><i class="fa-solid fa-crown"></i> '+esc(L.name)+'</span>'):'<span class="ld off"><i class="fa-solid fa-crown"></i> 교육생장 미지정</span>';
     return '<div class="crd" onclick="openDetail(\''+r.rid+'\')">'
@@ -509,7 +523,7 @@ function updateDetail(){
   var room=DATA[curRID]; if(!room) return;
   var s=room.settings||{}, st=room.status||{};
   document.getElementById('dTtl').textContent=s.courseName||'-';
-  var prof=((st.professorName||'').trim())?(st.professorName.trim()+' 교수'):'-';
+  var prof=kacProfLabel(st,' 교수')||'-';   // [J89] "장두석 교수 외 2명"
   document.getElementById('dInfo').innerHTML=
      '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(s.period||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:14px;">'+esc(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
