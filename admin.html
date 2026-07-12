@@ -472,9 +472,34 @@
   body.sidebar-hidden.in-course #headerBackBtn{ display:inline-flex; }
   #headerCourseInfo{ visibility:hidden; }
   body.in-course #headerCourseInfo{ visibility:visible; }
+
+  /* [J92] 현황판 좌측 상단 브랜드 — 누르면 키오스크 화면.
+     과정 안에서는 그 자리에 '뒤로가기'가 오므로 브랜드는 숨긴다. */
+  #kacBrandBtn{
+      position:absolute; left:30px; top:50%; transform:translateY(-50%);   /* .header 좌측 패딩(30px)과 맞춤 */
+      display:flex; align-items:center; gap:9px;
+      padding:7px 13px; border-radius:12px;
+      background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.13);
+      cursor:pointer; user-select:none; white-space:nowrap;
+      transition:background .16s, border-color .16s, transform .16s;
+  }
+  #kacBrandBtn:hover{ background:rgba(59,130,246,.28); border-color:rgba(147,197,253,.55); transform:translateY(-50%) scale(1.03); }
+  #kacBrandBtn i{ font-size:16px; color:#93c5fd; }
+  #kacBrandBtn .kb-main{ font-size:14.5px; font-weight:900; color:#fff; letter-spacing:.3px; line-height:1.15; }
+  #kacBrandBtn .kb-sub{ font-size:10px; font-weight:800; color:#93c5fd; letter-spacing:.4px; }
+  body.in-course #kacBrandBtn{ display:none; }
 </style>
 <header class="header" style="position:relative;">
-    <div id="headerCourseInfo" onclick="ui.goHomePortal()" title="항공기술훈련원 통합 교육 현황판으로 이동" style="display:flex; align-items:center; gap:8px; min-width:0; cursor:pointer;">
+    <!-- [J92] 현황판 좌측 상단 브랜드 → 누르면 키오스크 화면 -->
+    <div id="kacBrandBtn" onclick="kiosk.openTemp()" title="누르면 키오스크 화면 (5초 뒤 현황판으로 자동 복귀)">
+        <i class="fa-solid fa-tower-broadcast"></i>
+        <div>
+            <div class="kb-main">KAC Training Platform</div>
+            <div class="kb-sub">항공기술훈련원</div>
+        </div>
+    </div>
+    <!-- [J91] 뒤로가기는 한 단계씩: 소메뉴 → 과정 운영 현황 → 통합 현황판 -->
+    <div id="headerCourseInfo" onclick="ui.goBackStep()" title="뒤로" style="display:flex; align-items:center; gap:8px; min-width:0; cursor:pointer;">
         <span id="headerBackBtn" style="align-items:center; justify-content:center; color:#fff; font-size:20px; flex-shrink:0;"><i class="fa-solid fa-reply"></i></span>
         <div class="header-title">
             <span id="displayRoomName">연결 중…</span>
