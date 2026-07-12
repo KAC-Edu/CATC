@@ -1021,6 +1021,42 @@
         const db = firebase.database();
         if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+        /* ── [J89] 담임 교수 여러 명 ────────────────────────────────
+           연간교육계획의 prof는 "장두석,박호원,김정민" 또는 줄바꿈/공백 구분 문자열.
+           courses/{room}/status 에는
+             professorName  = 대표 1명 (기존 코드 전부 그대로 동작)
+             professorNames = 전체 배열
+             professorMain  = 수동 지정 대표(없으면 첫 번째)
+           로 저장한다. */
+        function kacProfList(raw){
+            if (Array.isArray(raw)) return raw.map(s => String(s == null ? '' : s).trim()).filter(Boolean);
+            return String(raw == null ? '' : raw)
+                .replace(/교수님?/g, ' ')
+                .split(/[,;\/·、|\n\r\t]+|\s+/)
+                .map(s => s.trim()).filter(Boolean);
+        }
+        function kacProfMain(st){
+            const arr = kacProfList((st && st.professorNames && st.professorNames.length) ? st.professorNames : (st && st.professorName));
+            if (!arr.length) return '';
+            const m = st && st.professorMain;
+            return (m && arr.indexOf(m) >= 0) ? m : arr[0];
+        }
+        function kacProfLabel(st, suffix){
+            const arr = kacProfList((st && st.professorNames && st.professorNames.length) ? st.professorNames : (st && st.professorName));
+            if (!arr.length) return '';
+            const main = kacProfMain(st);
+            return main + (suffix || '') + (arr.length > 1 ? (' 외 ' + (arr.length - 1) + '명') : '');
+        }
+        /* 계획값(prof 문자열) → updates 객체에 3개 필드 기록. 대표 이름을 돌려준다. */
+        function kacProfUpdates(updates, room, profRaw){
+            const arr = kacProfList(profRaw);
+            const main = arr[0] || '';
+            updates[`courses/${room}/status/professorName`]  = main;
+            updates[`courses/${room}/status/professorNames`] = arr.length ? arr : null;
+            updates[`courses/${room}/status/professorMain`]  = null;   // 계획 기준 = 자동(첫 번째)
+            return main;
+        }
+
         // ── STEP 2 상태 ──
         let selectedCourse = null;        // { room, courseName, period, weekKey, profName }
         let roster = [];                  // [{ seq, name, empNo, dept, gender }]
@@ -6637,6 +6673,8 @@
                         updates[`courses/${r}/settings/coordinatorName`] = null;
                         updates[`courses/${r}/settings/kakaoLink`] = null;
                         updates[`courses/${r}/status/professorName`] = '';
+                        updates[`courses/${r}/status/professorNames`] = null;
+                        updates[`courses/${r}/status/professorMain`] = null;
                         updates[`courses/${r}/status/roomStatus`]   = 'idle';
                         updates[`courses/${r}/status/ownerSessionId`] = null;
                         return; // freeRooms에 넣지 않음 → 다른 과정으로 다시 채우지 않음
@@ -6650,8 +6688,7 @@
                             updates[`courses/${r}/settings/period`] = pc.period;
                             updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
                             if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
-                                updates[`courses/${r}/status/professorName`] = pc.prof;
-                                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                                updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));
                             }
                             if (pc.roomDetail && !(roomsData[r] && roomsData[r].status && roomsData[r].status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실 보존
                         }
@@ -6665,8 +6702,7 @@
                         updates[`courses/${r}/settings/period`] = pc.period;
                         updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
                         if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
-                            updates[`courses/${r}/status/professorName`] = pc.prof;
-                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));
                         }
                         if (pc.roomDetail && !(roomsData[r] && roomsData[r].status && roomsData[r].status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실 보존
                         return;
@@ -6679,8 +6715,7 @@
                         updates[`courses/${r}/settings/period`] = pc.period;
                         updates[`courses/${r}/settings/coordinatorName`] = pc.coord || null;
                         if (!(roomsData[r] && roomsData[r].status && roomsData[r].status.professorManual)) {   // 수동 지정 교수 보존
-                            updates[`courses/${r}/status/professorName`] = pc.prof;
-                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(pc.prof);
+                            updates[`courses/${r}/settings/kakaoLink`] = kakaoOf(kacProfUpdates(updates, r, pc.prof));
                         }
                         if (pc.roomDetail && !(roomsData[r] && roomsData[r].status && roomsData[r].status.roomDetailManual)) updates[`courses/${r}/settings/roomDetailName`] = pc.roomDetail;   // 강사 수동 지정 강의실 보존
                         return;
