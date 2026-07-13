@@ -288,6 +288,7 @@ async function init() {
         SHEET_ROOM = null; window._archiveMode = true; window._archiveId = _archiveId; window._archiveExpected = ar.expectedStudents || null;
         HEADER.courseName = ar.courseName || '지난 과정'; HEADER.period = ar.period || '-'; HEADER.coordName = ar.coord || '-'; HEADER.profName = ar.prof ? ar.prof + ' 교수' : '-';
         dateArray = generateDates(ar.period || '');
+        await loadHolidays();                       // 보관 출석부에도 공휴일 적용
         renderTable(ar.students || {}, ar.internal_attendance || {});
         if (autoSave && !_autoDone) { _autoDone = true; setTimeout(() => { try { printSheet(); } catch (e) {} }, 1000); }
         return;
@@ -359,8 +360,15 @@ async function init() {
         }
     };
 
+    await loadHolidays();      // 공휴일(system/holidays)을 먼저 읽고 나서 표를 그린다
+
     db.ref(`courses/${roomFromUrl}/students`).on('value', s => { _stuRaw = s.val() || {}; _paint(); });
     db.ref(`courses/${roomFromUrl}/internal_attendance`).on('value', s => { _attRaw = s.val() || {}; _paint(); });
+
+    // 운영부가 공휴일을 추가·삭제하면 즉시 다시 그린다
+    db.ref('system/holidays').on('value', () => {
+        loadHolidays().then(() => { _lastKey = ''; _paint(); });
+    });
 }
 
 
@@ -382,7 +390,27 @@ async function init() {
         '2026-10-09':'한글날','2026-12-25':'성탄절',
         '2027-01-01':'신정','2027-02-06':'설날','2027-02-08':'설날','2027-02-09':'설날','2027-03-01':'삼일절'
     };
-    function isHoliday(d){ return HOLIDAYS[d] || null; }
+    /* [공휴일 관리] 코드에 박아둔 목록만 쓰면, 제헌절처럼 갑자기 공휴일이 지정될 때마다
+       개발자가 코드를 고쳐 재배포해야 한다(이번에 실제로 그랬다).
+       → Firebase(system/holidays)에 둔 목록을 함께 읽어 합친다.
+         교육운영부 플랫폼에서 화면으로 추가·삭제하면 코드 수정 없이 즉시 반영된다.
+         형식: system/holidays/{YYYY-MM-DD} = "제헌절"
+         (천문연구원 공휴일 API 는 서비스키가 소스에 노출되고 CORS 도 막혀 있어 쓰지 않는다.
+          게다가 임시공휴일은 API 에도 늦게 반영되므로, 사람이 넣는 게 더 확실하다.)      */
+    let _fbHolidays = {};
+    function isHoliday(d){ return _fbHolidays[d] || HOLIDAYS[d] || null; }
+
+    async function loadHolidays(){
+        try{
+            const s = await db.ref('system/holidays').once('value');
+            const v = s.val() || {};
+            const out = {};
+            Object.keys(v).forEach(k => {
+                if(/^\d{4}-\d{2}-\d{2}$/.test(k) && v[k]) out[k] = String(v[k]);   // 날짜 형식만 인정
+            });
+            _fbHolidays = out;
+        }catch(e){ _fbHolidays = {}; }   // 못 읽으면 코드 기본 목록만 사용
+    }
 
     function renderTable(studentsRaw, attendanceData) {
         const root = document.getElementById('sheets-root');
@@ -421,10 +449,15 @@ async function init() {
             else if (_n <= 45) { _rowH = 25; _sw = 16; _sf = 8;  }
             else               { _rowH = 17; _sw = 13; _sf = 7;  }
 
+            /* [M20 · 아래 여백 확보] 실제 PDF 를 재보니 1쪽 아래 여백이 0.8mm 밖에 안 남아
+               표가 종이 끝에 거의 닿았다(2쪽은 13.7mm). 한 장 정원이 1~2명 많았던 것.
+               → 아래 여백 12mm(45px)를 미리 빼고 정원을 계산한다.
+                 이제 마지막 행 아래로 항상 12mm 이상 여백이 남는다.                        */
             const A4_H      = 1123;                 // A4 세로 (297mm @96dpi)
-            const HEAD_H    = 380;                  // 머리말 + 표 헤더 + 상하 여백 (실측 349 + 안전여유)
+            const HEAD_H    = 380;                  // 머리말 + 표 헤더 + 상단 여백 (실측 349 + 안전여유)
+            const FOOT_H    = 45;                   // 아래 여백 최소 12mm 확보 (45px ≈ 12mm)
             const _realH    = _rowH + 4;            // 테두리·패딩으로 실제로는 커진다 (넉넉히 잡음)
-            MAXROWS = Math.max(10, Math.floor((A4_H - HEAD_H) / _realH) - 1);
+            MAXROWS = Math.max(10, Math.floor((A4_H - HEAD_H - FOOT_H) / _realH) - 1);
             const MAXCOLS = 12;
             const colBlocks = [];
             for (let i = 0; i < dateArray.length; i += MAXCOLS) colBlocks.push(dateArray.slice(i, i + MAXCOLS));
