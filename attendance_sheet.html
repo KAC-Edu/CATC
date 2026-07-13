@@ -40,23 +40,31 @@
         .stamp { color: #dc2626; font-weight: 900; border: 1.5px solid #dc2626; border-radius: 50%; width: var(--sw,16px); height: var(--sw,16px); display: inline-flex; align-items: center; justify-content: center; font-size: var(--sf,8px); transform: rotate(-10deg); margin:0 auto; }
 
         @media print {
-            .no-print { display: none; }
-            html, body { background: white; padding: 0; margin: 0; }
+            /* [M19] !important 가 없어서 인라인 style 에 밀리는 바람에,
+               안내문구·저장버튼이 인쇄물에 같이 찍혀 나왔다. */
+            .no-print, #markHint { display: none !important; }
+            html, body { background: white !important; padding: 0 !important; margin: 0 !important; }
             /* @page 여백 0 → 브라우저가 자동 삽입하는 머리글/꼬리글(주소·날짜·페이지) 제거 */
             @page { size: A4 portrait; margin: 0; }
-            /* 페이지 여백은 컨테이너 패딩으로 직접 부여 (한 주 = 한 페이지, 가운데 정렬) */
+            /* [M19] 한 장(.sheet-container) = A4 한 장으로 '정확히' 고정.
+               예전엔 height 를 안 잡아둬서, 브라우저 인쇄(Ctrl+P)가 제멋대로 잘라
+               마지막 한 명(36번)만 다음 장으로 넘기곤 했다.
+               PDF 저장 때만 297mm 로 못박고 인쇄에는 안 걸려 있던 게 원인. */
             .sheet-container {
                 box-sizing: border-box;
-                width: 100%;
-                min-height: auto;
+                width: 210mm;
+                height: 297mm;          /* A4 한 장에 정확히 */
+                min-height: 297mm;
+                max-height: 297mm;
+                overflow: hidden;       /* 넘치는 내용이 다음 장으로 새지 않게 */
                 box-shadow: none;
                 margin: 0;
                 border: none;
                 padding: 11mm 13mm;
             }
-            /* 주차별 페이지 자동 분할 — 다음 주는 새 장에서 이어 출력 */
-            .sheet-container { page-break-after: always; }
-            .sheet-container:last-child { page-break-after: auto; }
+            /* 페이지 분할 — 한 장이 끝나면 무조건 새 장에서 시작 */
+            .sheet-container { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
+            .sheet-container:last-child { page-break-after: auto; break-after: auto; }
             /* 테이블 헤더 반복 (여러 페이지) */
             thead { display: table-header-group; }
             tfoot { display: table-footer-group; }
@@ -85,7 +93,25 @@
     <div class="no-print" style="text-align:center; margin-bottom:20px;">
         <button onclick="printSheet()" style="padding:10px 30px; background:#003366; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">출석부 PDF 저장 / 인쇄 (A4)</button>
     </div>
-    <div id="markHint" class="no-print" style="display:none; max-width:780px; margin:0 auto 18px; padding:11px 16px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; color:#1e40af; font-size:13.5px; font-weight:800; text-align:center; line-height:1.5;"><i class="fa-solid fa-hand-pointer"></i> 아직 출석 처리되지 않은 칸(<i class="fa-solid fa-hand-pointer" style="color:#94a3b8;"></i> 표시)을 클릭하면 <b>운영부 직접 출석 처리</b>됩니다. OTP 출석에는 인증번호가 표기되고, 직접 처리한 칸에는 <b>‘직접처리’</b>가 함께 남습니다. <span style="color:#64748b;font-weight:700;">(클릭 아이콘은 인쇄·PDF에 표시되지 않음)</span></div>
+    <!-- 안내 문구 — 예전엔 한 문단으로 뭉쳐 가운데 정렬이라 읽기 어지러웠다.
+         → 제목 한 줄 + 항목별 줄바꿈(왼쪽 정렬)으로 정리. -->
+    <div id="markHint" class="no-print" style="display:none; max-width:780px; margin:0 auto 18px; padding:14px 18px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; color:#1e40af; font-size:13.5px; line-height:1.7; text-align:left;">
+        <div style="font-weight:900; margin-bottom:7px; display:flex; align-items:center; gap:7px;">
+            <i class="fa-solid fa-hand-pointer"></i> 출석 직접 처리 안내
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:4px;">
+            <span style="flex:0 0 auto; color:#60a5fa; font-weight:900;">·</span>
+            <span style="font-weight:700;">빈 칸(<i class="fa-solid fa-hand-pointer" style="color:#94a3b8;"></i> 표시)을 클릭하면 <b>운영부 직접 출석 처리</b>됩니다.</span>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:4px;">
+            <span style="flex:0 0 auto; color:#60a5fa; font-weight:900;">·</span>
+            <span style="font-weight:700;">OTP 출석 칸에는 <b>인증번호</b>가, 직접 처리한 칸에는 <b>‘직접처리’</b>가 함께 표기됩니다.</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <span style="flex:0 0 auto; color:#94a3b8; font-weight:900;">·</span>
+            <span style="color:#64748b; font-weight:700;">클릭 아이콘은 인쇄·PDF에는 나오지 않습니다.</span>
+        </div>
+    </div>
 
     <!-- 주차별 출석부 페이지가 자동 생성됩니다 -->
     <div id="print-area">
@@ -135,7 +161,7 @@ function printSheet() {
       + 'height:297mm !important;min-height:297mm !important;max-height:297mm !important;'   /* A4 한 장에 정확히 */
       + 'margin:0 !important;padding:11mm 13mm !important;'                                   /* 아래 여백 28px 제거 */
       + 'box-shadow:none !important;border:none !important;overflow:hidden !important;}'
-      + '.no-print{display:none !important;}'
+      + '.no-print,#markHint{display:none !important;}'      /* 안내문구·저장버튼은 절대 안 찍히게 */
       + '.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
     const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
@@ -383,9 +409,9 @@ async function init() {
             else               { _rowH = 17; _sw = 13; _sf = 7;  }
 
             const A4_H      = 1123;                 // A4 세로 (297mm @96dpi)
-            const HEAD_H    = 349;                  // 머리말 + 표 헤더 + 상하 여백 (실측)
-            const _realH    = _rowH + 3;            // 테두리·패딩으로 실제로는 +3px 커진다
-            MAXROWS = Math.max(10, Math.floor((A4_H - HEAD_H) / _realH) - 2);   // 여유 2행
+            const HEAD_H    = 380;                  // 머리말 + 표 헤더 + 상하 여백 (실측 349 + 안전여유)
+            const _realH    = _rowH + 4;            // 테두리·패딩으로 실제로는 커진다 (넉넉히 잡음)
+            MAXROWS = Math.max(10, Math.floor((A4_H - HEAD_H) / _realH) - 1);
             const MAXCOLS = 12;
             const colBlocks = [];
             for (let i = 0; i < dateArray.length; i += MAXCOLS) colBlocks.push(dateArray.slice(i, i + MAXCOLS));
