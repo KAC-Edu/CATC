@@ -7789,15 +7789,48 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         if(wrap && !wrap.querySelector('.kac-course-loading')){
           var ld=document.createElement('div'); ld.className='kac-course-loading';
           ld.style.cssText='position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:9px; background:rgba(240,247,255,.88); -webkit-backdrop-filter:blur(2.5px); backdrop-filter:blur(2.5px);border-radius:12px; z-index:4; pointer-events:none; padding:0 12px; opacity:0; transition:opacity .2s ease .42s;';
-          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">접속이 많아 과정 목록을 불러오는 중이에요…</div>';
+          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">과정 목록을 불러오는 중…</div>';
           wrap.appendChild(ld); requestAnimationFrame(function(){ try{ ld.style.opacity='1'; }catch(e){} });
         }
       }
     }catch(e){}
     var _done=function(){ try{ if(sel){ sel.disabled=false; sel.style.color=''; } var w=sel&&sel.parentElement; var l=w&&w.querySelector&&w.querySelector('.kac-course-loading'); if(l) l.remove(); }catch(e){} };
+
+    /* [무한로딩 방지] 예전엔 26개 방 × (settings·status) = 52개 요청을 Promise.all 로 묶어
+       '전부' 돌아오기만 기다렸다. PC(와이파이)에선 다 돌아오지만, 모바일·카카오 인앱에서
+       요청 하나라도 응답이 안 오면(끊긴 게 아니라 '멈춘' 상태) .catch 도 안 걸려서
+       Promise.all 이 영원히 끝나지 않았다 → 스피너가 계속 도는 원인.
+       → 요청마다 제한시간을 둬서, 늦으면 빈 값으로 처리하고 넘어간다. 절대 안 멈춘다.  */
+    var _RTO = 7000;                                   // 방 하나당 최대 7초
+    var _timedOut = 0;
+    var _withTimeout = function(p, fallback){
+      return new Promise(function(resolve){
+        var fin = false;
+        var t = setTimeout(function(){ if(!fin){ fin = true; _timedOut++; resolve(fallback); } }, _RTO);
+        p.then(function(v){ if(!fin){ fin = true; clearTimeout(t); resolve(v); } })
+         .catch(function(){ if(!fin){ fin = true; clearTimeout(t); resolve(fallback); } });
+      });
+    };
+    // 응답이 늦거나 실패해서 목록을 못 만들었을 때 → '다시 시도' 버튼
+    var _retryBtn = function(){
+      try{
+        if(!sel) return;
+        sel.innerHTML = '<option value="">과정을 불러오지 못했습니다 (통신 지연)</option>';
+        var wrap = sel.parentElement;
+        if(wrap && !wrap.querySelector('.kac-course-retry')){
+          var b = document.createElement('button');
+          b.type = 'button'; b.className = 'kac-course-retry';
+          b.textContent = '🔄 과정 목록 다시 불러오기';
+          b.style.cssText = 'width:100%;margin-top:8px;padding:11px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-size:14px;font-weight:800;cursor:pointer;';
+          b.onclick = function(){ try{ b.remove(); }catch(e){} loadCourses(sel); };
+          wrap.parentElement ? wrap.parentElement.insertBefore(b, wrap.nextSibling) : wrap.appendChild(b);
+        }
+      }catch(e){}
+    };
+
     // [vJ117] 속도개선 — courses 전체(학생·출결·미디어·퀴즈 포함) 통째 로드 대신, 각 방의 settings·status만 병렬로 읽어 대폭 경량화
     var _db=firebase.database(); var _reads=[];
-    for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')]).then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; }).catch(function(){ return {room:r, s:{}, st:{}}; })); })(String.fromCharCode(_i)); }
+    for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(_withTimeout(Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')]).then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; }), {room:r, s:{}, st:{}})); })(String.fromCharCode(_i)); }
     return Promise.all(_reads).then(function(arr){
       var list=[];
       arr.forEach(function(rd){ var s=rd.s||{}, st=rd.st||{}; var nm=(s.courseName||'').trim();
@@ -7807,7 +7840,11 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         list.push({room:rd.room, name:nm, period:(s.period||'').trim(), detail:(s.roomDetailName||'').trim(), prof:(st.professorName||'').trim()});
       });
       sel.innerHTML='';
-      if(!list.length){ var o=document.createElement('option'); o.value=''; o.textContent='진행 중인 과정이 없습니다'; sel.appendChild(o); _done(); return; }
+      if(!list.length){
+        // 통신이 늦어 못 읽은 방이 있으면 '과정 없음'이 아니라 '다시 시도'로 안내한다
+        if(_timedOut > 0){ _retryBtn(); _done(); return; }
+        var o=document.createElement('option'); o.value=''; o.textContent='진행 중인 과정이 없습니다'; sel.appendChild(o); _done(); return;
+      }
       // [vJ119] 해당 주 과정이 2개 이상이면 "선택해 주세요" 안내 옵션을 기본 선택 → 다른 과정 사람이 실수로 잘못된 과정 등록 방지
       if(list.length>1){ var _ph=document.createElement('option'); _ph.value=''; _ph.textContent='📋 입교등록할 과정을 선택해 주세요'; _ph.disabled=true; _ph.selected=true; sel.appendChild(_ph); }
       list.forEach(function(c){
