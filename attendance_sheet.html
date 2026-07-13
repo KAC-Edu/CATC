@@ -319,12 +319,23 @@ async function init() {
         }
 
         const _renderWithExp = (rawList) => {
-            // 날짜는 12일(약 2주반)씩, 학생은 42명씩 한 페이지 — 90명·2주 → 2페이지
+            /* [M17 · 행 잘림 수정] 한 장에 넣는 인원(MAXROWS)이 실제로 들어가는 양보다 많아서
+               페이지 경계에서 행이 반토막 나 있었다.
+                 · A4 세로 = 297mm = 1123px
+                 · 머리말(제목·과정명·결재란) 233px + 표 헤더 33px + 컨테이너 상하여백 83px ≈ 349px
+                 · 남는 높이 ≈ 774px
+               게다가 --rh 를 17px 로 줘도 테두리·패딩 때문에 실제 행 높이는 20px 로 그려진다.
+               → 실측 행 높이(아래 _realH)로 나눠서, 여유 2행을 뺀 값을 한 장 정원으로 쓴다.  */
             const _n = sortedStudents.length;
             let _rowH, _sw, _sf, MAXROWS;
-            if (_n <= 25)      { _rowH = 40; _sw = 22; _sf = 10; MAXROWS = 60; }
-            else if (_n <= 45) { _rowH = 25; _sw = 16; _sf = 8;  MAXROWS = 60; }
-            else               { _rowH = 17; _sw = 13; _sf = 7;  MAXROWS = 42; }
+            if (_n <= 25)      { _rowH = 40; _sw = 22; _sf = 10; }
+            else if (_n <= 45) { _rowH = 25; _sw = 16; _sf = 8;  }
+            else               { _rowH = 17; _sw = 13; _sf = 7;  }
+
+            const A4_H      = 1123;                 // A4 세로 (297mm @96dpi)
+            const HEAD_H    = 349;                  // 머리말 + 표 헤더 + 상하 여백 (실측)
+            const _realH    = _rowH + 3;            // 테두리·패딩으로 실제로는 +3px 커진다
+            MAXROWS = Math.max(10, Math.floor((A4_H - HEAD_H) / _realH) - 2);   // 여유 2행
             const MAXCOLS = 12;
             const colBlocks = [];
             for (let i = 0; i < dateArray.length; i += MAXCOLS) colBlocks.push(dateArray.slice(i, i + MAXCOLS));
