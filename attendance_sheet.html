@@ -77,6 +77,8 @@
         .att-in{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0.5px; line-height:1; }
         .att-auth{ font-size:calc(var(--sf, 8px) - 2px); font-family:'Consolas','Roboto Mono',monospace; color:#059669; font-weight:800; letter-spacing:-.3px; white-space:nowrap; transform:rotate(-10deg); margin-top:1px; }
         .att-auth.manual{ color:#2563eb; }
+        /* 입교등록으로 자동 출석된 칸 — OTP(초록)·직접처리(파랑)와 구분되는 보라색 */
+        .att-auth.enroll{ color:#7c3aed; }
         .stamp-manual{ color:#2563eb !important; border-color:#2563eb !important; }
         .att-mark{ cursor:pointer; }
         .att-mark:hover{ background:#eff6ff; }
@@ -105,7 +107,7 @@
         </div>
         <div style="display:flex; gap:8px; margin-bottom:4px;">
             <span style="flex:0 0 auto; color:#60a5fa; font-weight:900;">·</span>
-            <span style="font-weight:700;">OTP 출석 칸에는 <b>인증번호</b>가, 직접 처리한 칸에는 <b>‘직접처리’</b>가 함께 표기됩니다.</span>
+            <span style="font-weight:700;">칸마다 출처가 표기됩니다 — OTP 출석은 <b style="color:#059669;">인증번호</b>, 입교등록 자동 출석은 <b style="color:#7c3aed;">‘입교등록’</b>, 운영부 직접 처리는 <b style="color:#2563eb;">‘직접처리’</b>.</span>
         </div>
         <div style="display:flex; gap:8px;">
             <span style="flex:0 0 auto; color:#94a3b8; font-weight:900;">·</span>
@@ -479,11 +481,18 @@ async function init() {
                         // 운영부 직접 처리한 출석 → 다시 클릭하면 취소(확인 후)
                         row += `<td class="att-manual" data-d="${d}" data-n="${_n}" data-p="${_p}" onclick="unmarkCell(this)" title="클릭하면 직접처리 취소"><div class="att-in"><div class="stamp stamp-manual">출석</div><div class="att-auth manual">직접처리</div></div></td>`;
                     } else {
+                        /* [입교등록 출석] 입교등록 안내는 강의장 도착 후 나가므로, 입교등록 = 그날 출석.
+                           교육생 앱이 authId:'KAC-ENROLL', src:'enroll' 로 기록한다.
+                           → 인증번호 대신 '입교등록'으로 표기해 출처를 알아볼 수 있게 한다. */
+                        const _enr = (info.src === 'enroll') || /^KAC-?ENROLL$/i.test(_auth);
                         let _sub = '';
-                        if (_man) _sub = '<div class="att-auth manual">직접처리</div>';
+                        if (_man)      _sub = '<div class="att-auth manual">직접처리</div>';
+                        else if (_enr) _sub = '<div class="att-auth enroll">입교등록</div>';
                         else if (_auth) _sub = `<div class="att-auth">${_auth.replace(/^KAC-?/i, '')}</div>`;
-                        else if (_tm) _sub = `<div class="att-auth">${_tm.replace(/[오전오후\s]/g, '')}</div>`;
-                        const _ttl = (_man ? '운영부 직접 처리' : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
+                        else if (_tm)  _sub = `<div class="att-auth">${_tm.replace(/[오전오후\s]/g, '')}</div>`;
+                        const _ttl = (_man ? '운영부 직접 처리'
+                                    : _enr ? ('입교등록으로 자동 출석' + (_tm ? ' · ' + _tm : ''))
+                                    : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
                         row += `<td title="${_ttl}"><div class="att-in"><div class="stamp${_man ? ' stamp-manual' : ''}">출석</div>${_sub}</div></td>`;
                     }
                 } else if (_canMark && d <= _todayStr) {
