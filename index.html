@@ -7828,9 +7828,31 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       }catch(e){}
     };
 
-    // [vJ117] 속도개선 — courses 전체(학생·출결·미디어·퀴즈 포함) 통째 로드 대신, 각 방의 settings·status만 병렬로 읽어 대폭 경량화
-    var _db=firebase.database(); var _reads=[];
-    for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(_withTimeout(Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')]).then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; }), {room:r, s:{}, st:{}})); })(String.fromCharCode(_i)); }
+    /* [사내망·프록시 대응] 파이어베이스 SDK 는 '웹소켓'으로 붙는다.
+       사무실 와이파이·사내망·일부 인앱 브라우저가 웹소켓을 막으면 연결이 끊기는 게 아니라
+       '멈춘' 상태가 되어(에러도 안 남) 과정 목록이 영영 안 온다.
+       (강당에선 되는데 사무실 폰에선 계속 로딩되던 원인)
+       → 과정 목록만큼은 웹소켓을 쓰지 않는 일반 HTTPS(REST)로 읽는다. 방화벽·프록시를 통과한다.
+         REST 가 막히면 기존 SDK 방식으로 자동 폴백한다.                                  */
+    var _db=firebase.database();
+    var _dbUrl='';
+    try{ _dbUrl=String((firebase.app().options||{}).databaseURL||'').replace(/\/+$/,''); }catch(e){}
+
+    var _readRoom=function(r){
+      var _viaSdk=function(){
+        return Promise.all([_db.ref('courses/'+r+'/settings').once('value'), _db.ref('courses/'+r+'/status').once('value')])
+          .then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; });
+      };
+      if(!_dbUrl) return _viaSdk();
+      return Promise.all([
+        fetch(_dbUrl+'/courses/'+r+'/settings.json', {cache:'no-store'}).then(function(x){ if(!x.ok) throw 0; return x.json(); }),
+        fetch(_dbUrl+'/courses/'+r+'/status.json',   {cache:'no-store'}).then(function(x){ if(!x.ok) throw 0; return x.json(); })
+      ]).then(function(v){ return {room:r, s:v[0]||{}, st:v[1]||{}}; })
+        .catch(function(){ return _viaSdk(); });     // REST 실패 → SDK 로 재시도
+    };
+
+    var _reads=[];
+    for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(_withTimeout(_readRoom(r), {room:r, s:{}, st:{}})); })(String.fromCharCode(_i)); }
     return Promise.all(_reads).then(function(arr){
       var list=[];
       arr.forEach(function(rd){ var s=rd.s||{}, st=rd.st||{}; var nm=(s.courseName||'').trim();
