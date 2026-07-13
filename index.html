@@ -7786,15 +7786,92 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         var wrap=sel.parentElement;
         if(wrap && !wrap.classList.contains('kac-course-wrap')){ var w=document.createElement('div'); w.className='kac-course-wrap'; w.style.position='relative'; wrap.insertBefore(w, sel); w.appendChild(sel); wrap=w; }
         sel.disabled=true;
+        /* 예전엔 반투명 오버레이를 셀렉트 '위에' 덮었더니, 뒤의 글자가 비쳐 보이면서
+           스피너·문구가 엉뚱한 위치에 있는 것처럼 보였다.
+           → 셀렉트를 아예 감추고, 그 자리에 같은 규격의 '로딩 박스'를 놓는다. */
+        sel.style.display='none';
+        var _cp0 = wrap && wrap.querySelector('.kac-cp'); if(_cp0) _cp0.style.display='none';
         if(wrap && !wrap.querySelector('.kac-course-loading')){
           var ld=document.createElement('div'); ld.className='kac-course-loading';
-          ld.style.cssText='position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:9px; background:rgba(240,247,255,.88); -webkit-backdrop-filter:blur(2.5px); backdrop-filter:blur(2.5px);border-radius:12px; z-index:4; pointer-events:none; padding:0 12px; opacity:0; transition:opacity .2s ease .42s;';
-          ld.innerHTML='<div style="width:18px;height:18px;border:3px solid #bfdbfe;border-top-color:#2563eb;border-radius:50%;animation:kacSpin .8s linear infinite;flex:0 0 auto;"></div><div style="font-size:12.5px;font-weight:800;color:#1d4ed8;">과정 목록을 불러오는 중…</div>';
-          wrap.appendChild(ld); requestAnimationFrame(function(){ try{ ld.style.opacity='1'; }catch(e){} });
+          ld.innerHTML='<div class="kac-cl-spin"></div><span>과정 목록을 불러오는 중…</span>';
+          wrap.appendChild(ld);
         }
       }
     }catch(e){}
-    var _done=function(){ try{ if(sel){ sel.disabled=false; sel.style.color=''; } var w=sel&&sel.parentElement; var l=w&&w.querySelector&&w.querySelector('.kac-course-loading'); if(l) l.remove(); }catch(e){} };
+    /* [과정 목록 보기 좋게] 휴대폰의 기본 <select> 목록은 iOS·안드로이드가 제멋대로 그린다
+       (글자가 가운데로 몰리고 두 줄로 잘림). 브라우저 기본 UI라 CSS로 손볼 수가 없다.
+       → 진짜 <select> 는 로직용으로 그대로 두고 화면에서만 숨긴 뒤,
+         똑같이 동작하는 '직접 만든 목록'을 그 자리에 그린다. 왼쪽 정렬 · 한 줄 · 터치 편한 크기. */
+    var _skinSelect = function(){
+      try{
+        if(!sel) return;
+        var wrap = sel.parentElement;
+        if(!wrap || !wrap.classList.contains('kac-course-wrap')) return;
+        sel.style.display = 'none';                       // 네이티브 목록은 숨김(값은 그대로 사용)
+        var box = wrap.querySelector('.kac-cp');
+        if(!box){
+          box = document.createElement('div');
+          box.className = 'kac-cp';
+          box.innerHTML = '<button type="button" class="kac-cp-btn"><span class="kac-cp-label"></span><i class="fa-solid fa-chevron-down kac-cp-cv"></i></button><div class="kac-cp-list" hidden></div>';
+          wrap.appendChild(box);
+          box.querySelector('.kac-cp-btn').addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            var l = box.querySelector('.kac-cp-list');
+            var willOpen = l.hasAttribute('hidden');
+            if(willOpen){ l.removeAttribute('hidden'); } else { l.setAttribute('hidden',''); }
+            box.classList.toggle('open', willOpen);
+          });
+          document.addEventListener('click', function(ev){
+            if(!box.contains(ev.target)){
+              var l = box.querySelector('.kac-cp-list');
+              if(l && !l.hasAttribute('hidden')){ l.setAttribute('hidden',''); box.classList.remove('open'); }
+            }
+          });
+        }
+        var list  = box.querySelector('.kac-cp-list');
+        var label = box.querySelector('.kac-cp-label');
+        list.innerHTML = '';
+        var opts = Array.prototype.slice.call(sel.options);
+        opts.forEach(function(o, i){
+          if(o.disabled || !o.value) return;              // '선택해 주세요' 같은 안내 옵션은 목록에서 뺀다
+          var it = document.createElement('button');
+          it.type = 'button';
+          it.className = 'kac-cp-item' + (i === sel.selectedIndex ? ' on' : '');
+          it.textContent = o.textContent;
+          it.addEventListener('click', function(e){
+            e.preventDefault(); e.stopPropagation();
+            sel.selectedIndex = i;
+            try{ sel.dispatchEvent(new Event('change', {bubbles:true})); }catch(_){}
+            list.setAttribute('hidden',''); box.classList.remove('open');
+            _skinSelect();
+          });
+          list.appendChild(it);
+        });
+        if(!list.children.length){
+          var em = document.createElement('div');
+          em.className = 'kac-cp-empty';
+          em.textContent = (sel.options[0] ? sel.options[0].textContent : '과정이 없습니다');
+          list.appendChild(em);
+        }
+        var cur = sel.options[sel.selectedIndex];
+        var picked = (cur && cur.value) ? cur.textContent : '';
+        label.textContent = picked || '과정을 선택해 주세요';
+        box.classList.toggle('placeholder', !picked);
+      }catch(e){}
+    };
+    window._kacSkinCourse = _skinSelect;                  // 편집모드에서 값 세팅 후 다시 그리기용
+
+    var _done=function(){
+      try{
+        if(sel){ sel.disabled=false; sel.style.color=''; }
+        var w = sel && sel.parentElement;
+        var l = w && w.querySelector && w.querySelector('.kac-course-loading');
+        if(l) l.remove();                                  // 로딩 박스 제거
+        var cp = w && w.querySelector && w.querySelector('.kac-cp');
+        if(cp) cp.style.display='';                        // 목록 버튼 다시 표시
+        _skinSelect();
+      }catch(e){}
+    };
 
     /* [무한로딩 방지] 예전엔 26개 방 × (settings·status) = 52개 요청을 Promise.all 로 묶어
        '전부' 돌아오기만 기다렸다. PC(와이파이)에선 다 돌아오지만, 모바일·카카오 인앱에서
@@ -7901,6 +7978,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         var exists=Array.prototype.some.call(courseSel.options,function(o){ return o.value===window._keduOriginalRoom; });
         if(exists) courseSel.value=window._keduOriginalRoom;
       }
+      try{ if(typeof window._kacSkinCourse==='function') window._kacSkinCourse(); }catch(e){}   // 선택값 반영해 목록 UI 갱신
     }).finally(function(){ hideLoader(); });
     var _kEnrollBtn=document.getElementById('keduEnrollBtn');
     if(_kEnrollBtn){ _kEnrollBtn.onclick=function(){ submitEnroll(menu); }; _kEnrollBtn.textContent = window._keduEditMode ? '정보 수정하기' : '입교 등록'; }
@@ -10212,6 +10290,119 @@ html.kac-core-screen #realUserCount::before{
 }
 /* 칩이 잘리지 않도록 담임 칸의 클리핑 해제 */
 #keduHome .kh-rows #khProf{ overflow:visible !important; }
+
+/* ───────── [입교등록] 과정 선택 목록 — 직접 만든 UI ─────────
+   휴대폰 기본 <select> 목록은 글자가 가운데로 몰리고 두 줄로 잘려 보기 나빴다.
+   브라우저가 그리는 UI라 손댈 수 없어서, 아래처럼 직접 그린다. */
+#keduEnroll .kac-course-wrap{ position:relative; }
+#keduEnroll .kac-cp{ position:relative; width:100%; }
+
+#keduEnroll .kac-cp-btn{
+  width:100% !important;
+  display:flex !important;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  box-sizing:border-box;
+  margin:0 !important;
+  padding:14px 15px !important;
+  border:1.5px solid #dbeafe !important;
+  border-radius:12px !important;
+  background:#fff !important;
+  color:#0f172a !important;
+  font-family:inherit;
+  font-size:15px !important;
+  font-weight:800 !important;
+  text-align:left !important;
+  line-height:1.35;
+  cursor:pointer;
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+#keduEnroll .kac-cp.open .kac-cp-btn{ border-color:#2563eb !important; box-shadow:0 0 0 3px rgba(37,99,235,.12); }
+#keduEnroll .kac-cp.placeholder .kac-cp-btn{ color:#94a3b8 !important; font-weight:700 !important; }
+#keduEnroll .kac-cp-label{
+  flex:1 1 auto; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;   /* 한 줄로 */
+  text-align:left;
+}
+#keduEnroll .kac-cp-cv{ flex:0 0 auto; font-size:12px; color:#94a3b8; transition:transform .18s; }
+#keduEnroll .kac-cp.open .kac-cp-cv{ transform:rotate(180deg); }
+
+#keduEnroll .kac-cp-list{
+  position:absolute; left:0; right:0; top:calc(100% + 6px);
+  z-index:50;
+  background:#fff;
+  border:1px solid #e2e8f0;
+  border-radius:14px;
+  box-shadow:0 14px 36px rgba(15,23,42,.18);
+  overflow:hidden auto;
+  max-height:230px;
+  -webkit-overflow-scrolling:touch;
+}
+#keduEnroll .kac-cp-list[hidden]{ display:none; }
+
+#keduEnroll .kac-cp-item{
+  width:100% !important;
+  display:block !important;
+  box-sizing:border-box;
+  margin:0 !important;
+  padding:14px 15px !important;
+  border:none !important;
+  border-bottom:1px solid #f1f5f9 !important;
+  border-radius:0 !important;
+  background:#fff !important;
+  color:#0f172a !important;
+  font-family:inherit;
+  font-size:15px !important;
+  font-weight:700 !important;
+  text-align:left !important;        /* ← 가운데로 몰리던 문제 해결 */
+  line-height:1.35;
+  white-space:nowrap;                /* ← 두 줄로 잘리던 문제 해결 */
+  overflow:hidden;
+  text-overflow:ellipsis;
+  cursor:pointer;
+}
+#keduEnroll .kac-cp-item:last-child{ border-bottom:none !important; }
+#keduEnroll .kac-cp-item:active{ background:#f1f5f9 !important; }
+#keduEnroll .kac-cp-item.on{
+  background:#eff6ff !important;
+  color:#1d4ed8 !important;
+  font-weight:900 !important;
+}
+#keduEnroll .kac-cp-empty{
+  padding:14px 15px;
+  color:#94a3b8;
+  font-size:14px;
+  font-weight:700;
+  text-align:left;
+}
+
+/* 과정 목록을 불러오는 동안 — 선택 버튼과 똑같은 규격의 '로딩 박스'
+   (예전 반투명 오버레이는 뒤 글자가 비쳐서 위치가 이상해 보였다) */
+#keduEnroll .kac-course-loading{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+  box-sizing:border-box;
+  width:100%;
+  padding:14px 15px;
+  border:1.5px solid #dbeafe;
+  border-radius:12px;
+  background:#f4f8ff;          /* 불투명 — 뒤가 비치지 않는다 */
+  color:#1d4ed8;
+  font-size:14px;
+  font-weight:800;
+  line-height:1.35;
+}
+#keduEnroll .kac-cl-spin{
+  flex:0 0 auto;
+  width:17px; height:17px;
+  border:2.5px solid #bfdbfe;
+  border-top-color:#2563eb;
+  border-radius:50%;
+  animation:kacSpin .8s linear infinite;
+}
 </style>
 
 <!-- ═══ [2026-07-07 전체 점검모드] system/maintenance 스위치 하나로 전 플랫폼 동시 점검중 전환.
