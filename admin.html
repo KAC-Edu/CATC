@@ -484,6 +484,22 @@
   #kacBrandBtn:hover{ color:#93c5fd; text-shadow:0 0 18px rgba(147,197,253,.55); }
   body.in-course #kacBrandBtn{ display:none; }
 
+  /* [J96] '강의실 실시간 현황판'에 들어와 있을 때는 이 자리가 브랜드가 아니라 '뒤로가기'다.
+     들어온 곳(통합 교육 현황판 / 과정 운영 현황)이 어디냐에 따라 글자가 바뀌므로
+     알약 모양으로 감싸서 '누르는 버튼'임을 분명히 보이게 한다. */
+  #kacBrandBtn.is-back{
+      display:inline-flex; align-items:center; gap:7px;
+      font-size:16px; font-weight:800; letter-spacing:0;
+      padding:7px 17px 7px 13px; border-radius:999px;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.22);
+  }
+  #kacBrandBtn.is-back:hover{
+      color:#93c5fd; text-shadow:none;
+      background:rgba(147,197,253,.18);
+      border-color:rgba(147,197,253,.55);
+  }
+
   /* [J93] 과정 안(과정운영현황·소메뉴)에서도 좌측 상단에 마우스를 올리면
      현황판 브랜드와 '똑같은' 파란 글로우가 나오게 한다.
      그 자리는 클릭하면 뒤로 가는 곳이므로, 누를 수 있다는 신호를 동일하게 준다. */
@@ -502,8 +518,9 @@
   #headerCourseInfo .header-title .course-sub-name{ transition:color .16s, text-shadow .16s, opacity .16s; }
 </style>
 <header class="header" style="position:relative;">
-    <!-- [J92] 현황판 좌측 상단 브랜드 → 누르면 키오스크 화면 -->
-    <div id="kacBrandBtn" onclick="kiosk.openTemp()" title="누르면 키오스크 화면 (5초 뒤 현황판으로 자동 복귀)">KAC Training Platform</div>
+    <!-- [J92] 현황판 좌측 상단 브랜드 → 누르면 키오스크 화면
+         [J96] 단, '강의실 실시간 현황판'에 들어와 있을 때는 들어온 곳으로 돌아가는 뒤로가기가 된다 -->
+    <div id="kacBrandBtn" onclick="kacBrandClick()" title="누르면 키오스크 화면 (5초 뒤 현황판으로 자동 복귀)">KAC Training Platform</div>
     <!-- [J91] 뒤로가기는 한 단계씩: 소메뉴 → 과정 운영 현황 → 통합 현황판 -->
     <div id="headerCourseInfo" onclick="ui.goBackStep()" title="뒤로" style="display:flex; align-items:center; gap:8px; min-width:0; cursor:pointer;">
         <span id="headerBackBtn" style="align-items:center; justify-content:center; color:#fff; font-size:20px; flex-shrink:0;"><i class="fa-solid fa-reply"></i></span>
