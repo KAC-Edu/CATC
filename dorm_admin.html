@@ -2125,6 +2125,10 @@
                 (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {}))
                     .filter(c => c && c.name && c.cancelled).map(c => (c.name || '').trim())
             );
+            // [J98] 연간계획 행의 '키' 목록 — 방의 settings.planId 와 맞춰 보기 위해 필요
+            const _acObj  = annualCache || {};
+            const _acKeys = Array.isArray(_acObj) ? _acObj.map((_, i) => String(i)) : Object.keys(_acObj);
+            const planKeys = new Set(_acKeys.filter(k => _acObj[k] && _acObj[k].name && !_acObj[k].cancelled));
 
             let items = [];
             Object.entries(courses).forEach(([room, c]) => {
@@ -2151,9 +2155,14 @@
                 const profName = kacProfLabel(c.status || {});   // [J89] 담임 여러 명 → "장두석 외 2명"
                 const resetKeyMatch = String((c.status && c.status.resetKey) || '').match(/(?:reset_|rk_)(\d{13})/);
                 const inferredCreatedAt = resetKeyMatch ? Number(resetKeyMatch[1]) : 0;
-                const notInPlan = !planNames.has((s.courseName || '').trim());
+                /* [J98] 방↔연간계획은 planId 로 연결된다(있으면). planId 가 있으면 이름이 달라도 '계획 안의 과정'이다.
+                   예전엔 이름 글자만 봤기 때문에, 강사가 과정명을 고치면 그 방이 '계획 외 운영'으로 뜨고
+                   계획의 옛 과정은 '예정'으로 또 떠서 같은 과정이 두 개로 보였다. */
+                const _planId = String(s.planId || '');
+                const notInPlan = !(_planId && planKeys.has(_planId)) && !planNames.has((s.courseName || '').trim());
                 items.push({
                     room,
+                    planId: _planId,
                     courseName: s.courseName || room,
                     period: s.period || '',
                     roomDetail: courseRoomDetail({ room, courseName: s.courseName || room, period: s.period || '' }, s),
@@ -2168,9 +2177,13 @@
 
             // 연간계획에만 있고 실제 룸에 아직 배정 안 된 과정도 표시 (생활관 사전 준비용)
             const existingKeys = new Set(items.map(it => `${it.courseName}|${it.start}`));
-            (Array.isArray(annualCache) ? annualCache : Object.values(annualCache || {})).forEach(c => {
+            // [J98] 이미 방으로 운영 중인 계획 행(planId) — 이름·기간이 바뀌었어도 '같은 과정'이므로 예정으로 또 띄우지 않는다
+            const linkedPlanIds = new Set(items.map(it => it.planId).filter(Boolean));
+            _acKeys.forEach(_k => {
+                const c = _acObj[_k];
                 if (!c || !c.name) return;
                 if (c.cancelled) return;
+                if (linkedPlanIds.has(String(_k))) return;          // [J98] 이 계획은 이미 방으로 돌아가는 중 → 중복 방지
                 const start = c.startDate || (c.period && c.period.includes(' ~ ') ? c.period.split(' ~ ')[0].trim() : '');
                 const end = c.endDate || (c.period && c.period.includes(' ~ ') ? c.period.split(' ~ ')[1].trim() : start);
                 if (!start) return;
