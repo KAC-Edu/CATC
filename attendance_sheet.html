@@ -499,6 +499,8 @@ async function init() {
         }catch(e){ _fbHolidays = {}; }   // 못 읽으면 코드 기본 목록만 사용
     }
 
+    let _renderSeq = 0;   // [M21] 렌더 순번 — 늦게 돌아온 비동기 콜백이 중복으로 붙는 것을 막는다
+
     function renderTable(studentsRaw, attendanceData) {
         const root = document.getElementById('sheets-root');
         if (!root) return;
@@ -558,8 +560,22 @@ async function init() {
                 stuPages.forEach(sp => { pno++; root.appendChild(buildPage(dates, sp.list, sp.start, pno, total, attendanceData, rawList, _rowH, _sw, _sf)); });
             });
         };
-        if (window._archiveMode) { _renderWithExp(window._archiveExpected); }
-        else { db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _renderWithExp(expSnap.val())); }
+        /* [M21 · 명단 3중 중복 수정] renderTable() 은 맨 위에서 root.innerHTML='' 로 지우지만,
+           페이지를 실제로 붙이는 _renderWithExp 는 expectedStudents 를 읽어온 '뒤에'(비동기)
+           실행된다. 그래서 renderTable 이 짧은 간격으로 여러 번 불리면
+             지우기 → 지우기 → 지우기 → (콜백1 붙임) → (콜백2 붙임) → (콜백3 붙임)
+           순서가 되어 같은 명단이 여러 번 쌓였다(64명 → 201명 / 2쪽 → 9쪽).
+           → 렌더마다 번호를 매기고, 콜백이 돌아왔을 때 '가장 최근 렌더'가 아니면 버린다.
+             그리고 붙이기 직전에 한 번 더 비운다.                                        */
+        const _myRun = ++_renderSeq;
+        const _apply = (rawList) => {
+            if (_myRun !== _renderSeq) return;      // 그 사이 다시 그려졌으면 이 결과는 버린다
+            root.innerHTML = '';                    // 붙이기 직전에 한 번 더 비운다 (중복 방지)
+            _renderWithExp(rawList);
+        };
+
+        if (window._archiveMode) { _apply(window._archiveExpected); }
+        else { db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _apply(expSnap.val())); }
     }
 
     function buildPage(dates, students, startIdx, pageNo, totalPages, attendanceData, rawList, rowH, sw, sf) {
