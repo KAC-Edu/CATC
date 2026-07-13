@@ -275,8 +275,27 @@ async function init() {
     // [수정] 주차별 페이지에서 반복 사용하기 위해 헤더 정보를 전역에 보관
     HEADER.courseName = courseInfo.courseName || roomFromUrl;
     HEADER.period     = courseInfo.period || "-";
-    HEADER.coordName  = courseInfo.coordinatorName || "-";
     HEADER.profName   = roomStatus.professorName ? roomStatus.professorName + " 교수" : "-";
+
+    /* [결재란 과정담당 직책] 담임교수는 '김정민 교수'인데 과정담당은 이름만 나와 결재란이
+       어색했다. 직책은 담당자 명부(system/coordinators)에 title 로 들어 있다.
+       → 이름으로 찾아 '차장 전은영' 처럼 직책을 앞에 붙인다. (명부에 없으면 이름만) */
+    HEADER.coordName = courseInfo.coordinatorName || "-";
+    try {
+        const _cn = String(courseInfo.coordinatorName || '').trim();
+        if (_cn) {
+            const _cs = await db.ref('system/coordinators').once('value');
+            const _all = _cs.val() || {};
+            for (const k in _all) {
+                const c = _all[k] || {};
+                if (String(c.name || '').trim() === _cn) {
+                    const t = String(c.title || '').trim();
+                    if (t) HEADER.coordName = t + ' ' + _cn;      // 예) 차장 전은영
+                    break;
+                }
+            }
+        }
+    } catch (e) { /* 명부를 못 읽으면 이름만 표시 */ }
 
     // 3. 전체 평일 날짜 배열 생성 (월~금) — 이후 주 단위로 분할
     dateArray = generateDates(courseInfo.period);
