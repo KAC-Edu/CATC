@@ -12650,17 +12650,37 @@ const bgmPlayer = {
         }
     },
 
-    // raw.githubusercontent 에서 배경음N.mp3 를 1번부터 순차 확인 (API 한도 영향 없음)
+    /* raw.githubusercontent 에서 직접 확인 (GitHub API 한도와 무관 · API 실패 시에만 쓰는 폴백)
+       [번호 순서 무관] 예전엔 1번부터 하나씩 확인하다가 '연속 3개가 비면' 거기서 멈췄다.
+       그래서 배경음5를 지우고 6·7·8이 없으면 9번부터는 아예 못 찾는 문제가 있었다.
+       → 이제 1~80번을 한꺼번에(병렬로) 확인하고, 있는 것만 전부 모은다.
+         중간이 아무리 비어 있어도 상관없다. 번호를 이어 붙일 필요가 없다.
+       (HEAD 요청이라 본문을 받지 않아 가볍고, 결과는 캐시되므로 매번 돌지 않는다)          */
     _probe: async function() {
+        const MAX = 80;
         const nums = [], files = {};
-        let miss = 0;
-        for (let n = 1; n <= 80 && miss < 3; n++) {     // 연속 3개 비면 종료(중간 누락 일부 허용)
-            const url = this._BASE_URL + encodeURIComponent(`배경음${n}.mp3`);
-            let ok = false;
-            try { const r = await fetch(url, { method: 'HEAD', cache: 'no-store' }); ok = r.ok; } catch (e) { ok = false; }
-            if (ok) { nums.push(n); files[n] = `배경음${n}.mp3`; miss = 0; }
-            else { miss++; }
+
+        const checks = [];
+        for (let n = 1; n <= MAX; n++) {
+            (function(self, num){
+                checks.push((async function(){
+                    // 확장자도 여러 개 시도 (mp3 뿐 아니라 m4a 등도 인식)
+                    for (const ext of self._AUDIO_EXT) {
+                        const fname = `배경음${num}.${ext}`;
+                        try {
+                            const r = await fetch(self._BASE_URL + encodeURIComponent(fname), { method: 'HEAD', cache: 'no-store' });
+                            if (r.ok) return { num, fname };
+                        } catch (e) { /* 다음 확장자 시도 */ }
+                    }
+                    return null;
+                })());
+            })(this, n);
         }
+
+        const found = await Promise.all(checks);
+        found.forEach(function(f){ if (f) { nums.push(f.num); files[f.num] = f.fname; } });
+        nums.sort(function(a, b){ return a - b; });
+
         return nums.length ? { nums, files } : null;
     },
 
