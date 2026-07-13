@@ -8054,6 +8054,50 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       var profileUpdate={ name:name, empNo:sabun, phone:sabun, joinedAt: firebase.database.ServerValue.TIMESTAMP, isOnline:true };
       if(window._myDept) profileUpdate.dept=String(window._myDept).trim();
       await firebase.database().ref('courses/'+room+'/students/'+token).update(profileUpdate);
+
+      /* ═══ [입교등록 = 출석] ═══════════════════════════════════════════════
+         입교등록 안내는 교육생이 '강의장에 도착한 뒤' 채널방으로 나간다.
+         즉 입교등록 자체가 '그날 강의장에 있었다'는 증거다.
+         그런데 예전엔 students 에만 기록되고 internal_attendance(출석부가 읽는 곳)에는
+         아무것도 안 남아, 입교등록을 하고도 OTP 를 또 찍어야 출석부에 표시됐다.
+         → 등록한 날짜가 교육기간 안이면, 그날 출석을 함께 기록한다.
+           (기간 밖에 등록하면 기록하지 않는다 — 엉뚱한 날짜에 출석이 찍히지 않게)
+           이미 그날 OTP 로 출석했다면 덮어쓰지 않는다.                            */
+      try{
+        var _today = getTodayString();                       // YYYY-MM-DD
+        var _period = String((enrollmentSettings && enrollmentSettings.period) || '').trim();
+        var _inPeriod = true;                                // 기간 정보가 없으면 막지 않는다
+        if(_period.indexOf('~') >= 0){
+          var _pp = _period.split('~');
+          var _ps = (_pp[0]||'').trim(), _pe = (_pp[1]||'').trim();
+          if(_ps && _today < _ps) _inPeriod = false;         // 교육 시작 전
+          if(_pe && _today > _pe) _inPeriod = false;         // 교육 종료 후
+        }
+
+        if(_inPeriod){
+          var _attPath = 'courses/'+room+'/internal_attendance/'+_today+'/'+token;
+          var _exist = await firebase.database().ref(_attPath).once('value');
+          if(!_exist.exists()){                              // OTP 로 이미 출석했으면 그대로 둔다
+            await firebase.database().ref(_attPath).set({
+              name: name,
+              phone: sabun,
+              time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+              authId: 'KAC-ENROLL',                          // 출석부에 '입교등록'으로 구분 표시
+              src: 'enroll',
+              timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+          }
+          /* 교육생 앱 [출결하기] 버튼도 그날은 '출결완료'로 바뀌게 한다.
+             ※ 버튼은 kakaoAttendanceStorageKey() 가 만든 키를 보는데, 그 함수는 방 이름을
+               대문자로 정규화(normalizeKakaoRoom)해서 쓴다. 여기서 room 을 그대로 쓰면
+               키가 어긋나 버튼이 안 바뀐다 → 같은 정규화를 거쳐 키를 맞춘다. */
+          try{
+            var _rk = (typeof normalizeKakaoRoom === 'function') ? normalizeKakaoRoom(room) : String(room||'').trim().toUpperCase();
+            localStorage.setItem('kac_attended_'+_rk+'_'+_today+'_'+token, 'true');
+            if(typeof updateKakaoAttendanceButton === 'function') updateKakaoAttendanceButton(_rk);   // 즉시 반영
+          }catch(e){}
+        }
+      }catch(e){ /* 출석 기록에 실패해도 입교등록 자체는 정상 처리 */ }
       if(window._keduEditMode && window._keduOriginalToken && window._keduOriginalRoom &&
          (window._keduOriginalToken!==token || window._keduOriginalRoom!==room)){
         await firebase.database().ref('courses/'+window._keduOriginalRoom+'/students/'+window._keduOriginalToken).remove();
