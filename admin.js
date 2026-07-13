@@ -17148,5 +17148,89 @@ try {
     });
 } catch(e){}
 
+/* ══════════════════════════════════════════════════════════════════════
+   [J96] 좌측 상단 'KAC Training Platform' = 상황에 맞는 뒤로가기
+   ──────────────────────────────────────────────────────────────────────
+   '강의실 실시간 현황판(waiting)'은 두 곳에서 들어올 수 있다.
+     ① 통합 교육 현황판(home)  → 헤더의 모니터 아이콘
+     ② 과정 운영 현황(dashboard) → 헤더의 모니터 아이콘
+   예전엔 어느 쪽으로 들어왔든 좌측 상단이 그냥 브랜드(키오스크 미리보기)여서
+   '왔던 곳으로' 돌아갈 방법이 없었다.
+   → 들어온 곳을 기억해 두었다가, 현황판에서는 그 자리를 '뒤로가기'로 바꾼다.
+      글자도 목적지 이름으로 바꿔 어디로 가는지 눈으로 알 수 있게 한다.
+   현황판이 아닌 화면에서는 예전 그대로 키오스크 미리보기다.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+    try {
+        if (typeof ui === 'undefined' || !ui.setMode) return;
+
+        var _waitFrom = 'home';   // 현황판에 들어오기 '직전' 화면 (home | dashboard)
+
+        // 지금이 '강의실 실시간 현황판'인가?
+        function _onWaiting() {
+            try { return state.currentMode === 'waiting'; } catch (e) { return false; }
+        }
+
+        // 좌측 상단 글자/모양을 지금 상황에 맞게 갱신
+        function _syncBrand() {
+            var b = document.getElementById('kacBrandBtn');
+            if (!b) return;
+            if (_onWaiting()) {
+                var backToCourse = (_waitFrom === 'dashboard');
+                var label = backToCourse ? '과정 운영 현황' : '통합 교육 현황판';
+                b.innerHTML = '<i class="fa-solid fa-chevron-left"></i><span>' + label + '</span>';
+                b.title = '뒤로 — ' + label + '으로 돌아갑니다';
+                b.classList.add('is-back');
+            } else {
+                b.innerHTML = 'KAC Training Platform';
+                b.title = '누르면 키오스크 화면 (5초 뒤 현황판으로 자동 복귀)';
+                b.classList.remove('is-back');
+            }
+        }
+        ui._syncBrandBtn = _syncBrand;
+
+        // 좌측 상단 클릭 시 동작
+        window.kacBrandClick = function () {
+            if (_onWaiting()) {
+                var hasRoom = false;
+                try { hasRoom = !!state.room; } catch (e) {}
+                if (_waitFrom === 'dashboard' && hasRoom) { ui.setMode('dashboard'); }
+                else { ui.goHomePortal(); }
+                return;
+            }
+            try { kiosk.openTemp(); } catch (e) {}
+        };
+
+        // setMode 를 감싸서 '현황판에 어디서 들어왔는지'를 기억한다
+        var _origSetMode = ui.setMode;
+        ui.setMode = function (mode) {
+            try {
+                if (mode === 'waiting' && state.currentMode !== 'waiting') {
+                    // 과정(방)에 들어가 있는 상태에서 들어왔으면 과정 운영 현황으로 되돌린다
+                    _waitFrom = (state.room && state.currentMode && state.currentMode !== 'home')
+                        ? 'dashboard' : 'home';
+                }
+            } catch (e) {}
+            var r = _origSetMode.apply(this, arguments);
+            try { _syncBrand(); } catch (e) {}
+            return r;
+        };
+
+        // 통합 현황판으로 나가면 브랜드도 원래대로
+        var _origHome = ui.goHomePortal;
+        if (typeof _origHome === 'function') {
+            ui.goHomePortal = function () {
+                var r = _origHome.apply(this, arguments);
+                try { _syncBrand(); } catch (e) {}
+                return r;
+            };
+        }
+
+        // 새로고침 직후(마지막 모드가 현황판이었던 경우 등) 대비
+        try { document.addEventListener('DOMContentLoaded', function () { setTimeout(_syncBrand, 400); }); } catch (e) {}
+        setTimeout(_syncBrand, 1500);
+    } catch (e) { try { console.warn('[J96] 브랜드 뒤로가기 설치 실패', e); } catch (_) {} }
+})();
+
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
  
