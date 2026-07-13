@@ -259,23 +259,32 @@ async function init() {
     // 3. 전체 평일 날짜 배열 생성 (월~금) — 이후 주 단위로 분할
     dateArray = generateDates(courseInfo.period);
 
-    // 4. [중요] 해당 방의 수강생 명단 및 출석 데이터만 실시간 감시
-    db.ref(`courses/${roomFromUrl}/students`).on('value', studentSnap => {
-        const studentsRaw = studentSnap.val() || {};
+    /* 4. [M17 · 화면 떨림 수정] 해당 방의 수강생 명단 + 출석 데이터 실시간 감시
+       예전엔 students 리스너 '안에서' internal_attendance 리스너를 또 등록했다.
+       그래서 students 가 갱신될 때마다 리스너가 하나씩 계속 쌓였고,
+       쌓인 리스너들이 저마다 renderTable() 을 불러 root.innerHTML='' 로 표를 통째로
+       지웠다 다시 그리는 바람에 화면이 주기적으로 깜빡였다(= 떨리는 느낌).
+       → 두 리스너를 나란히(중첩 아님) 한 번씩만 등록하고,
+         데이터가 '실제로 바뀐 경우'에만 다시 그린다.                                  */
+    let _stuRaw = null, _attRaw = null, _lastKey = '';
 
-        db.ref(`courses/${roomFromUrl}/internal_attendance`).on('value', attendanceSnap => {
-            const attendanceData = attendanceSnap.val() || {};
-            // 명단 그리기 함수 호출
-            renderTable(studentsRaw, attendanceData);
-            // auto=1 진입 시 렌더 완료 후 자동으로 저장(인쇄) 창 띄움 — 1회만
-            if (autoSave && !_autoDone) {
-                _autoDone = true;
-                setTimeout(() => {
-                    try { printSheet(); } catch (e) {}
-                }, 1000);
-            }
-        });
-    });
+    const _paint = () => {
+        if (_stuRaw === null || _attRaw === null) return;      // 둘 다 도착해야 그린다
+        const key = JSON.stringify(_stuRaw) + '|' + JSON.stringify(_attRaw);
+        if (key === _lastKey) return;                          // 내용 그대로면 다시 안 그림 (깜빡임 방지)
+        _lastKey = key;
+
+        renderTable(_stuRaw, _attRaw);
+
+        // auto=1 진입 시 렌더 완료 후 자동으로 저장(인쇄) 창 띄움 — 1회만
+        if (autoSave && !_autoDone) {
+            _autoDone = true;
+            setTimeout(() => { try { printSheet(); } catch (e) {} }, 1000);
+        }
+    };
+
+    db.ref(`courses/${roomFromUrl}/students`).on('value', s => { _stuRaw = s.val() || {}; _paint(); });
+    db.ref(`courses/${roomFromUrl}/internal_attendance`).on('value', s => { _attRaw = s.val() || {}; _paint(); });
 }
 
 
