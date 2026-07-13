@@ -11534,6 +11534,26 @@ saveAll: function() {
             try{
                 if(!name) return;                                   // 과정명이 없으면 매칭 불가
                 const profStr = profArr.join(',');                  // "장두석,박현일,김정민"
+
+                /* [J98] 과정명·기간까지 연간계획에 반영한다.
+                   예전엔 여기서 '담임(prof)'만, 그것도 '새 이름'으로 계획을 찾았다.
+                   → 이름을 바꾸면 새 이름은 계획에 없으니 아무것도 못 찾고, 계획은 옛 이름 그대로 남았다.
+                     그 결과 지원부에 같은 과정이 '예정'과 '계획 외 운영'으로 두 번 나왔다.
+                   이제 '고치기 전 이름·기간'으로 계획 행을 찾아 planId 를 확보한 뒤,
+                   그 행의 이름·기간·담임을 한꺼번에 따라 고친다. */
+                const _os = (await firebase.database().ref(`courses/${state.room}/settings`).once('value')).val() || {};
+                const _oldName   = String(_os.courseName || '').trim();
+                const _oldPeriod = String(_os.period || '').trim();
+                const _key = await kacPlanLink.resolveKey(state.room, [
+                    { name: _oldName, period: _oldPeriod },   // ① 고치기 전 값으로 먼저 찾고
+                    { name: name,     period: periodRange }   // ② (새로 배치된 방이면) 지금 값으로 찾는다
+                ]);
+                if (_key) {
+                    kacPlanLink.applyTo(updates, state.room, _key, { name: name, period: periodRange, prof: profStr });
+                    return;
+                }
+
+                // ↓ 계획에서 못 찾은 경우에만 예전 방식(담임만 갱신)으로 폴백
                 const ps = await firebase.database().ref('system/annualPlan').once('value');
                 const pdata = ps.val();
                 if(!pdata) return;
@@ -15321,8 +15341,19 @@ ui.saveFieldEdit = async function(){
     var ds=(fp&&fp.selectedDates)?fp.selectedDates:[];
     if(!ds.length){ if(msg)msg.textContent='기간을 선택하세요.'; return; }
     var fmt=function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
-    updates['courses/'+room+'/settings/period']=fmt(ds[0])+' ~ '+fmt(ds[ds.length-1]);
+    var _newPeriod=fmt(ds[0])+' ~ '+fmt(ds[ds.length-1]);
+    updates['courses/'+room+'/settings/period']=_newPeriod;
     updates['courses/'+room+'/status/periodManual']=true;   // [J90] 수동 수정 — 자동 동기화가 되돌리지 않게 보호
+    /* [J98] 기간을 고치면 연간계획의 기간도 함께 고친다.
+       예전엔 여기서 계획을 전혀 건드리지 않아, 계획엔 옛 기간이 남고 방↔계획 연결이 끊겼다.
+       (지원부는 '과정명|시작일'로 같은 과정인지 보므로, 시작일이 달라지면 두 개로 갈라진다) */
+    try{
+      var _os0=(await firebase.database().ref('courses/'+room+'/settings').once('value')).val()||{};
+      var _k0=await kacPlanLink.resolveKey(room, [
+        { name:String(_os0.courseName||'').trim(), period:String(_os0.period||'').trim() }
+      ]);
+      if(_k0) kacPlanLink.applyTo(updates, room, _k0, { period:_newPeriod });
+    }catch(e){ console.warn('[기간 수정→연간계획 동기화]', e); }
   } else if(f==='roomDetail'){
     var sv=(document.getElementById('fe-val')||{}).value||'';
     if(sv==='direct'){ sv=((document.getElementById('fe-direct')||{}).value||'').trim(); if(!sv){ if(msg)msg.textContent='장소를 입력하세요.'; return; } }
@@ -15342,17 +15373,19 @@ ui.saveFieldEdit = async function(){
     updates['courses/'+room+'/settings/courseName']=cv;
     // [J70] 과정명 변경은 '신설'이 아니라 '이름 교체'로 인식 — 같은 방·같은 기간의 연간계획 항목 이름도 함께 갱신
     //  → 계획 ↔ 방이 계속 연결(동일 과정)되어 지원부에 중복(계획 외 운영)이 생기지 않음. 기존 배정·명단·출결은 그대로.
+    /* [J98] planId 로 연간계획 행을 직접 따라간다.
+       예전 방식은 '옛 이름 + 지금 기간'으로 계획을 찾았는데, 기간까지 바꾼 뒤에 이름을 고치면
+       기간이 안 맞아 아무것도 못 찾고 계획엔 옛 이름이 남았다. */
     try{
       var _os=(await firebase.database().ref('courses/'+room+'/settings').once('value')).val()||{};
       var _oldName=String(_os.courseName||'').trim();
-      var _period=String(_os.period||'').replace(/\s+/g,'');
+      var _oldPeriod=String(_os.period||'').trim();
       if(_oldName && _oldName!==cv){
-        var _ps=(await firebase.database().ref('system/annualPlan').once('value')).val();
-        if(_ps){
-          var _keys=Array.isArray(_ps)?_ps.map(function(_x,i){return i;}):Object.keys(_ps);
-          var _norm=function(x){ return String(x||'').replace(/\s+/g,'').toLowerCase(); };
-          _keys.forEach(function(k){ var c=_ps[k]; if(!c) return; if(_norm(c.name)!==_norm(_oldName)) return; var cP=String(c.period||((c.startDate&&c.endDate)?(c.startDate+' ~ '+c.endDate):'')).replace(/\s+/g,''); if(_period && cP && cP!==_period) return; updates['system/annualPlan/'+k+'/name']=cv; });
-        }
+        var _k=await kacPlanLink.resolveKey(room, [
+          { name:_oldName, period:_oldPeriod },   // ① 고치기 전 이름+기간
+          { name:_oldName, period:'' }            // ② 기간이 이미 어긋났으면 이름만으로
+        ]);
+        if(_k) kacPlanLink.applyTo(updates, room, _k, { name:cv });
       }
     }catch(e){ console.warn('[과정명 rename→연간계획 동기화]', e); }
   } else return;
@@ -17147,6 +17180,75 @@ try {
         } catch(e) {}
     });
 } catch(e){}
+
+/* ══════════════════════════════════════════════════════════════════════
+   [J98] 방 ↔ 연간계획 연결고리 (planId)
+   ──────────────────────────────────────────────────────────────────────
+   지금까지 '방'과 '연간계획 행'은 오직 과정명+기간 '글자 일치'로만 연결돼 있었다.
+   그래서 과정명이나 기간을 고치는 순간 연결이 끊겨 이런 일이 벌어졌다.
+     · 연간계획에는 옛 이름·옛 기간이 그대로 남는다 (수정본이 저장 안 된 것처럼 보임)
+     · 지원부(생활관)는 '계획에 있는 옛 과정' + '계획에 없는 방' 을 각각 세어
+       같은 과정이 두 개로 보인다 (하나는 '예정', 하나는 '계획 외 운영')
+   → 방에 planId(연간계획 행의 키)를 적어 두고, 이름·기간을 고칠 때
+     그 행을 직접 따라 고친다. 글자가 바뀌어도 연결이 끊기지 않는다.
+   planId 가 아직 없는 기존 방은 '고치기 직전의 이름·기간'으로 한 번 찾아내
+     그때 planId 를 적어 둔다(자동 복구).
+   ══════════════════════════════════════════════════════════════════════ */
+var kacPlanLink = {
+    _norm: function (x) { return String(x || '').replace(/\s+/g, '').toLowerCase(); },
+
+    /* 이 방이 가리키는 연간계획 행의 키를 찾는다.
+       tries: [{name, period}, ...] — 앞에서부터 순서대로 시도(보통 '고치기 전 값' → '고친 값') */
+    resolveKey: async function (room, tries) {
+        try {
+            if (!room) return null;
+            var s = (await firebase.database().ref('courses/' + room + '/settings').once('value')).val() || {};
+            if (s.planId) return s.planId;                       // 이미 연결돼 있으면 그대로 사용
+
+            var pdata = (await firebase.database().ref('system/annualPlan').once('value')).val();
+            if (!pdata) return null;
+            var keys = Array.isArray(pdata) ? pdata.map(function (_, i) { return String(i); }) : Object.keys(pdata);
+            var N = kacPlanLink._norm;
+
+            for (var t = 0; t < (tries || []).length; t++) {
+                var wantName = N(tries[t] && tries[t].name);
+                var wantPeriod = N(tries[t] && tries[t].period);
+                if (!wantName) continue;
+                var hit = null;
+                keys.forEach(function (k) {
+                    if (hit) return;
+                    var c = pdata[k];
+                    if (!c || c.cancelled) return;
+                    if (N(c.name) !== wantName) return;
+                    var cp = N(c.period || ((c.startDate && c.endDate) ? (c.startDate + ' ~ ' + c.endDate) : ''));
+                    // 기간이 양쪽 다 있으면 기간까지 같아야 한다(같은 이름이 여러 주차에 있을 수 있음)
+                    if (wantPeriod && cp && cp !== wantPeriod) return;
+                    hit = k;
+                });
+                if (hit) return hit;
+            }
+            return null;
+        } catch (e) { try { console.warn('[planLink] resolveKey 실패', e); } catch (_) {} return null; }
+    },
+
+    /* updates 묶음에 '연간계획 행 갱신 + 방에 planId 기록' 을 넣는다 */
+    applyTo: function (updates, room, key, o) {
+        if (!updates || !room || !key || !o) return;
+        updates['courses/' + room + '/settings/planId'] = key;    // 연결고리 기록(다음부터는 글자 매칭 불필요)
+        if (o.name) updates['system/annualPlan/' + key + '/name'] = o.name;
+        if (o.period) {
+            var p = String(o.period).trim();
+            updates['system/annualPlan/' + key + '/period'] = p;
+            var pp = p.split('~');
+            var sd = (pp[0] || '').trim();
+            var ed = (pp[1] || '').trim() || sd;
+            if (sd) updates['system/annualPlan/' + key + '/startDate'] = sd;
+            if (ed) updates['system/annualPlan/' + key + '/endDate'] = ed;
+        }
+        if (typeof o.prof === 'string') updates['system/annualPlan/' + key + '/prof'] = o.prof;
+    }
+};
+try { window.kacPlanLink = kacPlanLink; } catch (e) {}
 
 /* ══════════════════════════════════════════════════════════════════════
    [J96] 좌측 상단 'KAC Training Platform' = 상황에 맞는 뒤로가기
