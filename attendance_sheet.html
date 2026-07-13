@@ -139,48 +139,59 @@ function printSheet() {
       + '.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
     const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
-    const opt = {
-        margin: 0,
-        filename: base + '.pdf',
-        image: { type: 'jpeg', quality: 0.95 },
-        // [M17] windowWidth(캡처 창 폭)와 width(캡처 폭)·x/y(시작점)를 A4 폭에 정확히 맞춘다.
-        //  windowWidth 만 794 로 주고 body 가 1247px 이면, 넘치는 만큼 왼쪽이 잘려 나간다.
-        //  위 tmp 스타일에서 body 를 794px 로 줄였으므로 여기서도 같은 값으로 못박아 어긋남을 막는다.
-        html2canvas: {
-            scale: 2, useCORS: true, backgroundColor: '#ffffff',
-            windowWidth: 794,      // 캡처용 가상 창 폭 = A4 세로 폭(210mm)
-            width: 794,            // 캡처 폭도 동일하게 (넘침·잘림 방지)
-            x: 0, y: 0,            // 스크롤 위치와 무관하게 항상 좌상단부터
-            scrollX: 0, scrollY: 0
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        /* [빈 페이지 방지] 위에서 .sheet-container 를 정확히 A4 한 장(297mm)으로 못박았으므로,
-           페이지 나눔은 '컨테이너 앞에서만' 한다.
-           'legacy' 모드까지 켜두면 html2pdf 가 이미지를 A4 높이로 한 번 더 자르면서
-           1mm 라도 넘치면 빈 장을 하나 더 만든다 → legacy 제거.                        */
-        pagebreak: { mode: ['css'], before: '.sheet-container:not(:first-of-type)' }
-    };
-    // [M15] 모바일이면 OS 공유시트(카톡/메일 위치 선택), 데스크톱은 다운로드
+
+    /* [M18 · 빈 페이지 완전 차단] html2pdf 의 '자동 페이지 나누기'에 계속 끌려다녔다.
+       그 방식은 문서 전체를 이미지 한 장으로 뜬 뒤 A4 높이로 잘라 붙이는데,
+       1px 이라도 넘치면 그 잔여분이 '빈 장'으로 하나 더 붙는다.
+       → 자동 나누기를 아예 쓰지 않는다. 우리는 이미 한 장(.sheet-container)이
+         정확히 A4 한 장이라는 걸 알고 있으므로, 장마다 따로 캡처해서 PDF 페이지에
+         1:1 로 붙인다. 빈 장이 생길 여지 자체가 없다.                                  */
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+
     (async () => {
         try {
-            const worker = html2pdf().set(opt).from(el);
+            const pages = el.querySelectorAll('.sheet-container');
+            if (!pages.length || typeof html2canvas === 'undefined') throw new Error('fallback');
+
+            const { jsPDF } = (window.jspdf || window);      // html2pdf 번들에 포함되어 있음
+            const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+            /* [M18 · 화질 개선]
+                 · scale 2 → 3  : 캡처 해상도를 1.5배로 (96dpi × 3 ≈ 288dpi — 인쇄에 충분)
+                 · JPEG → PNG   : JPEG 압축은 가는 표 선과 작은 글씨를 뭉갠다. PNG 는 무손실.
+                 · compression:'FAST' : 용량이 커지므로 PDF 단에서 무손실 압축으로 줄인다.        */
+            for (let i = 0; i < pages.length; i++) {
+                const canvas = await html2canvas(pages[i], {
+                    scale: 3, useCORS: true, backgroundColor: '#ffffff',
+                    windowWidth: 794,          // A4 폭(210mm)
+                    width: 794, height: 1123,  // A4 한 장 = 794 x 1123px
+                    x: 0, y: 0, scrollX: 0, scrollY: 0
+                });
+                const img = canvas.toDataURL('image/png');       // 무손실 — 표 선·글씨 선명
+                if (i > 0) pdf.addPage();                        // 페이지 수만큼만 추가 (빈 장 없음)
+                pdf.addImage(img, 'PNG', 0, 0, 210, 297, undefined, 'FAST');   // A4 한 장에 정확히
+            }
+
+            const blob = pdf.output('blob');
+            const fname = base + '.pdf';
+
+            // 모바일: OS 공유시트(카톡·메일 등) → 실패하면 다운로드
             if (isMobile && navigator.canShare) {
-                const blob = await worker.outputPdf('blob');
-                const file = new File([blob], base + '.pdf', { type: 'application/pdf' });
+                const file = new File([blob], fname, { type: 'application/pdf' });
                 if (navigator.canShare({ files: [file] })) {
                     try { await navigator.share({ files: [file], title: base }); done(); return; }
                     catch (se) { if (se && se.name === 'AbortError') { done(); return; } }
                 }
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url; a.download = base + '.pdf';
-                document.body.appendChild(a); a.click(); a.remove();
-                setTimeout(() => URL.revokeObjectURL(url), 4000);
-                done(); return;
             }
-            await worker.save();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = fname;
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
             done();
-        } catch (e) { done(); document.title = base; window.print(); }
+        } catch (e) {
+            // 어떤 이유로든 실패하면 브라우저 인쇄로 폴백 (기존 동작 유지)
+            done(); document.title = base; window.print();
+        }
     })();
 }
 
