@@ -295,7 +295,11 @@ function markCell(td){
     if(window._archiveMode && window._archiveId){ path='system/course_archive/'+window._archiveId+'/internal_attendance/'+d+'/'+key; }
     else if(SHEET_ROOM){ path='courses/'+SHEET_ROOM+'/internal_attendance/'+d+'/'+key; }
     else return;
-    if(!confirm('['+nm+'] '+d+'\n이 교육생을 출석으로 처리할까요?\n\n※ 운영부 직접 처리(OTP 미체크 보완)로 기록됩니다.')) return;
+    // 아직 오지 않은 날짜면 한 번 더 경고 (실수로 미래 날짜를 찍는 것 방지)
+    var _future = d > _todayStr;
+    var _msg = '['+nm+']  '+d+'\n\n이 교육생을 출석으로 처리할까요?\n\n※ 운영부 직접 처리(OTP 미체크 보완)로 기록됩니다.';
+    if(_future) _msg = '⚠️ 아직 오지 않은 날짜입니다 ('+d+')\n\n' + _msg + '\n\n정말 미리 처리하시겠습니까?';
+    if(!confirm(_msg)) return;
     firebase.database().ref(path)
       .set({ name:nm, phone:ph, manual:true, src:'coord', ts:Date.now() })
       .then(function(){
@@ -659,7 +663,11 @@ async function init() {
                                     : ('OTP 인증 출석' + (_auth ? ' · ' + _auth : '') + (_tm ? ' · ' + _tm : ''))).replace(/"/g, '&quot;');
                         row += `<td title="${_ttl}"><div class="att-in"><div class="stamp${_man ? ' stamp-manual' : ''}">출석</div>${_sub}</div></td>`;
                     }
-                } else if (_canMark && d <= _todayStr) {
+                /* [운영부 직접 출결] 예전엔 'd <= 오늘' 이라 지난 날짜만 눌렀다.
+                   교육기간 중에는 어느 날짜든(지난 날 포함) 소급해서 처리할 수 있어야 한다.
+                   → 교육기간 안의 평일이면 언제든 클릭 가능.
+                     (미래 날짜는 회색으로 눌러도 되지만, 실수 방지를 위해 확인창에서 날짜를 보여준다) */
+                } else if (_canMark) {
                     const _n = (s.name || '').replace(/"/g, '&quot;');
                     const _p = ('' + (s.phone || '')).replace(/"/g, '&quot;');
                     row += `<td class="att-mark" data-d="${d}" data-n="${_n}" data-p="${_p}" onclick="markCell(this)"><span class="mk-hint" title="클릭하면 출석 처리"><i class="fa-solid fa-hand-pointer"></i></span></td>`;
