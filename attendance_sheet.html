@@ -123,11 +123,18 @@ function printSheet() {
        body 는 padding 20px + 기본 폭 때문에 1247px 로 남아 있었고,
        1247px 짜리 문서를 794px 창에 맞춰 캡처하니 왼쪽 453px(No·성명·첫 날짜 열)이
        종이 밖으로 밀려 잘려 나갔다. → body/html 폭과 padding 까지 A4 로 함께 고정한다. */
+    /* [빈 페이지 방지] 화면용 .sheet-container 에는 margin-bottom:28px 이 붙어 있고
+       min-height:297mm 도 걸려 있다. PDF 로 뜰 때 이 여백이 A4 한 장을 살짝 넘기면서
+       넘친 여백만큼이 '빈 장'으로 하나 더 만들어졌다.
+       → 저장할 때는 컨테이너 높이를 A4(297mm)에 정확히 못박고 바깥 여백을 0 으로 만든다. */
     tmp.innerHTML =
         'html,body{width:210mm !important;min-width:210mm !important;max-width:210mm !important;'
       + 'margin:0 !important;padding:0 !important;background:#fff !important;overflow-x:hidden !important;}'
-      + '#sheets-root,#print-area{width:210mm !important;min-width:210mm !important;max-width:210mm !important;margin:0 auto !important;}'
-      + '.sheet-container{width:210mm !important;box-shadow:none !important;margin:0 auto !important;}'
+      + '#sheets-root,#print-area{width:210mm !important;min-width:210mm !important;max-width:210mm !important;margin:0 auto !important;padding:0 !important;}'
+      + '.sheet-container{box-sizing:border-box !important;width:210mm !important;'
+      + 'height:297mm !important;min-height:297mm !important;max-height:297mm !important;'   /* A4 한 장에 정확히 */
+      + 'margin:0 !important;padding:11mm 13mm !important;'                                   /* 아래 여백 28px 제거 */
+      + 'box-shadow:none !important;border:none !important;overflow:hidden !important;}'
       + '.no-print{display:none !important;}'
       + '.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
@@ -147,7 +154,11 @@ function printSheet() {
             scrollX: 0, scrollY: 0
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'], before: '.sheet-container:not(:first-of-type)' }
+        /* [빈 페이지 방지] 위에서 .sheet-container 를 정확히 A4 한 장(297mm)으로 못박았으므로,
+           페이지 나눔은 '컨테이너 앞에서만' 한다.
+           'legacy' 모드까지 켜두면 html2pdf 가 이미지를 A4 높이로 한 번 더 자르면서
+           1mm 라도 넘치면 빈 장을 하나 더 만든다 → legacy 제거.                        */
+        pagebreak: { mode: ['css'], before: '.sheet-container:not(:first-of-type)' }
     };
     // [M15] 모바일이면 OS 공유시트(카톡/메일 위치 선택), 데스크톱은 다운로드
     const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
