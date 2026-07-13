@@ -3365,6 +3365,10 @@ var opsCfg = (function(){
   console.log('[copilot] 동기화 모듈 활성');
   var db = firebase.database();
   var curRoom = null, ref = null, lastTs = null;
+  /* [J97] lastAttn·inited 를 모듈 스코프로 승격.
+     예전엔 attach() 안의 지역변수여서, 리스너를 다시 걸 때마다 기억이 초기화됐다.
+     → 다시 걸어도 '어디까지 받았는지'를 유지해야 놓친 신호를 이어서 처리할 수 있다. */
+  var lastAttn = '', inited = false;
 
   function toast(msg){
     var t=document.getElementById('coToast');
@@ -3398,9 +3402,13 @@ var opsCfg = (function(){
   });
 
   // ── 강사(소유자) 측 수신 ──
-  function attach(room){
+  /* [J97] keep=true 로 부르면 '어디까지 받았는지(lastTs·lastAttn)'를 유지한 채 리스너만 다시 건다.
+     다시 거는 즉시 파이어베이스가 현재 값을 한 번 내려주므로,
+     리스너가 끊겨 있던 사이에 보조자가 보낸 신호도 그때 함께 따라잡는다. */
+  function attach(room, keep){
     if (ref) { try{ ref.off(); }catch(e){} ref=null; }
-    curRoom = room; lastTs = 0; var lastAttn = ''; var inited = false;
+    curRoom = room;
+    if (!keep) { lastTs = 0; lastAttn = ''; inited = false; }
     if (!room) return;
     ref = db.ref('courses/' + room + '/status');
     ref.on('value', function(snap){
@@ -3463,6 +3471,33 @@ var opsCfg = (function(){
   }
   setInterval(function(){ if (state.room !== curRoom) attach(state.room); }, 500);
   attach(state.room);
+
+  /* ══ [J97] 과정 운영 현황에 들어가면 동기화가 죽던 문제 ══════════════════
+     admin.js 의 대시보드 로더가 이전 방 데이터를 정리하려고
+         firebase.database().ref('courses/{방}/status').off()
+     를 부른다. 그런데 인자 없는 .off() 는 '그 경로에 걸린 모든 리스너'를 지운다.
+     → 대시보드 자기 리스너뿐 아니라 위에서 건 보조자 수신 리스너까지 같이 끊겨서,
+       한 번 '과정 운영 현황'에 들어가고 나면 그 뒤로 보조자 신호를 영영 못 받았다.
+       (질문하기 등 다른 메뉴는 이 로더를 안 타므로 동기화가 잘 되던 이유)
+     admin.js 의 정리 로직은 방 전환에 꼭 필요하므로 건드리지 않고,
+     화면이 바뀔 때마다 수신 리스너를 다시 걸어 스스로 되살아나게 한다. */
+  (function selfHeal(){
+    if (typeof ui === 'undefined' || !ui.setMode || ui._coHealHooked) { setTimeout(selfHeal, 800); return; }
+    ui._coHealHooked = true;
+    var _sm = ui.setMode;
+    ui.setMode = function(){
+      var r = _sm.apply(this, arguments);
+      try {
+        if (!state.isObserver && state.room) {
+          // 로더가 .off() 를 부른 '뒤'에 다시 걸어야 한다 → 즉시 + 잠시 뒤 한 번 더(비동기 정리 대비)
+          attach(state.room, true);
+          setTimeout(function(){ if (!state.isObserver && state.room) attach(state.room, true); }, 700);
+        }
+      } catch(e){ console.warn('[copilot] 리스너 재부착 실패', e); }
+      return r;
+    };
+    console.log('[copilot] 수신 리스너 자동 재부착(J97) 설치됨');
+  })();
 
   // [I20] 강사(무대)가 다른 탭/창 갔다가 돌아올 때 옵저버의 '최신 질문 열기' 신호를 다시 처리 —
   //  백그라운드 동안 받은 신호를 놓쳐 '무시하는' 문제 보완(가시성 복귀 시 status를 다시 읽어 재적용).
