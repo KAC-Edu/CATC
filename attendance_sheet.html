@@ -33,6 +33,21 @@
                 #94a3b8 calc(50% + 0.6px), transparent calc(50% + 0.6px));
         }
         .main-table th.hol { background: #e2e8f0; color:#b91c1c; }   /* 머리칸: 공휴일명 빨간색 */
+
+        /* [과정 특이사항] 견학·외부일정 등 '이 과정만' 출결 안 하는 날.
+           공휴일(회색 사선·빨간 글씨)과 구분되도록 주황 계열로 표시한다. */
+        .main-table td.hol.note {
+            background-color: #fff7ed;
+            background-image: linear-gradient(to top right,
+                transparent calc(50% - 0.6px), #fb923c calc(50% - 0.6px),
+                #fb923c calc(50% + 0.6px), transparent calc(50% + 0.6px));
+        }
+        .main-table th.hol.note { background:#ffedd5; color:#c2410c; }
+
+        /* 날짜 머리칸 클릭 → 견학 등 '출결 안 함' 지정 (운영부만 · 인쇄에는 표시 안 됨) */
+        .main-table th.day-set { cursor:pointer; }
+        .main-table th.day-set:hover { background:#dbeafe; outline:2px solid #2563eb; outline-offset:-2px; }
+        @media print { .main-table th.day-set { cursor:default; outline:none; } }
         
         /* No·성명만 고정폭, 날짜 열은 남은 공간을 균등 분할(3일→3등분, 5일→5등분) */
         .no-col { width: 28px; }
@@ -116,9 +131,13 @@
             <span style="flex:0 0 auto; color:#60a5fa; font-weight:900;">·</span>
             <span style="font-weight:700;">칸마다 출처가 표기됩니다 — OTP 출석은 <b style="color:#059669;">인증번호</b>, 입교등록 자동 출석은 <b style="color:#7c3aed;">‘입교등록’</b>, 운영부 직접 처리는 <b style="color:#2563eb;">‘직접처리’</b>.</span>
         </div>
+        <div style="display:flex; gap:8px; margin-bottom:4px;">
+            <span style="flex:0 0 auto; color:#fb923c; font-weight:900;">·</span>
+            <span style="font-weight:700;"><b style="color:#c2410c;">날짜 머리칸</b>을 클릭하면 그날을 <b style="color:#c2410c;">‘출결 안 함’</b>으로 지정할 수 있습니다 (견학·외부교육 등). 사선으로 막히고 사유가 표시됩니다. 다시 클릭하면 해제됩니다.</span>
+        </div>
         <div style="display:flex; gap:8px;">
             <span style="flex:0 0 auto; color:#94a3b8; font-weight:900;">·</span>
-            <span style="color:#64748b; font-weight:700;">클릭 아이콘은 인쇄·PDF에는 나오지 않습니다.</span>
+            <span style="color:#64748b; font-weight:700;">공휴일(<b style="color:#b91c1c;">빨강</b>)은 전 과정 공통이라 여기서 바꿀 수 없습니다. 클릭 아이콘은 인쇄·PDF에 나오지 않습니다.</span>
         </div>
     </div>
 
@@ -230,6 +249,41 @@ function printSheet() {
     })();
 }
 
+/* [과정 특이사항 지정] 날짜 머리칸 클릭 → 그날을 '출결 안 함'으로 지정/해제.
+   견학·외부일정처럼 이 과정만 출결을 안 하는 날에 쓴다.
+   저장 위치: courses/{방}/noAttendDays/{날짜} = "사유"
+   (공휴일은 전 과정 공통이라 여기서 건드리지 않는다) */
+function setNoAttend(d){
+  try{
+    if(autoSave) return;                       // 인쇄용 자동 진입에서는 동작 안 함
+    if(!SHEET_ROOM){ alert('보관된 출석부에서는 변경할 수 없습니다.'); return; }
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+
+    const path = 'courses/' + SHEET_ROOM + '/noAttendDays/' + d;
+    const cur  = _noAttend[d];
+
+    if(cur){                                   // 이미 지정됨 → 해제
+      if(!confirm(d + '\n\n현재 「' + cur + '」(으)로 출결 제외 상태입니다.\n해제하고 정상 출결일로 되돌릴까요?')) return;
+      firebase.database().ref(path).remove()
+        .catch(function(e){ alert('해제 실패: ' + ((e && e.message) || '')); });
+      return;
+    }
+
+    // 새로 지정 — 사유를 받는다
+    const reason = prompt(
+      d + '\n\n이 날은 출결을 하지 않습니다. 사유를 입력하세요.\n(예: 현장견학, 외부교육, 워크숍)\n\n※ 출석부에 사선으로 표시되고 출결 칸이 막힙니다.',
+      '현장견학'
+    );
+    if(reason === null) return;                // 취소
+    const r = String(reason).trim();
+    if(!r){ alert('사유를 입력해 주세요.'); return; }
+
+    firebase.database().ref(path).set(r)
+      .catch(function(e){ alert('지정 실패: ' + ((e && e.message) || '')); });
+  }catch(e){ alert('오류: ' + ((e && e.message) || '')); }
+}
+window.setNoAttend = setNoAttend;
+
 // [운영부 수동 출석] 아직 처리 안 된 칸 클릭 → 해당 날짜 출석 처리(OTP 미체크 보완). 라이브 방·보관(archive) 모두 지원.
 function markCell(td){
   try{
@@ -289,6 +343,8 @@ async function init() {
         HEADER.courseName = ar.courseName || '지난 과정'; HEADER.period = ar.period || '-'; HEADER.coordName = ar.coord || '-'; HEADER.profName = ar.prof ? ar.prof + ' 교수' : '-';
         dateArray = generateDates(ar.period || '');
         await loadHolidays();                       // 보관 출석부에도 공휴일 적용
+        // 보관 시점의 과정 특이사항(견학 등)도 함께 복원 (없으면 빈 값)
+        _noAttend = (ar.noAttendDays && typeof ar.noAttendDays === 'object') ? ar.noAttendDays : {};
         renderTable(ar.students || {}, ar.internal_attendance || {});
         if (autoSave && !_autoDone) { _autoDone = true; setTimeout(() => { try { printSheet(); } catch (e) {} }, 1000); }
         return;
@@ -360,14 +416,20 @@ async function init() {
         }
     };
 
-    await loadHolidays();      // 공휴일(system/holidays)을 먼저 읽고 나서 표를 그린다
+    // 공휴일(전 과정 공통) + 과정별 특이사항(견학 등)을 먼저 읽고 나서 표를 그린다
+    await loadHolidays();
+    await loadNoAttend(roomFromUrl);
 
     db.ref(`courses/${roomFromUrl}/students`).on('value', s => { _stuRaw = s.val() || {}; _paint(); });
     db.ref(`courses/${roomFromUrl}/internal_attendance`).on('value', s => { _attRaw = s.val() || {}; _paint(); });
 
-    // 운영부가 공휴일을 추가·삭제하면 즉시 다시 그린다
+    // 공휴일이 추가·삭제되면 즉시 다시 그린다
     db.ref('system/holidays').on('value', () => {
         loadHolidays().then(() => { _lastKey = ''; _paint(); });
+    });
+    // 이 과정의 특이사항(견학 등)이 바뀌어도 즉시 다시 그린다
+    db.ref(`courses/${roomFromUrl}/noAttendDays`).on('value', () => {
+        loadNoAttend(roomFromUrl).then(() => { _lastKey = ''; _paint(); });
     });
 }
 
@@ -398,7 +460,32 @@ async function init() {
          (천문연구원 공휴일 API 는 서비스키가 소스에 노출되고 CORS 도 막혀 있어 쓰지 않는다.
           게다가 임시공휴일은 API 에도 늦게 반영되므로, 사람이 넣는 게 더 확실하다.)      */
     let _fbHolidays = {};
-    function isHoliday(d){ return _fbHolidays[d] || HOLIDAYS[d] || null; }
+
+    /* [과정별 특이사항] 견학·외부일정 등으로 '이 과정만' 출결을 안 하는 날.
+       공휴일과 다르다 — 공휴일은 전 과정 공통(system/holidays)이지만,
+       특이사항은 그 과정에만 적용된다(courses/{방}/noAttendDays).
+       형식: courses/{방}/noAttendDays/{YYYY-MM-DD} = "현장견학"
+       보관 출석부(archive)에서도 함께 저장·복원된다.                                */
+    let _noAttend = {};
+
+    /* 그날 출결을 안 하는지 판정 — 공휴일이든 과정 특이사항이든 결과는 같다(사선 처리).
+       반환값이 곧 칸에 적을 사유("제헌절" / "현장견학")가 된다.
+       과정 특이사항을 먼저 본다(같은 날 둘 다 있으면 과정 사유가 더 구체적이므로). */
+    function isHoliday(d){ return _noAttend[d] || _fbHolidays[d] || HOLIDAYS[d] || null; }
+
+    /* 공휴일인지(전 과정 공통) 아니면 과정 특이사항인지 구분 — 색·표기를 달리하기 위해 */
+    function isCourseNote(d){ return !!_noAttend[d]; }
+
+    async function loadNoAttend(room){
+        try{
+            if(!room){ _noAttend = {}; return; }
+            const s = await db.ref('courses/' + room + '/noAttendDays').once('value');
+            const v = s.val() || {};
+            const out = {};
+            Object.keys(v).forEach(k => { if(/^\d{4}-\d{2}-\d{2}$/.test(k) && v[k]) out[k] = String(v[k]); });
+            _noAttend = out;
+        }catch(e){ _noAttend = {}; }
+    }
 
     async function loadHolidays(){
         try{
@@ -502,8 +589,23 @@ async function init() {
         let cols = '<col class="no-col"><col class="name-col">';
         dates.forEach(() => { cols += '<col class="day-col">'; });
         let thead = '<tr><th class="no-col">No</th><th class="name-col">성명</th>';
-        /* 공휴일 머리칸에는 '공휴일' 대신 실제 이름(제헌절 등)을 적어 무슨 날인지 바로 알 수 있게 한다. */
-        dates.forEach(d => { const h = isHoliday(d); thead += `<th class="day-col${h ? ' hol' : ''}">${d.split('-')[1]}/${d.split('-')[2]}<br>${h ? h : getDayName(d)}</th>`; });
+        /* 머리칸에 사유를 그대로 적는다 — 공휴일이면 '제헌절', 과정 특이사항이면 '현장견학'.
+           공휴일(빨강)과 과정 특이사항(주황)을 색으로 구분한다.
+
+           [특이사항 지정] 날짜 머리칸을 클릭하면 그날을 '출결 안 함'으로 지정/해제한다.
+           견학·외부일정처럼 갑자기 생기는 일을 별도 화면 안 가고 여기서 바로 처리한다.
+           (공휴일은 전 과정 공통이라 여기서 못 바꾼다 — 운영부 공휴일 관리에서 다룬다) */
+        dates.forEach(d => {
+            const h = isHoliday(d);
+            const note = h && isCourseNote(d);                       // 과정 특이사항 여부
+            const fixed = h && !note;                                // 공휴일(여기서 수정 불가)
+            const cls = h ? (note ? ' hol note' : ' hol') : '';
+            const clickable = _canMark && !fixed;                    // 운영부만, 공휴일이 아닐 때
+            const attr = clickable
+                ? ` class="day-col${cls} day-set" data-d="${d}" onclick="setNoAttend('${d}')" title="클릭하면 '출결 안 함(견학 등)'으로 지정 · 다시 클릭하면 해제"`
+                : ` class="day-col${cls}"`;
+            thead += `<th${attr}>${d.split('-')[1]}/${d.split('-')[2]}<br>${h ? h : getDayName(d)}</th>`;
+        });
         thead += '</tr>';
 
         let tbody = '';
@@ -514,7 +616,8 @@ async function init() {
                 : '<i class="fa-solid fa-qrcode" style="font-size:10px; color:#059669; margin-right:3px;"></i>';
             let row = `<td>${startIdx + idx + 1}</td><td class="name-col">${icon}${s.name}</td>`;
             dates.forEach(d => {
-                if (isHoliday(d)) { row += '<td class="hol"></td>'; return; }
+                // 공휴일 / 과정 특이사항(견학 등) → 출결 대상 아님. 사선으로 막는다.
+                if (isHoliday(d)) { row += `<td class="hol${isCourseNote(d) ? ' note' : ''}"></td>`; return; }
                 const info = findAttendanceRecord(attendanceData[d], s.name, s.phone);
                 if (info) {
                     const _auth = (info.authId || '').toString().trim();
