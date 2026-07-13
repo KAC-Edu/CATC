@@ -24,8 +24,15 @@
         .main-table { width: 100%; border-collapse: collapse; font-size: 10px; table-layout: fixed; word-break: break-all; }
         .main-table th, .main-table td { border: 1px solid #000; padding: 1px 2px; text-align: center; overflow: hidden; height: var(--rh, 24px); }
         .main-table th { background: #f8fafc; height: 30px; font-size:10px; }
-        .main-table td.hol { background: #f1f5f9; }
-        .main-table th.hol { background: #e2e8f0; color:#64748b; }
+        /* [공휴일] 칸을 대각선(사선)으로 그어 '출결 대상 아님'을 한눈에 알 수 있게.
+           선은 배경 그라데이션으로 그려서 인쇄·PDF(이미지 캡처)에도 그대로 나온다. */
+        .main-table td.hol {
+            background-color: #f1f5f9;
+            background-image: linear-gradient(to top right,
+                transparent calc(50% - 0.6px), #94a3b8 calc(50% - 0.6px),
+                #94a3b8 calc(50% + 0.6px), transparent calc(50% + 0.6px));
+        }
+        .main-table th.hol { background: #e2e8f0; color:#b91c1c; }   /* 머리칸: 공휴일명 빨간색 */
         
         /* No·성명만 고정폭, 날짜 열은 남은 공간을 균등 분할(3일→3등분, 5일→5등분) */
         .no-col { width: 28px; }
@@ -366,7 +373,11 @@ async function init() {
     const HOLIDAYS = {
         '2026-01-01':'신정','2026-02-16':'설날','2026-02-17':'설날','2026-02-18':'설날',
         '2026-03-01':'삼일절','2026-03-02':'대체공휴일','2026-05-05':'어린이날','2026-05-25':'부처님오신날',
-        '2026-06-06':'현충일','2026-08-15':'광복절','2026-08-17':'대체공휴일',
+        '2026-06-06':'현충일',
+        /* [추가] 제헌절 — 2026년부터 18년 만에 공휴일로 부활 (2026.4 국무회의 의결).
+           예전 목록은 그 이전 기준이라 빠져 있어서, 7/17 이 평일로 잡혀 출결 칸이 열려 있었다. */
+        '2026-07-17':'제헌절',
+        '2026-08-15':'광복절','2026-08-17':'대체공휴일',
         '2026-09-24':'추석','2026-09-25':'추석','2026-09-26':'추석','2026-10-03':'개천절','2026-10-05':'대체공휴일',
         '2026-10-09':'한글날','2026-12-25':'성탄절',
         '2027-01-01':'신정','2027-02-06':'설날','2027-02-08':'설날','2027-02-09':'설날','2027-03-01':'삼일절'
@@ -458,7 +469,8 @@ async function init() {
         let cols = '<col class="no-col"><col class="name-col">';
         dates.forEach(() => { cols += '<col class="day-col">'; });
         let thead = '<tr><th class="no-col">No</th><th class="name-col">성명</th>';
-        dates.forEach(d => { const h = isHoliday(d); thead += `<th class="day-col${h ? ' hol' : ''}">${d.split('-')[1]}/${d.split('-')[2]}<br>${h ? '공휴일' : getDayName(d)}</th>`; });
+        /* 공휴일 머리칸에는 '공휴일' 대신 실제 이름(제헌절 등)을 적어 무슨 날인지 바로 알 수 있게 한다. */
+        dates.forEach(d => { const h = isHoliday(d); thead += `<th class="day-col${h ? ' hol' : ''}">${d.split('-')[1]}/${d.split('-')[2]}<br>${h ? h : getDayName(d)}</th>`; });
         thead += '</tr>';
 
         let tbody = '';
