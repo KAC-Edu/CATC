@@ -118,18 +118,34 @@ function printSheet() {
     const oldTxt = btn ? btn.innerHTML : '';
     if (btn) { btn.disabled = true; btn.innerHTML = '⏳ PDF 생성 중…'; }
     const tmp = document.createElement('style');
-    // [M16] PDF 캡처 영역을 정확히 A4 세로 폭(210mm)으로 고정 → 좌우 여백/축소 방지.
-    //  min/max 폭까지 고정해 모바일에서 컨테이너가 화면폭으로 줄며 세로로 늘어나던 문제 차단.
-    tmp.innerHTML = '#sheets-root,#print-area{width:210mm !important;min-width:210mm !important;max-width:210mm !important;margin:0 auto !important;}.sheet-container{width:210mm !important;box-shadow:none !important;margin:0 auto !important;}.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
+    /* [M17 · 정렬 깨짐 수정] 예전엔 #sheets-root 만 210mm 로 고정했는데,
+       html2canvas 는 windowWidth(794px = A4 폭) 기준으로 '문서 전체(body)'를 캡처한다.
+       body 는 padding 20px + 기본 폭 때문에 1247px 로 남아 있었고,
+       1247px 짜리 문서를 794px 창에 맞춰 캡처하니 왼쪽 453px(No·성명·첫 날짜 열)이
+       종이 밖으로 밀려 잘려 나갔다. → body/html 폭과 padding 까지 A4 로 함께 고정한다. */
+    tmp.innerHTML =
+        'html,body{width:210mm !important;min-width:210mm !important;max-width:210mm !important;'
+      + 'margin:0 !important;padding:0 !important;background:#fff !important;overflow-x:hidden !important;}'
+      + '#sheets-root,#print-area{width:210mm !important;min-width:210mm !important;max-width:210mm !important;margin:0 auto !important;}'
+      + '.sheet-container{width:210mm !important;box-shadow:none !important;margin:0 auto !important;}'
+      + '.no-print{display:none !important;}'
+      + '.mk-hint{display:none !important;}.att-mark{cursor:default !important;}';
     document.head.appendChild(tmp);
     const done = () => { tmp.remove(); if (btn) { btn.disabled = false; btn.innerHTML = oldTxt; } };
     const opt = {
         margin: 0,
         filename: base + '.pdf',
         image: { type: 'jpeg', quality: 0.95 },
-        // [M16] windowWidth를 A4 세로 실측 px(210mm≈794px)로 고정 → 모바일 뷰포트(360~412px) 기준
-        //  캡처로 표가 압축되며 세로로 끝없이 늘어나던 근본 원인 차단(기기 무관 PC와 동일 렌더).
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 794 },
+        // [M17] windowWidth(캡처 창 폭)와 width(캡처 폭)·x/y(시작점)를 A4 폭에 정확히 맞춘다.
+        //  windowWidth 만 794 로 주고 body 가 1247px 이면, 넘치는 만큼 왼쪽이 잘려 나간다.
+        //  위 tmp 스타일에서 body 를 794px 로 줄였으므로 여기서도 같은 값으로 못박아 어긋남을 막는다.
+        html2canvas: {
+            scale: 2, useCORS: true, backgroundColor: '#ffffff',
+            windowWidth: 794,      // 캡처용 가상 창 폭 = A4 세로 폭(210mm)
+            width: 794,            // 캡처 폭도 동일하게 (넘침·잘림 방지)
+            x: 0, y: 0,            // 스크롤 위치와 무관하게 항상 좌상단부터
+            scrollX: 0, scrollY: 0
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
         pagebreak: { mode: ['css', 'legacy'], before: '.sheet-container:not(:first-of-type)' }
     };
