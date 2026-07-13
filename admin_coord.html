@@ -11256,6 +11256,128 @@ body.pc-mode .coord-left{ overflow:visible !important; min-width:max-content !im
 })();
 </script>
 
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     [공휴일 관리]  system/holidays  — 전 과정 공통. 출석부에서 사선으로 막힌다.
+
+     왜 필요한가 — 예전엔 공휴일이 출석부 코드 안에 손으로 박혀 있었다.
+     그래서 2026년 제헌절이 18년 만에 공휴일로 부활했을 때, 목록에 없어서
+     7/17 이 평일로 잡히고 출결 칸이 열려 있었다. 고치려면 개발자가 코드를
+     수정하고 재배포해야 했다.
+     → Firebase 에 두고 여기서 관리하면, 코드 수정 없이 즉시 반영된다.
+        임시공휴일처럼 갑자기 정해지는 날도 바로 넣을 수 있다.
+
+     ※ 과정별 특이사항(견학·외부교육 등 '이 과정만' 출결 안 하는 날)은 여기가 아니라
+       출석부 화면에서 날짜 머리칸을 클릭해 지정한다. 성격이 다르기 때문이다.
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<script>
+var holidayMgr = {
+  _ref: function(){ return firebase.database().ref('system/holidays'); },
+
+  _cb: null,
+
+  open: function(){
+    var self = this;
+    _cpop('<i class="fa-solid fa-calendar-xmark"></i> 공휴일 관리',
+          '<div id="hdBody"><div class="cpop-empty">불러오는 중...</div></div>');
+
+    // 이전 구독이 남아 있으면 정리 (팝업을 여러 번 열어도 리스너가 쌓이지 않게)
+    if(this._cb){ try{ this._ref().off('value', this._cb); }catch(e){} this._cb = null; }
+
+    this._cb = function(s){
+      var el = document.getElementById('hdBody');
+      if(!el){                                    // 팝업이 닫혔다 → 구독 해제하고 끝
+        try{ self._ref().off('value', self._cb); }catch(e){}
+        self._cb = null;
+        return;
+      }
+      self._render(el, s.val() || {});
+    };
+    this._ref().on('value', this._cb);
+  },
+
+  _render: function(el, data){
+    var self = this;
+    var keys = Object.keys(data).filter(function(k){ return /^\d{4}-\d{2}-\d{2}$/.test(k); }).sort();
+
+    // 올해·내년만 보여준다 (지난 해는 굳이 안 봐도 됨)
+    var thisYear = new Date().getFullYear();
+    var shown = keys.filter(function(k){
+      var y = parseInt(k.slice(0,4), 10);
+      return y >= thisYear;
+    });
+
+    var rows = shown.map(function(d){
+      var name = _esc(String(data[d]));
+      var dt = new Date(d + 'T00:00:00');
+      var dow = ['일','월','화','수','목','금','토'][dt.getDay()];
+      var past = d < self._today();
+      return '<tr' + (past ? ' style="opacity:.45;"' : '') + '>'
+        + '<td style="font-weight:800; color:#0f172a; white-space:nowrap;">' + d + ' <span style="color:#94a3b8; font-weight:700;">(' + dow + ')</span></td>'
+        + '<td style="font-weight:800; color:#b91c1c;">' + name + '</td>'
+        + '<td style="text-align:right;">'
+        +   '<button onclick="holidayMgr.del(\'' + d + '\',\'' + name.replace(/'/g,"\\'") + '\')" '
+        +   'style="padding:6px 12px; border:1px solid #fecaca; background:#fff5f5; color:#dc2626; border-radius:8px; font-size:12px; font-weight:800; cursor:pointer;">삭제</button>'
+        + '</td></tr>';
+    }).join('');
+
+    el.innerHTML =
+      '<div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:11px; padding:12px 15px; margin-bottom:14px; font-size:13px; line-height:1.7; color:#1e40af;">'
+    +   '<b>여기 넣은 날은 모든 과정의 출석부에서 사선으로 막힙니다.</b><br>'
+    +   '<span style="color:#64748b; font-weight:700;">임시공휴일처럼 갑자기 정해진 날도 바로 넣으면 즉시 반영됩니다. '
+    +   '견학·외부교육처럼 <b>특정 과정만</b> 출결을 안 하는 날은 여기가 아니라, '
+    +   '<b>출석부 화면에서 날짜 머리칸을 클릭</b>해 지정하세요.</span>'
+    + '</div>'
+
+    // 추가 입력줄
+    + '<div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">'
+    +   '<input type="date" id="hdDate" style="flex:0 0 170px; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:14px; font-weight:700;">'
+    +   '<input type="text" id="hdName" placeholder="공휴일 이름 (예: 임시공휴일)" maxlength="20" '
+    +     'style="flex:1 1 200px; min-width:0; padding:10px 12px; border:1.5px solid #cbd5e1; border-radius:10px; font-size:14px; font-weight:700;">'
+    +   '<button onclick="holidayMgr.add()" '
+    +     'style="flex:0 0 auto; padding:10px 20px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer;">＋ 추가</button>'
+    + '</div>'
+
+    + (shown.length
+        ? '<table class="cpop-table"><thead><tr><th style="width:170px;">날짜</th><th>공휴일</th><th style="width:80px;"></th></tr></thead><tbody>' + rows + '</tbody></table>'
+        : '<div class="cpop-empty">등록된 공휴일이 없습니다. 위에서 추가하세요.</div>')
+
+    + '<div style="margin-top:12px; font-size:12px; color:#94a3b8; font-weight:700;">'
+    +   '· ' + thisYear + '년 이후만 표시됩니다 · 지난 날짜는 흐리게 표시 · 총 ' + shown.length + '건'
+    + '</div>';
+  },
+
+  _today: function(){
+    var t = new Date(), z = function(n){ return String(n).padStart(2,'0'); };
+    return t.getFullYear() + '-' + z(t.getMonth()+1) + '-' + z(t.getDate());
+  },
+
+  add: function(){
+    var d = (document.getElementById('hdDate') || {}).value || '';
+    var n = ((document.getElementById('hdName') || {}).value || '').trim();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ showKacAlert('날짜를 선택해 주세요.'); return; }
+    if(!n){ showKacAlert('공휴일 이름을 입력해 주세요. (예: 임시공휴일)'); return; }
+    if(n.length > 20){ showKacAlert('이름은 20자 이내로 입력해 주세요.'); return; }
+
+    this._ref().child(d).set(n)
+      .then(function(){
+        try{ document.getElementById('hdName').value = ''; }catch(e){}
+        showKacAlert('✅ ' + d + ' — 「' + n + '」 공휴일로 등록되었습니다.\n\n모든 과정의 출석부에 즉시 반영됩니다.');
+      })
+      .catch(function(e){ showKacAlert('등록 실패: ' + ((e && e.message) || '')); });
+  },
+
+  del: function(d, name){
+    var self = this;
+    // showKacConfirm 은 Promise 가 아니라 콜백(onOk, onNo) 방식이다
+    showKacConfirm(d + ' 「' + name + '」\n\n공휴일 지정을 해제할까요?\n해제하면 그날은 정상 출결일이 됩니다.', function(){
+      self._ref().child(d).remove()
+        .catch(function(e){ showKacAlert('삭제 실패: ' + ((e && e.message) || '')); });
+    });
+  }
+};
+window.holidayMgr = holidayMgr;
+</script>
+
 </body>
 </html>
 <!-- @build 20260622 (교육운영부 vH26) -->
