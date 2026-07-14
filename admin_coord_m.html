@@ -123,7 +123,10 @@
     .mhead.shrink .clk b{ font-size:13px; }
     .ov-head.shrink{ padding-top:8px; padding-bottom:8px; border-radius:0 0 14px 14px; }
     .ov-head.shrink .ttl{ font-size:14px; }
-    .ov-head.shrink .bk{ height:34px; font-size:13px; padding:0 12px 0 10px; }
+    /* [K19] 접혀도 '동그란' 모양을 유지 — 너비를 같이 줄이지 않으면 타원으로 찌그러진다
+       (예전 알약 버튼 기준으로 높이만 줄이던 규칙이 남아 있었다) */
+    .ov-head.shrink .bk{ width:34px; height:34px; padding:0; }
+    .ov-head.shrink .bk i{ font-size:15px; }
 
     .sec{ padding:16px 15px 0; }
     .sec-ttl{ font-size:11.5px; font-weight:800; color:#7C8BA5; margin:6px 3px 11px; display:flex; align-items:center; gap:7px; letter-spacing:.2px; }
