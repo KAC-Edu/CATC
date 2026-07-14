@@ -72,7 +72,9 @@
     }
     html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
     body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:30px; letter-spacing:-.2px; }
-    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; }
+    /* [K15] 하단 여백은 .wrap 에 (body 는 height:100% + border-box 라 padding 이 안 먹는다) */
+    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh;
+           padding-bottom:calc(130px + env(safe-area-inset-bottom)); box-sizing:border-box; }
 
     .mhead{ background:linear-gradient(135deg,#0d9488 0%,#0f766e 100%); color:#fff; padding:16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 14px 30px rgba(13,148,136,.24); overflow:hidden; }
     .mhead::after{ content:''; position:absolute; right:-40px; top:-50px; width:160px; height:160px; border-radius:50%; background:radial-gradient(circle,rgba(255,255,255,.14),transparent 70%); pointer-events:none; }
