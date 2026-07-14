@@ -127,6 +127,15 @@
 
     .ov-img{ position:fixed; inset:0; background:rgba(15,23,42,.9); display:none; align-items:center; justify-content:center; z-index:500; padding:14px; }
     .ov-img.open{ display:flex; } .ov-img img{ max-width:100%; max-height:100%; border-radius:10px; }
+    /* [K2] 식단표 전체화면 — 예전엔 나가는 버튼이 없어 '화면 아무 데나' 눌러야 닫혔다.
+       카카오톡 인앱 브라우저 상단의 X(앱 종료)와 헷갈리기 쉬운 자리라 빨간 [뒤로]를 확실히 놓는다. */
+    .ov-img .imgback{ position:fixed; left:14px; top:calc(14px + env(safe-area-inset-top)); z-index:2;
+            height:42px; padding:0 16px 0 14px; border-radius:12px;
+            background:linear-gradient(135deg,#ef4444,#dc2626); border:1px solid #b91c1c; color:#fff;
+            font-size:15px; font-weight:900; display:inline-flex; align-items:center; gap:7px;
+            cursor:pointer; transition:transform .1s; box-shadow:0 5px 14px rgba(220,38,38,.5); white-space:nowrap; }
+    .ov-img .imgback i{ font-size:17px; }
+    .ov-img .imgback:active{ transform:scale(.94); }
     /* [vB] 식수 카드 확대·한줄 + 클릭 상세 */
     .meal{ cursor:pointer; position:relative; }
     .meal .l{ font-size:15px; font-weight:900; margin-top:6px; }
@@ -260,7 +269,10 @@
 </div>
 
 <div class="msheet-ov" id="mealSheetOv"><div class="msheet" id="mealSheet"></div></div>
-<div class="ov-img" id="imgOv" onclick="this.classList.remove('open')"><img id="imgOvImg" src="" alt="식단표"></div>
+<div class="ov-img" id="imgOv" onclick="this.classList.remove('open')">
+  <div class="imgback" onclick="event.stopPropagation(); document.getElementById('imgOv').classList.remove('open');"><i class="fa-solid fa-arrow-rotate-left"></i> 뒤로</div>
+  <img id="imgOvImg" src="" alt="식단표">
+</div>
 <div id="__catcVer" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">영양M vC</div>
 
 <script src="config.js?v=b260620c"></script>
