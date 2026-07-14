@@ -125,35 +125,178 @@ firebase.database().goOnline();
   var SHRINK_AT = 64;   // 이만큼 내려가면 접는다
   var EXPAND_AT = 16;   // 이만큼 위로 돌아오면 다시 편다
 
-  function bind(scroller, heads) {
+  /* ══ [K16] 상단바 아래로 지나가는 글을 흐리게 지운다 ═══════════════════
+     상단바가 불투明해서 글이 딱 잘려 들어가는 게 지저분했다.
+     상단바 바로 밑에 '흐림 띠'를 깔아, 아래 내용이 상단바로 들어갈수록
+     뿌옇게 흐려지며 사라지게 한다.
+     문제: 상단바 높이가 접힘/펼침으로 계속 변한다 → 고정값을 쓸 수 없다.
+     → 실제 높이를 재서 CSS 변수(--kacHeadH)로 알려주고, 띠가 그 높이에 붙게 한다.
+     스타일과 띠 요소를 여기서 만들어 넣으므로 모바일 6개 화면에 한 번에 적용된다.
+     ═══════════════════════════════════════════════════════════════════ */
+  function syncHeadH(heads, scope) {
+    try {
+      for (var i = 0; i < heads.length; i++) {
+        if (heads[i].offsetParent !== null) {
+          (scope || document.documentElement).style.setProperty('--kacHeadH', heads[i].offsetHeight + 'px');
+          return;
+        }
+      }
+    } catch (e) {}
+  }
+
+  function ensureFade() {
+    if (!document.querySelector('.mhead, .ov-head')) return;      // PC 화면이면 아무 것도 안 한다
+    if (!document.getElementById('kacHeadFadeCss')) {
+      var st = document.createElement('style');
+      st.id = 'kacHeadFadeCss';
+      st.textContent =
+        '.kac-head-fade{position:sticky; top:var(--kacHeadH, 92px); z-index:40;'
+        + ' height:26px; margin-bottom:-26px; pointer-events:none;'
+        + ' backdrop-filter:blur(7px); -webkit-backdrop-filter:blur(7px);'
+        + ' -webkit-mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.5) 55%,transparent 100%);'
+        + ' mask-image:linear-gradient(to bottom,#000 0%,rgba(0,0,0,.5) 55%,transparent 100%);}'
+        // [K18] 높이를 잴 때만 애니메이션을 잠시 끈다 (재는 동안 화면이 움찔하지 않게)
+        + '.kac-notrans, .kac-notrans *{transition:none !important;}';
+      document.head.appendChild(st);
+    }
+    var heads = document.querySelectorAll('.mhead, .ov-head');
+    for (var i = 0; i < heads.length; i++) {
+      var hd = heads[i];
+      var nx = hd.nextElementSibling;
+      if (nx && nx.className === 'kac-head-fade') continue;        // 이미 있음
+      var f = document.createElement('div');
+      f.className = 'kac-head-fade';
+      if (hd.parentNode) hd.parentNode.insertBefore(f, hd.nextSibling);
+    }
+  }
+
+  /* scope = 이 상단바가 속한 스크롤 영역. 창 스크롤이면 문서 루트, 오버레이면 그 오버레이.
+     (교육운영부 모바일은 목록과 상세가 서로 다른 영역에서 스크롤되므로 높이를 따로 기억해야 한다) */
+  /* 지금 보이는 상단바 */
+  function visHead(heads) {
+    for (var i = 0; i < heads.length; i++) {
+      if (heads[i].offsetParent !== null) return heads[i];
+    }
+    return null;
+  }
+  function headH(heads) { var h = visHead(heads); return h ? h.offsetHeight : 0; }
+
+  /* [K18] '접히면 몇 px 줄어드는지'를 미리 재둔다.
+     빈 칸을 접는 것과 '동시에' 채워야 문서 높이가 한순간도 변하지 않는다.
+     접힌 뒤에 재서 채우면(0.22초 뒤) 그 사이에 이미 문서가 짧아져 스크롤이 튕긴다.
+     → 애니메이션을 잠깐 끄고 접었다 폈다 하며 높이를 재둔다(화면엔 안 보인다). */
+  function measureGap(heads) {
+    var h = visHead(heads);
+    if (!h) return 0;
+    try {
+      var wasShrunk = h.classList.contains('shrink');
+      h.classList.add('kac-notrans');            // 애니메이션 잠시 끔
+      h.classList.remove('shrink');
+      var expanded = h.offsetHeight;             // 강제 재계산
+      h.classList.add('shrink');
+      var collapsed = h.offsetHeight;
+      if (!wasShrunk) h.classList.remove('shrink');
+      h.offsetHeight;                            // 반영 강제
+      h.classList.remove('kac-notrans');
+      return Math.max(0, expanded - collapsed);
+    } catch (e) {
+      try { h.classList.remove('kac-notrans'); } catch (_) {}
+      return 0;
+    }
+  }
+
+  /* [K18] 문서 맨 아래에 넣는 '빈 칸'. 상단바가 접히면서 사라진 높이를 여기서 되돌려준다.
+     → 문서 전체 높이가 변하지 않으므로 브라우저가 스크롤 위치를 건드리지 않는다. */
+  function ensureSpacer(scroller) {
+    var host = (scroller === window) ? document.body : scroller;
+    if (!host) return null;
+    var sp = host.querySelector(':scope > .kac-head-spacer');
+    if (!sp) {
+      sp = document.createElement('div');
+      sp.className = 'kac-head-spacer';
+      sp.setAttribute('aria-hidden', 'true');
+      sp.style.cssText = 'height:0; flex:none; pointer-events:none; transition:height .22s ease;';
+      host.appendChild(sp);
+    }
+    return sp;
+  }
+
+  function bind(scroller, heads, scope) {
     if (!heads || !heads.length) return;
-    var shrunk = false, ticking = false;
+    var shrunk = false, ticking = false, gapPx = null;
     var posOf = function () {
       return (scroller === window)
         ? (window.scrollY || document.documentElement.scrollTop || 0)
         : (scroller.scrollTop || 0);
     };
+    /* 지금 이 화면에서 '더 스크롤할 수 있는 여유'가 얼마나 되는지 */
+    var roomOf = function () {
+      try {
+        if (scroller === window) {
+          var de = document.documentElement;
+          return Math.max(0, de.scrollHeight - de.clientHeight);
+        }
+        return Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+      } catch (e) { return 0; }
+    };
     var apply = function () {
       ticking = false;
       var y = posOf(), want = shrunk;
-      if (!shrunk && y > SHRINK_AT) want = true;
+
+      /* ══ [K18] 펄럭임(접혔다 펴졌다 반복) 방지 ═══════════════════════════
+         [증상] 스크롤을 살짝 올리면 상단바가 접혔다 펴졌다를 반복한다.
+         [원인] 상단바가 접히면 그만큼(≈130px) 문서 전체가 짧아진다.
+                문서가 짧아지면 브라우저가 스크롤 위치를 강제로 위로 당긴다.
+                당겨진 위치가 '맨 위'라 판정되면 → 다시 펴진다
+                → 펴지면 문서가 길어지고 → 또 접히고 … 무한 반복.
+         [해결] 접힌 만큼 문서 맨 아래에 같은 높이의 빈 칸을 넣어
+                문서 전체 높이를 그대로 유지한다.
+                높이가 안 변하니 브라우저가 스크롤을 건드릴 일이 없고, 펄럭임도 없다.
+                (화면에서 내용이 위로 올라오는 효과는 그대로다 — 공간은 그대로 번다)     */
+      var NEED = 200;                              // 이보다 짧은 화면은 접어봐야 얻을 게 없다
+      if (!shrunk && y > SHRINK_AT && roomOf() >= NEED) want = true;
       else if (shrunk && y < EXPAND_AT) want = false;
+
       if (want === shrunk) return;                 // 바뀐 게 없으면 DOM 건드리지 않는다
+
+      // 줄어드는 높이를 미리 확보 (처음 한 번만 잰다)
+      if (gapPx == null) gapPx = measureGap(heads);
+
+      /* ★ 순서가 중요하다: 빈 칸을 '먼저' 채우고 나서 접는다.
+           그래야 문서 높이가 한순간도 줄어들지 않아 스크롤이 튕기지 않는다. */
+      try {
+        var sp = ensureSpacer(scroller);
+        if (sp) sp.style.height = want ? (gapPx + 'px') : '0px';
+      } catch (e) {}
+
       shrunk = want;
       for (var i = 0; i < heads.length; i++) heads[i].classList.toggle('shrink', shrunk);
+
+      // 흐림 띠는 상단바 높이에 붙어야 하므로 애니메이션 뒤에 한 번 더 맞춘다
+      syncHeadH(heads, scope);
+      setTimeout(function () { syncHeadH(heads, scope); }, 260);
     };
     scroller.addEventListener('scroll', function () {
       if (!ticking) { ticking = true; requestAnimationFrame(apply); }
     }, { passive: true });
+    syncHeadH(heads, scope);
+    setTimeout(function () { syncHeadH(heads, scope); }, 600);   // 첫 렌더 후 실제 높이 반영
   }
 
   function init() {
     try {
+      ensureFade();                                 // [K16] 흐림 띠 설치 (모바일 화면에만)
       // ① 본문(창) 스크롤 → 화면 상단바
-      bind(window, document.querySelectorAll('.mhead'));
+      bind(window, document.querySelectorAll('.mhead'), document.documentElement);
       // ② 상세 화면이 오버레이(.ov) 안에서 따로 스크롤되는 경우(교육운영부 모바일)
       var ovs = document.querySelectorAll('.ov');
-      for (var i = 0; i < ovs.length; i++) bind(ovs[i], ovs[i].querySelectorAll('.ov-head'));
+      for (var i = 0; i < ovs.length; i++) bind(ovs[i], ovs[i].querySelectorAll('.ov-head'), ovs[i]);
+      // 화면 회전·글자크기 변경 등으로 높이가 달라질 수 있다
+      window.addEventListener('resize', function () {
+        syncHeadH(document.querySelectorAll('.mhead'), document.documentElement);
+        var o = document.querySelectorAll('.ov');
+        for (var k = 0; k < o.length; k++) syncHeadH(o[k].querySelectorAll('.ov-head'), o[k]);
+      }, { passive: true });
     } catch (e) { try { console.warn('[K4] 상단바 접힘 설치 실패', e); } catch (_) {} }
   }
 
