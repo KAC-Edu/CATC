@@ -84,12 +84,16 @@
       --grad-act:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);
     }
     html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
-    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:#f4f7fb; color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:calc(28px + env(safe-area-inset-bottom)); letter-spacing:0; }
+    /* [K15] 하단 여백 확대 — 마지막 블록(외출·외박)이 화면 바닥에 붙어 누르기 힘들었다.
+       브라우저 하단 UI(카카오 인앱 바 등)에 가리지 않도록 넉넉히 띄우고, 그만큼 더 스크롤되게 한다. */
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:#f4f7fb; color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:calc(120px + env(safe-area-inset-bottom)); letter-spacing:0; }
     .wrap{ max-width:620px; margin:0 auto; min-height:100dvh; }
 
     .mhead{ background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%); color:#fff; padding:16px 16px 18px; position:sticky; top:0; z-index:50; border-radius:0 0 22px 22px; box-shadow:0 14px 30px rgba(37,99,235,.24); overflow:hidden; }
-    .mhead .row1{ display:flex; align-items:center; justify-content:space-between; }
-    .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:18px; font-weight:950; z-index:1; min-width:0; }
+    .mhead .row1{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    /* [K13] 플랫폼 이름을 키워 눈에 들어오게 */
+    .mhead .ttl{ display:flex; align-items:center; gap:11px; font-size:22px; font-weight:950; letter-spacing:-.4px; z-index:1; min-width:0; }
+    .hero-hint{ font-size:13px; font-weight:800; color:rgba(255,255,255,.88); }
     .mhead .ttl .mk{ width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:none; }
     .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
     .mhead .clk b{ font-size:15px; font-weight:900; }
@@ -261,15 +265,26 @@
     .cbadge i{ font-size:11px; opacity:.8; }
     .cbadge.hot{ background:#fff1f2; border-color:#fecdd3; color:#e11d48; }
     .cblock .cb-arrow{ position:absolute; right:15px; top:16px; color:#cbd5e1; font-size:14px; }
+    /* [K14] 과정별 색 구분 — 방(Room)마다 고정 색. 흰 카드만 이어지면 어디까지가 한 과정인지 안 보인다.
+       색은 방 글자로 정해지므로 매번 같은 방은 늘 같은 색이다(헷갈리지 않게). */
+    .cblock{ border-left:5px solid var(--cc, #2563eb); }
+    .cblock .cb-room{ background:linear-gradient(135deg, var(--cc, #2563eb), var(--cc2, #1d4ed8)); }
+    .cblock::before{ content:''; position:absolute; inset:0; border-radius:18px; pointer-events:none;
+                     background:linear-gradient(105deg, var(--ccbg, rgba(37,99,235,.06)), transparent 55%); }
+    .cblock > *{ position:relative; z-index:1; }
     /* [K2] 뒤로가기를 교육운영부와 똑같은 빨간 박스로 통일.
        예전엔 반투명 흰색 알약이라 파란 헤더에 묻혔고, 카카오톡 인앱 브라우저 상단의
        X(닫기) 버튼과 헷갈려 앱 자체를 나가버릴 위험이 있었다. */
-    .dback{ flex-shrink:0; height:42px; padding:0 16px 0 14px; border-radius:12px;
+    /* [K13] 뒤로 = 동그란 아이콘 버튼 (글자 없음) */
+    .dback{ flex-shrink:0; width:42px; height:42px; padding:0; border-radius:50%;
             background:linear-gradient(135deg,#ef4444,#dc2626); border:1px solid #b91c1c; color:#fff;
-            font-size:15px; font-weight:900; display:inline-flex; align-items:center; gap:7px;
-            cursor:pointer; transition:transform .1s; box-shadow:0 5px 14px rgba(220,38,38,.5); white-space:nowrap; }
-    .dback i{ font-size:17px; }
-    .dback:active{ transform:scale(.94); }
+            display:inline-flex; align-items:center; justify-content:center;
+            cursor:pointer; transition:transform .1s; box-shadow:0 5px 14px rgba(220,38,38,.5); }
+    .dback i{ font-size:18px; }
+    .dback:active{ transform:scale(.9); }
+    /* 뒤로 옆의 과정명 = 헤더 제목. 길면 말줄임. */
+    .dhead-t{ flex:1; min-width:0; font-size:17px; font-weight:950; letter-spacing:-.3px;
+              overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .mon-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
     .mon-cell{ text-align:center; background:#f8fafc; border:1px solid #eef1f6; border-radius:13px; padding:12px 4px; }
     .mon-cell .mk{ font-size:10.5px; font-weight:800; color:#64748b; margin-bottom:5px; word-break:keep-all; }
@@ -325,9 +340,12 @@
         <div class="ttl"><div class="mk"><i class="fa-solid fa-chalkboard-user"></i></div>강의 플랫폼</div>
         <div class="clk" id="clk"></div>
       </div>
+      <!-- [K13] '진행 중인 과정을 선택하세요'를 과정 수 알약과 같은 줄에 배치 (세로 공간 절약) -->
       <div class="hero" style="margin-top:12px;">
-        <div class="hero-course" style="font-size:17px;">진행 중인 과정을 선택하세요</div>
-        <div class="hero-meta"><span class="hero-pill"><i class="fa-solid fa-layer-group"></i><span id="hTotal">0개 과정</span></span></div>
+        <div class="hero-meta" style="margin-top:0; align-items:center;">
+          <span class="hero-pill"><i class="fa-solid fa-layer-group"></i><span id="hTotal">0개 과정</span></span>
+          <span class="hero-hint">진행 중인 과정을 선택하세요</span>
+        </div>
       </div>
     </div>
     <div class="sec">
@@ -339,13 +357,14 @@
   <!-- ===== 상세: 선택 과정 모니터링 ===== -->
   <div id="detailView" style="display:none;">
     <div class="mhead">
+      <!-- [K13] 상단 정리: 뒤로는 동그란 아이콘만, 그 옆에 과정명. ROOM 배지는 뺐다.
+           (과정명이 헤더 제목이므로 히어로에서 또 크게 쓰면 중복이다) -->
       <div class="row1">
-        <div class="dback" onclick="goHome()"><i class="fa-solid fa-arrow-rotate-left"></i> 뒤로</div>
+        <div class="dback" onclick="goHome()" aria-label="뒤로"><i class="fa-solid fa-arrow-rotate-left"></i></div>
+        <div class="dhead-t" id="hCourse">-</div>
         <div class="clk" id="clk2"></div>
       </div>
       <div class="hero" id="heroBox">
-        <div class="hero-room" id="hRoom">ROOM</div>
-        <div class="hero-course" id="hCourse">-</div>
         <div class="hero-meta">
           <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="hCount">0명</span></span>
           <span class="hero-pill"><i class="fa-solid fa-user-tie"></i><span id="hProf">담임교수 -</span></span>
@@ -365,9 +384,17 @@
         <h3><i class="fa-solid fa-wave-square"></i> 실시간 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 모니터링</span></h3>
         <div class="mon-grid" id="dMon"></div>
       </div>
-      <div class="card">
-        <h3><i class="fa-solid fa-bullhorn"></i> 운영부 공지</h3>
-        <div id="dNotice"><div class="notice-empty">받은 공지가 없습니다.</div></div>
+      <!-- [K17] 운영부 공지 — 가로바 -->
+      <div class="card" style="padding:11px 12px;">
+        <div class="mbar" id="ntcBar" onclick="toggleBar('ntc')">
+          <i class="fa-solid fa-bullhorn mb-ic"></i>
+          <span class="mb-t">운영부 공지</span>
+          <span class="mb-n" id="dNoticeN">없음</span>
+          <i class="fa-solid fa-chevron-down mb-chev"></i>
+        </div>
+        <div class="mbody" id="ntcBody">
+          <div id="dNotice"><div class="notice-empty">받은 공지가 없습니다.</div></div>
+        </div>
       </div>
       <!-- [K3] 질문사항 — [K5] 기본 '펼침'. 금일 질문이 바로 보여야 한다. 접고 싶으면 이 바를 누른다. -->
       <div class="card" style="padding:11px 12px;">
@@ -383,11 +410,19 @@
           <div id="dQa"></div>
         </div>
       </div>
-      <div class="card">
-        <h3><i class="fa-solid fa-map-location-dot"></i> 금주 공통 교육장소 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 전 과정 공통</span></h3>
-        <div class="edu-loc-grid">
-          <div class="edu-loc" id="dEduIntegrity"><div class="el-k"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</div><div class="el-v">미정</div></div>
-          <div class="edu-loc" id="dEduUnion"><div class="el-k"><i class="fa-solid fa-handshake"></i> 노조교육</div><div class="el-v">미정</div></div>
+      <!-- [K17] 금주 공통 교육장소 — 가로바 -->
+      <div class="card" style="padding:11px 12px;">
+        <div class="mbar" id="eduBar" onclick="toggleBar('edu')">
+          <i class="fa-solid fa-map-location-dot mb-ic"></i>
+          <span class="mb-t">금주 공통 교육장소</span>
+          <span class="mb-n">전 과정 공통</span>
+          <i class="fa-solid fa-chevron-down mb-chev"></i>
+        </div>
+        <div class="mbody" id="eduBody">
+          <div class="edu-loc-grid">
+            <div class="edu-loc" id="dEduIntegrity"><div class="el-k"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</div><div class="el-v">미정</div></div>
+            <div class="edu-loc" id="dEduUnion"><div class="el-k"><i class="fa-solid fa-handshake"></i> 노조교육</div><div class="el-v">미정</div></div>
+          </div>
         </div>
       </div>
       <!-- [K6] 퇴교차량 — 가로바를 누르면 아래로 펼쳐진다 -->
@@ -817,6 +852,24 @@ function applyEduLoc(id, val){
   var v=el.querySelector('.el-v'); if(v) v.textContent=set?shortRoom(val):'미정';
 }
 
+/* [K14] 방(Room)별 고정 색 — 같은 방은 언제 봐도 같은 색이라 눈에 익는다 */
+var ROOM_COLORS=[
+  ['#2563eb','#1d4ed8','rgba(37,99,235,.07)'],   // A 파랑
+  ['#0d9488','#0f766e','rgba(13,148,136,.07)'],  // B 청록
+  ['#7c3aed','#6d28d9','rgba(124,58,237,.07)'],  // C 보라
+  ['#ea580c','#c2410c','rgba(234,88,12,.07)'],   // D 주황
+  ['#db2777','#be185d','rgba(219,39,119,.07)'],  // E 분홍
+  ['#0ea5e9','#0369a1','rgba(14,165,233,.07)'],  // F 하늘
+  ['#65a30d','#4d7c0f','rgba(101,163,13,.07)'],  // G 초록
+  ['#e11d48','#be123c','rgba(225,29,72,.07)']    // H 빨강
+];
+function roomColorStyle(rid){
+  var i=(String(rid).toUpperCase().charCodeAt(0)-65);
+  if(!(i>=0)) i=0;
+  var c=ROOM_COLORS[i % ROOM_COLORS.length];
+  return '--cc:'+c[0]+'; --cc2:'+c[1]+'; --ccbg:'+c[2]+';';
+}
+
 /* ===== 홈: 과정 블록 목록 ===== */
 function renderHome(){
   var list=orderedRooms();
@@ -827,7 +880,7 @@ function renderHome(){
     var room=DATA[rid]||{}, s=room.settings||{}, st=room.status||{};
     var prof=kacProfLabel(st)||'-';   // [J89] 담임 여러 명 → "장두석 외 2명"
     var cnt=studentsOf(room).length, q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;
-    return '<div class="cblock" onclick="openCourse(\''+rid+'\')">'
+    return '<div class="cblock" style="'+roomColorStyle(rid)+'" onclick="openCourse(\''+rid+'\')">'
       +'<div class="cb-top"><span class="cb-room"><i class="fa-solid fa-door-closed"></i> #'+rid+'</span>'
         +'<span class="cb-live"><span class="dot"></span> 진행중</span></div>'
       +'<div class="cb-name">'+h(s.courseName||'과정명 미설정')+'</div>'
@@ -847,6 +900,12 @@ function renderHome(){
 function openCourse(rid){ curRID=rid; curView='detail';
   document.getElementById('homeView').style.display='none';
   document.getElementById('detailView').style.display='block';
+  /* [K17] 과정을 새로 열 때마다 가로바는 접힌 상태로 시작 — 앞 과정에서 펼쳐 둔 상태가 따라오면 헷갈린다 */
+  ['ntc','edu','shut','out'].forEach(function(k){
+    var bar=document.getElementById(k+'Bar'), body=document.getElementById(k+'Body');
+    if(bar) bar.classList.remove('open');
+    if(body) body.classList.remove('open');
+  });
   try{ window.scrollTo(0,0); }catch(e){}
   renderDetail();
 }
@@ -864,8 +923,15 @@ function renderDetail(){
   var prof=kacProfLabel(st,' 교수')||'-';   // [J89] "장두석 교수 외 2명"
   var count=studentsOf(room).length;
   var setT=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
-  setT('hRoom','ROOM #'+curRID); setT('hCourse',s.courseName||'과정명 미설정');
+  setT('hCourse', s.courseName||'과정명 미설정');   // [K13] 과정명 = 헤더 제목(뒤로 버튼 옆)
   setT('hCount',count+'명'); setT('hProf','담임교수 '+prof);
+  /* [K14] 상세 헤더도 그 과정의 색을 따른다 — 목록에서 고른 색이 그대로 이어져 어느 과정인지 헷갈리지 않는다 */
+  try{
+    var i=(String(curRID).toUpperCase().charCodeAt(0)-65); if(!(i>=0)) i=0;
+    var c=ROOM_COLORS[i % ROOM_COLORS.length];
+    var dh=document.querySelector('#detailView .mhead');
+    if(dh) dh.style.background='linear-gradient(135deg,'+c[0]+' 0%,'+c[1]+' 100%)';
+  }catch(e){}
   var q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;
   document.getElementById('dMon').innerHTML=
      '<div class="mon-cell"><div class="mk">수강생</div><div class="mv">'+count+'</div></div>'
@@ -884,6 +950,10 @@ function renderDetail(){
     : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">지정된 학생장 없음</div></div>';
   var notice=(room.coordNotice||'').trim();
   document.getElementById('dNotice').innerHTML = notice ? '<div class="notice-box">'+h(notice)+'</div>' : '<div class="notice-empty">받은 공지가 없습니다.</div>';
+  // [K17] 접힌 가로바에도 공지 유무는 보이게 — 열어보지 않아도 새 공지가 있는지 안다
+  setT('dNoticeN', notice ? '공지 1건' : '없음');
+  var _nb=document.getElementById('dNoticeN');
+  if(_nb){ _nb.style.color = notice ? '#e11d48' : '#64748b'; }
   renderQa(room);   // [K1] 질문사항
   // [K6] 접힌 가로바에도 건수는 보이게 — 열어보지 않아도 몇 명인지 알 수 있다
   // [K7] 가로바에는 '전원 / 버스 이용'을 함께 — 총원이 맞는지 바로 보인다
