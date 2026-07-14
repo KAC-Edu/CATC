@@ -107,6 +107,9 @@
     .meal.d{ background:linear-gradient(160deg,#f5f3ff,#ede9fe); border-color:#ddd6fe; color:#6d28d9; }
     .resv{ margin-top:10px; background:#fff; border:1.5px solid var(--line); border-radius:13px; padding:11px 14px; display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; color:#475569; box-shadow:var(--shadow); }
     .resv b{ color:#6d28d9; font-size:16px; margin-left:auto; }
+    /* [K9] 석식 제외 — '빠지는 인원'이므로 예약(보라)과 색으로 구분한다 */
+    .resv.skip{ background:#fff5f6; border-color:#fecdd3; color:#9f1239; }
+    .resv.skip b{ color:#e11d48; }
 
     /* 부서별 */
     .dept-card{ background:#fff; border:1px solid #eef1f6; border-radius:18px; padding:13px 15px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 26px -18px rgba(16,24,40,.22); }
@@ -237,6 +240,8 @@
       <div class="meal d" onclick="openMealDetail('d')"><span class="tap"><i class="fa-solid fa-magnifying-glass"></i></span><div class="ic"><i class="fa-solid fa-moon"></i></div><div class="l">석식</div><div class="n"><span id="cnt-d">0</span><span class="un">명</span></div></div>
     </div>
     <div class="resv" onclick="openMealDetail('r')"><i class="fa-solid fa-calendar-check" style="color:#a78bfa;"></i> 석식 예약 <b id="cnt-r">0명</b> <i class="fa-solid fa-magnifying-glass" style="color:#cbd5e1;font-size:11px;"></i></div>
+    <!-- [K9] 석식 제외 신청 — 교육생이 외출·외박 신청할 때 함께 낸 '석식 제외'. 누르면 과정별 명단. -->
+    <div class="resv skip" onclick="openSkipSheet()"><i class="fa-solid fa-ban" style="color:#f43f5e;"></i> 석식 제외 신청 <b id="cnt-skip">0명</b> <i class="fa-solid fa-magnifying-glass" style="color:#cbd5e1;font-size:11px;"></i></div>
   </div>
 
   <div class="sec">
@@ -269,10 +274,18 @@
     </div>
   </div>
 
+  <!-- [K9] 입교 인원 합계 = 가로바. 누르면 아래로 과정 목록이 펼쳐진다 (중식 체크·식단표와 같은 방식) -->
   <div class="sec">
-    <div class="sec-ttl"><i class="fa-solid fa-graduation-cap"></i> 운영중 과정 인원</div>
-    <div id="crsTot"></div>
-    <div id="crsList"><div class="empty">불러오는 중...</div></div>
+    <div class="lunch-bar" id="crsBar" onclick="toggleCrs()">
+      <span class="lb-ic" style="background:#fef3c7;color:#b45309;"><i class="fa-solid fa-graduation-cap"></i></span>
+      <span class="lb-t">입교 인원 합계</span>
+      <span class="lb-tot" style="color:#b45309;"><b id="crsTotN">0</b>명</span>
+      <i class="fa-solid fa-chevron-down lb-chev"></i>
+    </div>
+    <div id="crsDetail" style="display:none;">
+      <div class="sec-ttl" style="margin-top:12px;"><i class="fa-solid fa-graduation-cap"></i> 운영중 과정 인원</div>
+      <div id="crsList"><div class="empty">불러오는 중...</div></div>
+    </div>
   </div>
 
 </div>
@@ -347,6 +360,64 @@ function openMealDetail(kind){
 }
 function refreshSheet(kind){ if(_sheetKind===kind && document.getElementById('mealSheetOv').classList.contains('open')) openMealDetail(kind); }
 function closeMealSheet(){ _sheetKind=null; document.getElementById('mealSheetOv').classList.remove('open'); }
+
+/* ══ [K9] 석식 제외 신청자 ═══════════════════════════════════════════
+   교육생이 외출·외박을 신청할 때 함께 낸 '석식 제외'다.
+   저장 위치: courses/{방}/dinner_skips/{오늘}/{토큰} = "이름(사번)" 문자열
+   (PC 영양사 화면의 '석식 제외 신청자 — 과정별 명단'과 같은 자료)
+   석식 인원 산정에서 빠지는 사람들이라, 식당에서 바로 확인할 수 있어야 한다.
+   ═══════════════════════════════════════════════════════════════════ */
+function skipRowsByCourse(){
+  var out=[], td=getToday();
+  for(var i=65;i<=90;i++){
+    var rid=String.fromCharCode(i), room=allRoomData[rid];
+    if(!room) continue;
+    var s=room.settings||{}, st=room.status||{};
+    if(!s.courseName) continue;
+    if(st.roomStatus!=='active') continue;
+    if(s.hideFromBoard) continue;
+    var day=(room.dinner_skips||{})[td]||{};
+    var names=Object.keys(day).map(function(k){ return day[k]; })
+                 .filter(function(v){ return v && (''+v).trim(); })
+                 .map(function(v){ return (''+v).trim(); });
+    if(!names.length) continue;
+    names.sort(function(a,b){ return a.localeCompare(b,'ko'); });
+    out.push({ rid:rid, cn:s.courseName, names:names });
+  }
+  return out;
+}
+function skipTotal(){
+  return skipRowsByCourse().reduce(function(n,c){ return n + c.names.length; }, 0);
+}
+function openSkipSheet(){
+  _sheetKind='skip';
+  var groups=skipRowsByCourse(), tot=skipTotal();
+  var html='<h3><i class="fa-solid fa-ban" style="color:#f43f5e;"></i> 석식 제외 신청자</h3>'
+    +'<div class="ms-sub">'+today+' · 총 <b>'+tot+'명</b><br>외출·외박을 신청하면서 석식 제외를 함께 신청한 인원입니다. (석식 인원에서 빠집니다)</div>';
+  if(!groups.length){
+    html+='<div class="empty">오늘 석식 제외 신청자가 없습니다.</div>';
+  } else {
+    groups.forEach(function(g){
+      html+='<div class="sec-ttl" style="margin:14px 3px 8px;"><i class="fa-solid fa-graduation-cap"></i> '
+          + h(g.cn)+' <span style="font-weight:800;color:#b45309;">#'+g.rid+' · '+g.names.length+'명</span></div>'
+          + '<table class="ms-tbl"><thead><tr><th class="num">#</th><th>성함(사번)</th></tr></thead><tbody>'
+          + g.names.map(function(nm,i){ return '<tr><td class="num">'+(i+1)+'</td><td>'+h(nm)+'</td></tr>'; }).join('')
+          + '</tbody></table>';
+    });
+  }
+  html+='<button class="ms-close" onclick="closeMealSheet()">닫기</button>';
+  document.getElementById('mealSheet').innerHTML=html;
+  document.getElementById('mealSheetOv').classList.add('open');
+}
+
+/* [K9] 입교 인원 합계 = 접이식 가로바 (중식 체크·식단표와 같은 방식) */
+function toggleCrs(){
+  var bar=document.getElementById('crsBar'), d=document.getElementById('crsDetail');
+  if(!bar||!d) return;
+  var open=d.style.display!=='none';
+  d.style.display=open?'none':'block';
+  bar.classList.toggle('open', !open);
+}
 
 /* ── 중식 체크 접이식 ── */
 function toggleLunch(){ var b=document.getElementById('lunchBar'), d=document.getElementById('lunchDetail'); if(!b||!d) return; var open=(d.style.display==='none'); d.style.display=open?'block':'none'; b.classList.toggle('open',open); }
@@ -435,13 +506,21 @@ function renderCourses(){
     var c=studentsCount(room); total+=c;
     rows.push({rid:rid, cn:s.courseName, c:c});
   }
-  var tot=document.getElementById('crsTot');
+  // [K9] 합계는 가로바에, 과정 목록은 그 아래(펼쳤을 때)에
+  var totN=document.getElementById('crsTotN');
+  if(totN) totN.textContent=total;
   var list=document.getElementById('crsList');
-  if(!rows.length){ tot.innerHTML=''; list.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
-  tot.innerHTML='<div class="crs-tot"><i class="fa-solid fa-users"></i> 입교 인원 합계 <span class="big">'+total+'명</span></div>';
-  list.innerHTML=rows.map(function(r){
-    return '<div class="crs"><span class="rb">#'+r.rid+'</span><span class="cn">'+h(r.cn)+'</span><span class="pc">'+r.c+'명</span></div>';
-  }).join('');
+  if(list){
+    list.innerHTML = rows.length
+      ? rows.map(function(r){
+          return '<div class="crs"><span class="rb">#'+r.rid+'</span><span class="cn">'+h(r.cn)+'</span><span class="pc">'+r.c+'명</span></div>';
+        }).join('')
+      : '<div class="empty">운영 중인 과정이 없습니다.</div>';
+  }
+  // [K9] 석식 제외 신청 인원 — 과정 자료(dinner_skips)가 갱신될 때 함께 반영
+  var sk=document.getElementById('cnt-skip');
+  if(sk) sk.textContent = skipTotal()+'명';
+  if(_sheetKind==='skip' && document.getElementById('mealSheetOv').classList.contains('open')) openSkipSheet();
 }
 var _msov=document.getElementById('mealSheetOv'); if(_msov) _msov.addEventListener('click', function(e){ if(e.target===this) closeMealSheet(); });
 </script>
