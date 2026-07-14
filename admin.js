@@ -5117,9 +5117,35 @@ filterQa: function(f, event) {
 
 
     // [6.22차 최종] 실시간 최적화 및 렌더링 안정화 버전
+/* [K26] Q&A 정렬 — 최신순 / 추천순(좋아요 많은 순).
+   고정(📌)·보류(⚠️)는 어느 쪽을 골라도 항상 위에 남는다(처리해야 할 것이므로).
+   고른 값은 이 브라우저에 기억해 둔다(매번 다시 고르지 않게). */
+setQaSort: function(mode) {
+    state.qaSort = (mode === 'like') ? 'like' : 'new';
+    try { localStorage.setItem('kac_qa_sort', state.qaSort); } catch(e) {}
+    try {
+        document.querySelectorAll('.qa-sort-btn').forEach(function(b){
+            b.classList.toggle('on', b.getAttribute('data-sort') === state.qaSort);
+        });
+    } catch(e) {}
+    ui.renderQaList();
+},
+_initQaSort: function() {
+    if (state.qaSort) return;                        // 이미 정해져 있으면 그대로
+    var saved = null;
+    try { saved = localStorage.getItem('kac_qa_sort'); } catch(e) {}
+    state.qaSort = (saved === 'like') ? 'like' : 'new';   // 기본은 최신순
+    try {
+        document.querySelectorAll('.qa-sort-btn').forEach(function(b){
+            b.classList.toggle('on', b.getAttribute('data-sort') === state.qaSort);
+        });
+    } catch(e) {}
+},
+
 renderQaList: function(f) {
-    const list = document.getElementById('qaList'); 
+    const list = document.getElementById('qaList');
     if (!list) return;
+    ui._initQaSort();                                // [K26] 저장해 둔 정렬 방식 적용
 
     // 1. 현재 필터 상태 동기화 (전달인자가 있으면 우선 적용)
     if (f) state.currentQaFilter = f;
@@ -5184,16 +5210,29 @@ renderQaList: function(f) {
         groups[dStr].push(i);
     });
 
-    // 각 그룹 내 정렬: pin > later > 좋아요 > 최신
+    /* [K26] 각 그룹(날짜) 안의 정렬 — 상단 [최신순 / 추천순] 버튼을 따른다.
+         공통: 고정(📌) → 보류(⚠️) 는 항상 위로 올린다 (처리해야 할 것이니까)
+         최신순: 그 다음 최근에 올라온 순
+         추천순: 그 다음 좋아요 많은 순 (동점이면 최신)                          */
+    const _sortMode = (state.qaSort === 'like') ? 'like' : 'new';
+    try {
+        const _note = document.getElementById('qaSortNote');
+        if (_note) _note.textContent = (_sortMode === 'like')
+            ? '좋아요 많은 순 · 📌고정·⚠️보류는 항상 위'
+            : '최근 올라온 순 · 📌고정·⚠️보류는 항상 위';
+    } catch(e) {}
     const w = s => s==='pin'?3:s==='later'?2:s==='normal'?1:0;
-    Object.values(groups).forEach(g => {
-        g.sort((a, b) => {
-            const wd = w(b.status) - w(a.status);
-            if (wd !== 0) return wd;
+    const _cmp = (a, b) => {
+        const wd = w(b.status) - w(a.status);
+        if (wd !== 0) return wd;
+        if (_sortMode === 'like') {
             if (b.likes !== a.likes) return b.likes - a.likes;
             return b.timestamp - a.timestamp;
-        });
-    });
+        }
+        if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+        return b.likes - a.likes;
+    };
+    Object.values(groups).forEach(g => { g.sort(_cmp); });
 
     // 날짜 내림차순 (최신 날짜 먼저)
     const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
@@ -5265,15 +5304,10 @@ renderQaList: function(f) {
         } catch(err) { return ''; }
     };
 
-    // [J78] 게시판 모드 — 날짜 구분 없이 전 기간을 한 목록으로, 추천 많은 순
+    // [J78] 게시판 모드 — 날짜 구분 없이 전 기간을 한 목록으로
+    // [K26] 정렬은 상단 [최신순/추천순] 버튼을 따른다 (예전엔 추천순 고정이었다)
     if (isSubjectPicked) {
-        const wS = s => s==='pin'?3:s==='later'?2:s==='normal'?1:0;   // 고정·보류는 그래도 위로
-        const flat = items.slice().sort((a, b) => {
-            const wd = wS(b.status) - wS(a.status);
-            if (wd !== 0) return wd;
-            if (b.likes !== a.likes) return b.likes - a.likes;        // ★ 추천 많은 순
-            return b.timestamp - a.timestamp;                          // 동점이면 최신
-        });
+        const flat = items.slice().sort(_cmp);
         const doneN = flat.filter(i => i.status === 'done' || i.status === 'pin-done').length;
         list.innerHTML = (flat.length ? `
             <div style="display:flex; align-items:center; gap:8px; margin:2px 0 12px; padding:9px 13px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:10px;">
@@ -5281,7 +5315,7 @@ renderQaList: function(f) {
                 <span style="font-weight:800; color:#5b21b6; font-size:13px;">${ui._esc(String(subjectMgr.selectedFilter))}</span>
                 <span style="font-size:12px; color:#7c3aed; font-weight:700;">전체 ${flat.length}건</span>
                 ${doneN > 0 ? `<span style="font-size:11px; color:#10b981; font-weight:700;">✅ ${doneN}건 답변</span>` : ''}
-                <span style="margin-left:auto; font-size:11px; color:#8b5cf6; font-weight:700;">날짜 구분 없이 · 추천 많은 순</span>
+                <span style="margin-left:auto; font-size:11px; color:#8b5cf6; font-weight:700;">날짜 구분 없이 · ${_sortMode==='like' ? '추천 많은 순' : '최신순'}</span>
             </div>` : '')
             + (flat.map(buildCard).join('') || `
             <div style="text-align:center; padding:80px 0; color:#94a3b8;">
