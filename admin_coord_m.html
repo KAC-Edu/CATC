@@ -782,7 +782,7 @@ function updateDetail(){
   _st('dHeroCount', studentsOf(room).length+'명');
   _st('dHeroProf','담임 '+prof);
   document.getElementById('dInfo').innerHTML=
-     '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(s.period||'-')+'</div></div>'
+     '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(kacPeriod(s.period))+'</div></div>'   /* [K20] 2026.07.13~2026.07.24 */
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:14px;">'+esc(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">담임교수</div><div class="v">'+esc(prof)+'</div></div>'
     +'<div class="info-item"><div class="k">과정담당</div><div class="v">'+esc(coordFull(s.coordinatorName)||'-')+'</div></div>';
