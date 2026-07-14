@@ -105,3 +105,58 @@ firebase.database().goOnline();
     }
   }, true);   // capture 단계 — 배경의 onclick 보다 먼저 가로챈다
 })();
+
+/* ══════════════════════════════════════════════════════════════════════
+   [K4] 모바일 상단바 — 내용을 위로 올리면(아래로 스크롤하면) 살짝 접힌다
+   ──────────────────────────────────────────────────────────────────────
+   둥근 상단바가 보기는 좋은데 늘 자리를 크게 차지해, 폰에서 볼 수 있는
+   내용이 그만큼 줄어든다. 그래서:
+     · 아래로 내리면  → 둘째 줄(통계·주차·과정 요약)이 접히고 제목줄만 얇게 남는다
+     · 맨 위로 돌리면 → 원래 크기로 다시 펼쳐진다
+   PC 화면에는 .mhead 가 없으므로 아무 일도 하지 않는다(안전).
+
+   흔들림(깜빡임) 방지: 접는 기준(64px)과 펴는 기준(16px)을 다르게 둬서,
+   경계에서 스크롤을 미세하게 움직여도 접혔다 펴졌다 하지 않는다.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+  if (window.__kacHeadShrink) return;
+  window.__kacHeadShrink = true;
+
+  var SHRINK_AT = 64;   // 이만큼 내려가면 접는다
+  var EXPAND_AT = 16;   // 이만큼 위로 돌아오면 다시 편다
+
+  function bind(scroller, heads) {
+    if (!heads || !heads.length) return;
+    var shrunk = false, ticking = false;
+    var posOf = function () {
+      return (scroller === window)
+        ? (window.scrollY || document.documentElement.scrollTop || 0)
+        : (scroller.scrollTop || 0);
+    };
+    var apply = function () {
+      ticking = false;
+      var y = posOf(), want = shrunk;
+      if (!shrunk && y > SHRINK_AT) want = true;
+      else if (shrunk && y < EXPAND_AT) want = false;
+      if (want === shrunk) return;                 // 바뀐 게 없으면 DOM 건드리지 않는다
+      shrunk = want;
+      for (var i = 0; i < heads.length; i++) heads[i].classList.toggle('shrink', shrunk);
+    };
+    scroller.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+    }, { passive: true });
+  }
+
+  function init() {
+    try {
+      // ① 본문(창) 스크롤 → 화면 상단바
+      bind(window, document.querySelectorAll('.mhead'));
+      // ② 상세 화면이 오버레이(.ov) 안에서 따로 스크롤되는 경우(교육운영부 모바일)
+      var ovs = document.querySelectorAll('.ov');
+      for (var i = 0; i < ovs.length; i++) bind(ovs[i], ovs[i].querySelectorAll('.ov-head'));
+    } catch (e) { try { console.warn('[K4] 상단바 접힘 설치 실패', e); } catch (_) {} }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
