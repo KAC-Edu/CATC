@@ -205,22 +205,6 @@ firebase.database().goOnline();
     }
   }
 
-  /* [K18] 문서 맨 아래에 넣는 '빈 칸'. 상단바가 접히면서 사라진 높이를 여기서 되돌려준다.
-     → 문서 전체 높이가 변하지 않으므로 브라우저가 스크롤 위치를 건드리지 않는다. */
-  function ensureSpacer(scroller) {
-    var host = (scroller === window) ? document.body : scroller;
-    if (!host) return null;
-    var sp = host.querySelector(':scope > .kac-head-spacer');
-    if (!sp) {
-      sp = document.createElement('div');
-      sp.className = 'kac-head-spacer';
-      sp.setAttribute('aria-hidden', 'true');
-      sp.style.cssText = 'height:0; flex:none; pointer-events:none; transition:height .22s ease;';
-      host.appendChild(sp);
-    }
-    return sp;
-  }
-
   function bind(scroller, heads, scope) {
     if (!heads || !heads.length) return;
     var shrunk = false, ticking = false, gapPx = null;
@@ -244,31 +228,23 @@ firebase.database().goOnline();
       var y = posOf(), want = shrunk;
 
       /* ══ [K18] 펄럭임(접혔다 펴졌다 반복) 방지 ═══════════════════════════
-         [증상] 스크롤을 살짝 올리면 상단바가 접혔다 펴졌다를 반복한다.
-         [원인] 상단바가 접히면 그만큼(≈130px) 문서 전체가 짧아진다.
-                문서가 짧아지면 브라우저가 스크롤 위치를 강제로 위로 당긴다.
-                당겨진 위치가 '맨 위'라 판정되면 → 다시 펴진다
-                → 펴지면 문서가 길어지고 → 또 접히고 … 무한 반복.
-         [해결] 접힌 만큼 문서 맨 아래에 같은 높이의 빈 칸을 넣어
-                문서 전체 높이를 그대로 유지한다.
-                높이가 안 변하니 브라우저가 스크롤을 건드릴 일이 없고, 펄럭임도 없다.
-                (화면에서 내용이 위로 올라오는 효과는 그대로다 — 공간은 그대로 번다)     */
-      var NEED = 200;                              // 이보다 짧은 화면은 접어봐야 얻을 게 없다
+         [증상] 스크롤을 조금 올리면 상단바가 접혔다 펴졌다를 계속 반복한다.
+         [원인] 접을 만큼 내용이 길지 않은 화면에서 생긴다.
+                상단바가 접히면 내용이 위로 올라가 '더 스크롤할 여유'가 줄어든다.
+                여유가 바닥나면 브라우저가 스크롤을 맨 위(0)로 강제로 되돌린다.
+                → 맨 위 = '펼침' 조건 → 다시 펴진다
+                → 펴지면 여유가 생겨 또 접히고 … 무한 반복.
+                (실제로 홈 화면에서 재현됨: 여유 0px인데 접으니 스크롤이 0으로 튕김)
+         [해결] '접고 나서도 스크롤이 넉넉히 남는 화면'에서만 접는다.
+                필요 여유 = 접히며 줄어드는 높이 + 접기 기준(64px) + 안전 여유(80px)
+                짧은 화면은 어차피 접어봐야 얻을 공간도 없으니 그냥 펼쳐 둔다.          */
+      if (gapPx == null) gapPx = measureGap(heads);        // 접히며 줄어드는 높이(한 번만 잰다)
+      var NEED = gapPx + SHRINK_AT + 80;
+
       if (!shrunk && y > SHRINK_AT && roomOf() >= NEED) want = true;
       else if (shrunk && y < EXPAND_AT) want = false;
 
       if (want === shrunk) return;                 // 바뀐 게 없으면 DOM 건드리지 않는다
-
-      // 줄어드는 높이를 미리 확보 (처음 한 번만 잰다)
-      if (gapPx == null) gapPx = measureGap(heads);
-
-      /* ★ 순서가 중요하다: 빈 칸을 '먼저' 채우고 나서 접는다.
-           그래야 문서 높이가 한순간도 줄어들지 않아 스크롤이 튕기지 않는다. */
-      try {
-        var sp = ensureSpacer(scroller);
-        if (sp) sp.style.height = want ? (gapPx + 'px') : '0px';
-      } catch (e) {}
-
       shrunk = want;
       for (var i = 0; i < heads.length; i++) heads[i].classList.toggle('shrink', shrunk);
 
