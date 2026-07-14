@@ -7894,5 +7894,108 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 })();
 </script>
 
+<!-- ══ [K28] 옛 버전(캐시) 자동 감지 → 블러 + [업데이트] 버튼 ══════════════════
+     브라우저가 옛 화면을 캐시로 계속 물고 있으면(재부팅해도 안 지워진다),
+     내 화면 버전과 Firebase에 등록된 '최신 기준' 버전을 비교해
+     낮으면 화면을 흐리게 덮고 [업데이트] 한 번으로 강제 새로고침시킨다.
+     · 최신 기준은 강사플랫폼의 [최신 기준 등록] 버튼으로 배포 때마다 갱신됨
+     · 인터넷이 안 되거나 기준이 없으면 아무 것도 막지 않는다(오작동 방지) -->
+<script>
+(function(){
+  var FILE = (location.pathname.split('/').pop() || 'dorm_admin.html');
+  function myVer(){ var el=document.getElementById('__catcVer'); return el ? (el.textContent||'').trim() : ''; }
+
+  /* 내 버전이 기준보다 '낮은지' 판정.
+     R1<R2, D65<D66 처럼 같은 접두어면 숫자로 비교(새로 배포한 직후 잠깐 기준이 안 바뀐 상태에서
+     오히려 최신 화면에 팝업이 뜨는 오작동을 막는다). 접두어가 다르면 그냥 '다름'=구버전 취급. */
+  function isStale(mine, base){
+    if(!base || !mine || mine===base) return false;
+    var pm=String(mine).match(/^([A-Za-z]*)(\d+)/), pb=String(base).match(/^([A-Za-z]*)(\d+)/);
+    if(pm && pb && pm[1]===pb[1]) return parseInt(pm[2],10) < parseInt(pb[2],10);
+    return mine !== base;
+  }
+
+  /* [K29] 무한 블러 방지 — 업데이트를 눌렀는데도(=방금 새로고침했는데도) 또 팝업이 뜨면
+     기준 버전이 잘못 등록됐을 가능성이 크다. 이땐 [닫고 계속 쓰기] 탈출구를 함께 준다. */
+  function justUpdated(){ try{ return new URL(location.href).searchParams.has('_v'); }catch(e){ return false; } }
+
+  function showBlock(base){
+    if(document.getElementById('kacUpdateOv')) return;
+    var stuck = justUpdated();
+    var ov=document.createElement('div');
+    ov.id='kacUpdateOv';
+    ov.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;'
+      +'background:rgba(15,23,42,.45);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);padding:20px;';
+    ov.innerHTML=
+      '<div style="max-width:360px;width:100%;background:#fff;border-radius:22px;padding:28px 24px;text-align:center;'
+      +'box-shadow:0 24px 60px rgba(0,0,0,.35);font-family:\'Pretendard\',\'Malgun Gothic\',sans-serif;">'
+      +'<div style="font-size:40px;line-height:1;margin-bottom:14px;">'+(stuck?'⚠️':'🔄')+'</div>'
+      +'<div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:8px;">'+(stuck?'업데이트가 안 끝났어요':'새 버전이 나왔어요')+'</div>'
+      +'<div style="font-size:14px;font-weight:700;color:#475569;line-height:1.6;margin-bottom:22px;">'
+      +(stuck
+        ? '방금 업데이트했는데도 계속 이 안내가 뜨면<br>기준 버전이 잘못 등록됐을 수 있습니다.<br><span style="font-size:12px;color:#94a3b8;">관리자에게 알려주시고, 우선 아래 버튼으로 닫고 사용하세요.</span>'
+        : '지금 보시는 화면은 예전 버전입니다.<br>아래 <b>업데이트</b>를 누르면 최신 화면으로 바뀝니다.<br><span style="font-size:12px;color:#94a3b8;">(입력 중이던 내용이 있으면 먼저 저장해 주세요)</span>')
+      +'</div>'
+      +'<button id="kacUpdateBtn" style="width:100%;padding:15px;border:none;border-radius:14px;'
+      +'background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:16px;font-weight:900;cursor:pointer;'
+      +'box-shadow:0 8px 20px rgba(37,99,235,.4);">⬆️ 업데이트</button>'
+      +(stuck
+        ? '<button id="kacUpdateSkip" style="width:100%;margin-top:9px;padding:12px;border:none;border-radius:12px;background:#f1f5f9;color:#475569;font-size:14px;font-weight:900;cursor:pointer;">닫고 계속 쓰기</button>'
+        : '')
+      +'<div style="margin-top:12px;font-size:11.5px;color:#cbd5e1;font-weight:700;">현재 '+myVer()+' → 최신 '+base+'</div>'
+      +'</div>';
+    document.body.appendChild(ov);
+    document.getElementById('kacUpdateBtn').onclick=doUpdate;
+    var skip=document.getElementById('kacUpdateSkip');
+    if(skip) skip.onclick=function(){ window._kacUpdateDismissed=true; ov.remove(); };
+  }
+
+  /* [업데이트] 버튼 = '진짜 새로고침' — 서비스워커·캐시를 비우고 주소에 무효화 값을 붙여 강제로 새로 받아온다.
+     (Ctrl+Shift+R 를 몰라도 이 버튼 하나면 된다) */
+  async function doUpdate(){
+    var btn=document.getElementById('kacUpdateBtn');
+    if(btn){ btn.disabled=true; btn.textContent='업데이트 중…'; }
+    try{
+      if('serviceWorker' in navigator){
+        var rs=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(rs.map(function(r){ return r.unregister(); }));
+      }
+    }catch(e){}
+    try{
+      if(window.caches){
+        var ks=await caches.keys();
+        await Promise.all(ks.map(function(k){ return caches.delete(k); }));
+      }
+    }catch(e){}
+    try{
+      var u=new URL(location.href);
+      u.searchParams.set('_v', Date.now());     // 주소가 달라지면 브라우저가 새로 받아온다
+      location.replace(u.href);
+    }catch(e){ location.reload(); }
+  }
+
+  /* 최신으로 잘 떴는데 주소에 _v=... 무효화 값이 남아 있으면 깔끔하게 지운다 */
+  function tidyUrl(){
+    try{ var u=new URL(location.href);
+      if(u.searchParams.has('_v')){ u.searchParams.delete('_v'); history.replaceState(null,'',u.pathname+u.search+u.hash); }
+    }catch(e){}
+  }
+
+  function check(){
+    try{
+      if(typeof firebase==='undefined' || !firebase.apps || !firebase.apps.length){ setTimeout(check, 600); return; }
+      var ref=firebase.database().ref('system/platformVersions/'+FILE);
+      // 실시간 구독: 관리자가 새 기준을 등록하면 열려 있는 화면에도 즉시 팝업이 뜬다
+      ref.on('value', function(snap){
+        var base=snap.val();
+        if(base && isStale(myVer(), base) && !window._kacUpdateDismissed){ showBlock(base); }
+        else { var ov=document.getElementById('kacUpdateOv'); if(ov) ov.remove(); tidyUrl(); }
+      }, function(){ /* 읽기 실패 = 오프라인 → 아무 것도 막지 않음 */ });
+    }catch(e){}
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', check); else check();
+})();
+</script>
+
 </body>
 </html>
