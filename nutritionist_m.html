@@ -82,6 +82,15 @@
     .mhead .ttl .mk{ width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.26); display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:none; }
     .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
     .mhead .clk b{ font-size:15px; font-weight:900; }
+    /* [K4] 아래로 스크롤하면 상단바가 접힌다 (동작은 config.js).
+       여긴 둘째 줄이 없어 제목줄 자체를 얇게 줄인다. */
+    .mhead{ transition:padding .22s ease, border-radius .22s ease; }
+    .mhead .ttl, .mhead .clk, .mhead .ttl .mk{ transition:font-size .22s ease, width .22s ease, height .22s ease; }
+    .mhead.shrink{ padding-top:8px; padding-bottom:8px; border-radius:0 0 16px 16px; }
+    .mhead.shrink .ttl{ font-size:15px; }
+    .mhead.shrink .ttl .mk{ width:30px; height:30px; font-size:13px; border-radius:9px; }
+    .mhead.shrink .clk{ font-size:11px; }
+    .mhead.shrink .clk b{ font-size:13px; }
 
     .sec{ padding:15px 14px 0; }
     .sec-ttl{ font-size:11.5px; font-weight:800; color:#7C8BA5; margin:4px 3px 11px; display:flex; align-items:center; gap:7px; } .sec-ttl i{ color:#F59E0B; }
