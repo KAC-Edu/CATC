@@ -484,6 +484,19 @@
   #kacBrandBtn:hover{ color:#93c5fd; text-shadow:0 0 18px rgba(147,197,253,.55); }
   body.in-course #kacBrandBtn{ display:none; }
 
+  /* [J99] 퇴교 수송 현황 — 목적지 숫자 아래 체크박스로 명단을 골라 본다 */
+  .shuttle-flt{
+      display:block; text-align:center; cursor:pointer; user-select:none;
+      padding:8px 14px 6px; border-radius:14px; border:2px solid transparent;
+      transition:background .15s, border-color .15s;
+  }
+  .shuttle-flt:hover{ background:#f1f5f9; }
+  .shuttle-flt input[type="checkbox"]{
+      display:block; margin:7px auto 0; width:19px; height:19px; cursor:pointer;
+  }
+  /* 체크된 칸은 테두리로 '지금 이걸 보고 있다'는 것을 알려준다 */
+  .shuttle-flt:has(input:checked){ background:#f8fafc; border-color:#cbd5e1; }
+
   /* [J96] '강의실 실시간 현황판'에 들어와 있을 때는 이 자리가 브랜드가 아니라 '뒤로가기'다.
      들어온 곳(통합 교육 현황판 / 과정 운영 현황)이 어디냐에 따라 글자가 바뀌므로
      알약 모양으로 감싸서 '누르는 버튼'임을 분명히 보이게 한다. */
@@ -1939,10 +1952,11 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
         <!-- 목적지별 요약 칩 + 초기화 버튼 추가 구역 -->
         <div style="display:flex; justify-content:space-around; align-items:center; background:white; border:1px solid #e2e8f0; border-radius:20px; padding:15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-            <div style="text-align:center;"><label style="font-size:20px; color:#64748b; font-weight:700; display:block; margin-bottom:5px;">자차</label><b id="cnt-car" style="font-size:42px; color:#64748b; font-weight:900;">0</b></div>
-            <div style="text-align:center;"><label style="font-size:20px; color:#ef4444; font-weight:700; display:block; margin-bottom:5px;">오송역</label><b id="cnt-osong" style="font-size:42px; color:#ef4444; font-weight:900;">0</b></div>
-            <div style="text-align:center;"><label style="font-size:20px; color:#3b82f6; font-weight:700; display:block; margin-bottom:5px;">터미널</label><b id="cnt-terminal" style="font-size:42px; color:#3b82f6; font-weight:900;">0</b></div>
-            <div style="text-align:center;"><label style="font-size:20px; color:#10b981; font-weight:700; display:block; margin-bottom:5px;">공항</label><b id="cnt-airport" style="font-size:42px; color:#10b981; font-weight:900;">0</b></div>
+            <!-- [J99] 숫자 아래 체크박스 = 그 목적지 신청자만 골라 보기. 아무것도 체크 안 하면 전체 표시. -->
+            <label for="flt-car" class="shuttle-flt" title="체크하면 '자차'만 골라 봅니다 (미선택=자차 간주 포함)"><span style="font-size:20px; color:#64748b; font-weight:700; display:block; margin-bottom:5px;">자차</span><b id="cnt-car" style="font-size:42px; color:#64748b; font-weight:900;">0</b><input type="checkbox" id="flt-car" onchange="ui.applyShuttleFilter()" style="accent-color:#64748b;"></label>
+            <label for="flt-osong" class="shuttle-flt" title="체크하면 '오송역'만 골라 봅니다"><span style="font-size:20px; color:#ef4444; font-weight:700; display:block; margin-bottom:5px;">오송역</span><b id="cnt-osong" style="font-size:42px; color:#ef4444; font-weight:900;">0</b><input type="checkbox" id="flt-osong" onchange="ui.applyShuttleFilter()" style="accent-color:#ef4444;"></label>
+            <label for="flt-terminal" class="shuttle-flt" title="체크하면 '터미널'만 골라 봅니다"><span style="font-size:20px; color:#3b82f6; font-weight:700; display:block; margin-bottom:5px;">터미널</span><b id="cnt-terminal" style="font-size:42px; color:#3b82f6; font-weight:900;">0</b><input type="checkbox" id="flt-terminal" onchange="ui.applyShuttleFilter()" style="accent-color:#3b82f6;"></label>
+            <label for="flt-airport" class="shuttle-flt" title="체크하면 '공항'만 골라 봅니다"><span style="font-size:20px; color:#10b981; font-weight:700; display:block; margin-bottom:5px;">공항</span><b id="cnt-airport" style="font-size:42px; color:#10b981; font-weight:900;">0</b><input type="checkbox" id="flt-airport" onchange="ui.applyShuttleFilter()" style="accent-color:#10b981;"></label>
             <div style="width:1px; height:40px; background:#e2e8f0; margin:0 10px;"></div>
             <div style="text-align:center; margin-right: 15px;"><label style="font-size:20px; color:#0f172a; font-weight:800; display:block; margin-bottom:5px;">총 신청</label><b id="cnt-total" style="font-size:42px; color:#0f172a; font-weight:900;">0</b></div>
             
