@@ -346,11 +346,10 @@
         <div class="ttl"><div class="mk"><i class="fa-solid fa-chalkboard-user"></i></div>강의 플랫폼</div>
         <div class="clk" id="clk"></div>
       </div>
-      <!-- [K13] '진행 중인 과정을 선택하세요'를 과정 수 알약과 같은 줄에 배치 (세로 공간 절약) -->
+      <!-- [K25] 안내 문구는 뺐다 (굳이 없어도 아는 내용) -->
       <div class="hero" style="margin-top:12px;">
         <div class="hero-meta" style="margin-top:0; align-items:center;">
           <span class="hero-pill"><i class="fa-solid fa-layer-group"></i><span id="hTotal">0개 과정</span></span>
-          <span class="hero-hint">진행 중인 과정을 선택하세요</span>
         </div>
       </div>
     </div>
@@ -372,19 +371,22 @@
       </div>
       <div class="hero" id="heroBox">
         <div class="hero-meta">
+          <!-- [K25] '과정 정보' 카드는 없앴다(부피만 크고 내용이 적었다).
+               꼭 필요한 것만 상단바 알약으로 끌어올린다: 인원 · 담임 · 강의실 · 학생장 -->
           <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="hCount">0명</span></span>
           <span class="hero-pill"><i class="fa-solid fa-user-tie"></i><span id="hProf">담임교수 -</span></span>
+          <span class="hero-pill"><i class="fa-solid fa-location-dot"></i><span id="hRoomLoc">강의실 -</span></span>
+          <span class="hero-pill" id="hLeaderPill"><i class="fa-solid fa-crown"></i><span id="hLeader">학생장 미지정</span></span>
         </div>
       </div>
     </div>
     <div class="sec">
       <!-- [K6] 순서: 과정정보 → 실시간현황 → 운영부공지 → 질문사항 → 금주 공통 교육장소 → 퇴교차량 → 외출·외박
            (퇴교차량·외출외박은 '필요할 때만' 보는 정보라 가로바로 접어 둔다) -->
-      <div class="card">
-        <h3><i class="fa-solid fa-circle-info"></i> 과정 정보</h3>
-        <div class="cname-big" id="dCourse">-</div>
-        <div class="info-grid" id="dInfo"></div>
-        <div id="dLeaderWrap"></div>
+      <!-- [K25] '과정 정보' 카드 삭제 — 교육기간·강의실·담임·인원·학생장은 상단바 알약으로 옮겼다.
+           (기존 코드가 참조하므로 요소만 숨겨 남겨 둔다) -->
+      <div style="display:none;">
+        <span id="dCourse"></span><span id="dInfo"></span><span id="dLeaderWrap"></span>
       </div>
       <div class="card">
         <h3><i class="fa-solid fa-wave-square"></i> 실시간 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 모니터링</span></h3>
@@ -938,6 +940,12 @@ function renderDetail(){
   var setT=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
   setT('hCourse', s.courseName||'과정명 미설정');   // [K13] 과정명 = 헤더 제목(뒤로 버튼 옆)
   setT('hCount',count+'명'); setT('hProf','담임교수 '+prof);
+  /* [K25] '과정 정보' 카드를 없앤 대신, 강의실·학생장을 상단바 알약으로 올린다 */
+  setT('hRoomLoc', '강의실 '+(s.roomDetailName||s.roomDetail||'미정'));
+  var _L=leaderOf(room);
+  setT('hLeader', _L ? ('학생장 '+_L.name) : '학생장 미지정');
+  var _lp=document.getElementById('hLeaderPill');
+  if(_lp) _lp.style.opacity = _L ? '1' : '.6';    // 미지정이면 흐리게
   /* [K14] 상세 헤더도 그 과정의 색을 따른다 — 목록에서 고른 색이 그대로 이어져 어느 과정인지 헷갈리지 않는다 */
   try{
     var i=(String(curRID).toUpperCase().charCodeAt(0)-65); if(!(i>=0)) i=0;
