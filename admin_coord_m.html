@@ -240,10 +240,18 @@
     .qa-newbadge{ background:#ef4444; color:#fff; font-size:11px; font-weight:900; padding:3px 8px; border-radius:999px; }
     .qa-readbtn{ border:1.5px solid #e2e8f0; background:#fff; color:#475569; border-radius:999px; padding:6px 12px; font-size:12px; font-weight:900; }
     .qa-body{ margin-top:11px; }
-    .qa-chips{ display:flex; gap:6px; overflow-x:auto; padding:1px 1px 10px; -webkit-overflow-scrolling:touch; }
-    .qa-chips button{ flex:0 0 auto; border:1.5px solid #e2e8f0; background:#fff; color:#64748b; border-radius:999px;
-                      padding:7px 13px; font-size:12.5px; font-weight:900; white-space:nowrap; }
-    .qa-chips button.on{ background:#0f172a; border-color:#0f172a; color:#fff; }
+    /* [K5] 강사 필터 — 칩을 눈으로 훑는 대신, [필터] 버튼을 눌러 체크로 고른다 */
+    .qa-fltbtn{ border:1.5px solid #cbd5e1; background:#fff; color:#0f172a; border-radius:999px;
+                padding:7px 13px; font-size:12.5px; font-weight:900; display:inline-flex; align-items:center; gap:6px; }
+    .qa-fltbtn.on{ background:#2563eb; border-color:#2563eb; color:#fff; }
+    .qa-flt-row{ display:flex; align-items:center; gap:11px; padding:13px 12px; border:1px solid #e8eef7;
+                 border-radius:13px; margin-bottom:8px; font-weight:800; color:#0f172a; font-size:14px; }
+    .qa-flt-row input{ width:20px; height:20px; flex-shrink:0; accent-color:#2563eb; }
+    .qa-flt-row .n{ margin-left:auto; color:#94a3b8; font-weight:800; font-size:12.5px; flex-shrink:0; }
+    .qa-flt-acts{ display:flex; gap:8px; margin-top:12px; }
+    .qa-flt-acts button{ flex:1; padding:13px; border:none; border-radius:12px; font-weight:900; font-size:14px; }
+    .qf-reset{ background:#f1f5f9; color:#475569; }
+    .qf-ok{ background:#0f172a; color:#fff; }
     .qa-head{ display:flex; align-items:center; gap:7px; margin-bottom:9px; flex-wrap:wrap; }
     .qa-mode{ font-size:11.5px; font-weight:800; color:#7c3aed; background:#f5f3ff; border:1px solid #ddd6fe;
               border-radius:9px; padding:7px 11px; margin-bottom:9px; }
@@ -395,14 +403,15 @@
     </div>
     <!-- [K3] 질문사항 — 가로바를 누르면 펼쳐진다 (PC 질문 화면과 같은 구성) -->
     <div class="card" style="padding:11px 12px;">
-      <div class="qa-bar" id="qaBar" onclick="toggleQa()">
+      <!-- [K5] 기본은 '펼침' — 금일 질문이 바로 보여야 한다. 접고 싶으면 이 바를 누른다. -->
+      <div class="qa-bar open" id="qaBar" onclick="toggleQa()">
         <i class="fa-solid fa-circle-question qb-ic"></i>
         <span class="qb-t">질문사항</span>
         <span class="qb-n" id="dQaCnt">0건</span>
         <span id="dQaNew"></span>
         <i class="fa-solid fa-chevron-down qb-chev"></i>
       </div>
-      <div class="qa-body" id="qaBody" style="display:none;">
+      <div class="qa-body" id="qaBody">
         <div class="qa-head" id="dQaHead"></div>
         <div id="dQa"></div>
       </div>
@@ -437,6 +446,22 @@
 </div>
 
 <div id="toast"></div>
+<!-- [K5] 질문 필터 — 누구 질문을 볼지 체크로 고른다 -->
+<div id="qaFltOv" class="m-shuttle-ov" onclick="if(event.target===this)closeQaFilter()">
+  <div class="m-shuttle-sheet">
+    <div class="m-shuttle-head">
+      <h3><i class="fa-solid fa-filter" style="color:#2563eb;"></i> 질문 필터</h3>
+      <button class="m-shuttle-close" onclick="closeQaFilter()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div style="font-size:12.5px;font-weight:800;color:#94a3b8;margin:-4px 2px 10px;">볼 질문을 골라 체크하세요. 아무것도 안 고르면 전체가 보입니다.</div>
+    <div id="qaFltList"></div>
+    <div class="qa-flt-acts">
+      <button class="qf-reset" onclick="qaFilterReset()">전체 보기</button>
+      <button class="qf-ok" onclick="closeQaFilter()">적용</button>
+    </div>
+  </div>
+</div>
+
 <div id="mShuttleOv" class="m-shuttle-ov" onclick="if(event.target===this)closeMobileShuttleList()">
   <div class="m-shuttle-sheet">
     <div class="m-shuttle-head">
@@ -648,8 +673,11 @@ function updateDetail(){
    · 정렬: 최신순(기본) / 좋아요순
    운영부는 읽기 전용이다 (질문 삭제·답변은 강사 PC에서) */
 function qaEsc(s){ return (typeof esc==='function'?esc:h)(s); }
-var _qaOpen=false;          // 가로바 펼침 여부
-var _qaSubj='all';          // 강사·과목 필터
+/* [K5] 금일 질문은 처음부터 펼쳐 보여준다 (가로바는 '접기'용으로 남긴다) */
+var _qaOpen=true;
+/* [K5] 강사 필터 — 칩을 눈으로 훑는 방식은 사람이 많아지면 못 찾는다.
+   [필터] 버튼 → 체크박스로 고르는 방식. 빈 배열 = 필터 없음 = 전체 표시(기본값). */
+var _qaPick=[];
 var _qaDateOpen={};         // 지난 날짜 섹션 펼침 상태
 
 function qaSeenKey(){ return 'kac_qa_seen_' + (curRID || '_'); }
@@ -676,8 +704,36 @@ function toggleQa(){
   if(body) body.style.display=_qaOpen?'block':'none';
   if(_qaOpen){ var r=DATA[curRID]; if(r) renderQa(r); }
 }
-function setQaSubj(s){ _qaSubj=s; _qaDateOpen={}; var r=DATA[curRID]; if(r) renderQa(r); }
 function toggleQaDate(d){ _qaDateOpen[d]=!_qaDateOpen[d]; var r=DATA[curRID]; if(r) renderQa(r); }
+
+/* ── [K5] 질문 필터 (체크박스 시트) ── */
+function openQaFilter(){
+  var room=DATA[curRID]; if(!room) return;
+  var all=qaLiveList(room);
+  var subs=[]; all.forEach(function(x){ if(subs.indexOf(x.subject)<0) subs.push(x.subject); });
+  subs.sort(function(a,b){ if(a==='공통질문') return -1; if(b==='공통질문') return 1; return a.localeCompare(b,'ko'); });
+  var box=document.getElementById('qaFltList'); if(!box) return;
+  box.innerHTML = subs.map(function(s){
+    var n=all.filter(function(x){ return x.subject===s; }).length;
+    var on=_qaPick.indexOf(s)>=0;
+    return '<label class="qa-flt-row">'
+      + '<input type="checkbox" '+(on?'checked':'')+' onchange="qaPickToggle(this, \''+String(s).replace(/'/g,"\\'")+'\')">'
+      + '<span>'+qaEsc(s)+'</span><span class="n">'+n+'건</span></label>';
+  }).join('') || '<div class="empty" style="padding:20px 0;">질문이 없습니다.</div>';
+  document.getElementById('qaFltOv').classList.add('open');
+}
+function closeQaFilter(){ var o=document.getElementById('qaFltOv'); if(o) o.classList.remove('open'); }
+function qaPickToggle(el, s){
+  var i=_qaPick.indexOf(s);
+  if(el.checked){ if(i<0) _qaPick.push(s); } else if(i>=0){ _qaPick.splice(i,1); }
+  _qaDateOpen={};
+  var r=DATA[curRID]; if(r) renderQa(r);           // 체크하는 즉시 뒤 목록이 바뀐다
+}
+function qaFilterReset(){
+  _qaPick=[]; _qaDateOpen={};
+  var r=DATA[curRID]; if(r) renderQa(r);
+  openQaFilter();
+}
 function qaMarkAllRead(){
   var room=DATA[curRID]; if(!room) return;
   try{ localStorage.setItem(qaSeenKey(), JSON.stringify(qaLiveList(room).map(function(x){return x.id;}))); }catch(e){}
@@ -722,40 +778,25 @@ function renderQa(room){
   if(nb)  nb.innerHTML = unread>0 ? '<span class="qa-newbadge">새 '+unread+'</span>' : '';
   if(!_qaOpen || !box || !head) return;
 
-  /* [K3] 강사·과목 필터 — 실제 올라온 질문의 subject 로 칩을 만든다 */
-  var subjects=[]; all.forEach(function(x){ if(subjects.indexOf(x.subject)<0) subjects.push(x.subject); });
-  subjects.sort(function(a,b){
-    if(a==='공통질문') return -1; if(b==='공통질문') return 1;
-    return a.localeCompare(b,'ko');
-  });
-  var cntOf=function(s){ return s==='all'?all.length:all.filter(function(x){ return x.subject===s; }).length; };
-  var chips='<div class="qa-chips"><button class="'+(_qaSubj==='all'?'on':'')+'" onclick="setQaSubj(\'all\')">전체 '+all.length+'</button>'
-    + subjects.map(function(s){
-        return '<button class="'+(_qaSubj===s?'on':'')+'" onclick="setQaSubj(\''+String(s).replace(/'/g,"\\'")+'\')">'
-             + qaEsc(s)+' '+cntOf(s)+'</button>';
-      }).join('') + '</div>';
-
+  /* [K5] 상단 줄 — [필터] 버튼 + 새 질문 배지.
+     필터를 안 걸면(기본값) 전체가 보인다. 담당자가 필터를 눌러 고를 때만 걸린다. */
+  var fltOn=_qaPick.length>0;
   head.innerHTML =
-      (unread>0 ? '<span class="qa-newbadge">새 질문 '+unread+'</span><button class="qa-readbtn" onclick="qaMarkAllRead()">모두 확인</button>'
+      '<button class="qa-fltbtn'+(fltOn?' on':'')+'" onclick="openQaFilter()">'
+    +   '<i class="fa-solid fa-filter"></i> '+(fltOn ? ('필터 '+_qaPick.length+'명') : '필터')
+    + '</button>'
+    + (unread>0 ? '<span class="qa-newbadge">새 질문 '+unread+'</span><button class="qa-readbtn" onclick="qaMarkAllRead()">모두 확인</button>'
                 : '<span style="font-size:12px;font-weight:800;color:#94a3b8;">새 질문 없음</span>');
 
-  var items = (_qaSubj==='all') ? all.slice() : all.filter(function(x){ return x.subject===_qaSubj; });
+  var items = fltOn ? all.filter(function(x){ return _qaPick.indexOf(x.subject)>=0; }) : all.slice();
+  var chips = fltOn
+    ? '<div class="qa-mode"><i class="fa-solid fa-filter"></i> '+qaEsc(_qaPick.join(', '))+' 만 보는 중 · '+items.length+'건'
+      + ' <span onclick="qaFilterReset()" style="float:right;text-decoration:underline;cursor:pointer;">전체 보기</span></div>'
+    : '';
 
   if(!items.length){ box.innerHTML=chips+'<div class="empty" style="padding:22px 0;">해당 질문이 없습니다.</div>'; return; }
 
-  /* [K3] 특정 강사·과목을 고르면 '게시판 모드' — 날짜 구분 없이 전 기간을 추천 많은 순으로.
-     (PC와 같은 이유: 강사를 콕 집은 순간의 의도는 "나한테 온 질문 전부 보기"다.
-      며칠 전에 미리 올라온 질문이 지난 날짜에 접혀 숨는 걸 막는다) */
-  var picked = (_qaSubj!=='all' && _qaSubj!=='공통질문' && _qaSubj!=='일반');
-  if(picked){
-    items.sort(qaSortInGroup);
-    box.innerHTML = chips
-      + '<div class="qa-mode"><i class="fa-solid fa-list-ul"></i> '+qaEsc(_qaSubj)+' · 전체 '+items.length+'건 · 날짜 구분 없이 추천 많은 순</div>'
-      + '<div class="qa-list">'+items.map(function(x){ return qaCard(x,seen); }).join('')+'</div>';
-    return;
-  }
-
-  /* [K3] 평소에는 PC와 동일하게 — 오늘 질문은 바로 펼쳐 보이고, 지난 날짜는 접어 둔다. */
+  /* [K5] 오늘 질문은 항상 전부 펼쳐 보여 준다. 지난 날짜만 접어 둔다. */
   var today=qaTodayStr(), groups={};
   items.forEach(function(x){ var d=qaDayStr(x.timestamp); (groups[d]=groups[d]||[]).push(x); });
   Object.keys(groups).forEach(function(d){ groups[d].sort(qaSortInGroup); });
