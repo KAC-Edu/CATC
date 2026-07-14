@@ -404,14 +404,16 @@
       </div>
       <!-- [K3] 질문사항 — [K5] 기본 '펼침'. 금일 질문이 바로 보여야 한다. 접고 싶으면 이 바를 누른다. -->
       <div class="card" style="padding:11px 12px;">
-        <div class="qa-bar open" id="qaBar" onclick="toggleQa()">
+        <!-- [K21] 기본 접힘 — 질문 목록이 늘 펼쳐져 있으면 화면이 산만하다. 가로바를 눌러 펼친다.
+             (접혀 있어도 바에 '건수'와 '새 질문' 배지는 보이므로 놓치지 않는다) -->
+        <div class="qa-bar" id="qaBar" onclick="toggleQa()">
           <i class="fa-solid fa-circle-question qb-ic"></i>
           <span class="qb-t">질문사항</span>
           <span class="qb-n" id="dQaCnt">0건</span>
           <span id="dQaNew"></span>
           <i class="fa-solid fa-chevron-down qb-chev"></i>
         </div>
-        <div class="qa-body" id="qaBody">
+        <div class="qa-body" id="qaBody" style="display:none;">
           <div class="qa-head" id="dQaHead"></div>
           <div id="dQa"></div>
         </div>
@@ -600,9 +602,9 @@ function toggleBar(key){
 }
 
 function qaEsc(s){ return (typeof esc==='function'?esc:h)(s); }
-/* [K5] 금일 질문은 처음부터 펼쳐 보여준다 (가로바는 '접기'용으로 남긴다).
-   질문은 바로 눈에 들어와야 하는 정보라, 매번 열어야 하면 안 보게 된다. */
-var _qaOpen=true;
+/* [K21] 기본 접힘 — 가로바를 눌러야 질문이 펼쳐진다.
+   접혀 있어도 바에 건수와 '새 질문' 배지가 보이므로 놓칠 일은 없다. */
+var _qaOpen=false;
 /* [K5] 강사 필터 — 칩을 눈으로 훑는 방식은 사람이 많아지면 못 찾는다.
    [필터] 버튼 → 체크박스로 고르는 방식으로 바꿨다.
    빈 배열 = 필터 없음 = 전체 표시(기본값). */
@@ -912,6 +914,11 @@ function openCourse(rid){ curRID=rid; curView='detail';
     if(bar) bar.classList.remove('open');
     if(body) body.classList.remove('open');
   });
+  /* [K21] 질문사항도 접힌 상태로 시작 */
+  _qaOpen=false;
+  var _qb=document.getElementById('qaBar'), _qy=document.getElementById('qaBody');
+  if(_qb) _qb.classList.remove('open');
+  if(_qy) _qy.style.display='none';
   try{ window.scrollTo(0,0); }catch(e){}
   renderDetail();
 }
