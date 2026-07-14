@@ -180,6 +180,23 @@
     .hstat .hv small{ font-size:12px; font-weight:800; margin-left:2px; opacity:.9; }
     .hstat.alert{ background:rgba(250,204,21,.22); border-color:rgba(250,204,21,.5); }
     .hstat.alert .hv{ color:#fef08a; }
+    /* [K10] 상단 요약 블록을 '누를 수 있게' — 눌러야 하는 건데 눌리지 않아 답답했다 */
+    .hstat{ cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .1s, background .15s; }
+    .hstat:active{ transform:scale(.96); }
+    .hstat .hgo{ display:block; font-size:10px; font-weight:800; color:rgba(255,255,255,.72); margin-top:5px; }
+    .hstat.on{ background:rgba(255,255,255,.28); border-color:rgba(255,255,255,.55); }
+
+    /* [K10] 기사가 직접 출발시간을 정한다 — 30분 단위, 13:00~18:00 */
+    .dep-btn{ margin-top:10px; width:100%; padding:12px; border:none; border-radius:12px;
+              background:#0369a1; color:#fff; font-weight:900; font-size:13.5px; cursor:pointer; }
+    .dep-btn.set{ background:#f1f5f9; color:#0369a1; border:1.5px solid #bae6fd; }
+    .dep-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:4px 0 2px; }
+    .dep-grid button{ padding:14px 6px; border:1.5px solid #e2e8f0; background:#fff; color:#0f172a;
+                      border-radius:13px; font-size:16px; font-weight:900; cursor:pointer; }
+    .dep-grid button.on{ background:#0369a1; border-color:#0369a1; color:#fff; }
+    .dep-sub{ font-size:12px; font-weight:700; color:#94a3b8; margin:-2px 2px 12px; line-height:1.55; }
+    .dep-clear{ width:100%; margin-top:10px; padding:13px; border:none; border-radius:12px;
+                background:#fee2e2; color:#b91c1c; font-weight:900; font-size:13.5px; cursor:pointer; }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -228,30 +245,49 @@
       <div class="ttl"><div class="mk"><i class="fa-solid fa-van-shuttle"></i></div>차량지원 운행</div>
       <div class="clk" id="clk"></div>
     </div>
+    <!-- [K10] 두 블록 모두 누르면 해당 화면으로 — 자차 간주는 기사에게 필요 없어 뺐다 -->
     <div class="hero-row">
-      <div class="hstat" id="hsPend"><div class="hk">픽업 대기</div><div class="hv" id="hPend">0</div></div>
-      <div class="hstat"><div class="hk">퇴교 버스</div><div class="hv" id="hBus">0<small>명</small></div></div>
-      <div class="hstat"><div class="hk">자차 간주</div><div class="hv" id="hCar">0<small>명</small></div></div>
+      <div class="hstat on" id="hsBus" onclick="switchTab('leave')">
+        <div class="hk">퇴교 버스</div><div class="hv" id="hBus">0<small>명</small></div>
+        <span class="hgo">지금 보는 화면</span>
+      </div>
+      <div class="hstat" id="hsPend" onclick="switchTab('pickup')">
+        <div class="hk">픽업 대기</div><div class="hv" id="hPend">0</div>
+        <span class="hgo">눌러서 보기</span>
+      </div>
     </div>
   </div>
 
   <div class="tabs">
-    <div class="tab active" data-v="pickup" onclick="switchTab('pickup')"><i class="fa-solid fa-bell"></i> 픽업 신청 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
-    <div class="tab" data-v="leave" onclick="switchTab('leave')"><i class="fa-solid fa-bus"></i> 퇴교차량</div>
+    <div class="tab active" data-v="leave" onclick="switchTab('leave')"><i class="fa-solid fa-bus"></i> 퇴교차량</div>
+    <div class="tab" data-v="pickup" onclick="switchTab('pickup')"><i class="fa-solid fa-bell"></i> 픽업 신청 <span class="cnt" id="tabCnt" style="display:none;">0</span></div>
+  </div>
+
+  <!-- [K10] 퇴교차량 — 기사가 접속하면 이 화면이 먼저 뜬다 -->
+  <div class="view active" id="v-leave">
+    <div class="sec-ttl"><i class="fa-solid fa-bus" style="color:#0d9488;"></i> 이번주 퇴교차량 신청 <span style="font-weight:700;color:#94a3b8;">· 실시간</span></div>
+    <div id="leaveList"><div class="empty">불러오는 중...</div></div>
   </div>
 
   <!-- 픽업 신청 -->
-  <div class="view active" id="v-pickup">
+  <div class="view" id="v-pickup">
     <div class="sec-ttl"><i class="fa-solid fa-bell" style="color:#f59e0b;"></i> 신규 픽업 신청 <span id="pendN" style="font-weight:700;color:#94a3b8;"></span></div>
     <div id="pendList"><div class="empty">불러오는 중...</div></div>
     <div class="sec-ttl"><i class="fa-solid fa-list-check"></i> 처리 완료 (최근)</div>
     <div id="doneList"><div class="empty" style="padding:18px 0;">-</div></div>
   </div>
+</div>
 
-  <!-- 퇴교차량 -->
-  <div class="view" id="v-leave">
-    <div class="sec-ttl"><i class="fa-solid fa-bus" style="color:#0d9488;"></i> 퇴교차량 인원 집계 <span style="font-weight:700;color:#94a3b8;">· 실시간</span></div>
-    <div id="leaveList"><div class="empty">불러오는 중...</div></div>
+<!-- [K10] 출발시간 설정 시트 — 13:00~18:00, 30분 단위 -->
+<div class="sheet-ov" id="depSheet" onclick="if(event.target===this)closeDep()">
+  <div class="sheet">
+    <h3><i class="fa-solid fa-clock" style="color:#0369a1;"></i> 출발시간 공지</h3>
+    <div class="dep-sub" id="depSub">과정</div>
+    <div class="dep-grid" id="depGrid"></div>
+    <button class="dep-clear" id="depClear" onclick="clearDep()"><i class="fa-solid fa-rotate-left"></i> 공지 취소 (미정으로)</button>
+    <div class="sheet-acts" style="margin-top:10px;">
+      <button class="btn-cancel" onclick="closeDep()">닫기</button>
+    </div>
   </div>
 </div>
 
@@ -278,7 +314,8 @@
 <script src="config.js?v=b260620c"></script>
 <script>
 /* ========== 차량지원 모바일 라이트뷰 (픽업 처리 + 퇴교차량 조회) ========== */
-var allCourses={}, pickups=[], knownIds=[], firstLoad=true, curTab='pickup';
+/* [K10] 기사가 접속하면 '퇴교차량'이 먼저 보인다 (예전엔 픽업 신청이 첫 화면이었음) */
+var allCourses={}, pickups=[], knownIds=[], firstLoad=true, curTab='leave';
 function h(s){ return (s==null?'':String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function pad(n){ return String(n).padStart(2,'0'); }
 function fmtPhone(p){ if(!p) return ''; var d=(''+p).replace(/[^0-9]/g,''); if(d.length===11) return d.replace(/(\d{3})(\d{4})(\d{4})/,'$1-$2-$3'); if(d.length===10) return d.replace(/(\d{3})(\d{3})(\d{4})/,'$1-$2-$3'); return p; }
@@ -301,6 +338,56 @@ function switchTab(v){
   document.querySelectorAll('.tab').forEach(function(e){ e.classList.remove('active'); });
   document.getElementById('v-'+v).classList.add('active');
   document.querySelector('.tab[data-v="'+v+'"]').classList.add('active');
+  /* [K10] 상단 요약 블록도 지금 보고 있는 화면을 표시 — 어디를 보고 있는지 헷갈리지 않게 */
+  var hb=document.getElementById('hsBus'), hp=document.getElementById('hsPend');
+  if(hb){ hb.classList.toggle('on', v==='leave');
+          var g=hb.querySelector('.hgo'); if(g) g.textContent = (v==='leave'?'지금 보는 화면':'눌러서 보기'); }
+  if(hp){ hp.classList.toggle('on', v==='pickup');
+          var g2=hp.querySelector('.hgo'); if(g2) g2.textContent = (v==='pickup'?'지금 보는 화면':'눌러서 보기'); }
+  try{ window.scrollTo({top:0, behavior:'smooth'}); }catch(e){}
+}
+
+/* ══ [K10] 출발시간 공지 — 기사가 직접 정한다 ═══════════════════════════
+   예전엔 운영부가 공지해 줄 때까지 기사는 '미공지(운영부 대기)'만 보고 기다려야 했다.
+   기사가 현장에서 바로 30분 단위(13:00~18:00)로 정할 수 있게 한다.
+   저장 위치·형식은 운영부/강사가 쓰는 것과 동일:
+     courses/{방}/shuttle/departure = { time, date, announced:true, ts }
+   ═══════════════════════════════════════════════════════════════════ */
+var DEP_TIMES=(function(){
+  var a=[];
+  for(var m=13*60; m<=18*60; m+=30){ a.push(pad(Math.floor(m/60))+':'+pad(m%60)); }
+  return a;                                    // 13:00 ~ 18:00, 30분 간격 (11개)
+})();
+var _depRid=null;
+function openDep(rid, cn){
+  _depRid=rid;
+  var room=allCourses[rid]||{};
+  var dep=(room.shuttle&&room.shuttle.departure)||{};
+  var cur=(dep.announced && dep.time) ? dep.time : '';
+  document.getElementById('depSub').innerHTML =
+    '<b style="color:#0f172a;">'+h(cn)+'</b><br>'
+    + (cur ? ('현재 공지: <b style="color:#0369a1;">'+h(cur)+' 출발</b>') : '아직 출발시간이 공지되지 않았습니다.')
+    + '<br>시간을 누르면 교육생·운영부 화면에 바로 공지됩니다.';
+  document.getElementById('depGrid').innerHTML = DEP_TIMES.map(function(t){
+    return '<button type="button" class="'+(t===cur?'on':'')+'" onclick="setDep(\''+t+'\')">'+t+'</button>';
+  }).join('');
+  document.getElementById('depClear').style.display = cur ? 'block' : 'none';
+  document.getElementById('depSheet').classList.add('open');
+}
+function closeDep(){ _depRid=null; document.getElementById('depSheet').classList.remove('open'); }
+function setDep(t){
+  if(!_depRid) return;
+  firebase.database().ref('courses/'+_depRid+'/shuttle/departure')
+    .update({ time:t, date:ymd(new Date()), announced:true, ts:Date.now(), by:'driver' })
+    .then(function(){ toast('출발시간 '+t+' 공지 완료'); closeDep(); })
+    .catch(function(e){ toast('공지 실패: '+((e&&e.message)||'')); });
+}
+function clearDep(){
+  if(!_depRid) return;
+  firebase.database().ref('courses/'+_depRid+'/shuttle/departure')
+    .update({ announced:false })
+    .then(function(){ toast('공지를 취소했습니다 (미정)'); closeDep(); })
+    .catch(function(e){ toast('취소 실패: '+((e&&e.message)||'')); });
 }
 
 /* ===== Firebase ===== */
@@ -370,52 +457,73 @@ function undoPickup(id){ firebase.database().ref('system/pickup/'+id).update({ s
 
 /* ===== 퇴교차량 집계 ===== */
 function sumLine(c){ return '오송'+c.osong+'·터미널'+c.terminal+'·공항'+c.airport+(c.car?('·자차'+c.car):''); }
+/* [K10] 퇴교차량 — 기사 첫 화면.
+   · 과정 하나하나를 카드로 보여주고, 각 카드에서 바로 출발시간을 정할 수 있게 한다.
+   · 자차(미신청 간주)는 기사에게 필요 없어 아예 세지도, 보여주지도 않는다.
+   · 이미 끝난 과정은 제외 — '이번주 운영 중인 과정'만 뜬다. */
 function renderLeave(){
-  var box=document.getElementById('leaveList'); var groups={}, pending=[];
-  var GT={bus:0,car:0};
+  var box=document.getElementById('leaveList');
+  var td=ymd(new Date());
+  var cards=[], busGrand=0;
+
   for(var rid in allCourses){
-    var room=allCourses[rid]; var reqs=room.shuttle&&room.shuttle.requests; if(!reqs) continue;
-    var arr=Object.keys(reqs).map(function(k){return reqs[k];}); if(!arr.length) continue;
-    var counts={osong:0,terminal:0,airport:0,car:0};
-    arr.forEach(function(r){ if(counts[r.type]!==undefined) counts[r.type]++; });
-    // [DN3] 자차 디폴트(전 화면 동시, 강사 admin.js J48 규칙) — 미신청 입교완료 교육생을 자차로 간주.
-    //  유효 이름 필터 + 공백제거·소문자 정규화 매칭 + 중복 이름 1회. 버스 탑승 총원(busTot)은 실신청 그대로.
-    (function(){
-      var _nm=function(n){ return String(n||'').replace(/\s+/g,'').toLowerCase(); };
-      var _seen={}; arr.forEach(function(r){ if(r&&r.name) _seen[_nm(r.name)]=1; });
-      var _dupe={};
-      Object.keys(room.students||{}).forEach(function(k){
-        var s=room.students[k]; if(!s||!s.name||s.name==='undefined') return;
-        var nm=String(s.name).trim(); if(!nm) return;
-        var key=_nm(nm); if(_dupe[key]) return; _dupe[key]=1;
-        if(!_seen[key]) counts.car++;
-      });
-    })();
+    var room=allCourses[rid]||{};
+    var s=room.settings||{}, st=room.status||{};
+    if(!s.courseName) continue;
+    if(st.roomStatus!=='active') continue;
+    if(s.hideFromBoard) continue;
+    // 이미 끝난 과정 제외
+    if(s.period && s.period.indexOf('~')>=0){
+      var ed=(s.period.split('~')[1]||'').trim();
+      if(ed && ed < td) continue;
+    }
+    var reqs=(room.shuttle&&room.shuttle.requests)||{};
+    var counts={osong:0,terminal:0,airport:0};
+    Object.keys(reqs).forEach(function(k){
+      var r=reqs[k]; if(!r||!r.type) return;
+      if(counts[r.type]!==undefined) counts[r.type]++;
+    });
     var busTot=counts.osong+counts.terminal+counts.airport;
-    GT.bus+=busTot; GT.car+=counts.car;
-    var cn=(room.settings&&room.settings.courseName)||rid;
-    var dep=room.shuttle&&room.shuttle.departure;
-    if(dep && dep.announced && dep.time){
-      var key=(dep.date||'')+'__'+dep.time;
-      if(!groups[key]) groups[key]={date:dep.date||'',time:dep.time,counts:{osong:0,terminal:0,airport:0,car:0},busTot:0,courses:[]};
-      var g=groups[key]; ['osong','terminal','airport','car'].forEach(function(k){ g.counts[k]+=counts[k]; }); g.busTot+=busTot; g.courses.push({cn:cn,counts:counts,busTot:busTot});
-    } else { pending.push({cn:cn,counts:counts,busTot:busTot}); }
+    if(!busTot) continue;                       // 버스 탈 사람이 없는 과정은 기사에게 의미 없다
+    busGrand+=busTot;
+    var dep=(room.shuttle&&room.shuttle.departure)||{};
+    cards.push({
+      rid:rid, cn:s.courseName, counts:counts, busTot:busTot,
+      time:(dep.announced && dep.time) ? dep.time : '',
+      date:dep.date||''
+    });
   }
-  var gkeys=Object.keys(groups).sort(function(a,b){return a.localeCompare(b);});
-  if(!gkeys.length && !pending.length){ box.innerHTML='<div class="empty">신청된 퇴교차량이 없습니다.</div>'; return; }
-  var html='';
-  gkeys.forEach(function(k){ var g=groups[k];
-    html+='<div class="lv-run"><div class="lv-run-h"><span class="lv-time"><i class="fa-solid fa-bus"></i> '+fmtFull(g.date)+' '+(g.time==='미정'?'출발시간 미정':(g.time+' 출발'))+'</span><span class="lv-tot">'+g.busTot+'명</span></div>'
-      +'<div class="lv-bd"><span class="bd2 osong">오송 '+g.counts.osong+'</span><span class="bd2 term">터미널 '+g.counts.terminal+'</span><span class="bd2 air">공항 '+g.counts.airport+'</span><span class="bd2 car">자차 '+g.counts.car+'</span></div>'
-      +'<div class="lv-courses">'+g.courses.map(function(c){ return '<div class="lv-c"><span>'+h(c.cn)+'</span><b>'+c.busTot+'명</b><small>'+sumLine(c.counts)+'</small></div>'; }).join('')+'</div></div>';
+
+  // 시간이 정해진 과정 먼저(빠른 순), 미정은 뒤로
+  cards.sort(function(a,b){
+    if(!!a.time !== !!b.time) return a.time ? -1 : 1;
+    if(a.time && b.time && a.time!==b.time) return a.time.localeCompare(b.time);
+    return a.cn.localeCompare(b.cn,'ko');
   });
-  if(pending.length){
-    html+='<div class="lv-run pending"><div class="lv-run-h"><span class="lv-time wait"><i class="fa-solid fa-clock"></i> 출발시간 미공지 (운영부 대기)</span></div>'
-      +'<div class="lv-courses">'+pending.map(function(c){ return '<div class="lv-c"><span>'+h(c.cn)+'</span><b>'+c.busTot+'명</b><small>'+sumLine(c.counts)+'</small></div>'; }).join('')+'</div></div>';
+
+  if(!cards.length){
+    box.innerHTML='<div class="empty">이번주 퇴교차량 신청이 없습니다.</div>';
+  } else {
+    box.innerHTML = cards.map(function(c){
+      var head = c.time
+        ? '<span class="lv-time"><i class="fa-solid fa-bus"></i> '+h(c.time)+' 출발</span>'
+        : '<span class="lv-time wait"><i class="fa-solid fa-clock"></i> 출발시간 미정</span>';
+      var btn = c.time
+        ? '<button class="dep-btn set" onclick="openDep(\''+c.rid+'\',\''+String(c.cn).replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-pen"></i> 출발시간 변경 ('+h(c.time)+')</button>'
+        : '<button class="dep-btn" onclick="openDep(\''+c.rid+'\',\''+String(c.cn).replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-clock"></i> 출발시간 정하기</button>';
+      return '<div class="lv-run'+(c.time?'':' pending')+'">'
+        + '<div class="lv-run-h">'+head+'<span class="lv-tot">'+c.busTot+'명</span></div>'
+        + '<div class="lv-courses"><div class="lv-c"><span>'+h(c.cn)+'</span><b>#'+c.rid+'</b></div></div>'
+        + '<div class="lv-bd">'
+        +   '<span class="bd2 osong">오송 '+c.counts.osong+'</span>'
+        +   '<span class="bd2 term">터미널 '+c.counts.terminal+'</span>'
+        +   '<span class="bd2 air">공항 '+c.counts.airport+'</span>'
+        + '</div>'
+        + btn
+        + '</div>';
+    }).join('');
   }
-  box.innerHTML=html;
-  var eb=document.getElementById('hBus'); if(eb) eb.innerHTML=GT.bus+'<small>명</small>';
-  var ec=document.getElementById('hCar'); if(ec) ec.innerHTML=GT.car+'<small>명</small>';
+  var eb=document.getElementById('hBus'); if(eb) eb.innerHTML=busGrand+'<small>명</small>';
 }
 
 var _toastT;
