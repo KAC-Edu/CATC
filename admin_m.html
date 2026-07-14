@@ -112,7 +112,10 @@
     .mhead.shrink .ttl .mk{ width:30px; height:30px; font-size:13px; border-radius:9px; }
     .mhead.shrink .clk{ font-size:11px; }
     .mhead.shrink .clk b{ font-size:13px; }
-    .mhead.shrink .dback{ height:34px; font-size:13px; padding:0 12px 0 10px; }
+    /* [K19] 접혀도 '동그란' 모양 유지 — 너비를 같이 줄이지 않으면 타원으로 찌그러진다 */
+    .mhead.shrink .dback{ width:34px; height:34px; padding:0; }
+    .mhead.shrink .dback i{ font-size:15px; }
+    .mhead.shrink .dhead-t{ font-size:15px; }
     .hero{ margin-top:14px; padding:0; background:transparent; border:none; box-shadow:none; }
     .hero-room{ display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px; background:rgba(250,204,21,.95); color:#1e293b; font-size:12px; font-weight:950; }
     .hero-course{ margin-top:10px; font-size:22px; font-weight:950; line-height:1.25; word-break:keep-all; }
