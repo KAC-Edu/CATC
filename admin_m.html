@@ -99,7 +99,8 @@
     .mhead .hero{ overflow:hidden; max-height:200px; opacity:1;
                   transition:max-height .24s ease, opacity .18s ease, margin-top .22s ease; }
     .mhead.shrink{ padding-top:9px; padding-bottom:9px; border-radius:0 0 16px 16px; }
-    .mhead.shrink .hero{ max-height:0; opacity:0; margin-top:0 !important; }
+    .mhead.shrink .hero{ max-height:0; opacity:0; margin-top:0 !important;
+                         padding-top:0 !important; padding-bottom:0 !important; border-width:0 !important; }
     .mhead.shrink .ttl{ font-size:15px; }
     .mhead.shrink .ttl .mk{ width:30px; height:30px; font-size:13px; border-radius:9px; }
     .mhead.shrink .clk{ font-size:11px; }
@@ -150,6 +151,19 @@
     .empty{ text-align:center; color:var(--mute); font-weight:700; padding:26px 0; }
 
     /* [vC] 외출·외박 표 */
+    /* [K6] 공통 접이식 가로바 — 퇴교차량·외출외박처럼 '필요할 때만 보는' 블록에 쓴다.
+       질문사항 가로바(.qa-bar)와 생김새를 맞춰 화면이 따로 놀지 않게 했다. */
+    .mbar{ display:flex; align-items:center; gap:9px; padding:13px 14px; border-radius:16px; cursor:pointer;
+           background:linear-gradient(135deg,#f8fbff,#eef4ff); border:1px solid #dbeafe; }
+    .mbar:active{ transform:scale(.985); }
+    .mbar .mb-ic{ color:#2563eb; font-size:15px; }
+    .mbar .mb-t{ font-size:14px; font-weight:900; color:#0f172a; }
+    .mbar .mb-n{ font-size:12px; font-weight:800; color:#64748b; }
+    .mbar .mb-chev{ margin-left:auto; color:#94a3b8; transition:transform .22s; }
+    .mbar.open .mb-chev{ transform:rotate(180deg); }
+    .mbody{ display:none; margin-top:11px; }
+    .mbody.open{ display:block; }
+
     /* [K3] 질문사항 — 평소엔 가로바로 접어두고, 누르면 펼친다 (PC 질문 화면과 같은 방식) */
     .qa-bar{ display:flex; align-items:center; gap:9px; padding:13px 14px; border-radius:16px; cursor:pointer;
              background:linear-gradient(135deg,#f8fbff,#eef4ff); border:1px solid #dbeafe; }
@@ -339,10 +353,8 @@
       </div>
     </div>
     <div class="sec">
-      <div class="card">
-        <h3><i class="fa-solid fa-wave-square"></i> 실시간 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 모니터링</span></h3>
-        <div class="mon-grid" id="dMon"></div>
-      </div>
+      <!-- [K6] 순서: 과정정보 → 실시간현황 → 운영부공지 → 질문사항 → 금주 공통 교육장소 → 퇴교차량 → 외출·외박
+           (퇴교차량·외출외박은 '필요할 때만' 보는 정보라 가로바로 접어 둔다) -->
       <div class="card">
         <h3><i class="fa-solid fa-circle-info"></i> 과정 정보</h3>
         <div class="cname-big" id="dCourse">-</div>
@@ -350,12 +362,15 @@
         <div id="dLeaderWrap"></div>
       </div>
       <div class="card">
+        <h3><i class="fa-solid fa-wave-square"></i> 실시간 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 모니터링</span></h3>
+        <div class="mon-grid" id="dMon"></div>
+      </div>
+      <div class="card">
         <h3><i class="fa-solid fa-bullhorn"></i> 운영부 공지</h3>
         <div id="dNotice"><div class="notice-empty">받은 공지가 없습니다.</div></div>
       </div>
-      <!-- [K3] 질문사항 — 가로바를 누르면 펼쳐진다 (PC 질문 화면과 같은 구성) -->
+      <!-- [K3] 질문사항 — [K5] 기본 '펼침'. 금일 질문이 바로 보여야 한다. 접고 싶으면 이 바를 누른다. -->
       <div class="card" style="padding:11px 12px;">
-        <!-- [K5] 기본은 '펼침' — 금일 질문이 바로 보여야 한다. 접고 싶으면 이 바를 누른다. -->
         <div class="qa-bar open" id="qaBar" onclick="toggleQa()">
           <i class="fa-solid fa-circle-question qb-ic"></i>
           <span class="qb-t">질문사항</span>
@@ -369,18 +384,35 @@
         </div>
       </div>
       <div class="card">
-        <h3><i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 숫자를 누르면 명단</span></h3>
-        <div class="shut-grid" id="dShuttle"></div>
-      </div>
-      <div class="card">
-        <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
-        <div id="dOuting"></div>
-      </div>
-      <div class="card">
         <h3><i class="fa-solid fa-map-location-dot"></i> 금주 공통 교육장소 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 전 과정 공통</span></h3>
         <div class="edu-loc-grid">
           <div class="edu-loc" id="dEduIntegrity"><div class="el-k"><i class="fa-solid fa-scale-balanced"></i> 청렴교육</div><div class="el-v">미정</div></div>
           <div class="edu-loc" id="dEduUnion"><div class="el-k"><i class="fa-solid fa-handshake"></i> 노조교육</div><div class="el-v">미정</div></div>
+        </div>
+      </div>
+      <!-- [K6] 퇴교차량 — 가로바를 누르면 아래로 펼쳐진다 -->
+      <div class="card" style="padding:11px 12px;">
+        <div class="mbar" id="shutBar" onclick="toggleBar('shut')">
+          <i class="fa-solid fa-bus mb-ic"></i>
+          <span class="mb-t">퇴교차량 신청 현황</span>
+          <span class="mb-n" id="dShutN">0명</span>
+          <i class="fa-solid fa-chevron-down mb-chev"></i>
+        </div>
+        <div class="mbody" id="shutBody">
+          <div style="font-size:11.5px;font-weight:800;color:#94a3b8;margin-bottom:9px;">숫자를 누르면 그 목적지 신청자 명단이 나옵니다.</div>
+          <div class="shut-grid" id="dShuttle"></div>
+        </div>
+      </div>
+      <!-- [K6] 외출·외박 신청자 — 가로바를 누르면 아래로 펼쳐진다 -->
+      <div class="card" style="padding:11px 12px;">
+        <div class="mbar" id="outBar" onclick="toggleBar('out')">
+          <i class="fa-solid fa-user-clock mb-ic"></i>
+          <span class="mb-t">외출·외박 신청자</span>
+          <span class="mb-n" id="dOutN">금일 0건</span>
+          <i class="fa-solid fa-chevron-down mb-chev"></i>
+        </div>
+        <div class="mbody" id="outBody">
+          <div id="dOuting"></div>
         </div>
       </div>
     </div>
@@ -488,6 +520,15 @@ function shuttleCount(room){
      단 기기별로 따로 기억되므로, 폰에서 확인해도 PC 배지는 그대로다.
    · 정렬: 최신순(기본) / 좋아요순
    ═══════════════════════════════════════════════════════════════════ */
+/* [K6] 공통 접이식 가로바 — id 규칙: {키}Bar / {키}Body */
+function toggleBar(key){
+  var bar=document.getElementById(key+'Bar'), body=document.getElementById(key+'Body');
+  if(!bar||!body) return;
+  var open=!bar.classList.contains('open');
+  bar.classList.toggle('open', open);
+  body.classList.toggle('open', open);
+}
+
 function qaEsc(s){ return (typeof esc==='function'?esc:h)(s); }
 /* [K5] 금일 질문은 처음부터 펼쳐 보여준다 (가로바는 '접기'용으로 남긴다).
    질문은 바로 눈에 들어와야 하는 정보라, 매번 열어야 하면 안 보게 된다. */
@@ -807,6 +848,9 @@ function renderDetail(){
   var notice=(room.coordNotice||'').trim();
   document.getElementById('dNotice').innerHTML = notice ? '<div class="notice-box">'+h(notice)+'</div>' : '<div class="notice-empty">받은 공지가 없습니다.</div>';
   renderQa(room);   // [K1] 질문사항
+  // [K6] 접힌 가로바에도 건수는 보이게 — 열어보지 않아도 몇 명인지 알 수 있다
+  setT('dShutN', sh.total+'명 신청');
+  setT('dOutN', '금일 '+ou+'건');
   /* [J99] 숫자 칸을 누르면 그 목적지를 신청한 사람이 누구인지 바로 뜬다 */
   document.getElementById('dShuttle').innerHTML=
      '<div class="shut-cell tot" onclick="showMobileShuttleList(\'bus\')"><div class="sk" style="color:#64748b;">총 신청</div><div class="sv">'+sh.total+'</div></div>'
