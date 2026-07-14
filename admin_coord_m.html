@@ -1464,10 +1464,14 @@ async function openLedgerArchiveM(){
   if(!ov){
     ov=document.createElement('div'); ov.id='laOv';
     ov.style.cssText='position:fixed;inset:0;z-index:99400;background:#f1f5f9;display:flex;flex-direction:column;';
-    ov.innerHTML='<div style="background:linear-gradient(135deg,#047857,#059669);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;">'
-      +'<i class="fa-solid fa-folder-open" style="font-size:18px;"></i>'
-      +'<div style="flex:1;font-size:16.5px;font-weight:900;">출석부 · 외출외박 대장</div>'
-      +'<button onclick="document.getElementById(\'laOv\').style.display=\'none\'" style="background:rgba(255,255,255,.18);border:none;color:#fff;width:34px;height:34px;border-radius:10px;font-size:16px;font-weight:900;">✕</button></div>'
+    /* [K24] 뒤로가기를 좌측 상단으로 — 다른 화면과 같은 자리·같은 모양(빨간 동그라미)에 문구를 붙인다.
+       예전엔 우측 끝에 작은 ✕ 하나뿐이라, 카카오 인앱 브라우저의 X(앱 종료)와 헷갈리고 누르기도 멀었다. */
+    ov.innerHTML='<div style="background:linear-gradient(135deg,#047857,#059669);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 14px;display:flex;align-items:center;gap:11px;flex-shrink:0;">'
+      +'<button onclick="document.getElementById(\'laOv\').style.display=\'none\'" aria-label="뒤로"'
+      +' style="flex-shrink:0;width:38px;height:38px;padding:0;border-radius:50%;background:linear-gradient(135deg,#ef4444,#dc2626);'
+      +'border:1px solid #b91c1c;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:16px;'
+      +'box-shadow:0 4px 12px rgba(220,38,38,.45);cursor:pointer;"><i class="fa-solid fa-arrow-rotate-left"></i></button>'
+      +'<div style="flex:1;min-width:0;font-size:16.5px;font-weight:900;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">출석부 · 외출외박 대장</div></div>'
       +'<div id="laBody" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 14px calc(24px + env(safe-area-inset-bottom));"><div style="text-align:center;padding:40px;color:#94a3b8;font-weight:800;">불러오는 중…</div></div>';
     document.body.appendChild(ov);
   }
