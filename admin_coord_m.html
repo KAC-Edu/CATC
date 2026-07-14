@@ -570,14 +570,43 @@ function leaderOf(room){
   if(!L) return null;
   return { name:L.name||'-', no:(L.empNo||L.sabun||L.id||L.studentId||L.phone||'') };
 }
+/* ══ [K7] 퇴교차량 집계 — PC(kacShuttleMerge)와 똑같이 맞춘다 ══════════
+   예전 모바일 집계는 '신청서를 낸 사람'만 셌다. 그래서 아무것도 신청하지 않은
+   교육생이 어디에도 안 잡혀 총원이 맞지 않았다.
+   PC는 '입교완료했는데 신청 안 한 사람 = 자차(미선택) 간주'로 자차에 더하고,
+   총 신청 = 전원이 된다. 모바일도 같은 규칙으로 맞춘다.
+     · car   = 자차 신청자 + 미신청자(자차 간주)
+     · bus   = 오송 + 터미널 + 공항 (실제로 버스를 타는 인원)
+     · total = bus + car = 전원
+   ═══════════════════════════════════════════════════════════════════ */
 function shuttleCount(room){
-  var rq=(room.shuttle&&room.shuttle.requests)||{};
-  var e=Object.keys(rq).map(function(k){return rq[k];}).filter(function(r){return r&&r.type;});
-  return { total:e.length,
-    osong:e.filter(function(r){return r.type==='osong';}).length,
-    terminal:e.filter(function(r){return r.type==='terminal';}).length,
-    airport:e.filter(function(r){return r.type==='airport';}).length,
-    car:e.filter(function(r){return r.type==='car';}).length };
+  var rq=(room && room.shuttle && room.shuttle.requests) || {};
+  var stu=(room && room.students) || {};
+  var norm=function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+  var c={ osong:0, terminal:0, airport:0, car:0 };
+  var seen={};
+  Object.keys(rq).forEach(function(k){
+    var r=rq[k]; if(!r||!r.type) return;
+    var t=r.type;
+    if(t==='osong'||t==='terminal'||t==='airport') c[t]++;
+    else c.car++;                                  // 자차 신청 + 타입 미지정
+    if(r.name) seen[norm(r.name)]=1;
+  });
+  // 미신청 입교완료 교육생 = 자차(미선택) 간주 — 이름 중복은 1회만
+  var nonApp=[], dupe={};
+  Object.keys(stu).forEach(function(k){
+    var s=stu[k]; if(!s) return;
+    var nm=String(s.name==null?'':s.name).trim();
+    if(!nm || nm==='undefined') return;
+    var key=norm(nm);
+    if(dupe[key]) return; dupe[key]=1;
+    if(seen[key]) return;                          // 이미 신청한 사람
+    nonApp.push(nm);
+  });
+  c.car += nonApp.length;
+  var bus = c.osong + c.terminal + c.airport;
+  return { osong:c.osong, terminal:c.terminal, airport:c.airport, car:c.car,
+           bus:bus, nonApp:nonApp, total:bus + c.car };
 }
 function outingsToday(room){
   var w=opWindow(), s=w[0], en=w[1], list=[];
@@ -675,7 +704,8 @@ function updateDetail(){
   renderQa(room);   // [K1] 질문사항
   var sh=shuttleCount(room);
   // [K6] 접힌 가로바에도 건수는 보이게 — 열어보지 않아도 몇 명인지 알 수 있다
-  var _sn=document.getElementById('dShutN'); if(_sn) _sn.textContent=sh.total+'명 신청';
+  // [K7] 가로바에 '전원 / 버스 이용'을 함께 — 총원이 맞는지 바로 보인다
+  var _sn=document.getElementById('dShutN'); if(_sn) _sn.textContent='전원 '+sh.total+'명 · 버스 '+sh.bus+'명';
   var _on=document.getElementById('dOutN');  if(_on) _on.textContent='금일 '+outingsToday(room).length+'건';
   /* [J99] 숫자 칸마다 따로 눌러 그 목적지 신청자만 보게 한다.
      예전엔 어디를 눌러도 전체 명단이 떠서, 누가 오송역인지 눈으로 골라내야 했다. */
@@ -901,6 +931,12 @@ function renderMobileShuttleList(){
   var rq=(room.shuttle&&room.shuttle.requests)||{};
   var all=Object.keys(rq).map(function(k){ var r=rq[k]||{}; r._key=k; return r; }).filter(function(r){ return r&&r.type; });
 
+  /* [K7] 아무것도 신청하지 않은 교육생 = 자차(미선택) 간주 — 명단에도 함께 보여야
+     위 숫자판의 '자차'와 인원이 맞는다. (PC 퇴교 수송 현황과 동일) */
+  shuttleCount(room).nonApp.forEach(function(nm){
+    all.push({ name:nm, type:'car', typeText:'미선택 (자차 간주)', timestamp:0, _noApp:true });
+  });
+
   // 칩 — 각 목적지 인원수를 함께 보여줘 굳이 닫았다 열 필요가 없게 한다
   var cnt=function(f){ return all.filter(function(r){ return _M_SHUT_DEST[f].has(r.type); }).length; };
   var chips='<div class="m-shut-chips">'
@@ -930,7 +966,9 @@ function renderMobileShuttleList(){
     +'<div style="overflow-x:auto;"><table class="m-tbl"><thead><tr><th class="num">연번</th><th>성명</th><th>소속</th><th>신청현황</th></tr></thead><tbody>'
     +list.map(function(r,i){
         var c=(_M_SHUT_DEST[r.type]||{}).color||'#2563eb';
-        return '<tr><td class="num">'+(i+1)+'</td><td>'+esc(r.name||'-')+'</td><td>'
+        if(r._noApp) c='#94a3b8';                                  // [K7] 미선택은 회색으로 구분
+        return '<tr'+(r._noApp?' style="background:#f8fafc;"':'')+'><td class="num">'+(i+1)+'</td>'
+             + '<td'+(r._noApp?' style="color:#64748b;"':'')+'>'+esc(r.name||'-')+'</td><td>'
              + esc(deptByName[String(r.name||'').trim()]||'-')+'</td><td style="color:'+c+';font-weight:900;">'
              + esc(r.typeText||r.type||'-')+'</td></tr>';
       }).join('')
