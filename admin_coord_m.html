@@ -270,6 +270,28 @@
     .m-shuttle-head h3{ margin:0; font-size:18px; font-weight:950; color:#0f172a; }
     .m-shuttle-close{ width:38px; height:38px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:16px; }
     .m-shuttle-list{ display:flex; flex-direction:column; gap:9px; }
+    /* ══ [K22] 홈 블록 순서 직접 바꾸기 ═══════════════════════════════════
+       보는 사람마다 중요한 게 달라서, 순서를 직접 정할 수 있게 한다.
+       [순서 변경]을 누르면 편집 모드가 되고, 블록을 끌어서 옮긴다.
+       바뀐 순서는 이 기기에 기억된다(다음에 열어도 그대로).
+       편집 모드에서는 블록 안의 버튼이 눌리지 않게 막는다(잘못 눌러 들어가는 것 방지). */
+    #secEditBtn{ background:rgba(255,255,255,.22); border:1px solid rgba(255,255,255,.32); }
+    body.sec-edit #secEditBtn{ background:#fde68a; color:#78350f; border-color:#fbbf24; }
+    body.sec-edit .sec{ position:relative; border:2px dashed #cbd5e1; border-radius:16px;
+                        padding:10px 10px 10px 44px; margin-bottom:10px; background:rgba(255,255,255,.6); }
+    body.sec-edit .sec > *{ pointer-events:none; }              /* 편집 중엔 안쪽 버튼 안 눌림 */
+    body.sec-edit .sec::before{                                  /* 왼쪽 손잡이 */
+      content:'\f58e'; font-family:'Font Awesome 6 Free'; font-weight:900;
+      position:absolute; left:12px; top:50%; transform:translateY(-50%);
+      color:#94a3b8; font-size:17px; pointer-events:none;
+    }
+    body.sec-edit .sec.dragging{ opacity:.55; border-color:#2563eb; background:#eff6ff;
+                                 box-shadow:0 10px 26px rgba(37,99,235,.2); }
+    .sec-edit-tip{ display:none; margin:0 0 10px; padding:11px 13px; border-radius:12px;
+                   background:#fffbeb; border:1px solid #fde68a; color:#92400e;
+                   font-size:12.5px; font-weight:800; line-height:1.5; }
+    body.sec-edit .sec-edit-tip{ display:block; }
+
     /* [K6] 공통 접이식 가로바 — 퇴교차량·외출외박·공지발송처럼 '필요할 때만' 여는 블록에 쓴다 */
     .mbar{ display:flex; align-items:center; gap:9px; padding:13px 14px; border-radius:16px; cursor:pointer;
            background:linear-gradient(135deg,#f8fbff,#eef4ff); border:1px solid #dbeafe; }
@@ -408,31 +430,37 @@
       <div class="hero-meta">
         <span class="hero-pill"><i class="fa-solid fa-layer-group"></i><span id="hTotal">0개 과정</span></span>
         <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="hStu">0명</span></span>
+        <!-- [K22] 블록 순서를 직접 바꾼다 -->
+        <span class="hero-pill" id="secEditBtn" onclick="toggleSecEdit()" style="cursor:pointer;"><i class="fa-solid fa-arrows-up-down"></i> 순서 변경</span>
       </div>
     </div>
   </div>
 
-  <!-- [K11] 홈 순서: 상단바 → 대장 보관함 → 교수 오픈톡방 → 운영중인 과정 → 금주 공통 교육장소 -->
-
-  <!-- [M14] 과거 주차 대장 보관함 진입 (독립 블록으로 분리 — 예전엔 '운영중인 과정' 안에 끼어 있었다) -->
-  <div class="sec">
+  <!-- [K22] 아래 블록들은 사용자가 끌어서 순서를 바꿀 수 있다 (data-sec = 저장 키) -->
+  <div class="sec-edit-tip">
+    <i class="fa-solid fa-hand-pointer"></i> 블록을 <b>꾹 눌러 위아래로 끌면</b> 순서가 바뀝니다.
+    다 되면 위의 <b>[완료]</b>를 누르세요. 바뀐 순서는 이 휴대폰에 기억됩니다.
+  </div>
+  <div id="secHost">
+  <!-- [M14] 과거 주차 대장 보관함 진입 -->
+  <div class="sec" data-sec="ledger">
     <div class="sec-ttl"><i class="fa-solid fa-folder-open"></i> 대장 보관함 <span style="font-weight:700;color:#94a3b8;">· 최근 90일</span></div>
     <button onclick="openLedgerArchiveM()" style="width:100%; display:flex; align-items:center; justify-content:center; gap:9px; background:#fff; border:1.5px solid #bbf7d0; border-radius:14px; padding:14px; color:#047857; font-weight:900; font-size:14.5px; box-shadow:0 2px 8px rgba(4,120,87,.08);">
       <i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장 보관함
     </button>
   </div>
 
-  <div class="sec">
+  <div class="sec" data-sec="proftalk">
     <div class="sec-ttl"><i class="fa-solid fa-comments"></i> 교수 오픈톡방</div>
     <button class="otalk-open-btn" onclick="openProfTalkSheet()"><i class="fa-solid fa-comment-dots"></i> 교수님 오픈톡방 바로가기</button>
   </div>
 
-  <div class="sec">
+  <div class="sec" data-sec="courses">
     <div class="sec-ttl"><i class="fa-solid fa-list-ul"></i> 운영중인 과정</div>
     <div id="courseList"><div class="empty">불러오는 중...</div></div>
   </div>
 
-  <div class="sec">
+  <div class="sec" data-sec="edu">
     <div class="sec-ttl"><i class="fa-solid fa-bullhorn"></i> 금주 공통 교육 장소 <span style="font-weight:700;color:#94a3b8;">· 전 과정 공통</span></div>
     <div class="edu-row">
       <div class="edu-card unset" id="eduIntegrity" onclick="openEduSheet('integrity')">
@@ -447,6 +475,7 @@
       </div>
     </div>
   </div>
+  </div><!-- /secHost -->
 </div>
 
 <!-- 청렴/노조 장소 선택 바텀시트 (커스텀) -->
@@ -616,6 +645,86 @@ var COORD_MAP={};
 var RANK_RE=/\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
 function coordFull(nm){ nm=(''+(nm==null?'':nm)).trim(); if(!nm) return ''; if(RANK_RE.test(nm)) return nm; return COORD_MAP[nm]||nm; }
 
+/* ══ [K22] 홈 블록 순서 직접 바꾸기 ═══════════════════════════════════
+   [순서 변경] → 편집 모드 → 블록을 끌어서 이동 → [완료]
+   순서는 이 기기(localStorage)에 저장되므로 다음에 열어도 그대로다.
+   서버에 저장하지 않는 이유: 운영부 여러 명이 각자 다른 순서를 원할 수 있고,
+   한 사람이 바꾸면 다른 사람 화면까지 바뀌는 게 더 혼란스럽기 때문.
+   ═══════════════════════════════════════════════════════════════════ */
+var SEC_KEY='kac_coord_sec_order';
+var _secEdit=false;
+
+function loadSecOrder(){
+  var host=document.getElementById('secHost'); if(!host) return;
+  var saved;
+  try{ saved=JSON.parse(localStorage.getItem(SEC_KEY)||'null'); }catch(e){ saved=null; }
+  if(!Array.isArray(saved) || !saved.length) return;            // 저장된 게 없으면 기본 순서 그대로
+  saved.forEach(function(key){
+    var el=host.querySelector('.sec[data-sec="'+key+'"]');
+    if(el) host.appendChild(el);                                 // 저장된 순서대로 뒤에 붙여 재배치
+  });
+}
+function saveSecOrder(){
+  var host=document.getElementById('secHost'); if(!host) return;
+  var order=[].slice.call(host.querySelectorAll('.sec[data-sec]')).map(function(e){ return e.getAttribute('data-sec'); });
+  try{ localStorage.setItem(SEC_KEY, JSON.stringify(order)); }catch(e){}
+}
+function toggleSecEdit(){
+  _secEdit=!_secEdit;
+  document.body.classList.toggle('sec-edit', _secEdit);
+  var btn=document.getElementById('secEditBtn');
+  if(btn) btn.innerHTML = _secEdit
+    ? '<i class="fa-solid fa-check"></i> 완료'
+    : '<i class="fa-solid fa-arrows-up-down"></i> 순서 변경';
+  if(!_secEdit) saveSecOrder();
+}
+
+/* 손가락으로 끌어서 옮기기 — 편집 모드에서만 동작 */
+(function(){
+  var drag=null, startY=0, host=null;
+
+  function secUnder(y){
+    var list=[].slice.call(host.querySelectorAll('.sec[data-sec]'));
+    for(var i=0;i<list.length;i++){
+      if(list[i]===drag) continue;
+      var r=list[i].getBoundingClientRect();
+      if(y >= r.top && y <= r.bottom) return { el:list[i], before: y < (r.top + r.height/2) };
+    }
+    return null;
+  }
+  function onDown(e){
+    if(!_secEdit) return;
+    var sec=e.target.closest ? e.target.closest('.sec[data-sec]') : null;
+    if(!sec) return;
+    host=document.getElementById('secHost'); if(!host) return;
+    drag=sec; startY=(e.touches?e.touches[0].clientY:e.clientY);
+    drag.classList.add('dragging');
+    if(e.cancelable) e.preventDefault();               // 편집 중 스크롤 방지(끌기와 충돌)
+  }
+  function onMove(e){
+    if(!drag) return;
+    var y=(e.touches?e.touches[0].clientY:e.clientY);
+    var hit=secUnder(y);
+    if(hit){
+      if(hit.before) host.insertBefore(drag, hit.el);
+      else host.insertBefore(drag, hit.el.nextSibling);
+    }
+    if(e.cancelable) e.preventDefault();
+  }
+  function onUp(){
+    if(!drag) return;
+    drag.classList.remove('dragging');
+    drag=null;
+    saveSecOrder();                                     // 놓는 즉시 저장
+  }
+  document.addEventListener('touchstart', onDown, {passive:false});
+  document.addEventListener('touchmove',  onMove, {passive:false});
+  document.addEventListener('touchend',   onUp);
+  document.addEventListener('mousedown',  onDown);
+  document.addEventListener('mousemove',  onMove);
+  document.addEventListener('mouseup',    onUp);
+})();
+
 /* 시계 */
 function tickClock(){
   var d=new Date();
@@ -628,6 +737,9 @@ function tickClock(){
   if(el2) el2.innerHTML=txt;
 }
 setInterval(tickClock,1000); tickClock();
+
+/* [K22] 저장해 둔 블록 순서를 화면에 적용 (처음 여는 기기면 기본 순서 그대로) */
+try{ loadSecOrder(); }catch(e){}
 
 /* 운영일(09시 KST) 윈도우 — 09:00 KST == 00:00 UTC */
 function opWindow(){ var dayMs=86400000; var start=Math.floor(Date.now()/dayMs)*dayMs; return [start, start+dayMs]; }
