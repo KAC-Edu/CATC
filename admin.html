@@ -1115,7 +1115,11 @@ body.in-course #moreToggleTab{ display:flex !important; }
                 <div class="ops-list">
                     <div class="ops-row" data-key="otp" onclick="ui.setMode('attendance'); ui.toggleAttendanceMode('internal');">
                         <span class="ops-ic" style="color:#2563eb; background:#eff6ff;"><i class="fa-solid fa-keyboard"></i></span>
-                        <span class="ops-name">OTP 출결<span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span></span>
+                        <!-- [K12] 수강생 현황의 '입교율'처럼, OTP 출결에도 '출석률'을 함께 보여준다 -->
+                        <span class="ops-name">OTP 출결
+                            <span class="ops-subline opsOtpSub">출석률 —</span>
+                            <span id="dashAttendCount" style="display:none;">0</span><span id="dashAttendTotal" style="display:none;">0</span>
+                        </span>
                         <span class="ops-val" style="color:#2563eb; font-weight:900;">출결 시작</span>
                         <i class="fa-solid fa-arrow-right ops-go"></i>
                     </div>
