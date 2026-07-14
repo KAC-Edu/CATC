@@ -3016,8 +3016,10 @@ loadDashboardStats: function() {
     try{
         state._dashStudentsCache = {};
         state._dashExpectedCache = [];
+        state._dashAttendCache = 0;   // [K12] 방을 옮기면 이전 방 출석률이 남지 않게 초기화
         document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = '-'; });
         document.querySelectorAll('.opsStuSub').forEach(function(e){ e.textContent = '확인 중…'; e.style.color = '#94a3b8'; });
+        document.querySelectorAll('.opsOtpSub').forEach(function(e){ e.textContent = '확인 중…'; e.style.color = '#94a3b8'; });
     }catch(e){}
 
     // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
@@ -3039,6 +3041,7 @@ loadDashboardStats: function() {
         state._dashStudentsCache = data;
         ui._recalcDashShuttle(room);
         ui._syncOpsStuRow(room);      // 과정현황 '수강생 현황' 줄을 이 방 값으로 갱신
+        ui._syncOpsOtpRow(room);      // [K12] 입교 인원이 바뀌면 출석률 분모도 바뀐다
         
         // 온라인(isOnline) 여부와 상관없이 이름이 등록된 모든 학생 필터링
         const arrivedStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
@@ -3145,6 +3148,9 @@ loadDashboardStats: function() {
         const count = Object.keys(s.val() || {}).length;
         const el = document.getElementById('dashAttendCount');
         if (el) el.innerText = count;
+        // [K12] 출석률 계산용 캐시 — 오늘 출결 인원
+        state._dashAttendCache = count;
+        ui._syncOpsOtpRow(room);
     });
 
 
@@ -3238,6 +3244,33 @@ _syncOpsStuRow: function(room) {
                 e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
             } else {
                 e.textContent = '예정명단 없음';
+                e.style.color = '#94a3b8';
+            }
+        });
+    }catch(e){}
+},
+
+/* [K12] 과정현황 'OTP 출결' 줄에 오늘 출석률을 함께 표시한다.
+   ★ 기준 — 입교율과 헷갈리지 않게 분모를 다르게 잡는다:
+       입교율  = 입교완료 ÷ 예정명단   (오기로 한 사람 중 몇 명이 왔나)
+       출석률  = 오늘 출결 ÷ 입교완료  (온 사람 중 오늘 몇 명이 출석을 찍었나)
+     입교하지 않은 사람은 애초에 출석 대상이 아니므로 분모에서 뺀다.               */
+_syncOpsOtpRow: function(room) {
+    if (state.room !== room) return;
+    try{
+        const data = state._dashStudentsCache || {};
+        const enrolled = Object.values(data)
+            .map(s => s && s.name)
+            .filter(n => n && n !== 'undefined').length;          // 분모 = 입교완료 인원
+        const attended = Number(state._dashAttendCache || 0);      // 분자 = 오늘 출결 인원
+        const percent = enrolled > 0 ? Math.round((attended / enrolled) * 100) : 0;
+
+        document.querySelectorAll('.opsOtpSub').forEach(function(e){
+            if(enrolled > 0){
+                e.textContent = '출석률 ' + percent + '% (' + attended + '/' + enrolled + ')';
+                e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
+            } else {
+                e.textContent = '입교 인원 없음';
                 e.style.color = '#94a3b8';
             }
         });
