@@ -404,8 +404,8 @@
       <div class="clk" id="clk"></div>
     </div>
     <div class="hero">
-      <div class="hero-course" style="font-size:17px;">진행 중인 과정을 선택하세요</div>
-      <div class="hero-meta">
+      <!-- [K25] 안내 문구 제거 (굳이 없어도 아는 내용) -->
+      <div class="hero-meta" style="margin-top:0;">
         <span class="hero-pill"><i class="fa-solid fa-layer-group"></i><span id="hTotal">0개 과정</span></span>
         <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="hStu">0명</span></span>
       </div>
@@ -472,20 +472,21 @@
     </div>
     <div class="hero">
       <div class="hero-meta" style="margin-top:0;">
+        <!-- [K25] '과정 정보' 카드는 없앴다(부피만 크고 내용이 적었다).
+             꼭 필요한 것만 상단바 알약으로: 인원 · 담임 · 강의실 · 교육생장 -->
         <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="dHeroCount">0명</span></span>
         <span class="hero-pill"><i class="fa-solid fa-user-tie"></i><span id="dHeroProf">담임 -</span></span>
+        <span class="hero-pill"><i class="fa-solid fa-location-dot"></i><span id="dHeroLoc">강의실 -</span></span>
+        <span class="hero-pill" id="dHeroLeaderPill"><i class="fa-solid fa-crown"></i><span id="dHeroLeader">교육생장 미지정</span></span>
       </div>
     </div>
     <span id="dTtl" style="display:none;"></span>   <!-- 기존 코드가 참조하므로 남겨 둠(화면엔 안 보임) -->
   </div>
   <div class="ov-body">
-    <div class="card">
-      <h3><i class="fa-solid fa-circle-info"></i> 과정 정보</h3>
-      <div class="info-grid" id="dInfo"></div>
-      <div style="margin-top:13px;" id="dLeaderWrap"></div>
-    </div>
-    <!-- [K6] 순서: 과정정보 → 출석부·외출외박 대장 → 퇴교차량 → 외출·외박 신청자 → 공지발송 → 질문사항
-         (퇴교차량·외출외박·공지발송은 가로바로 접어 둔다. 질문사항은 기본 펼침) -->
+    <!-- [K25] '과정 정보' 카드 삭제 — 교육기간·강의실·담임·과정담당·교육생장은 상단바 알약으로 옮겼다.
+         (기존 코드가 참조하므로 요소만 숨겨 남겨 둔다) -->
+    <div style="display:none;"><span id="dInfo"></span><span id="dLeaderWrap"></span></div>
+    <!-- [K6] 순서: 출석부·외출외박 대장 → 퇴교차량 → 외출·외박 신청자 → 공지발송 → 질문사항 -->
     <!-- [K21] 출석부·외출외박 대장 — 가로바를 눌러야 내려온다 (자주 쓰는 게 아니라 평소엔 접어 둔다)
          [M14] PC와 동일한 정식 양식 페이지(attendance_sheet/outing_ledger)를 열어 저장. -->
     <div class="card" style="padding:11px 12px;">
@@ -795,6 +796,12 @@ function updateDetail(){
   _st('dHeroCourse', s.courseName||'과정명 미설정');
   _st('dHeroCount', studentsOf(room).length+'명');
   _st('dHeroProf','담임 '+prof);
+  /* [K25] '과정 정보' 카드를 없앤 대신, 강의실·교육생장을 상단바 알약으로 올린다 */
+  _st('dHeroLoc', '강의실 '+(s.roomDetailName||s.roomDetail||'미정'));
+  var _L=leaderOf(room);
+  _st('dHeroLeader', _L ? ('교육생장 '+_L.name) : '교육생장 미지정');
+  var _lp=document.getElementById('dHeroLeaderPill');
+  if(_lp) _lp.style.opacity = _L ? '1' : '.6';
   document.getElementById('dInfo').innerHTML=
      '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:14px;">'+esc(kacPeriod(s.period))+'</div></div>'   /* [K20] 2026.07.13~2026.07.24 */
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:14px;">'+esc(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
