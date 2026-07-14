@@ -504,14 +504,43 @@ function orderedRooms(){
 }
 function studentsOf(room){ return room && room.students ? Object.keys(room.students).map(function(k){return room.students[k];}).filter(function(x){return x&&x.name&&(''+x.name).trim()&&x.name!=='undefined';}) : []; }
 function leaderOf(room){ var L=studentsOf(room).filter(function(s){return s&&s.isLeader===true;})[0]; if(!L) return null; return { name:L.name||'-', no:(L.empNo||L.sabun||L.id||L.studentId||'') }; }
+/* ══ [K7] 퇴교차량 집계 — PC(kacShuttleMerge)와 똑같이 맞춘다 ══════════
+   예전 모바일 집계는 '신청서를 낸 사람'만 셌다. 그래서 아무것도 신청하지 않은
+   교육생이 어디에도 안 잡혀 총원이 맞지 않았다.
+   PC는 '입교완료했는데 신청 안 한 사람 = 자차(미선택) 간주'로 자차에 더하고,
+   총 신청 = 전원이 된다. 모바일도 같은 규칙으로 맞춘다.
+     · car   = 자차 신청자 + 미신청자(자차 간주)
+     · bus   = 오송 + 터미널 + 공항 (실제로 버스를 타는 인원)
+     · total = bus + car = 전원
+   ═══════════════════════════════════════════════════════════════════ */
 function shuttleCount(room){
-  var rq=(room.shuttle&&room.shuttle.requests)||{};
-  var e=Object.keys(rq).map(function(k){return rq[k];}).filter(function(r){return r&&r.type;});
-  return { total:e.filter(function(r){return r.type!=='car';}).length,
-    osong:e.filter(function(r){return r.type==='osong';}).length,
-    terminal:e.filter(function(r){return r.type==='terminal';}).length,
-    airport:e.filter(function(r){return r.type==='airport';}).length,
-    car:e.filter(function(r){return r.type==='car';}).length };
+  var rq=(room && room.shuttle && room.shuttle.requests) || {};
+  var stu=(room && room.students) || {};
+  var norm=function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+  var c={ osong:0, terminal:0, airport:0, car:0 };
+  var seen={};
+  Object.keys(rq).forEach(function(k){
+    var r=rq[k]; if(!r||!r.type) return;
+    var t=r.type;
+    if(t==='osong'||t==='terminal'||t==='airport') c[t]++;
+    else c.car++;                                  // 자차 신청 + 타입 미지정
+    if(r.name) seen[norm(r.name)]=1;
+  });
+  // 미신청 입교완료 교육생 = 자차(미선택) 간주 — 이름 중복은 1회만
+  var nonApp=[], dupe={};
+  Object.keys(stu).forEach(function(k){
+    var s=stu[k]; if(!s) return;
+    var nm=String(s.name==null?'':s.name).trim();
+    if(!nm || nm==='undefined') return;
+    var key=norm(nm);
+    if(dupe[key]) return; dupe[key]=1;
+    if(seen[key]) return;                          // 이미 신청한 사람
+    nonApp.push(nm);
+  });
+  c.car += nonApp.length;
+  var bus = c.osong + c.terminal + c.airport;
+  return { osong:c.osong, terminal:c.terminal, airport:c.airport, car:c.car,
+           bus:bus, nonApp:nonApp, total:bus + c.car };
 }
 /* ══ [K1] 질문사항 ═══════════════════════════════════════════════════
    강사분들이 질문을 확인하려면 PC를 켜야 했다. 폰에서 바로 보이게 한다.
@@ -724,6 +753,12 @@ function renderMobileShuttleList(){
   var rq=(room.shuttle&&room.shuttle.requests)||{};
   var all=Object.keys(rq).map(function(k){ var r=rq[k]||{}; r._key=k; return r; }).filter(function(r){ return r&&r.type; });
 
+  /* [K7] 아무것도 신청하지 않은 교육생 = 자차(미선택) 간주 — 명단에도 함께 보여야
+     위 숫자판의 '자차'와 인원이 맞는다. (PC 퇴교 수송 현황과 동일) */
+  shuttleCount(room).nonApp.forEach(function(nm){
+    all.push({ name:nm, phone:'-', type:'car', typeText:'미선택 (자차 간주)', timestamp:0, _noApp:true });
+  });
+
   var cnt=function(f){ return all.filter(function(r){ return _M_SHUT_DEST[f].has(r.type); }).length; };
   var chips='<div class="m-shut-chips">'
     + ['bus','osong','terminal','airport','car'].map(function(f){
@@ -749,7 +784,9 @@ function renderMobileShuttleList(){
     +'<div style="overflow-x:auto;"><table class="m-tbl"><thead><tr><th class="num">연번</th><th>성함</th><th>식별ID</th><th>신청현황</th></tr></thead><tbody>'
     +list.map(function(r,i){
         var c=(_M_SHUT_DEST[r.type]||{}).color||'#2563eb';
-        return '<tr><td class="num">'+(i+1)+'</td><td>'+h(r.name||'-')+'</td><td>'+h(r.phone||'-')+'</td>'
+        if(r._noApp) c='#94a3b8';                                  // [K7] 미선택은 회색으로 구분
+        return '<tr'+(r._noApp?' style="background:#f8fafc;"':'')+'><td class="num">'+(i+1)+'</td>'
+             + '<td'+(r._noApp?' style="color:#64748b;"':'')+'>'+h(r.name||'-')+'</td><td>'+h(r.phone||'-')+'</td>'
              + '<td style="color:'+c+';font-weight:900;">'+h(r.typeText||r.type||'-')+'</td></tr>';
       }).join('')
     +'</tbody></table></div>';
@@ -801,7 +838,7 @@ function renderHome(){
       +'</div>'
       +'<div class="cb-badges">'
         +'<span class="cbadge'+(q>0?' hot':'')+'"><i class="fa-solid fa-comment-dots"></i> 질문 '+q+'</span>'
-        +'<span class="cbadge"><i class="fa-solid fa-bus"></i> 셔틀 '+sh.total+'</span>'
+        +'<span class="cbadge"><i class="fa-solid fa-bus"></i> 셔틀 '+sh.bus+'</span>'   /* [K7] 실제 버스 이용 인원(자차 제외) */
         +'<span class="cbadge'+(ou>0?' hot':'')+'"><i class="fa-solid fa-user-clock"></i> 외출 '+ou+'</span>'
       +'</div>'
       +'<i class="fa-solid fa-chevron-right cb-arrow"></i></div>';
@@ -833,7 +870,7 @@ function renderDetail(){
   document.getElementById('dMon').innerHTML=
      '<div class="mon-cell"><div class="mk">수강생</div><div class="mv">'+count+'</div></div>'
     +'<div class="mon-cell'+(q>0?' hot':'')+'"><div class="mk">Q&amp;A 질문</div><div class="mv">'+q+'</div></div>'
-    +'<div class="mon-cell"><div class="mk">셔틀신청</div><div class="mv">'+sh.total+'</div></div>'
+    +'<div class="mon-cell"><div class="mk">셔틀신청</div><div class="mv">'+sh.bus+'</div></div>'   /* [K7] 버스 이용 인원 */
     +'<div class="mon-cell'+(ou>0?' hot':'')+'"><div class="mk">외출·외박</div><div class="mv">'+ou+'</div></div>';
   setT('dCourse',s.courseName||'-');
   document.getElementById('dInfo').innerHTML=
@@ -849,7 +886,8 @@ function renderDetail(){
   document.getElementById('dNotice').innerHTML = notice ? '<div class="notice-box">'+h(notice)+'</div>' : '<div class="notice-empty">받은 공지가 없습니다.</div>';
   renderQa(room);   // [K1] 질문사항
   // [K6] 접힌 가로바에도 건수는 보이게 — 열어보지 않아도 몇 명인지 알 수 있다
-  setT('dShutN', sh.total+'명 신청');
+  // [K7] 가로바에는 '전원 / 버스 이용'을 함께 — 총원이 맞는지 바로 보인다
+  setT('dShutN', '전원 '+sh.total+'명 · 버스 '+sh.bus+'명');
   setT('dOutN', '금일 '+ou+'건');
   /* [J99] 숫자 칸을 누르면 그 목적지를 신청한 사람이 누구인지 바로 뜬다 */
   document.getElementById('dShuttle').innerHTML=
