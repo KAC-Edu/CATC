@@ -165,9 +165,19 @@
                     transition:max-height .24s ease, opacity .18s ease, margin-top .22s ease; }
     .ov-head.shrink .hero{ max-height:0; opacity:0; margin-top:0 !important;
                            padding-top:0 !important; padding-bottom:0 !important; border-width:0 !important; }
-    .ov-head .bk{ flex-shrink:0; height:42px; padding:0 16px 0 14px; border-radius:12px; background:linear-gradient(135deg,#ef4444,#dc2626); border:1px solid #b91c1c; color:#fff; font-size:15px; font-weight:900; display:flex; align-items:center; gap:7px; cursor:pointer; transition:transform .1s; box-shadow:0 5px 14px rgba(220,38,38,.5); white-space:nowrap; }
-    .ov-head .bk i{ font-size:17px; }
-    .ov-head .bk:active{ transform:scale(.94); }
+    /* [K13] 뒤로 = 동그란 아이콘 버튼 (글자 없음) */
+    .ov-head .bk{ flex-shrink:0; width:42px; height:42px; padding:0; border-radius:50%; background:linear-gradient(135deg,#ef4444,#dc2626); border:1px solid #b91c1c; color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; transition:transform .1s; box-shadow:0 5px 14px rgba(220,38,38,.5); }
+    .ov-head .bk i{ font-size:18px; }
+    .ov-head .bk:active{ transform:scale(.9); }
+    /* 뒤로 옆의 과정명 = 헤더 제목 */
+    .ov-head .dhead-t{ flex:1; min-width:0; font-size:17px; font-weight:950; letter-spacing:-.3px;
+                       overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .ov-head.shrink .dhead-t{ font-size:15px; }
+
+    /* [K14] 과정별 색 구분 — 방마다 고정 색 (같은 방은 늘 같은 색) */
+    .crd{ border-left:5px solid var(--cc, #2563eb); }
+    .crd .room-badge{ background:linear-gradient(135deg, var(--cc, #2563eb), var(--cc2, #1d4ed8)) !important;
+                      box-shadow:0 2px 6px var(--ccbg, rgba(37,99,235,.3)) !important; }
     .ov-head .ttl{ font-size:16px; font-weight:900; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; letter-spacing:-.3px; }
     /* [K8] 상세 헤더 — 뒤로 + 시계 한 줄 (강사 모바일과 동일 규격) */
     .ov-head .row1{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -175,7 +185,8 @@
     .ov-head .clk b{ font-size:15px; font-weight:900; letter-spacing:.3px; }
     .ov-head.shrink .clk{ font-size:11px; }
     .ov-head.shrink .clk b{ font-size:13px; }
-    .ov-body{ padding:15px 15px calc(30px + env(safe-area-inset-bottom)); max-width:600px; margin:0 auto; }
+    /* [K15] 하단 여백 확대 — 마지막 블록이 화면 바닥에 붙어 누르기 힘들었다 */
+    .ov-body{ padding:15px 15px calc(120px + env(safe-area-inset-bottom)); max-width:600px; margin:0 auto; }
     .card{ background:#fff; border:1px solid #eef1f6; border-radius:18px; padding:16px 17px; margin-bottom:12px; box-shadow:0 1px 2px rgba(16,24,40,.04),0 12px 26px -18px rgba(16,24,40,.22); }
     .card h3{ margin:0 0 13px; font-size:13px; font-weight:800; color:#1e293b; display:flex; align-items:center; gap:8px; letter-spacing:-.2px; }
     .card h3 i{ color:var(--blue); }
@@ -447,13 +458,12 @@
     <!-- [K8] 강사 모바일과 동일: 뒤로 + 시계 한 줄, 그 아래 히어로(ROOM · 과정명 · 요약)
          예전엔 [뒤로] 옆에 과정명이 작게 붙어 있었는데, 히어로에 큰 글씨로 나오므로 중복이었다. -->
     <div class="row1">
-      <div class="bk" onclick="closeDetail()"><i class="fa-solid fa-arrow-rotate-left"></i> 뒤로</div>
+      <div class="bk" onclick="closeDetail()" aria-label="뒤로"><i class="fa-solid fa-arrow-rotate-left"></i></div>
+      <div class="dhead-t" id="dHeroCourse">-</div>
       <div class="clk" id="clk2"></div>
     </div>
     <div class="hero">
-      <div class="hero-room"><i class="fa-solid fa-door-open"></i> <span id="dHeroRoom">ROOM</span></div>
-      <div class="hero-course" id="dHeroCourse">-</div>
-      <div class="hero-meta">
+      <div class="hero-meta" style="margin-top:0;">
         <span class="hero-pill"><i class="fa-solid fa-users"></i><span id="dHeroCount">0명</span></span>
         <span class="hero-pill"><i class="fa-solid fa-user-tie"></i><span id="dHeroProf">담임 -</span></span>
       </div>
