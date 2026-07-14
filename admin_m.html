@@ -138,6 +138,19 @@
     .empty{ text-align:center; color:var(--mute); font-weight:700; padding:26px 0; }
 
     /* [vC] 외출·외박 표 */
+    /* [J99] 퇴교차량 신청자 팝업 (숫자 칸을 누르면 아래에서 올라온다) */
+    #dShuttle .shut-cell{ cursor:pointer; -webkit-tap-highlight-color:transparent; transition:transform .1s; }
+    #dShuttle .shut-cell:active{ transform:scale(.96); }
+    .m-shuttle-ov{ position:fixed; inset:0; z-index:700; display:none; align-items:flex-end; background:rgba(15,23,42,.52); }
+    .m-shuttle-ov.open{ display:flex; }
+    .m-shuttle-sheet{ width:100%; max-height:82vh; max-height:82dvh; overflow:auto; background:#fff; border-radius:24px 24px 0 0; padding:10px 16px calc(20px + env(safe-area-inset-bottom)); box-shadow:0 -18px 44px rgba(15,23,42,.28); }
+    .m-shuttle-sheet::before{ content:''; display:block; width:42px; height:5px; background:#dbe3ef; border-radius:999px; margin:0 auto 14px; }
+    .m-shuttle-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+    .m-shuttle-head h3{ margin:0; font-size:18px; font-weight:950; color:#0f172a; }
+    .m-shuttle-close{ width:38px; height:38px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:16px; }
+    .m-shut-chips{ display:flex; gap:7px; overflow-x:auto; padding:2px 2px 10px; -webkit-overflow-scrolling:touch; }
+    .m-shut-chips button{ flex:0 0 auto; border:1.5px solid #e2e8f0; background:#fff; color:#64748b; border-radius:999px; padding:8px 14px; font-size:13px; font-weight:900; white-space:nowrap; }
+    .m-shut-chips button.on{ background:#0f172a; border-color:#0f172a; color:#fff; }
     .m-tbl{ width:100%; border-collapse:collapse; font-size:13px; }
     .m-tbl th{ background:#f1f5f9; color:#475569; font-weight:800; text-align:left; padding:9px 9px; border-bottom:2px solid #e2e8f0; white-space:nowrap; font-size:12px; }
     .m-tbl td{ padding:9px 9px; border-bottom:1px solid #f1f5f9; color:#1e293b; font-weight:700; white-space:nowrap; }
@@ -274,7 +287,7 @@
         <div id="dNotice"><div class="notice-empty">받은 공지가 없습니다.</div></div>
       </div>
       <div class="card">
-        <h3><i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 실시간</span></h3>
+        <h3><i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 숫자를 누르면 명단</span></h3>
         <div class="shut-grid" id="dShuttle"></div>
       </div>
       <div class="card">
@@ -289,6 +302,17 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- [J99] 퇴교차량 신청자 명단 (숫자 칸을 누르면 아래에서 올라오는 시트) -->
+<div id="mShuttleOv" class="m-shuttle-ov" onclick="if(event.target===this)closeMobileShuttleList()">
+  <div class="m-shuttle-sheet">
+    <div class="m-shuttle-head">
+      <h3><i class="fa-solid fa-bus" style="color:#2563eb;"></i> 퇴교차량 신청자</h3>
+      <button class="m-shuttle-close" onclick="closeMobileShuttleList()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="mShuttleList" class="m-shuttle-list"></div>
   </div>
 </div>
 
@@ -359,6 +383,71 @@ function shuttleCount(room){
     airport:e.filter(function(r){return r.type==='airport';}).length,
     car:e.filter(function(r){return r.type==='car';}).length };
 }
+/* ══ [J99] 퇴교차량 신청자 명단 팝업 ══════════════════════════════════
+   숫자만 보이고 '누가' 신청했는지는 알 수 없어서, PC를 켜야만 확인이 됐다.
+   → 숫자 칸을 누르면 그 목적지 신청자 명단이 아래에서 올라온다.
+     팝업 안의 칩으로 목적지를 바로 갈아끼울 수 있고, 이름 ㄱ~ㅎ 순으로 정렬한다.
+     각 칩의 인원수는 위 숫자판과 정확히 일치한다. */
+var _mShutFilter='bus';
+var _M_SHUT_DEST={
+  bus:      { label:'셔틀 전체', color:'#2563eb', has:function(t){ return t==='osong'||t==='terminal'||t==='airport'; } },
+  osong:    { label:'오송역',    color:'#ef4444', has:function(t){ return t==='osong'; } },
+  terminal: { label:'터미널',    color:'#2563eb', has:function(t){ return t==='terminal'; } },
+  airport:  { label:'공항',      color:'#10b981', has:function(t){ return t==='airport'; } },
+  car:      { label:'자차',      color:'#64748b', has:function(t){ return t==='car'; } }
+};
+function showMobileShuttleList(f){
+  if(!curRID) return;
+  _mShutFilter = _M_SHUT_DEST[f] ? f : 'bus';
+  renderMobileShuttleList();
+  var ov=document.getElementById('mShuttleOv'); if(ov) ov.classList.add('open');
+}
+function setMobileShuttleFilter(f){
+  if(!_M_SHUT_DEST[f]) return;
+  _mShutFilter=f;
+  renderMobileShuttleList();
+}
+function closeMobileShuttleList(){
+  var ov=document.getElementById('mShuttleOv'); if(ov) ov.classList.remove('open');
+}
+function renderMobileShuttleList(){
+  var box=document.getElementById('mShuttleList');
+  if(!box || !curRID) return;
+  var room=DATA[curRID]||{}, s=room.settings||{};
+  var rq=(room.shuttle&&room.shuttle.requests)||{};
+  var all=Object.keys(rq).map(function(k){ var r=rq[k]||{}; r._key=k; return r; }).filter(function(r){ return r&&r.type; });
+
+  var cnt=function(f){ return all.filter(function(r){ return _M_SHUT_DEST[f].has(r.type); }).length; };
+  var chips='<div class="m-shut-chips">'
+    + ['bus','osong','terminal','airport','car'].map(function(f){
+        return '<button type="button" class="'+(f===_mShutFilter?'on':'')+'" onclick="setMobileShuttleFilter(\''+f+'\')">'
+             + h(_M_SHUT_DEST[f].label)+' '+cnt(f)+'</button>';
+      }).join('')
+    + '</div>';
+
+  var D=_M_SHUT_DEST[_mShutFilter];
+  var list=all.filter(function(r){ return D.has(r.type); });
+  list.sort(function(a,b){
+    return String(a.name||'').localeCompare(String(b.name||''),'ko') || ((a.timestamp||0)-(b.timestamp||0));
+  });
+
+  var head='<div style="font-size:13px;font-weight:800;color:#64748b;margin:0 2px 9px;">'
+         + h(s.courseName||('ROOM #'+curRID))+' · '+h(D.label)+' '+list.length+'명</div>';
+
+  if(!list.length){
+    box.innerHTML=head+chips+'<div class="empty" style="padding:30px 0;">'+h(D.label)+' 신청자가 없습니다.</div>';
+    return;
+  }
+  box.innerHTML=head+chips
+    +'<div style="overflow-x:auto;"><table class="m-tbl"><thead><tr><th class="num">연번</th><th>성함</th><th>식별ID</th><th>신청현황</th></tr></thead><tbody>'
+    +list.map(function(r,i){
+        var c=(_M_SHUT_DEST[r.type]||{}).color||'#2563eb';
+        return '<tr><td class="num">'+(i+1)+'</td><td>'+h(r.name||'-')+'</td><td>'+h(r.phone||'-')+'</td>'
+             + '<td style="color:'+c+';font-weight:900;">'+h(r.typeText||r.type||'-')+'</td></tr>';
+      }).join('')
+    +'</tbody></table></div>';
+}
+
 function questionsCount(room){ return room && room.questions ? Object.keys(room.questions).length : 0; }
 function opWindow(){ var dayMs=86400000; var start=Math.floor(Date.now()/dayMs)*dayMs; return [start, start+dayMs]; }
 function shortRoom(v){ v=(''+(v||'')).trim(); if(!v) return '미정'; var p=v.split(' '); return p.length>1?p[p.length-1]:v; }
@@ -451,12 +540,13 @@ function renderDetail(){
     : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 학생장</div><div class="lv">지정된 학생장 없음</div></div>';
   var notice=(room.coordNotice||'').trim();
   document.getElementById('dNotice').innerHTML = notice ? '<div class="notice-box">'+h(notice)+'</div>' : '<div class="notice-empty">받은 공지가 없습니다.</div>';
+  /* [J99] 숫자 칸을 누르면 그 목적지를 신청한 사람이 누구인지 바로 뜬다 */
   document.getElementById('dShuttle').innerHTML=
-     '<div class="shut-cell tot"><div class="sk" style="color:#64748b;">총 신청</div><div class="sv">'+sh.total+'</div></div>'
-    +'<div class="shut-cell"><div class="sk" style="color:#ef4444;">오송</div><div class="sv">'+sh.osong+'</div></div>'
-    +'<div class="shut-cell"><div class="sk" style="color:#2563eb;">터미널</div><div class="sv">'+sh.terminal+'</div></div>'
-    +'<div class="shut-cell"><div class="sk" style="color:#10b981;">공항</div><div class="sv">'+sh.airport+'</div></div>'
-    +'<div class="shut-cell"><div class="sk" style="color:#64748b;">자차</div><div class="sv">'+sh.car+'</div></div>';
+     '<div class="shut-cell tot" onclick="showMobileShuttleList(\'bus\')"><div class="sk" style="color:#64748b;">총 신청</div><div class="sv">'+sh.total+'</div></div>'
+    +'<div class="shut-cell" onclick="showMobileShuttleList(\'osong\')"><div class="sk" style="color:#ef4444;">오송</div><div class="sv">'+sh.osong+'</div></div>'
+    +'<div class="shut-cell" onclick="showMobileShuttleList(\'terminal\')"><div class="sk" style="color:#2563eb;">터미널</div><div class="sv">'+sh.terminal+'</div></div>'
+    +'<div class="shut-cell" onclick="showMobileShuttleList(\'airport\')"><div class="sk" style="color:#10b981;">공항</div><div class="sv">'+sh.airport+'</div></div>'
+    +'<div class="shut-cell" onclick="showMobileShuttleList(\'car\')"><div class="sk" style="color:#64748b;">자차</div><div class="sv">'+sh.car+'</div></div>';
   var outs=outingsToday(room);
   var dOut=document.getElementById('dOuting');
   if(dOut){
