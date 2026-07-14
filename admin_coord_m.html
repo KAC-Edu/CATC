@@ -93,6 +93,20 @@
     .mhead .ttl .mk{ width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:none; }
     .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
     .mhead .clk b{ font-size:15px; font-weight:900; letter-spacing:.3px; }
+    /* [K4] 아래로 스크롤하면 상단바가 접힌다 (동작은 config.js) — 화면을 넓게 쓰기 위해.
+       이 화면은 목록(.mhead)과 상세(.ov-head) 두 곳 모두 접힌다.
+       상세는 오버레이(.ov) 안에서 따로 스크롤되므로 config.js가 그쪽도 함께 감시한다. */
+    .mhead, .ov-head{ transition:padding .22s ease, border-radius .22s ease; }
+    .mhead .ttl, .mhead .clk, .mhead .ttl .mk,
+    .ov-head .ttl, .ov-head .bk{ transition:font-size .22s ease, width .22s ease, height .22s ease, padding .22s ease; }
+    .mhead.shrink{ padding-top:9px; padding-bottom:9px; border-radius:0 0 16px 16px; }
+    .mhead.shrink .ttl{ font-size:15px; }
+    .mhead.shrink .ttl .mk{ width:30px; height:30px; font-size:13px; border-radius:9px; }
+    .mhead.shrink .clk{ font-size:11px; }
+    .mhead.shrink .clk b{ font-size:13px; }
+    .ov-head.shrink{ padding-top:8px; padding-bottom:8px; border-radius:0 0 14px 14px; }
+    .ov-head.shrink .ttl{ font-size:14px; }
+    .ov-head.shrink .bk{ height:34px; font-size:13px; padding:0 12px 0 10px; }
 
     .sec{ padding:16px 15px 0; }
     .sec-ttl{ font-size:11.5px; font-weight:800; color:#7C8BA5; margin:6px 3px 11px; display:flex; align-items:center; gap:7px; letter-spacing:.2px; }
