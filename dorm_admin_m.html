@@ -81,6 +81,17 @@
     .mhead .ttl .mk{ width:38px; height:38px; border-radius:12px; background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center; font-size:16px; box-shadow:none; }
     .mhead .clk{ text-align:right; font-size:12px; font-weight:700; opacity:.95; line-height:1.4; z-index:1; }
     .mhead .clk b{ font-size:15px; font-weight:900; }
+    /* [K4] 아래로 스크롤하면 상단바가 접힌다 (동작은 config.js) — 화면을 넓게 쓰기 위해 */
+    .mhead{ transition:padding .22s ease, border-radius .22s ease; }
+    .mhead .ttl, .mhead .clk, .mhead .ttl .mk{ transition:font-size .22s ease, width .22s ease, height .22s ease; }
+    .mhead .wk-label{ overflow:hidden; max-height:80px; opacity:1;
+                      transition:max-height .24s ease, opacity .18s ease, margin-top .22s ease; }
+    .mhead.shrink{ padding-top:9px; padding-bottom:9px; border-radius:0 0 16px 16px; }
+    .mhead.shrink .wk-label{ max-height:0; opacity:0; margin-top:0 !important; }
+    .mhead.shrink .ttl{ font-size:15px; }
+    .mhead.shrink .ttl .mk{ width:30px; height:30px; font-size:13px; border-radius:9px; }
+    .mhead.shrink .clk{ font-size:11px; }
+    .mhead.shrink .clk b{ font-size:13px; }
     .wk-label{ margin-top:11px; font-size:12.5px; font-weight:800; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:7px 12px; display:inline-flex; align-items:center; gap:7px; position:relative; z-index:1; }
 
     .sec{ padding:15px 14px 0; }
