@@ -228,6 +228,18 @@
     .m-shuttle-head h3{ margin:0; font-size:18px; font-weight:950; color:#0f172a; }
     .m-shuttle-close{ width:38px; height:38px; border:none; border-radius:12px; background:#f1f5f9; color:#475569; font-size:16px; }
     .m-shuttle-list{ display:flex; flex-direction:column; gap:9px; }
+    /* [K6] 공통 접이식 가로바 — 퇴교차량·외출외박·공지발송처럼 '필요할 때만' 여는 블록에 쓴다 */
+    .mbar{ display:flex; align-items:center; gap:9px; padding:13px 14px; border-radius:16px; cursor:pointer;
+           background:linear-gradient(135deg,#f8fbff,#eef4ff); border:1px solid #dbeafe; }
+    .mbar:active{ transform:scale(.985); }
+    .mbar .mb-ic{ color:#2563eb; font-size:15px; }
+    .mbar .mb-t{ font-size:14px; font-weight:900; color:#0f172a; }
+    .mbar .mb-n{ font-size:12px; font-weight:800; color:#64748b; }
+    .mbar .mb-chev{ margin-left:auto; color:#94a3b8; transition:transform .22s; }
+    .mbar.open .mb-chev{ transform:rotate(180deg); }
+    .mbody{ display:none; margin-top:11px; }
+    .mbody.open{ display:block; }
+
     /* [K3] 질문사항 — 평소엔 가로바로 접어두고, 누르면 펼친다 (PC 질문 화면과 같은 방식) */
     .qa-bar{ display:flex; align-items:center; gap:9px; padding:13px 14px; border-radius:16px; cursor:pointer;
              background:linear-gradient(135deg,#f8fbff,#eef4ff); border:1px solid #dbeafe; }
@@ -401,9 +413,57 @@
       <div class="info-grid" id="dInfo"></div>
       <div style="margin-top:13px;" id="dLeaderWrap"></div>
     </div>
-    <!-- [K3] 질문사항 — 가로바를 누르면 펼쳐진다 (PC 질문 화면과 같은 구성) -->
+    <!-- [K6] 순서: 과정정보 → 출석부·외출외박 대장 → 퇴교차량 → 외출·외박 신청자 → 공지발송 → 질문사항
+         (퇴교차량·외출외박·공지발송은 가로바로 접어 둔다. 질문사항은 기본 펼침) -->
+    <!-- [M14] 출석부·외출외박 대장 — PC와 동일한 정식 양식 페이지(attendance_sheet/outing_ledger)를 열어 저장. -->
+    <div class="card">
+      <h3><i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· PC와 동일 양식</span></h3>
+      <div style="display:flex; gap:10px; margin-top:12px;">
+        <button class="btn" style="flex:1; background:#0d9488; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('attendance')"><i class="fa-solid fa-clipboard-user"></i> 출석부 대장</button>
+        <button class="btn" style="flex:1; background:#2563eb; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('outing')"><i class="fa-solid fa-file-signature"></i> 외출외박 대장</button>
+      </div>
+      <div style="margin-top:9px; font-size:11.5px; font-weight:700; color:#94a3b8; line-height:1.55;">복귀완료가 포함된 외출(외박) 신청서와 출석 도장이 찍힌 출석부 — PC와 동일한 정식 대장이 열립니다. 열린 화면에서 <b>PDF 저장</b>을 누르세요.</div>
+    </div>
+    <!-- [K6] 퇴교차량 — 가로바 -->
     <div class="card" style="padding:11px 12px;">
-      <!-- [K5] 기본은 '펼침' — 금일 질문이 바로 보여야 한다. 접고 싶으면 이 바를 누른다. -->
+      <div class="mbar" id="shutBar" onclick="toggleBar('shut')">
+        <i class="fa-solid fa-bus mb-ic"></i>
+        <span class="mb-t">퇴교차량 현황</span>
+        <span class="mb-n" id="dShutN">0명</span>
+        <i class="fa-solid fa-chevron-down mb-chev"></i>
+      </div>
+      <div class="mbody" id="shutBody">
+        <div style="font-size:11.5px;font-weight:800;color:#94a3b8;margin-bottom:9px;">숫자를 누르면 그 목적지 신청자 명단이 나옵니다.</div>
+        <div class="shut-grid" id="dShuttle"></div>
+      </div>
+    </div>
+    <!-- [K6] 외출·외박 신청자 — 가로바 -->
+    <div class="card" style="padding:11px 12px;">
+      <div class="mbar" id="outBar" onclick="toggleBar('out')">
+        <i class="fa-solid fa-user-clock mb-ic"></i>
+        <span class="mb-t">외출·외박 신청자</span>
+        <span class="mb-n" id="dOutN">금일 0건</span>
+        <i class="fa-solid fa-chevron-down mb-chev"></i>
+      </div>
+      <div class="mbody" id="outBody">
+        <div id="dOuting"></div>
+      </div>
+    </div>
+    <!-- [K6] 강사플랫폼 공지 발송 — 가로바 -->
+    <div class="card" style="padding:11px 12px;" id="dNoticeCard">
+      <div class="mbar" id="noticeBar" onclick="toggleBar('notice')">
+        <i class="fa-solid fa-paper-plane mb-ic"></i>
+        <span class="mb-t">강사플랫폼 공지 발송</span>
+        <i class="fa-solid fa-chevron-down mb-chev"></i>
+      </div>
+      <div class="mbody" id="noticeBody">
+        <textarea class="notice" id="dNotice" placeholder="교육생·강사 플랫폼에 전달할 공지를 입력하세요"></textarea>
+        <button class="btn btn-send" onclick="sendNotice()"><i class="fa-solid fa-paper-plane"></i> 공지 발송</button>
+        <div class="hist" id="dHist"></div>
+      </div>
+    </div>
+    <!-- [K3] 질문사항 — [K5] 기본 '펼침'. 금일 질문이 바로 보여야 한다. -->
+    <div class="card" style="padding:11px 12px;">
       <div class="qa-bar open" id="qaBar" onclick="toggleQa()">
         <i class="fa-solid fa-circle-question qb-ic"></i>
         <span class="qb-t">질문사항</span>
@@ -414,32 +474,6 @@
       <div class="qa-body" id="qaBody">
         <div class="qa-head" id="dQaHead"></div>
         <div id="dQa"></div>
-      </div>
-    </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-bus"></i> 퇴교차량 현황 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 숫자를 누르면 명단</span></h3>
-      <div class="shut-grid" id="dShuttle"></div>
-    </div>
-    <div class="card">
-      <h3><i class="fa-solid fa-user-clock"></i> 외출·외박 신청자 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· 금일</span></h3>
-      <div id="dOuting"></div>
-    </div>
-    <!-- [M14] 출석부·외출외박 대장 — PC와 동일한 정식 양식 페이지(attendance_sheet/outing_ledger)를 열어 저장.
-         (기존 M11 자체 생성 PDF는 양식이 PC 대장과 달라 폐기 — 이제 복귀완료 포함 신청서·도장 출석부 그대로) -->
-    <div class="card">
-      <h3><i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· PC와 동일 양식</span></h3>
-      <div style="display:flex; gap:10px; margin-top:12px;">
-        <button class="btn" style="flex:1; background:#0d9488; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('attendance')"><i class="fa-solid fa-clipboard-user"></i> 출석부 대장</button>
-        <button class="btn" style="flex:1; background:#2563eb; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('outing')"><i class="fa-solid fa-file-signature"></i> 외출외박 대장</button>
-      </div>
-      <div style="margin-top:9px; font-size:11.5px; font-weight:700; color:#94a3b8; line-height:1.55;">복귀완료가 포함된 외출(외박) 신청서와 출석 도장이 찍힌 출석부 — PC와 동일한 정식 대장이 열립니다. 열린 화면에서 <b>PDF 저장</b>을 누르세요.</div>
-    </div>
-    <div class="card" id="dNoticeCard">
-      <h3 onclick="toggleNoticeCard()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0;"><span><i class="fa-solid fa-paper-plane"></i> 강사플랫폼 공지 발송</span><i class="fa-solid fa-chevron-down" id="dNoticeChev" style="font-size:14px;color:#94a3b8;transition:transform .22s;"></i></h3>
-      <div id="dNoticeBody" style="display:none;margin-top:13px;">
-        <textarea class="notice" id="dNotice" placeholder="교육생·강사 플랫폼에 전달할 공지를 입력하세요"></textarea>
-        <button class="btn btn-send" onclick="sendNotice()"><i class="fa-solid fa-paper-plane"></i> 공지 발송</button>
-        <div class="hist" id="dHist"></div>
       </div>
     </div>
   </div>
@@ -599,19 +633,24 @@ function openDetail(rid){
   document.body.style.overflow='hidden';
   var room=DATA[rid]||{};
   document.getElementById('dNotice').value=room.coordNotice||'';
-  // 공지발송 카드는 평시 접힘(화면에 딱 맞게) — 가로바 탭하면 펼침
-  var nb=document.getElementById('dNoticeBody'), nc=document.getElementById('dNoticeChev');
-  if(nb) nb.style.display='none'; if(nc) nc.style.transform='';
+  /* [K6] 과정을 새로 열 때마다 가로바(퇴교차량·외출외박·공지발송)는 접힌 상태로 시작한다.
+     — 앞 과정에서 펼쳐 둔 상태가 그대로 따라오면 화면이 헷갈린다. */
+  ['shut','out','notice'].forEach(function(k){
+    var bar=document.getElementById(k+'Bar'), body=document.getElementById(k+'Body');
+    if(bar) bar.classList.remove('open');
+    if(body) body.classList.remove('open');
+  });
   document.querySelector('#detailOv .ov-body') && (document.querySelector('#detailOv .ov-body').scrollTop=0);
   updateDetail();
 }
-function toggleNoticeCard(){
-  var b=document.getElementById('dNoticeBody'), c=document.getElementById('dNoticeChev');
-  if(!b) return;
-  var open=b.style.display!=='none';
-  b.style.display=open?'none':'block';
-  if(c) c.style.transform=open?'':'rotate(180deg)';
-  if(!open){ try{ document.getElementById('dNoticeCard').scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }
+/* [K6] 공통 접이식 가로바 — id 규칙: {키}Bar / {키}Body */
+function toggleBar(key){
+  var bar=document.getElementById(key+'Bar'), body=document.getElementById(key+'Body');
+  if(!bar||!body) return;
+  var open=!bar.classList.contains('open');
+  bar.classList.toggle('open', open);
+  body.classList.toggle('open', open);
+  if(open){ try{ bar.scrollIntoView({behavior:'smooth',block:'nearest'}); }catch(e){} }
 }
 function closeDetail(){
   document.getElementById('detailOv').classList.remove('open');
@@ -635,6 +674,9 @@ function updateDetail(){
     : '<div class="leader-box off"><div class="lk"><i class="fa-solid fa-crown"></i> 교육생장</div><div class="lv">지정된 교육생장 없음</div></div>';
   renderQa(room);   // [K1] 질문사항
   var sh=shuttleCount(room);
+  // [K6] 접힌 가로바에도 건수는 보이게 — 열어보지 않아도 몇 명인지 알 수 있다
+  var _sn=document.getElementById('dShutN'); if(_sn) _sn.textContent=sh.total+'명 신청';
+  var _on=document.getElementById('dOutN');  if(_on) _on.textContent='금일 '+outingsToday(room).length+'건';
   /* [J99] 숫자 칸마다 따로 눌러 그 목적지 신청자만 보게 한다.
      예전엔 어디를 눌러도 전체 명단이 떠서, 누가 오송역인지 눈으로 골라내야 했다. */
   var dSh=document.getElementById('dShuttle');
