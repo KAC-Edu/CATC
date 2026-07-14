@@ -190,6 +190,10 @@
     .qa-fltbtn{ border:1.5px solid #cbd5e1; background:#fff; color:#0f172a; border-radius:999px;
                 padding:7px 13px; font-size:12.5px; font-weight:900; display:inline-flex; align-items:center; gap:6px; }
     .qa-fltbtn.on{ background:#2563eb; border-color:#2563eb; color:#fff; }
+    /* [K26] 정렬 — 최신순 / 추천순 (PC 질문 화면과 동일) */
+    .qa-sortbtn{ border:1.5px solid #e2e8f0; background:#fff; color:#64748b; border-radius:999px;
+                 padding:7px 12px; font-size:12.5px; font-weight:900; display:inline-flex; align-items:center; gap:5px; }
+    .qa-sortbtn.on{ background:#0f172a; border-color:#0f172a; color:#fff; }
     .qa-flt-row{ display:flex; align-items:center; gap:11px; padding:13px 12px; border:1px solid #e8eef7;
                  border-radius:13px; margin-bottom:8px; font-weight:800; color:#0f172a; font-size:14px; }
     .qa-flt-row.all{ background:#f8fafc; }
@@ -692,11 +696,26 @@ function qaCard(x, seen){
     + '</div></div>';
 }
 /* 그룹 안 정렬: 고정 > 보류 > 좋아요 많은 순 > 최신 (PC와 동일) */
+/* [K26] 정렬 — 최신순 / 추천순 (PC 질문 화면과 같은 규칙)
+   어느 쪽을 골라도 📌고정 · ⚠️보류는 항상 위에 남는다(처리해야 할 것이므로).
+   고른 값은 이 브라우저에 기억한다. */
+var _qaSort=(function(){
+  try{ return localStorage.getItem('kac_qa_sort')==='like' ? 'like' : 'new'; }catch(e){ return 'new'; }
+})();
+function setQaSort(m){
+  _qaSort = (m==='like') ? 'like' : 'new';
+  try{ localStorage.setItem('kac_qa_sort', _qaSort); }catch(e){}
+  var r=DATA[curRID]; if(r) renderQa(r);
+}
 function qaSortInGroup(a,b){
   var w=function(s){ return s==='pin'?3:(s==='later'?2:(s==='normal'?1:0)); };
   var d=w(b.status)-w(a.status); if(d) return d;
-  if(b.likes!==a.likes) return b.likes-a.likes;
-  return b.timestamp-a.timestamp;
+  if(_qaSort==='like'){
+    if(b.likes!==a.likes) return b.likes-a.likes;
+    return b.timestamp-a.timestamp;
+  }
+  if(b.timestamp!==a.timestamp) return b.timestamp-a.timestamp;
+  return b.likes-a.likes;
 }
 
 function renderQa(room){
@@ -718,6 +737,9 @@ function renderQa(room){
       '<button class="qa-fltbtn'+(fltOn?' on':'')+'" onclick="openQaFilter()">'
     +   '<i class="fa-solid fa-filter"></i> '+(fltOn ? ('필터 '+_qaPick.length+'명') : '필터')
     + '</button>'
+    /* [K26] 정렬 — 최신순 / 추천순 */
+    + '<button class="qa-sortbtn'+(_qaSort==='new'?' on':'')+'" onclick="setQaSort(\'new\')"><i class="fa-regular fa-clock"></i> 최신순</button>'
+    + '<button class="qa-sortbtn'+(_qaSort==='like'?' on':'')+'" onclick="setQaSort(\'like\')"><i class="fa-solid fa-thumbs-up"></i> 추천순</button>'
     + (unread>0 ? '<span class="qa-newbadge">새 질문 '+unread+'</span><button class="qa-readbtn" onclick="qaMarkAllRead()">모두 확인</button>'
                 : '<span style="font-size:12px;font-weight:800;color:#94a3b8;">새 질문 없음</span>');
 
