@@ -616,86 +616,6 @@ var COORD_MAP={};
 var RANK_RE=/\s*(차장|부장|팀장|실장|원장|과장|대리|주임|사원|교수)\s*$/;
 function coordFull(nm){ nm=(''+(nm==null?'':nm)).trim(); if(!nm) return ''; if(RANK_RE.test(nm)) return nm; return COORD_MAP[nm]||nm; }
 
-/* ══ [K22] 홈 블록 순서 직접 바꾸기 ═══════════════════════════════════
-   [순서 변경] → 편집 모드 → 블록을 끌어서 이동 → [완료]
-   순서는 이 기기(localStorage)에 저장되므로 다음에 열어도 그대로다.
-   서버에 저장하지 않는 이유: 운영부 여러 명이 각자 다른 순서를 원할 수 있고,
-   한 사람이 바꾸면 다른 사람 화면까지 바뀌는 게 더 혼란스럽기 때문.
-   ═══════════════════════════════════════════════════════════════════ */
-var SEC_KEY='kac_coord_sec_order';
-var _secEdit=false;
-
-function loadSecOrder(){
-  var host=document.getElementById('secHost'); if(!host) return;
-  var saved;
-  try{ saved=JSON.parse(localStorage.getItem(SEC_KEY)||'null'); }catch(e){ saved=null; }
-  if(!Array.isArray(saved) || !saved.length) return;            // 저장된 게 없으면 기본 순서 그대로
-  saved.forEach(function(key){
-    var el=host.querySelector('.sec[data-sec="'+key+'"]');
-    if(el) host.appendChild(el);                                 // 저장된 순서대로 뒤에 붙여 재배치
-  });
-}
-function saveSecOrder(){
-  var host=document.getElementById('secHost'); if(!host) return;
-  var order=[].slice.call(host.querySelectorAll('.sec[data-sec]')).map(function(e){ return e.getAttribute('data-sec'); });
-  try{ localStorage.setItem(SEC_KEY, JSON.stringify(order)); }catch(e){}
-}
-function toggleSecEdit(){
-  _secEdit=!_secEdit;
-  document.body.classList.toggle('sec-edit', _secEdit);
-  var btn=document.getElementById('secEditBtn');
-  if(btn) btn.innerHTML = _secEdit
-    ? '<i class="fa-solid fa-check"></i> 완료'
-    : '<i class="fa-solid fa-arrows-up-down"></i> 순서 변경';
-  if(!_secEdit) saveSecOrder();
-}
-
-/* 손가락으로 끌어서 옮기기 — 편집 모드에서만 동작 */
-(function(){
-  var drag=null, startY=0, host=null;
-
-  function secUnder(y){
-    var list=[].slice.call(host.querySelectorAll('.sec[data-sec]'));
-    for(var i=0;i<list.length;i++){
-      if(list[i]===drag) continue;
-      var r=list[i].getBoundingClientRect();
-      if(y >= r.top && y <= r.bottom) return { el:list[i], before: y < (r.top + r.height/2) };
-    }
-    return null;
-  }
-  function onDown(e){
-    if(!_secEdit) return;
-    var sec=e.target.closest ? e.target.closest('.sec[data-sec]') : null;
-    if(!sec) return;
-    host=document.getElementById('secHost'); if(!host) return;
-    drag=sec; startY=(e.touches?e.touches[0].clientY:e.clientY);
-    drag.classList.add('dragging');
-    if(e.cancelable) e.preventDefault();               // 편집 중 스크롤 방지(끌기와 충돌)
-  }
-  function onMove(e){
-    if(!drag) return;
-    var y=(e.touches?e.touches[0].clientY:e.clientY);
-    var hit=secUnder(y);
-    if(hit){
-      if(hit.before) host.insertBefore(drag, hit.el);
-      else host.insertBefore(drag, hit.el.nextSibling);
-    }
-    if(e.cancelable) e.preventDefault();
-  }
-  function onUp(){
-    if(!drag) return;
-    drag.classList.remove('dragging');
-    drag=null;
-    saveSecOrder();                                     // 놓는 즉시 저장
-  }
-  document.addEventListener('touchstart', onDown, {passive:false});
-  document.addEventListener('touchmove',  onMove, {passive:false});
-  document.addEventListener('touchend',   onUp);
-  document.addEventListener('mousedown',  onDown);
-  document.addEventListener('mousemove',  onMove);
-  document.addEventListener('mouseup',    onUp);
-})();
-
 /* 시계 */
 function tickClock(){
   var d=new Date();
@@ -708,9 +628,6 @@ function tickClock(){
   if(el2) el2.innerHTML=txt;
 }
 setInterval(tickClock,1000); tickClock();
-
-/* [K22] 저장해 둔 블록 순서를 화면에 적용 (처음 여는 기기면 기본 순서 그대로) */
-try{ loadSecOrder(); }catch(e){}
 
 /* 운영일(09시 KST) 윈도우 — 09:00 KST == 00:00 UTC */
 function opWindow(){ var dayMs=86400000; var start=Math.floor(Date.now()/dayMs)*dayMs; return [start, start+dayMs]; }
