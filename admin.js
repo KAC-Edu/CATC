@@ -6200,14 +6200,40 @@ loadShuttleData: function() {
         if(!tbody) return;
 
         const merged = kacShuttleMerge(_sbReq, _sbStu);
-        const items = merged.items.sort((a,b) => (a.timestamp||0) - (b.timestamp||0));
-        const nonApp = merged.nonApp;
         const counts = merged.counts;
+
+        /* [J99] 정렬을 '신청한 순서(시각)'에서 '이름 ㄱ~ㅎ 순'으로 바꿨다.
+           명단에서 사람을 찾는 화면이므로, 언제 눌렀는지보다 이름으로 찾는 게 빠르다.
+           (이름이 같으면 먼저 신청한 사람이 위) */
+        const _byName = (a, b) =>
+            String(a.name || '').localeCompare(String(b.name || ''), 'ko') || ((a.timestamp || 0) - (b.timestamp || 0));
+
+        /* [J99] 목적지 필터 — 상단 숫자 아래 체크박스. 아무것도 체크 안 하면 전체를 보여준다. */
+        const _ck = (id) => { const e = document.getElementById(id); return !!(e && e.checked); };
+        const _flt = { car:_ck('flt-car'), osong:_ck('flt-osong'), terminal:_ck('flt-terminal'), airport:_ck('flt-airport') };
+        const _fltOn = _flt.car || _flt.osong || _flt.terminal || _flt.airport;
+        const _destOf = (it) => {
+            const t = it.type, tx = it.typeText || '';
+            if (t === 'osong'    || tx.includes('오송'))   return 'osong';
+            if (t === 'terminal' || tx.includes('터미널')) return 'terminal';
+            if (t === 'airport'  || tx.includes('공항'))   return 'airport';
+            return 'car';
+        };
+
+        let items  = merged.items.slice().sort(_byName);
+        let nonApp = merged.nonApp.slice().sort((a, b) => String(a).localeCompare(String(b), 'ko'));
+        if (_fltOn) {
+            items  = items.filter(it => _flt[_destOf(it)]);
+            // 미선택(자차 간주)은 '자차'를 체크했을 때만 보인다 — 상단 자차 숫자에 포함되는 인원이므로
+            if (!_flt.car) nonApp = [];
+        }
 
         tbody.innerHTML = "";
 
         if (items.length === 0 && nonApp.length === 0) {
-            tbody.innerHTML = "<tr><td colspan='6' style='padding:80px 0; color:#94a3b8; text-align:center; font-weight:600;'>차량 신청 내역이 없습니다.</td></tr>";
+            tbody.innerHTML = _fltOn
+                ? "<tr><td colspan='6' style='padding:80px 0; color:#94a3b8; text-align:center; font-weight:600;'>선택한 목적지를 신청한 교육생이 없습니다.<br><small style='font-weight:500;'>위 체크박스를 해제하면 전체 명단이 나옵니다.</small></td></tr>"
+                : "<tr><td colspan='6' style='padding:80px 0; color:#94a3b8; text-align:center; font-weight:600;'>차량 신청 내역이 없습니다.</td></tr>";
         } else {
             items.forEach((item, idx) => {
                 let color = "#64748b"; // 기본 회색 (자차)
@@ -6267,6 +6293,8 @@ loadShuttleData: function() {
         }
         window._shuttleAdminCounts = counts; // 최신 counts 캐시
     };
+    // [J99] 체크박스를 눌렀을 때 다시 그릴 수 있도록 렌더 함수를 밖으로 꺼내 둔다
+    window._shuttleRerender = _renderShuttleBoard;
 
     state.shuttleRequestsRef.on('value', snap => {
         if (state.room !== activeRoom) return;
@@ -17249,6 +17277,15 @@ var kacPlanLink = {
     }
 };
 try { window.kacPlanLink = kacPlanLink; } catch (e) {}
+
+/* [J99] 퇴교 수송 현황 — 목적지 체크박스를 누르면 명단을 다시 그린다.
+   상단 숫자(자차·오송역·터미널·공항·총 신청)는 필터와 무관하게 '전체 기준'을 유지한다.
+   → 전체가 몇 명인지 보면서, 아래 명단만 골라 보는 방식. */
+ui.applyShuttleFilter = function () {
+    try {
+        if (typeof window._shuttleRerender === 'function') window._shuttleRerender();
+    } catch (e) { try { console.warn('[수송 필터]', e); } catch (_) {} }
+};
 
 /* ══════════════════════════════════════════════════════════════════════
    [J96] 좌측 상단 'KAC Training Platform' = 상황에 맞는 뒤로가기
