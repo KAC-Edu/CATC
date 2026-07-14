@@ -83,8 +83,13 @@
       --shadow-lg:0 10px 28px rgba(37,99,235,.16);
     }
     html,body{ margin:0; padding:0; height:100%; overscroll-behavior:none; }
-    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; padding-bottom:calc(34px + env(safe-area-inset-bottom)); letter-spacing:-.2px; overscroll-behavior-y:none; }
-    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; background:linear-gradient(180deg,#f7f9fd 0%,#f4f7fc 220px); }
+    body{ font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; letter-spacing:-.2px; overscroll-behavior-y:none; }
+    /* [K15] 하단 여백은 .wrap 에 준다.
+       body 는 height:100% + box-sizing:border-box 라서, body 에 padding 을 줘도
+       안쪽으로 먹혀 문서가 길어지지 않는다 → 스크롤이 안 생겨 마지막 블록이 잘렸다.
+       (실측: body padding 을 300px 로 줘도 문서 높이 888px 그대로였음) */
+    .wrap{ max-width:600px; margin:0 auto; min-height:100dvh; background:linear-gradient(180deg,#f7f9fd 0%,#f4f7fc 220px);
+           padding-bottom:calc(130px + env(safe-area-inset-bottom)); box-sizing:border-box; }
 
     /* 헤더 */
     /* [K8] 상단바를 강사 모바일과 같은 구성으로 — 제목줄(row1) 아래에 히어로(요약) 블록 */
