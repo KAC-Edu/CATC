@@ -891,7 +891,7 @@ function renderHome(){
         +'<span class="cb-live"><span class="dot"></span> 진행중</span></div>'
       +'<div class="cb-name">'+h(s.courseName||'과정명 미설정')+'</div>'
       +'<div class="cb-meta">'
-        +'<span><i class="fa-solid fa-calendar-days"></i>'+h(s.period||'-')+'</span>'
+        +'<span><i class="fa-solid fa-calendar-days"></i>'+h(kacPeriod(s.period))+'</span>'   /* [K20] 2026.07.13~2026.07.24 */
         +'<span><i class="fa-solid fa-users"></i>'+cnt+'명</span>'
         +'<span><i class="fa-solid fa-user-tie"></i>'+h(prof)+'</span>'
       +'</div>'
@@ -946,7 +946,7 @@ function renderDetail(){
     +'<div class="mon-cell'+(ou>0?' hot':'')+'"><div class="mk">외출·외박</div><div class="mv">'+ou+'</div></div>';
   setT('dCourse',s.courseName||'-');
   document.getElementById('dInfo').innerHTML=
-     '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:13px;">'+h(s.period||'-')+'</div></div>'
+     '<div class="info-item"><div class="k">교육기간</div><div class="v" style="font-size:13px;">'+h(kacPeriod(s.period))+'</div></div>'   /* [K20] */
     +'<div class="info-item"><div class="k">강의실</div><div class="v" style="font-size:13px;">'+h(s.roomDetailName||s.roomDetail||'-')+'</div></div>'
     +'<div class="info-item"><div class="k">담임교수</div><div class="v">'+h(prof)+'</div></div>'
     +'<div class="info-item"><div class="k">교육인원</div><div class="v">'+count+'명</div></div>';
