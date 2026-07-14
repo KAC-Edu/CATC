@@ -486,14 +486,22 @@
     </div>
     <!-- [K6] 순서: 과정정보 → 출석부·외출외박 대장 → 퇴교차량 → 외출·외박 신청자 → 공지발송 → 질문사항
          (퇴교차량·외출외박·공지발송은 가로바로 접어 둔다. 질문사항은 기본 펼침) -->
-    <!-- [M14] 출석부·외출외박 대장 — PC와 동일한 정식 양식 페이지(attendance_sheet/outing_ledger)를 열어 저장. -->
-    <div class="card">
-      <h3><i class="fa-solid fa-folder-open"></i> 출석부 · 외출외박 대장 <span style="font-weight:700;color:#94a3b8;font-size:12px;">· PC와 동일 양식</span></h3>
-      <div style="display:flex; gap:10px; margin-top:12px;">
-        <button class="btn" style="flex:1; background:#0d9488; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('attendance')"><i class="fa-solid fa-clipboard-user"></i> 출석부 대장</button>
-        <button class="btn" style="flex:1; background:#2563eb; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('outing')"><i class="fa-solid fa-file-signature"></i> 외출외박 대장</button>
+    <!-- [K21] 출석부·외출외박 대장 — 가로바를 눌러야 내려온다 (자주 쓰는 게 아니라 평소엔 접어 둔다)
+         [M14] PC와 동일한 정식 양식 페이지(attendance_sheet/outing_ledger)를 열어 저장. -->
+    <div class="card" style="padding:11px 12px;">
+      <div class="mbar" id="ledgerBar" onclick="toggleBar('ledger')">
+        <i class="fa-solid fa-folder-open mb-ic"></i>
+        <span class="mb-t">출석부 · 외출외박 대장</span>
+        <span class="mb-n">PC와 동일 양식</span>
+        <i class="fa-solid fa-chevron-down mb-chev"></i>
       </div>
-      <div style="margin-top:9px; font-size:11.5px; font-weight:700; color:#94a3b8; line-height:1.55;">복귀완료가 포함된 외출(외박) 신청서와 출석 도장이 찍힌 출석부 — PC와 동일한 정식 대장이 열립니다. 열린 화면에서 <b>PDF 저장</b>을 누르세요.</div>
+      <div class="mbody" id="ledgerBody">
+        <div style="display:flex; gap:10px;">
+          <button class="btn" style="flex:1; background:#0d9488; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('attendance')"><i class="fa-solid fa-clipboard-user"></i> 출석부 대장</button>
+          <button class="btn" style="flex:1; background:#2563eb; color:#fff; font-weight:900; padding:14px 10px; border:none; border-radius:12px; font-size:14px;" onclick="openLedgerPageM('outing')"><i class="fa-solid fa-file-signature"></i> 외출외박 대장</button>
+        </div>
+        <div style="margin-top:9px; font-size:11.5px; font-weight:700; color:#94a3b8; line-height:1.55;">복귀완료가 포함된 외출(외박) 신청서와 출석 도장이 찍힌 출석부 — PC와 동일한 정식 대장이 열립니다. 열린 화면에서 <b>PDF 저장</b>을 누르세요.</div>
+      </div>
     </div>
     <!-- [K6] 퇴교차량 — 가로바 -->
     <div class="card" style="padding:11px 12px;">
@@ -533,16 +541,17 @@
         <div class="hist" id="dHist"></div>
       </div>
     </div>
-    <!-- [K3] 질문사항 — [K5] 기본 '펼침'. 금일 질문이 바로 보여야 한다. -->
+    <!-- [K21] 운영부는 기본 '접힘' — 질문 목록이 늘 펼쳐져 있으면 화면이 산만하다.
+         (강사 모바일은 질문을 바로 확인해야 하므로 거긴 펼침 그대로) -->
     <div class="card" style="padding:11px 12px;">
-      <div class="qa-bar open" id="qaBar" onclick="toggleQa()">
+      <div class="qa-bar" id="qaBar" onclick="toggleQa()">
         <i class="fa-solid fa-circle-question qb-ic"></i>
         <span class="qb-t">질문사항</span>
         <span class="qb-n" id="dQaCnt">0건</span>
         <span id="dQaNew"></span>
         <i class="fa-solid fa-chevron-down qb-chev"></i>
       </div>
-      <div class="qa-body" id="qaBody">
+      <div class="qa-body" id="qaBody" style="display:none;">
         <div class="qa-head" id="dQaHead"></div>
         <div id="dQa"></div>
       </div>
@@ -747,11 +756,16 @@ function openDetail(rid){
   document.getElementById('dNotice').value=room.coordNotice||'';
   /* [K6] 과정을 새로 열 때마다 가로바(퇴교차량·외출외박·공지발송)는 접힌 상태로 시작한다.
      — 앞 과정에서 펼쳐 둔 상태가 그대로 따라오면 화면이 헷갈린다. */
-  ['shut','out','notice'].forEach(function(k){
+  ['ledger','shut','out','notice'].forEach(function(k){
     var bar=document.getElementById(k+'Bar'), body=document.getElementById(k+'Body');
     if(bar) bar.classList.remove('open');
     if(body) body.classList.remove('open');
   });
+  /* [K21] 질문사항도 접힌 상태로 시작 */
+  _qaOpen=false;
+  var _qb=document.getElementById('qaBar'), _qy=document.getElementById('qaBody');
+  if(_qb) _qb.classList.remove('open');
+  if(_qy) _qy.style.display='none';
   document.querySelector('#detailOv .ov-body') && (document.querySelector('#detailOv .ov-body').scrollTop=0);
   updateDetail();
 }
@@ -834,8 +848,8 @@ function updateDetail(){
    · 정렬: 최신순(기본) / 좋아요순
    운영부는 읽기 전용이다 (질문 삭제·답변은 강사 PC에서) */
 function qaEsc(s){ return (typeof esc==='function'?esc:h)(s); }
-/* [K5] 금일 질문은 처음부터 펼쳐 보여준다 (가로바는 '접기'용으로 남긴다) */
-var _qaOpen=true;
+/* [K21] 운영부는 기본 접힘 — 가로바를 눌러야 질문이 펼쳐진다 */
+var _qaOpen=false;
 /* [K5] 강사 필터 — 칩을 눈으로 훑는 방식은 사람이 많아지면 못 찾는다.
    [필터] 버튼 → 체크박스로 고르는 방식. 빈 배열 = 필터 없음 = 전체 표시(기본값). */
 var _qaPick=[];
