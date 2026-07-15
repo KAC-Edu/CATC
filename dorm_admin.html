@@ -5122,6 +5122,19 @@
             const isInst = (token && token.indexOf('inst_') === 0) || (s.course === '강사');
             const idTxt = (s.empNo && s.empNo !== '-') ? `(${s.empNo})` : '';
             if (!confirm(`${s.name}${idTxt}님을 이 주차 배정에서 삭제할까요?\n(자동배정을 다시 실행해도 이 인원은 다시 배정되지 않습니다)`)) return;
+            /* [K30] 교육생을 명단(총원)에서 빼는 경우 사유를 받아 기록한다(강사도 알 수 있게).
+               강사·외부(숙박만)는 총원과 무관하므로 사유를 묻지 않는다. */
+            var _k30DelReason = '';
+            if(!isInst){
+                _k30DelReason = prompt(
+                    '📝 "' + s.name + '" 님을 명단에서 제외하는 사유를 적어 주세요.\n' +
+                    '(예: 퇴소 / 타지역 합격 / 개인사정 / 명단 정정 등)\n\n' +
+                    '※ 이 사유는 강사플랫폼에도 표시됩니다.',
+                    '퇴소'
+                );
+                if(_k30DelReason === null) return;               // 취소하면 삭제 자체를 멈춤
+                _k30DelReason = String(_k30DelReason||'').trim() || '(사유 미기재)';
+            }
             const wk = viewAssign.weekKey;
             const ops = [ db.ref(`system/dorm/assignments/${wk}/students/${token}`).remove() ];
             if (isInst) ops.push(db.ref(`system/dorm/instructors/${wk}/${token}`).remove().catch(() => {}));
@@ -5134,7 +5147,10 @@
             Promise.all(ops)
                 .then(() => {
                     delete viewAssign.students[token];
-                    if(!isInst){ _dormSyncRoster(s.course, 'remove', { name:s.name }); }
+                    if(!isInst){
+                        _dormSyncRoster(s.course, 'remove', { name:s.name });
+                        try { kacLogRosterChange('remove', s.course, s.name, _k30DelReason, (s.room||'')); } catch(_){}  // [K30]
+                    }
                     showToast(`🗑️ ${s.name} 삭제 완료 - 자동배정에서도 제외됩니다`);
                     if (typeof renderBoard === 'function') renderBoard(true);
                     if (currentBoardTab === 'map' && typeof renderBoardMap === 'function') renderBoardMap();
@@ -5293,6 +5309,27 @@
             if(rid){ var names = Array.from(new Set(list.map(function(t){ return String(t.name||'').trim(); }).filter(Boolean))); await db.ref('courses/'+rid+'/expectedStudents').set(names).catch(function(){}); }
           }catch(e){ console.warn('[STEP4->명단 동기화]', e); }
         }
+        /* [K30] 교육인원 변동 사유를 기록한다.
+           위치: system/dorm/rosterChanges/byCourse/{과정명}/{id}
+             - system/dorm 은 로그인 없이도 쓸 수 있는 노드라 지원부 플랫폼에서 바로 기록된다.
+             - 과정명으로 키를 잡아 강사플랫폼(과정명 기준)이 그대로 읽어 '왜 인원이 바뀌었는지' 표시.
+           강사플랫폼은 건드리지 않고, 이 데이터만 남긴다(강사쪽 표시는 점심에 별도 반영). */
+        function kacLogRosterChange(action, course, name, reason, room){
+            try{
+                var key = String(course||'미지정').replace(/[.#$\[\]\/]/g,'_').slice(0,80);
+                var id  = Date.now() + '_' + Math.random().toString(36).slice(2,6);
+                db.ref('system/dorm/rosterChanges/byCourse/'+key+'/'+id).set({
+                    action: action,                 // 'add' | 'remove'
+                    name: String(name||'').trim(),
+                    course: String(course||''),
+                    reason: String(reason||'(사유 미기재)').trim(),
+                    room: String(room||''),
+                    by: '지원부',
+                    at: Date.now()
+                });
+            }catch(e){ console.warn('[K30] 변동 로그 실패', e); }
+        }
+
         async function confirmStudentAdd() {
             const name = (document.getElementById('stuName').value || '').trim();
             const empNo = (document.getElementById('stuEmpNo').value || '').trim();
@@ -5307,6 +5344,10 @@
                총원을 맞추느라 다른 교육생이 밀려나는 일이 생길 수 있다(실제 사례 발생).
                강사·외부 인원이면 이 버튼이 아니라 [강사·외부 숙박 추가]를 써야 한다.
                → 추가 직전에 한 번 물어, 잘못 누르는 것 자체를 막는다. */
+            /* [K30] 교육인원 변동 사유 기록.
+               교육생을 명단에 추가하면 총원이 바뀌고, 그 사유(추가합격 등)를 강사도 알아야 한다.
+               ① 강사 오추가 방지 확인 → ② 사유 입력 → ③ 추가 성공 시 변동 로그에 기록. */
+            var _k30Reason = '';
             if (name && !window._k27Confirmed) {
                 const ok = confirm(
                     '👤 "' + name + '" 님을 교육생으로 추가합니다.\n\n' +
@@ -5317,6 +5358,15 @@
                     '교육생이 맞으면 [확인]을 누르세요.'
                 );
                 if (!ok) return;
+                // [K30] 사유 입력 — 강사플랫폼에도 이 사유가 표시됩니다.
+                _k30Reason = prompt(
+                    '📝 "' + name + '" 님을 추가하는 사유를 적어 주세요.\n' +
+                    '(예: 추가합격 / 명단 누락 정정 / 재입교 등)\n\n' +
+                    '※ 이 사유는 강사플랫폼에도 표시되어, 왜 인원이 바뀌었는지 알 수 있게 합니다.',
+                    '추가합격'
+                );
+                if (_k30Reason === null) return;                 // 취소하면 추가 자체를 멈춤
+                _k30Reason = String(_k30Reason || '').trim() || '(사유 미기재)';
             }
             window._k27Confirmed = false;
             const wk = viewAssign.weekKey;
@@ -5336,6 +5386,8 @@
                 await db.ref(`system/dorm/assignments/${wk}/students/${token}`).update(rec);
                 await _clearDeletedMark(wk, name, empNo);
                 _dormSyncRoster(course, 'add', { name:name, empNo:(empNo||''), dept:(dept||''), gender:gender });
+                /* [K30] 변동 사유 로그 — system/dorm 아래(로그인 없이 쓰기 가능) + 강사플랫폼이 읽는다 */
+                try { kacLogRosterChange('add', course, name, _k30Reason, (dest.building+' '+dest.no)); } catch(_){}
                 if (!viewAssign) viewAssign = { weekKey: wk, students: {} };
                 viewAssign.weekKey = wk;
                 if (!viewAssign.students) viewAssign.students = {};
