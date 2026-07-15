@@ -405,9 +405,27 @@ async function init() {
          데이터가 '실제로 바뀐 경우'에만 다시 그린다.                                  */
     let _stuRaw = null, _attRaw = null, _lastKey = '';
 
+    /* [M22] 깜빡임(계속 다시 그려짐) 근본 수정.
+       students 노드에는 각 교육생의 lastSeen(마지막 접속 시각)·isOnline 이 들어 있고,
+       교육 중 학생들이 앱을 켜두면 이 값이 수시로 갱신된다.
+       예전 중복방지 해시는 students 를 통째로(JSON.stringify) 비교해서,
+       lastSeen 이 조금만 바뀌어도 '내용이 달라졌다'고 판단 → 표를 계속 다시 그렸다.
+       출석부가 실제로 쓰는 건 '이름'뿐(출결은 attendance 쪽)이므로,
+       비교 키에서 접속 관련 잡음 필드를 빼고 '이름 목록'만 본다. */
+    const _stuFingerprint = (raw) => {
+        try {
+            return Object.keys(raw || {}).map(function(k){
+                var s = raw[k] || {};
+                var nm = String(s.name || '').trim();
+                if (!nm || nm === 'undefined') return '';
+                return nm + '_' + String(s.phone || '0000').trim();   // 출석부가 쓰는 값(이름·전화)만
+            }).filter(Boolean).sort().join('|');
+        } catch(e) { return JSON.stringify(raw || {}); }
+    };
+
     const _paint = () => {
         if (_stuRaw === null || _attRaw === null) return;      // 둘 다 도착해야 그린다
-        const key = JSON.stringify(_stuRaw) + '|' + JSON.stringify(_attRaw);
+        const key = _stuFingerprint(_stuRaw) + '|' + JSON.stringify(_attRaw);
         if (key === _lastKey) return;                          // 내용 그대로면 다시 안 그림 (깜빡임 방지)
         _lastKey = key;
 
