@@ -5994,7 +5994,16 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
             tbody.innerHTML = "";
             let arrivedCount = 0;
 
-            combinedNames.forEach((name, idx) => {
+            // [K33] 명단 사람(위) / 명단 외 QR·자체 입교자(아래)를 구분선으로 나눠 배치
+            const onPlanNames  = combinedNames.filter(n => expectedNames.includes(String(n).trim()));
+            const offPlanNames = combinedNames.filter(n => !expectedNames.includes(String(n).trim())); // 전부 QR·자체 입교자
+            const orderedNames = [...onPlanNames, ...offPlanNames];
+
+            orderedNames.forEach((name, idx) => {
+                    // 명단 외 입교자 구간이 시작되는 지점에 구분선 한 줄
+                    if (idx === onPlanNames.length && offPlanNames.length) {
+                        tbody.innerHTML += `<tr class="roster-divider"><td colspan="5" style="padding:9px 14px;background:#f8fafc;border-top:2px dashed #cbd5e1;color:#64748b;font-size:12px;font-weight:800;text-align:left;">──  명단 외 입교자 (QR·자체 입장) — '명단 포함'을 체크하면 총원에 합산됩니다  ──</td></tr>`;
+                    }
                     const sList = actualStudents.filter(student => student.name === name);
                     const isArrived = sList.length > 0;
                     const studentData = isArrived ? sList[0] : null;
