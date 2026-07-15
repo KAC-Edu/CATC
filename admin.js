@@ -3240,7 +3240,8 @@ _syncOpsStuRow: function(room) {
         document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = arrivedCount; });
         document.querySelectorAll('.opsStuSub').forEach(function(e){
             if(_plan > 0){
-                e.textContent = '입교율 ' + percent + '%';
+                // [K31] 66(명단)과 65(입교완료)가 헷갈리지 않도록 '입교완료/명단'을 함께 표기
+                e.textContent = '입교완료 ' + arrivedOnPlan + '/' + _plan + '명 · ' + percent + '%';
                 e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
             } else {
                 e.textContent = '예정명단 없음';
