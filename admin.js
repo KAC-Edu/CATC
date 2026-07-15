@@ -3092,23 +3092,31 @@ loadDashboardStats: function() {
     refs.expected.on('value', async expSnap => {
         if (state.room !== room) return;
         let _names = expSnap.val() || [];
-        // [분모 정합] 지원부 명단(과정명 매칭)도 합산 → 예정명단이 비어 있어도 전체 인원(분모) 정확
+        // [K32-딜레이] 예정명단만으로 '즉시' 먼저 반영 → 지원부(생활관) 명단 fetch를 기다리며 "입교 인원 없음"이 뜨는 지연 제거
+        _expectedNamesCache = Array.isArray(_names) ? _names.slice() : Object.values(_names || {});
+        state._dashExpectedCache = _expectedNamesCache;
+        ui._syncOpsStuRow(room);
+        ui._syncOpsOtpRow(room);
+        firebase.database().ref(`courses/${room}/students`).once('value', snap => { recalcTotal(snap.val() || {}); });
+        // [분모 정합] 지원부 명단(과정명 매칭)도 합산 → 예정명단이 비어 있어도 전체 인원(분모) 정확 (비동기로 정밀 갱신)
         try { const _rn = await ui._gatherRosterNames(room); if (_rn && _rn.length) _names = Array.from(new Set([..._names, ..._rn])); } catch(e){}
         if (state.room !== room) return;
         _expectedNamesCache = _names;
         state._dashExpectedCache = _names;           // 대시보드 '수강생 현황' 줄 계산용
         ui._syncOpsStuRow(room);
+        ui._syncOpsOtpRow(room);
         firebase.database().ref(`courses/${room}/students`).once('value', snap => {
             recalcTotal(snap.val() || {});
         });
     });
 
-    // [K32] '명단 포함' 체크(rosterInclude)가 바뀌면 총원·입교율을 즉시 다시 계산한다.
+    // [K32] '명단 포함' 체크(rosterInclude)가 바뀌면 총원·입교율·출석률을 즉시 다시 계산한다.
     refs.include.on('value', incSnap => {
         if (state.room !== room) return;
         state._rosterIncludeCache = incSnap.val() || {};
         try { recalcTotal(state._dashStudentsCache || {}); } catch(e){}
         try { ui._syncOpsStuRow(room); } catch(e){}
+        try { ui._syncOpsOtpRow(room); } catch(e){}
     });
 
     // [본 과정 수강생(예정)] 수강생현황과 100% 동일한 로직을 인라인으로 직접 실행 — 리스너/캐시/메서드 의존 없이 무조건 표시
