@@ -979,7 +979,7 @@ function renderDetail(){
   document.getElementById('dMon').innerHTML=
      '<div class="mon-cell"><div class="mk">수강생</div><div class="mv">'+count+'</div></div>'
     +'<div class="mon-cell'+(q>0?' hot':'')+'"><div class="mk">Q&amp;A 질문</div><div class="mv">'+q+'</div></div>'
-    +'<div class="mon-cell"><div class="mk">셔틀신청</div><div class="mv">'+sh.bus+'</div></div>'   /* [K7] 버스 이용 인원 */
+    +'<div class="mon-cell"><div class="mk">셔틀신청<br><span style="font-size:8.5px;color:#94a3b8;font-weight:700;">자차 제외</span></div><div class="mv">'+sh.bus+'</div></div>'   /* [K7] 버스 이용 인원(자차 제외) */
     +'<div class="mon-cell'+(ou>0?' hot':'')+'"><div class="mk">외출·외박</div><div class="mv">'+ou+'</div></div>';
   setT('dCourse',s.courseName||'-');
   document.getElementById('dInfo').innerHTML=
