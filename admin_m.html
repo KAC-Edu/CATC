@@ -300,7 +300,13 @@
     .mon-cell .mk{ font-size:10.5px; font-weight:800; color:#64748b; margin-bottom:5px; word-break:keep-all; }
     .mon-cell .mv{ font-size:21px; font-weight:950; color:#1e293b; }
     .mon-cell.hot{ background:#fff1f2; border-color:#fecdd3; } .mon-cell.hot .mv{ color:#e11d48; }
-    @media(max-width:380px){ .mon-grid{ grid-template-columns:repeat(2,1fr); } }
+    /* 좁은 화면에서도 수강생·질문·셔틀신청·외출외박을 한 줄(좌우)로 유지 — 여백·글자만 줄여서 4칸을 맞춘다 */
+    @media(max-width:380px){
+      .mon-grid{ grid-template-columns:repeat(4,1fr); gap:5px; }
+      .mon-cell{ padding:9px 2px; }
+      .mon-cell .mk{ font-size:9px; }
+      .mon-cell .mv{ font-size:17px; }
+    }
   </style>
   <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
   <link rel="stylesheet" href="kac-tokens.css?v=20260622">
@@ -923,7 +929,7 @@ function renderHome(){
       +'</div>'
       +'<div class="cb-badges">'
         +'<span class="cbadge'+(q>0?' hot':'')+'"><i class="fa-solid fa-comment-dots"></i> 질문 '+q+'</span>'
-        +'<span class="cbadge"><i class="fa-solid fa-bus"></i> 셔틀 '+sh.bus+'</span>'   /* [K7] 실제 버스 이용 인원(자차 제외) */
+        +'<span class="cbadge"><i class="fa-solid fa-bus"></i> 셔틀 '+sh.bus+'<span style="font-size:9px;color:#94a3b8;font-weight:700;margin-left:3px;">자차제외</span></span>'   /* [K7] 실제 버스 이용 인원(자차 제외) */
         +'<span class="cbadge'+(ou>0?' hot':'')+'"><i class="fa-solid fa-user-clock"></i> 외출 '+ou+'</span>'
       +'</div>'
       +'<i class="fa-solid fa-chevron-right cb-arrow"></i></div>';
