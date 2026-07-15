@@ -3181,7 +3181,7 @@ function setupAcc(btn){
     var shuttle=num(document.getElementById('dashShuttleTotal'));
     var action=num(document.getElementById('dashActionCount'));
     var html='<span class="dts-label">오늘 한눈에</span>';
-    html+=chip('fa-user-graduate','#2563eb','수강생',(students==null?'-':students)+'명',false,'students');
+    html+=chip('fa-user-graduate','#2563eb','수강생(명단)',(students==null?'-':students)+'명',false,'students');
     html+=chip('fa-comment-dots','#3b82f6','Q&A',(qa==null?'-':qa)+'건',qa>0,'qa');
     html+=chip('fa-bus','#0ea5e9','셔틀',(shuttle==null?'-':shuttle)+'명',shuttle>0,'shuttle');
     if(action>0) html+=chip('fa-person-walking-arrow-right','#f43f5e','외출·외박',action+'명',true,'admin-action');
