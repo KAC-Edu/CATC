@@ -1799,6 +1799,24 @@ toggleLeader: function(token, currentName) {
         });
     },
 
+    /* [K32] 명단 외(QR·자체) 입교자를 '명단(총원)'에 포함/제외 토글.
+       체크 → courses/{room}/rosterInclude/{이름} 기록 → 총원·입교율에 합산.
+       해제 → 삭제 → 구경꾼으로 제외(기본값). */
+    toggleRosterInclude: function(rawName, checked) {
+        if(state.isObserver) { ui.showAlert("👁️ 옵저버 모드에서는 변경할 수 없습니다."); return; }
+        if(!state.room) return;
+        let name = rawName; try { name = decodeURIComponent(rawName); } catch(e){}
+        const key = String(name).trim().replace(/[.#$\[\]\/]/g,'_');
+        if(!key) return;
+        const ref = firebase.database().ref(`courses/${state.room}/rosterInclude/${key}`);
+        if(checked){
+            ref.set({ name: String(name).trim(), by: '강사', at: firebase.database.ServerValue.TIMESTAMP })
+               .then(()=> ui.showAlert(`✅ [${name}] 님을 명단(총원)에 포함했습니다.`));
+        } else {
+            ref.remove().then(()=> ui.showAlert(`ℹ️ [${name}] 님을 명단에서 제외했습니다(구경꾼).`));
+        }
+    },
+
     downloadStudentSample: function() {
         const content = "홍길동\n김철수\n이영희\n박사임";
         const blob = new Blob([content], { type: "text/plain" });
@@ -2907,7 +2925,8 @@ loadDashboardStats: function() {
         attend: firebase.database().ref(`courses/${room}/internal_attendance/${today}`),
         departure: firebase.database().ref(`courses/${room}/shuttle/departure`),
         autoDep:   firebase.database().ref(`courses/${room}/shuttle/autoDeparture`),   // [J10] 지원부 시간표 기반 자동판정
-        shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`)
+        shuttleReq: firebase.database().ref(`courses/${room}/shuttle/requests`),
+        include:   firebase.database().ref(`courses/${room}/rosterInclude`)   // [K32] 명단 외(QR·자체) 입교자 중 '명단 포함' 체크한 사람
     };
     window.dashRefs = refs; // 전역 보관 → 다음 방 전환 시 off() 가능
 
@@ -3026,11 +3045,10 @@ loadDashboardStats: function() {
     //  최신 expected 명단을 캐시해 두고, 학생 입장(actual)·명단(expected) 어느 쪽이 바뀌어도 분모를 다시 계산한다.
     let _expectedNamesCache = [];
     const recalcTotal = (actualData) => {
-        const actualNames = Object.values(actualData || {})
-            .map(s => s && s.name).filter(n => n && n !== "undefined");
-        const combined = Array.from(new Set([..._expectedNamesCache, ...actualNames]));
+        // [K32] 명단(총원) = 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자.  구경꾼(미체크)은 제외.
+        const roster = ui._rosterNames(_expectedNamesCache, actualData || {});
         const totalEl = document.getElementById('dashTotalCount');
-        if (totalEl) totalEl.innerText = combined.length;
+        if (totalEl) totalEl.innerText = roster.length;
     };
 
     refs.actual.on('value', snap => {
@@ -3085,6 +3103,14 @@ loadDashboardStats: function() {
         });
     });
 
+    // [K32] '명단 포함' 체크(rosterInclude)가 바뀌면 총원·입교율을 즉시 다시 계산한다.
+    refs.include.on('value', incSnap => {
+        if (state.room !== room) return;
+        state._rosterIncludeCache = incSnap.val() || {};
+        try { recalcTotal(state._dashStudentsCache || {}); } catch(e){}
+        try { ui._syncOpsStuRow(room); } catch(e){}
+    });
+
     // [본 과정 수강생(예정)] 수강생현황과 100% 동일한 로직을 인라인으로 직접 실행 — 리스너/캐시/메서드 의존 없이 무조건 표시
     const _refreshDashRoster = async (retry) => {
         try {
@@ -3099,11 +3125,11 @@ loadDashboardStats: function() {
             const _rn = _best ? _best.list.map(x => x && x.name).filter(Boolean).map(n => String(n).trim()) : [];
             const _aSnap = await firebase.database().ref('courses/' + room + '/students').once('value');
             if (state.room !== room) return;
-            const _actNames = Object.values(_aSnap.val() || {}).map(s => s && s.name).filter(n => n && n !== "undefined");
-            const _combined = Array.from(new Set([..._rn, ..._actNames]));
             _expectedNamesCache = Array.from(new Set([..._expectedNamesCache, ..._rn]));
+            // [K32] 총원 = 예정명단(지원부 포함) ∪ '명단 포함' 체크된 명단 외 입교자. 구경꾼은 제외.
+            const _roster = ui._rosterNames(_expectedNamesCache, _aSnap.val() || {});
             const _el = document.getElementById('dashTotalCount');
-            if (_el) _el.innerText = _combined.length;
+            if (_el) _el.innerText = _roster.length;
             // 런타임 증거: 배지에 ·R(명단수) 표기
             try { var _b = document.getElementById('__catcVer'); if (_b) _b.textContent = _b.textContent.replace(/\u00b7R\d+/, '') + '\u00b7R' + _rn.length; } catch(e){}
             if (!_rn.length && !retry) setTimeout(() => _refreshDashRoster(true), 1200);
@@ -3215,11 +3241,27 @@ _recalcDashShuttle: function(room) {
     if (totalEl) { totalEl.innerText = m.total + "명"; totalEl.style.color = "#003366"; }
 },
 
+/* [K32] 명단 외(QR·자체) 입교자 처리 헬퍼 =====================================
+   - 명단(총원) = 예정명단 ∪ 'rosterInclude 에 체크된 명단 외 입교자'.
+   - 체크 안 된 명단 외 입교자(구경꾼)는 어떤 인원수에도 더하지 않는다(기본 제외).
+   - 전 화면이 '이름' 집합으로 계산하므로 여기서도 이름 기준.                        */
+_riKey: function(name){ return String(name==null?'':name).trim().replace(/[.#$\[\]\/]/g,'_'); },
+_rosterNames: function(expectedNames, actualData){
+    var inc = state._rosterIncludeCache || {};
+    var exp = (expectedNames||[]).map(function(n){ return String(n==null?'':n).trim(); }).filter(Boolean);
+    var expSet = {}; exp.forEach(function(n){ expSet[n]=1; });
+    var actNames = Object.values(actualData||{}).map(function(s){ return s && s.name; })
+        .filter(function(n){ return n && n!=='undefined'; }).map(function(n){ return String(n).trim(); });
+    var includedOff = actNames.filter(function(n){ return !expSet[n] && inc[ui._riKey(n)]; });  // 체크된 명단 외 입교자만
+    var seen={}, out=[];
+    exp.concat(includedOff).forEach(function(n){ if(!seen[n]){ seen[n]=1; out.push(n); } });
+    return out;
+},
+
 /* 과정현황 '오늘의 운영 > 수강생 현황' 줄을 이 방의 값으로 직접 계산해 채운다.
-   (예전엔 '수강생 현황' 화면을 열어야만 채워져서, 방을 옮기면 이전 방 숫자가 남았다)
-   ★ 입교율 기준은 수강생 현황 화면과 동일:
-       분모 = 예정명단 수 (없으면 '예정명단 없음')
-       분자 = 예정자 중 실제 입교한 수                                        */
+   ★ 기준:
+       분모(명단) = 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자
+       분자(입교완료) = 그 명단 중 실제 입교한 수                                 */
 _syncOpsStuRow: function(room) {
     if (state.room !== room) return;
     try{
@@ -3228,20 +3270,18 @@ _syncOpsStuRow: function(room) {
             .map(s => s && s.name)
             .filter(n => n && n !== 'undefined')
             .map(n => String(n).trim());
-        const arrivedCount = actualNames.length;
 
-        const expected = (state._dashExpectedCache || [])
-            .map(n => String(n || '').trim())
-            .filter(Boolean);
-        const _plan = expected.length;
-        const arrivedOnPlan = expected.filter(n => actualNames.includes(n)).length;
-        const percent = _plan > 0 ? Math.round((arrivedOnPlan / _plan) * 100) : 0;
+        const roster = ui._rosterNames(state._dashExpectedCache || [], data);   // [K32] 명단 = 예정 ∪ 체크된 명단외
+        const _plan = roster.length;
+        const rosterSet = {}; roster.forEach(function(n){ rosterSet[n]=1; });
+        const enteredOnRoster = actualNames.filter(function(n){ return rosterSet[n]; }).length;  // 입교완료(명단 기준)
+        const percent = _plan > 0 ? Math.round((enteredOnRoster / _plan) * 100) : 0;
 
-        document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = arrivedCount; });
+        document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = enteredOnRoster; });
         document.querySelectorAll('.opsStuSub').forEach(function(e){
             if(_plan > 0){
-                // [K31] 66(명단)과 65(입교완료)가 헷갈리지 않도록 '입교완료/명단'을 함께 표기
-                e.textContent = '입교완료 ' + arrivedOnPlan + '/' + _plan + '명 · ' + percent + '%';
+                // 66(명단)과 65(입교완료)가 헷갈리지 않도록 '입교완료/명단'을 함께 표기
+                e.textContent = '입교완료 ' + enteredOnRoster + '/' + _plan + '명 · ' + percent + '%';
                 e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
             } else {
                 e.textContent = '예정명단 없음';
@@ -3260,9 +3300,12 @@ _syncOpsOtpRow: function(room) {
     if (state.room !== room) return;
     try{
         const data = state._dashStudentsCache || {};
-        const enrolled = Object.values(data)
-            .map(s => s && s.name)
-            .filter(n => n && n !== 'undefined').length;          // 분모 = 입교완료 인원
+        // [K32] 분모 = 입교완료(명단 기준). 명단 외 미체크 입교자(구경꾼)는 출결 대상이 아니므로 뺀다.
+        const _otpActual = Object.values(data).map(s => s && s.name)
+            .filter(n => n && n !== 'undefined').map(n => String(n).trim());
+        const _otpRoster = ui._rosterNames(state._dashExpectedCache || [], data);
+        const _otpSet = {}; _otpRoster.forEach(function(n){ _otpSet[n]=1; });
+        const enrolled = _otpActual.filter(function(n){ return _otpSet[n]; }).length;   // 분모 = 명단 기준 입교완료
         const attended = Number(state._dashAttendCache || 0);      // 분자 = 오늘 출결 인원
         const percent = enrolled > 0 ? Math.round((attended / enrolled) * 100) : 0;
 
@@ -5906,7 +5949,8 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
         const self = this;
         const expectedRef = firebase.database().ref(`courses/${room}/expectedStudents`);
         const actualRef = firebase.database().ref(`courses/${room}/students`);
-        expectedRef.off(); actualRef.off();
+        const includeRef = firebase.database().ref(`courses/${room}/rosterInclude`);   // [K32] 명단 포함 체크
+        expectedRef.off(); actualRef.off(); includeRef.off();
 
         let lastExpected = [];
         let lastActual = {};
@@ -5957,6 +6001,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                     const isOnline = isArrived && studentData.isOnline === true;
                     const isLeader = isArrived && studentData.isLeader === true;
                     const isExpected = expectedNames.includes(name); // 명단 업로드 여부
+                    const isIncluded = !!((state._rosterIncludeCache||{})[ui._riKey(name)]); // [K32] '명단 포함' 체크 여부
 
                     if(isArrived) arrivedCount++;
 
@@ -5988,6 +6033,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                             <td>
                                 <span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span>
                                 ${arrivalBadge}
+                                ${(isArrived && !isExpected) ? `<label title="이 사람은 예정 명단에 없습니다. 체크하면 명단(총원)에 합산되고, 두면 구경꾼으로 제외됩니다." style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 8px;border-radius:999px;background:${isIncluded?'#dcfce7':'#f1f5f9'};border:1px solid ${isIncluded?'#86efac':'#e2e8f0'};font-size:11px;font-weight:800;color:${isIncluded?'#166534':'#64748b'};cursor:pointer;vertical-align:middle;"><input type="checkbox" ${isIncluded?'checked':''} onclick="event.stopPropagation(); dataMgr.toggleRosterInclude('${encodeURIComponent(name)}', this.checked)" style="cursor:pointer;margin:0;">명단 포함</label>` : ''}
                             </td>
                             <td style="color:#94a3b8; font-size:13px;">${isArrived ? (isOnline ? '접속 중' : '오프라인') : '-'}</td>
                             <td>
@@ -6006,11 +6052,12 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                             </td>
                         </tr>`;
                 });
-                // [입교율 정정] 분모=업로드된 예정명단(expectedNames)만. 명단 외 QR 자체입교자는 산출대상 제외
-                //  (명단 없이 자체입교 1명이 100%로 잡히던 문제 방지 · 교육운영부 admin_coord.html과 동일 기준)
-                const _plan = expectedNames.length;                                             // 예정 인원 = 계획 명단 수
-                const arrivedOnPlan = expectedNames.filter(n => actualNames.includes(n)).length; // 예정자 중 입교완료
-                const percent = _plan > 0 ? Math.round((arrivedOnPlan / _plan) * 100) : 0;       // 입교율 = 입교완료/예정
+                // [K32] 명단(총원) = 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자. 미체크(구경꾼)는 제외.
+                const rosterEff = ui._rosterNames(expectedNames, data);
+                const _plan = rosterEff.length;                                                  // 명단 인원(총원)
+                const rosterSet = {}; rosterEff.forEach(function(n){ rosterSet[n]=1; });
+                const arrivedOnPlan = actualNames.filter(n => rosterSet[String(n).trim()]).length; // 입교완료(명단 기준)
+                const percent = _plan > 0 ? Math.round((arrivedOnPlan / _plan) * 100) : 0;       // 입교율 = 입교완료/명단
                 const statusEl = document.getElementById('arrivalStatusSmall');
                 if(statusEl) statusEl.innerText = _plan > 0 ? `${arrivedOnPlan} / ${_plan} 명 (${percent}%)` : `${arrivedCount}명 입교 · 예정명단 없음`;
                 const sb = document.getElementById('stuSummaryBar');
@@ -6019,8 +6066,8 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                         +'<div style="font-size:12px;font-weight:800;color:#475569;margin-bottom:4px;">'+label+'</div>'
                         +'<div style="font-size:30px;font-weight:900;color:'+color+';line-height:1;">'+val+'</div></div>';
                     const rateDisp = _plan > 0 ? (percent + '<span style=\'font-size:15px;\'>%</span>') : '<span style=\'font-size:20px;color:#94a3b8;\'>—</span>';
-                    sb.innerHTML = cell('예정 인원', _plan, '#334155', '#f8fafc', '#e8edf3')
-                        + cell('입교 완료', arrivedCount, '#2563eb', '#f8fafc', '#e8edf3')
+                    sb.innerHTML = cell('명단 인원', _plan, '#334155', '#f8fafc', '#e8edf3')
+                        + cell('입교 완료', arrivedOnPlan, '#2563eb', '#f8fafc', '#e8edf3')
                         + cell('입교율', rateDisp, '#2563eb', '#f8fafc', '#e8edf3');
                 }
                 /* [J81] 과정현황 '오늘의 운영 > 수강생 현황' 행에 같은 값을 그대로 내보낸다.
@@ -6029,10 +6076,10 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                        분자 = 예정자 중 실제 입교한 수
                        예정명단이 없으면 산출 불가 → '—'                                   */
                 try{
-                    document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = arrivedCount; });
+                    document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = arrivedOnPlan; });
                     document.querySelectorAll('.opsStuSub').forEach(function(e){
                         if(_plan > 0){
-                            e.textContent = '입교율 ' + percent + '%';
+                            e.textContent = '입교완료 ' + arrivedOnPlan + '/' + _plan + '명 · ' + percent + '%';
                             e.style.color = (percent>=100) ? '#16a34a' : (percent>=70 ? '#2563eb' : '#f59e0b');
                         } else {
                             e.textContent = '예정명단 없음';
@@ -6044,6 +6091,8 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
 
         expectedRef.on('value', snap => { lastExpected = snap.val() || []; render(); });
         actualRef.on('value', snap => { lastActual = snap.val() || {}; render(); });
+        // [K32] '명단 포함' 체크가 바뀌면 목록·요약을 다시 그린다.
+        includeRef.on('value', snap => { state._rosterIncludeCache = snap.val() || {}; render(); });
     },
 
 
