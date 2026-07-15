@@ -3171,11 +3171,15 @@ loadDashboardStats: function() {
     });
     refs.attend.on('value', s => {
         if (state.room !== room) return;
-        const count = Object.keys(s.val() || {}).length;
+        const _av = s.val() || {};
+        const count = Object.keys(_av).length;
         const el = document.getElementById('dashAttendCount');
         if (el) el.innerText = count;
         // [K12] 출석률 계산용 캐시 — 오늘 출결 인원
         state._dashAttendCache = count;
+        // [K32] 오늘 출결자 '이름' 캐시 — 출석률 분자를 명단 기준으로 맞추기 위함(구경꾼 OTP 제외)
+        state._dashAttendNames = Object.values(_av).map(a => a && a.name)
+            .filter(n => n && n !== 'undefined').map(n => String(n).trim());
         ui._syncOpsOtpRow(room);
     });
 
@@ -3306,7 +3310,11 @@ _syncOpsOtpRow: function(room) {
         const _otpRoster = ui._rosterNames(state._dashExpectedCache || [], data);
         const _otpSet = {}; _otpRoster.forEach(function(n){ _otpSet[n]=1; });
         const enrolled = _otpActual.filter(function(n){ return _otpSet[n]; }).length;   // 분모 = 명단 기준 입교완료
-        const attended = Number(state._dashAttendCache || 0);      // 분자 = 오늘 출결 인원
+        // [K32] 분자도 명단 기준: 오늘 출결자 중 '명단(총원)'에 있는 사람만 센다(구경꾼 OTP는 제외) → 100% 초과 방지
+        const _attNames = state._dashAttendNames || [];
+        const attended = _attNames.length
+            ? _attNames.filter(function(n){ return _otpSet[String(n).trim()]; }).length
+            : Math.min(Number(state._dashAttendCache || 0), enrolled);   // 이름 캐시 없을 때 폴백(분모 초과 방지)
         const percent = enrolled > 0 ? Math.round((attended / enrolled) * 100) : 0;
 
         document.querySelectorAll('.opsOtpSub').forEach(function(e){
