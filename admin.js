@@ -3064,8 +3064,8 @@ loadDashboardStats: function() {
         // 온라인(isOnline) 여부와 상관없이 이름이 등록된 모든 학생 필터링
         const arrivedStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
         const arrivedCount = arrivedStudents.length;
-        // [K36] '입교' 표시는 명단 기준(예정 ∪ 체크된 명단외). 명단 외 미체크 입교자(구경꾼)는 제외.
-        //  단, 퀴즈 참여/대기 수 등은 실제 방 안 인원이 기준이므로 arrivedCount(전원) 그대로 쓴다.
+        // [K36] '입교/퀴즈 참여/대기' 표시는 모두 명단 기준(예정 ∪ 체크된 명단외).
+        //  명단 외 미체크 입교자(구경꾼 = 모니터링 직원 등)는 어느 인원수에도 넣지 않는다.
         let _rosterEntered = arrivedCount;
         try {
             const _rs = ui._rosterNames(_expectedNamesCache, data);
@@ -3085,13 +3085,13 @@ loadDashboardStats: function() {
         // (B) 퀴즈 화면 상단 인원 숫자도 함께 업데이트
         const quizJoinCountEl = document.getElementById('currentJoinCount');
         if (quizJoinCountEl) {
-            quizJoinCountEl.innerText = arrivedCount;
-            
-            // 대기자 수 자동 재계산 (전체 입교자 - 퀴즈 제출자)
+            quizJoinCountEl.innerText = _rosterEntered;
+
+            // 대기자 수 자동 재계산 (명단 기준 입교 − 퀴즈 제출자)
             const answeredCount = parseInt(document.getElementById('answeredCount').innerText || 0);
             const pendingCountEl = document.getElementById('pendingCount');
             if (pendingCountEl) {
-                pendingCountEl.innerText = Math.max(0, arrivedCount - answeredCount);
+                pendingCountEl.innerText = Math.max(0, _rosterEntered - answeredCount);
             }
         }
     });
@@ -4085,7 +4085,21 @@ loadInternalAttendance: function() {
                 uniqueStudentsMap.set(key || identifier, { name: s.name.trim(), phone: cleanPhone, token: key || identifier });
             }
         });
-        const sortedList = Array.from(uniqueStudentsMap.values()).sort((a,b) => a.name.localeCompare(b.name));
+        // [K36] 명단 외 미체크 입교자(구경꾼 = 모니터링 직원 등)는 출결 대상(분모)·명단에서 제외.
+        const _normF = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
+        const _riKeyF = n => String(n||'').trim().replace(/[.#$\[\]\/]/g,'_');
+        let _rsetF = null;
+        try {
+            const _exp = (state._dashExpectedCache||[]).map(n=>String(n||'').trim()).filter(Boolean);
+            if(_exp.length){
+                _rsetF = {}; _exp.forEach(n=>_rsetF[_normF(n)]=1);
+                const _inc = state._rosterIncludeCache||{};
+                Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc[_riKeyF(nm)]) _rsetF[_normF(nm)]=1; });
+            }
+        } catch(e){}
+        const sortedList = Array.from(uniqueStudentsMap.values())
+            .filter(x => !_rsetF || _rsetF[_normF(x.name)])
+            .sort((a,b) => a.name.localeCompare(b.name));
 
         attendanceRef.off();
         attendanceRef.on('value', attendSnap => {
@@ -4140,7 +4154,7 @@ loadInternalAttendance: function() {
             const totalEl = document.getElementById('totalMemberCount');
             const checkInEl = document.getElementById('checkInCount');
             if(totalEl) totalEl.innerText = sortedList.length;
-            if(checkInEl) checkInEl.innerText = Object.keys(attendees).length;
+            if(checkInEl) checkInEl.innerText = attendCount;   // [K36] 분자도 명단 기준(명단 외 미체크 입교자 제외)
         });
     });
 },
@@ -6215,7 +6229,11 @@ loadDormitoryData: function() {
                 .map(([token, s]) => ({ token, ...s }))
                 .filter(s => s.name && s.name !== "undefined");
             const actualNames = actualStudents.map(s => s.name);
-            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
+            // [K36] 명단 외 미체크 입교자(구경꾼 = 모니터링 직원 등)는 생활관 명단·인원에서 제외
+            const _dormInc = state._rosterIncludeCache || {};
+            const combinedNames = Array.from(new Set([...expectedNames, ...actualNames]))
+                .filter(function(n){ const nm=String(n).trim(); return expectedNames.includes(nm) || !!_dormInc[nm.replace(/[.#$\[\]\/]/g,'_')]; })
+                .sort((a,b) => a.localeCompare(b));
             // await 이후 최신 배정 캐시를 다시 읽음 — 호출 시점에 비어있었어도 그 사이 도착한 배정을 사용
             const assignNow = (self._dormAssignCache && Object.keys(self._dormAssignCache).length) ? self._dormAssignCache : (assignData || {});
             const dormData = makeDormIndex(assignNow, settings || {});
@@ -10253,11 +10271,24 @@ init: function() {
             slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
         } catch (e) {}
-        // 교육 인원 = 실제 입교완료(QR 입장) 인원 수 (수강생 현황의 '입교 완료'와 동일)
+        // 교육 인원 = 명단 기준 입교완료 (수강생 현황의 '입교 완료'와 동일 · 명단 외 미체크 입교자=구경꾼 제외)  [K36]
         try {
-            const sSnap = await firebase.database().ref(`courses/${room}/students`).once('value');
+            const [sSnap, eSnap, iSnap] = await Promise.all([
+                firebase.database().ref(`courses/${room}/students`).once('value'),
+                firebase.database().ref(`courses/${room}/expectedStudents`).once('value'),
+                firebase.database().ref(`courses/${room}/rosterInclude`).once('value')
+            ]);
             const stu = sSnap.val() || {};
-            ci.count = new Set(Object.values(stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
+            const _ev = eSnap.val();
+            const exp = (Array.isArray(_ev) ? _ev : (_ev && typeof _ev === 'object' ? Object.values(_ev) : [])).map(n => String(n||'').trim()).filter(Boolean);
+            const _nrm = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
+            let _rset = null;
+            if (exp.length) {
+                _rset = {}; exp.forEach(n => _rset[_nrm(n)] = 1);
+                const inc = iSnap.val() || {};
+                Object.values(stu).forEach(s => { const nm = String(s && s.name || '').trim(); if (nm && inc[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset[_nrm(nm)] = 1; });
+            }
+            ci.count = new Set(Object.values(stu).filter(x => x && x.name && x.name !== 'undefined' && (!_rset || _rset[_nrm(String(x.name).trim())])).map(x => String(x.name).trim())).size;
         } catch (e) {}
         // 교육 시간표 사진 존재 여부 (+ 업로드 30분 경과 시 자동 삭제로 Firebase 부담 경감)
         slot.scheduleTs = 0;
