@@ -653,6 +653,23 @@ function activeRooms(){
   return out;
 }
 function studentsOf(room){ return room && room.students ? Object.keys(room.students).map(function(k){return room.students[k];}).filter(function(x){return x&&x.name&&(''+x.name).trim()&&x.name!=='undefined';}) : []; }
+/* [K34] 표시 인원 = 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자.
+   명단에 없는 QR/자체 입교자(구경꾼)는 체크(rosterInclude) 안 하면 인원에서 제외 — 강사플랫폼 PC와 동일. 예정명단 없으면 기존 방식. */
+function _riKeyM(n){ return String(n==null?'':n).trim().replace(/[.#$\[\]\/]/g,'_'); }
+function rosterCountOf(room){
+  if(!room) return 0;
+  var es=room.expectedStudents, exp=[];
+  if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
+  if(!exp.length) return studentsOf(room).length;
+  var expSet={}; exp.forEach(function(n){expSet[n]=1;});
+  var inc=room.rosterInclude||{};
+  var includedOff=studentsOf(room).map(function(s){return String(s.name).trim();})
+      .filter(function(n){ return !expSet[n] && inc[_riKeyM(n)]; });
+  var seen={}, c=0;
+  exp.concat(includedOff).forEach(function(n){ if(!seen[n]){ seen[n]=1; c++; } });
+  return c;
+}
 function leaderOf(room){
   var L=studentsOf(room).filter(function(s){return s&&s.isLeader===true;})[0];
   if(!L) return null;
@@ -723,7 +740,7 @@ function renderList(){
   var _stu=document.getElementById('hStu');
   if(_stu){
     var n=0;
-    rooms.forEach(function(r){ n += studentsOf(r.room).length; });
+    rooms.forEach(function(r){ n += rosterCountOf(r.room); });   /* [K34] 명단 외 미체크 입교자 제외 */
     _stu.textContent = n+'명';
   }
   if(!rooms.length){ el.innerHTML='<div class="empty">운영 중인 과정이 없습니다.</div>'; return; }
@@ -798,7 +815,7 @@ function updateDetail(){
   var _st=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
   _st('dHeroRoom','ROOM #'+curRID);
   _st('dHeroCourse', s.courseName||'과정명 미설정');
-  _st('dHeroCount', studentsOf(room).length+'명');
+  _st('dHeroCount', rosterCountOf(room)+'명');   /* [K34] 명단 외 미체크 입교자 제외 */
   _st('dHeroProf','담임 '+prof);
   /* [K25] '과정 정보' 카드를 없앤 대신, 강의실·교육생장을 상단바 알약으로 올린다 */
   _st('dHeroLoc', '강의실 '+(s.roomDetailName||s.roomDetail||'미정'));
