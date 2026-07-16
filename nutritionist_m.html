@@ -492,9 +492,19 @@ function openImg(src){ var o=document.getElementById('imgOv'); document.getEleme
 
 /* 운영중 과정 인원 */
 db.ref('courses').on('value', function(s){ allRoomData=s.val()||{}; renderCourses(); });
+function _nmN(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); }
 function studentsCount(room){
   var st=room && room.students; if(!st) return 0;
-  return Object.keys(st).filter(function(k){ var x=st[k]; return x && x.name && (''+x.name).trim() && x.name!=='undefined'; }).length;
+  var entries=Object.keys(st).map(function(k){return st[k];}).filter(function(x){ return x && x.name && (''+x.name).trim() && x.name!=='undefined'; });
+  // [K36] 명단 외 미체크 입교자(구경꾼 = 과정담당 직원 등)는 식수 인원에서 제외. 예정명단 없으면 전원(폴백).
+  var es=room.expectedStudents, exp=[];
+  if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
+  if(!exp.length) return entries.length;
+  var set={}; exp.forEach(function(n){ set[_nmN(n)]=1; });
+  var inc=room.rosterInclude||{};
+  entries.forEach(function(x){ var nm=String(x.name).trim(); if(inc[nm.replace(/[.#$\[\]\/]/g,'_')]) set[_nmN(nm)]=1; });
+  return entries.filter(function(x){ return set[_nmN(String(x.name).trim())]; }).length;
 }
 function renderCourses(){
   var rows=[], total=0, td=getToday();
