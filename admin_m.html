@@ -558,6 +558,24 @@ function orderedRooms(){
   return owned.concat(others);
 }
 function studentsOf(room){ return room && room.students ? Object.keys(room.students).map(function(k){return room.students[k];}).filter(function(x){return x&&x.name&&(''+x.name).trim()&&x.name!=='undefined';}) : []; }
+/* [K34] 표시 인원 = 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자.
+   명단에 없는데 QR/자체로 들어온 사람(구경꾼)은 체크(rosterInclude) 안 하면 인원에서 제외 — 강사플랫폼 PC와 동일 규칙.
+   예정명단이 비어 있으면 기존처럼 실제 입교 수를 쓴다(0으로 표시되는 것 방지). */
+function _riKeyM(n){ return String(n==null?'':n).trim().replace(/[.#$\[\]\/]/g,'_'); }
+function rosterCountOf(room){
+  if(!room) return 0;
+  var es=room.expectedStudents, exp=[];
+  if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
+  if(!exp.length) return studentsOf(room).length;
+  var expSet={}; exp.forEach(function(n){expSet[n]=1;});
+  var inc=room.rosterInclude||{};
+  var includedOff=studentsOf(room).map(function(s){return String(s.name).trim();})
+      .filter(function(n){ return !expSet[n] && inc[_riKeyM(n)]; });
+  var seen={}, c=0;
+  exp.concat(includedOff).forEach(function(n){ if(!seen[n]){ seen[n]=1; c++; } });
+  return c;
+}
 function leaderOf(room){ var L=studentsOf(room).filter(function(s){return s&&s.isLeader===true;})[0]; if(!L) return null; return { name:L.name||'-', no:(L.empNo||L.sabun||L.id||L.studentId||'') }; }
 /* ══ [K7] 퇴교차량 집계 — PC(kacShuttleMerge)와 똑같이 맞춘다 ══════════
    예전 모바일 집계는 '신청서를 낸 사람'만 셌다. 그래서 아무것도 신청하지 않은
@@ -917,7 +935,7 @@ function renderHome(){
   el.innerHTML=list.map(function(rid){
     var room=DATA[rid]||{}, s=room.settings||{}, st=room.status||{};
     var prof=kacProfLabel(st)||'-';   // [J89] 담임 여러 명 → "장두석 외 2명"
-    var cnt=studentsOf(room).length, q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;
+    var cnt=rosterCountOf(room), q=questionsCount(room), sh=shuttleCount(room), ou=outingsToday(room).length;   /* [K34] 명단 외 미체크 입교자 제외 */
     return '<div class="cblock" style="'+roomColorStyle(rid)+'" onclick="openCourse(\''+rid+'\')">'
       +'<div class="cb-top"><span class="cb-room"><i class="fa-solid fa-door-closed"></i> #'+rid+'</span>'
         +'<span class="cb-live"><span class="dot"></span> 진행중</span></div>'
@@ -964,7 +982,7 @@ function renderDetail(){
   var room=DATA[curRID]; if(!room){ goHome(); return; }
   var s=room.settings||{}, st=room.status||{};
   var prof=kacProfLabel(st,' 교수')||'-';   // [J89] "장두석 교수 외 2명"
-  var count=studentsOf(room).length;
+  var count=rosterCountOf(room);   /* [K34] 명단 외 미체크 입교자 제외 */
   var setT=function(id,v){ var el=document.getElementById(id); if(el) el.textContent=v; };
   setT('hCourse', s.courseName||'과정명 미설정');   // [K13] 과정명 = 헤더 제목(뒤로 버튼 옆)
   setT('hCount',count+'명'); setT('hProf','담임교수 '+prof);
