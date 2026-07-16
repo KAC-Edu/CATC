@@ -4264,8 +4264,23 @@ showAlert: function(msg, onConfirm) {
             const settings = roomData.settings || {};
             const studentObj = roomData.students || {};
             const validStudents = Object.values(studentObj).filter(s => s.name && s.name !== "undefined");
-            const uniqueNames = new Set(validStudents.map(s => s.name)); 
-            const userCount = uniqueNames.size;
+            const uniqueNames = new Set(validStudents.map(s => String(s.name).trim()));
+            // [K36] 인원 = 명단 기준(운영부/예정 명단 ∪ '명단 포함' 체크). 명단 외 미체크 입교자(구경꾼) 제외.
+            const _uNm = x => String(x==null?'':x).replace(/\s+/g,'').toLowerCase();
+            const _rc36 = (function(){
+                let names=[];
+                const _cr=roomData.coordRoster&&roomData.coordRoster.list; if(Array.isArray(_cr)) _cr.forEach(x=>{ if(x&&x.name) names.push(x.name); });
+                const _es=roomData.expectedStudents; if(Array.isArray(_es)) names=names.concat(_es); else if(_es&&typeof _es==='object') names=names.concat(Object.values(_es));
+                names=names.map(x=>String(x||'').trim()).filter(Boolean);
+                if(!names.length) return null;
+                const set={}; names.forEach(n=>set[_uNm(n)]=1);
+                const inc=roomData.rosterInclude||{};
+                validStudents.forEach(s=>{ const nm=String(s.name).trim(); if(inc[nm.replace(/[.#$\[\]\/]/g,'_')]) set[_uNm(nm)]=1; });
+                return set;
+            })();
+            let userCount;
+            if(_rc36){ let _c=0; uniqueNames.forEach(nm=>{ if(_rc36[_uNm(nm)]) _c++; }); userCount=_c; }
+            else userCount=uniqueNames.size;
             const isRoomActive = (st.roomStatus === 'active');
             const courseName = settings.courseName ? settings.courseName : "-";
             const profName = kacProfLabel(st) || "-";   // [J89] "장두석 외 2명"
@@ -7390,7 +7405,7 @@ resetShuttleRequests: function() {
                 +'</div>'
                 +'<div class="dash-premium-grid">'
                 +'<div class="stat-premium-card card-blue" style="padding:18px;"><div class="card-content combined-stats">'
-                +'<div class="stat-row" style="padding:6px 0;"><span class="card-label">본 과정 수강생 <span style="font-size:11px;color:#94a3b8;font-weight:700;">(예정)</span></span><div class="card-value"><b>'+registered.length+'</b><small>명</small></div></div>'
+                +'<div class="stat-row" style="padding:6px 0;"><span class="card-label">본 과정 수강생 <span style="font-size:11px;color:#94a3b8;font-weight:700;">(명단)</span></span><div class="card-value"><b>'+_regEff+'</b><small>명</small></div></div>'
                 +'<div class="stat-divider"></div>'
                 +'<div class="stat-row" style="padding:8px 0;"><span class="card-label"><i class="fa-solid fa-keyboard" style="color:#0ea5e9; margin-right:5px;"></i>항공기술훈련원 OTP 출결</span><div class="card-value" style="color:#0ea5e9;"><b>'+attn+'</b><small>명</small></div></div>'
                 +'<div class="stat-divider" style="border-top:1px dashed #e2e8f0; margin:2px 0;"></div>'
@@ -7867,11 +7882,16 @@ resetShuttleRequests: function() {
                 try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
                 // 소속 분포 집계 (예정 명단 소속 기준)
                 list.forEach(function(pp){ var reg=ui._deptToRegion((pp&&pp.dept)||''); if(reg){ _agg[reg]=(_agg[reg]||0)+1; _aggTotal++; } else { _aggUnknown++; } });
-                const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim())); const stuCnt=_arrivedSet.size;
+                const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim()));
                 const cnt=list.length;
                 const uid='hsR_'+room;
                 // 명단(예정)에 없어도 QR로 입교한 교육생은 표에 추가 표시
                 const _rosterNm=new Set(list.map(x=>String(x&&x.name||'').trim()).filter(Boolean));
+                // [K36] 입교 인원(stuCnt) = 명단 기준(예정 명단 ∪ '명단 포함' 체크). 명단 외 미체크 입교자(구경꾼) 제외.
+                const _incRC=r.rosterInclude||{};
+                let stuCnt;
+                if(_rosterNm.size){ let _sc=0; _arrivedSet.forEach(function(nm){ if(_rosterNm.has(nm) || _incRC[nm.replace(/[.#$\[\]\/]/g,'_')]) _sc++; }); stuCnt=_sc; }
+                else stuCnt=_arrivedSet.size;
                 const _qrOnly=Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined'&&!_rosterNm.has(String(s.name).trim())).map(s=>({name:s.name,empNo:(s.empNo||s.employeeNo||''),dept:(s.dept||''),_qr:true}));
                 const _disp=list.concat(_qrOnly);
                 let detail;
