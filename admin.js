@@ -3064,12 +3064,20 @@ loadDashboardStats: function() {
         // 온라인(isOnline) 여부와 상관없이 이름이 등록된 모든 학생 필터링
         const arrivedStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
         const arrivedCount = arrivedStudents.length;
+        // [K36] '입교' 표시는 명단 기준(예정 ∪ 체크된 명단외). 명단 외 미체크 입교자(구경꾼)는 제외.
+        //  단, 퀴즈 참여/대기 수 등은 실제 방 안 인원이 기준이므로 arrivedCount(전원) 그대로 쓴다.
+        let _rosterEntered = arrivedCount;
+        try {
+            const _rs = ui._rosterNames(_expectedNamesCache, data);
+            const _set = {}; _rs.forEach(function(n){ _set[String(n).trim()] = 1; });
+            _rosterEntered = arrivedStudents.filter(function(s){ return _set[String(s.name).trim()]; }).length;
+        } catch(e){}
 
         // (A) 대시보드 "수강생 입교 현황" 좌측 숫자 업데이트
         const dashArrivedEl = document.getElementById('dashArrivedCount');
-        if (dashArrivedEl) dashArrivedEl.innerText = arrivedCount;
+        if (dashArrivedEl) dashArrivedEl.innerText = _rosterEntered;
         const dashAttendTotalEl = document.getElementById('dashAttendTotal');
-        if (dashAttendTotalEl) dashAttendTotalEl.innerText = arrivedCount;
+        if (dashAttendTotalEl) dashAttendTotalEl.innerText = _rosterEntered;
 
         // (A-2) 분모(총원)도 함께 재계산 — 학생이 새로 들어와도 즉시 반영
         recalcTotal(data);
@@ -7302,6 +7310,8 @@ resetShuttleRequests: function() {
         var esc=ui._esc, norm=function(v){return String(v||'').replace(/\s+/g,'').toLowerCase();};
         var registered=Object.values(r.students||{}).filter(function(s){return s&&s.name&&s.name!=='undefined';});
         var roster=Array.isArray(src.roster)?src.roster:[];
+        // [K36] '입교' 표시용 명단 기준 인원 — 명단 외 미체크 입교자(구경꾼) 제외
+        var _regEff=(function(){ if(!roster.length) return registered.length; var _s={}; roster.forEach(function(n){_s[norm(n)]=1;}); var _i=(r.rosterInclude)||{}; registered.forEach(function(x){var nm=String(x.name||'').trim(); if(_i[nm.replace(/[.#$\[\]\/]/g,'_')]) _s[norm(nm)]=1;}); return registered.filter(function(x){return _s[norm(x.name)];}).length; })();
         var requests=Object.values((r.shuttle&&r.shuttle.requests)||{}).filter(Boolean);
         var actions=[];
         (function walk(obj,date){
@@ -7320,7 +7330,7 @@ resetShuttleRequests: function() {
             var regMap={}; registered.forEach(function(s){regMap[norm(s.name)]=s;});
             var list=roster.length?roster:registered;
             if(!list.length) body=empty('등록된 예정·입교 수강생이 없습니다.');
-            else body='<div class="hsr-summary-line"><b>입교 '+registered.length+'명</b><span>예정 '+(roster.length||registered.length)+'명</span></div><div class="hsr-table-wrap"><table class="hsr-table"><thead><tr><th>번호</th><th>성명</th><th>사번</th><th>소속</th><th>상태</th></tr></thead><tbody>'
+            else body='<div class="hsr-summary-line"><b>입교 '+_regEff+'명</b><span>예정 '+(roster.length||registered.length)+'명</span></div><div class="hsr-table-wrap"><table class="hsr-table"><thead><tr><th>번호</th><th>성명</th><th>사번</th><th>소속</th><th>상태</th></tr></thead><tbody>'
                 +list.map(function(s,i){var live=regMap[norm(s.name)]||{}, done=!!regMap[norm(s.name)];return '<tr><td>'+(i+1)+'</td><td><b>'+esc(s.name||live.name||'-')+'</b></td><td>'+esc(s.empNo||s.sabun||live.empNo||live.phone||'-')+'</td><td>'+esc(s.dept||s.department||live.dept||'-')+'</td><td><span class="hsr-state '+(done?'done':'wait')+'">'+(done?'입교완료':'입교예정')+'</span></td></tr>';}).join('')
                 +'</tbody></table></div>'+go('students','수강생 현황');
         }else if(type==='dashboard'){
