@@ -2175,10 +2175,19 @@ function _courseCounts(c){
     const m=_roomMatchForCourse(c);
     if(m){
         const students=m.room.students||{};
-        Object.values(students).forEach(s=>{ if(s?.name && s.name!=='undefined') names.add(String(s.name).trim()); });
+        // [K36] 명단 외 미체크 입교자(구경꾼 = 과정담당 직원 등)는 식수 인원에서 제외
+        const _nrmC = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
+        const _cr = (m.room.coordRoster && Array.isArray(m.room.coordRoster.list)) ? m.room.coordRoster.list : [];
+        let _roster = [];
+        _cr.forEach(s=>{ if(s&&s.name) _roster.push(s.name); });
+        const _esC = m.room.expectedStudents;
+        if(Array.isArray(_esC)) _roster = _roster.concat(_esC); else if(_esC && typeof _esC==='object') _roster = _roster.concat(Object.values(_esC));
+        _roster = _roster.map(n=>String(n||'').trim()).filter(Boolean);
+        let _rsetC = null;
+        if(_roster.length){ _rsetC = {}; _roster.forEach(n=>_rsetC[_nrmC(n)]=1); const _incC = m.room.rosterInclude||{}; Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _incC[nm.replace(/[.#$\[\]\/]/g,'_')]) _rsetC[_nrmC(nm)]=1; }); }
+        Object.values(students).forEach(s=>{ if(s?.name && s.name!=='undefined'){ const nm=String(s.name).trim(); if(!_rsetC || _rsetC[_nrmC(nm)]) names.add(nm); } });
         if(names.size===0){
-            const list=m.room.coordRoster && Array.isArray(m.room.coordRoster.list) ? m.room.coordRoster.list : [];
-            list.forEach(s=>{ const nm=((s&&s.name)||'').trim(); if(nm && nm!=='undefined') names.add(nm); });
+            _cr.forEach(s=>{ const nm=((s&&s.name)||'').trim(); if(nm && nm!=='undefined') names.add(nm); });
         }
     }
     if(names.size>0) return {found:true, total:names.size};
