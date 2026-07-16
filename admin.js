@@ -7035,8 +7035,24 @@ resetShuttleRequests: function() {
                 const include = !ended && ((isActive && hasCourse) || ui._isThisWeek(period));
                 if (!include) return;
                 if (isActive) activeCount++;
-                // 입교(QR 입실) 인원
-                const cnt = new Set(Object.values(students).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>s.name)).size;
+                // 입교(QR 입실) 인원 — [K36] 명단 기준(지원부 명단 ∪ '명단 포함' 체크). 명단 외 미체크 입교자(구경꾼) 제외.
+                const _rnorm = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
+                let _rosterNames = [];
+                try {
+                    const _cn2 = String(settings.courseName||'').trim(); let _best2=null;
+                    for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn2){ if(!_best2||(_dv.updatedAt||0)>(_best2.updatedAt||0)) _best2=_dv; } }
+                    if(_best2) _best2.list.forEach(x=>{ if(x&&x.name) _rosterNames.push(x.name); });
+                } catch(e){}
+                const _es2 = Array.isArray(r.expectedStudents) ? r.expectedStudents : (r.expectedStudents ? Object.values(r.expectedStudents) : []);
+                _es2.forEach(n=>_rosterNames.push(n));
+                _rosterNames = _rosterNames.map(n=>String(n||'').trim()).filter(Boolean);
+                let _rset2 = null;
+                if(_rosterNames.length){
+                    _rset2={}; _rosterNames.forEach(n=>_rset2[_rnorm(n)]=1);
+                    const _inc2 = r.rosterInclude||{};
+                    Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc2[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset2[_rnorm(nm)]=1; });
+                }
+                const cnt = new Set(Object.values(students).filter(s=>s&&s.name&&s.name!=='undefined' && (!_rset2 || _rset2[_rnorm(s.name)])).map(s=>s.name)).size;
                 studentTotal += cnt;
                 // 예정(지원부 업로드) 인원 — 현재 과정 주차의 지원부 명단
                 try {
