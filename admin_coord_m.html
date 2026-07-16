@@ -670,6 +670,19 @@ function rosterCountOf(room){
   exp.concat(includedOff).forEach(function(n){ if(!seen[n]){ seen[n]=1; c++; } });
   return c;
 }
+/* [K35] 명단(정원) 이름 집합 { norm(이름):1 } — 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자.
+   셔틀 등 인원 집계에서 명단 외 미체크 입교자(구경꾼)를 걸러낸다. 예정명단 없으면 null(=전원). */
+function _rosterNorm(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); }
+function rosterNameSet(room){
+  var es=room&&room.expectedStudents, exp=[];
+  if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
+  if(!exp.length) return null;
+  var set={}; exp.forEach(function(n){ set[_rosterNorm(n)]=1; });
+  var inc=(room&&room.rosterInclude)||{};
+  studentsOf(room).forEach(function(s){ var nm=String(s.name==null?'':s.name).trim(); if(nm && inc[_riKeyM(nm)]) set[_rosterNorm(nm)]=1; });
+  return set;
+}
 function leaderOf(room){
   var L=studentsOf(room).filter(function(s){return s&&s.isLeader===true;})[0];
   if(!L) return null;
@@ -688,10 +701,12 @@ function shuttleCount(room){
   var rq=(room && room.shuttle && room.shuttle.requests) || {};
   var stu=(room && room.students) || {};
   var norm=function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+  var rset=rosterNameSet(room);                    // [K35] 명단 밖(미체크 워크인)은 셔틀 집계에서 제외. null이면 전원.
   var c={ osong:0, terminal:0, airport:0, car:0 };
   var seen={};
   Object.keys(rq).forEach(function(k){
     var r=rq[k]; if(!r||!r.type) return;
+    if(rset && r.name && !rset[norm(r.name)]) return;   // [K35] 명단 외 미체크 입교자의 신청은 세지 않음
     var t=r.type;
     if(t==='osong'||t==='terminal'||t==='airport') c[t]++;
     else c.car++;                                  // 자차 신청 + 타입 미지정
@@ -704,6 +719,7 @@ function shuttleCount(room){
     var nm=String(s.name==null?'':s.name).trim();
     if(!nm || nm==='undefined') return;
     var key=norm(nm);
+    if(rset && !rset[key]) return;                  // [K35] 명단 외 미체크 입교자는 자차간주에서 제외
     if(dupe[key]) return; dupe[key]=1;
     if(seen[key]) return;                          // 이미 신청한 사람
     nonApp.push(nm);
