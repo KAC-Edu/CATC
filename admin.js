@@ -3244,7 +3244,8 @@ refs.shuttleReq.on('value', s => {
 //  신청(shuttleReq)·학생(actual) 어느 리스너가 먼저/나중에 오든 최신 캐시 기준으로 일관 표시.
 _recalcDashShuttle: function(room) {
     if (state.room !== room) return;
-    const m = kacShuttleMerge(state._dashShuttleReqCache, state._dashStudentsCache);
+    const _rs = ui._rosterNameSet(state._dashExpectedCache || [], state._dashStudentsCache);   // [K35] 명단 외 미체크 입교자 제외
+    const m = kacShuttleMerge(state._dashShuttleReqCache, state._dashStudentsCache, _rs);
     if (document.getElementById('total-osong')) document.getElementById('total-osong').innerText = m.counts.osong;
     if (document.getElementById('total-term')) document.getElementById('total-term').innerText = m.counts.terminal;
     if (document.getElementById('total-air')) document.getElementById('total-air').innerText = m.counts.airport;
@@ -3268,6 +3269,13 @@ _rosterNames: function(expectedNames, actualData){
     var seen={}, out=[];
     exp.concat(includedOff).forEach(function(n){ if(!seen[n]){ seen[n]=1; out.push(n); } });
     return out;
+},
+/* [K35] 명단 이름 집합 { norm(이름):1 } — 셔틀 등 집계에서 명단 외 미체크 입교자를 거르는 데 쓴다. 예정명단 없으면 null(=전원). */
+_rosterNameSet: function(expectedNames, actualData){
+    var arr = ui._rosterNames(expectedNames, actualData);
+    if(!arr.length) return null;
+    var set={}; arr.forEach(function(n){ set[String(n).replace(/\s+/g,'').toLowerCase()]=1; });
+    return set;
 },
 
 /* 과정현황 '오늘의 운영 > 수강생 현황' 줄을 이 방의 값으로 직접 계산해 채운다.
@@ -6341,7 +6349,8 @@ loadShuttleData: function() {
         const tbody = document.getElementById('shuttleListTableBody');
         if(!tbody) return;
 
-        const merged = kacShuttleMerge(_sbReq, _sbStu);
+        const _rsB = ui._rosterNameSet(state._dashExpectedCache || [], _sbStu);   // [K35] 명단 외 미체크 입교자 제외
+        const merged = kacShuttleMerge(_sbReq, _sbStu, _rsB);
         const counts = merged.counts;
 
         /* [J99] 정렬을 '신청한 순서(시각)'에서 '이름 ㄱ~ㅎ 순'으로 바꿨다.
@@ -7321,14 +7330,21 @@ resetShuttleRequests: function() {
             var dinner = (r.dinner_skips && r.dinner_skips[today]) ? Object.keys(r.dinner_skips[today]).length : 0;
             var tablet = r.tablet_loans ? Object.keys(r.tablet_loans).length : 0;
             var qaCnt=0; try{ if(r.questions) qaCnt=Object.values(r.questions).filter(function(q){return q&&q.status!=='delete';}).length; }catch(e){}
-            var shu=(r.shuttle&&r.shuttle.requests)?Object.values(r.shuttle.requests):[];
+            // [K35] 명단(예정 ∪ 체크된 명단외) 이름셋 — 명단 외 미체크 입교자(구경꾼)를 셔틀 집계에서 제외
+            var _effSet={}, _hasRoster=(roster&&roster.length);
+            (roster||[]).forEach(function(n){ _effSet[norm(n)]=1; });
+            var _incR=r.rosterInclude||{};
+            registered.forEach(function(s){ var _rn=String(s.name||'').trim(); if(_rn && _incR[_rn.replace(/[.#$\[\]\/]/g,'_')]) _effSet[norm(_rn)]=1; });
+            var _inRos=function(nm){ return !_hasRoster || _effSet[norm(nm)]; };
+            var shu=((r.shuttle&&r.shuttle.requests)?Object.values(r.shuttle.requests):[])
+                     .filter(function(i){ return !(i&&i.name&&!_inRos(i.name)); });   // 명단 외 미체크자의 신청 제외
             var sOsong=shu.filter(function(i){return i&&i.type==='osong';}).length;
             var sTerm =shu.filter(function(i){return i&&i.type==='terminal';}).length;
             var sAir  =shu.filter(function(i){return i&&i.type==='airport';}).length;
             var sCar  =shu.filter(function(i){return i&&i.type==='car';}).length;
-            // [J48] 미신청 입교완료 교육생 = 자차 간주 (kacShuttleMerge와 동일 규칙: 유효 이름·정규화 매칭)
+            // [J48/K35] 미신청 입교완료 교육생 = 자차 간주 (명단 외 미체크 입교자는 제외)
             var _shuSet={}; shu.forEach(function(i){ if(i&&i.name) _shuSet[norm(i.name)]=1; });
-            sCar += registered.filter(function(s){ return !_shuSet[norm(s.name)]; }).length;
+            sCar += registered.filter(function(s){ return !_shuSet[norm(s.name)] && _inRos(s.name); }).length;
             var activeOut=actions.filter(function(a){return !(a.returned===true||a.returnReportTime);}).length;
             var adminNotice=r.coordNotice||r.notice||'';
             var enter='event.stopPropagation();ui.enterCourseMode(\''+esc(room)+'\',\'dashboard\')';
@@ -17267,8 +17283,11 @@ window.addEventListener('resize', function(){
      3개 호출부(대시보드 _recalcDashShuttle · 셔틀보드 _renderShuttleBoard · 홈 카드)의
      계약(items/nonApp/counts/total)과 driver.html 규칙에 맞춰 원형 복원 + 전역 노출 재접합.
    ══════════════════════════════════════════════════════════════════════ */
-function kacShuttleMerge(reqObj, stuObj){
+function kacShuttleMerge(reqObj, stuObj, rosterSet){
   var _nm = function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+  // [K35] rosterSet(={norm(이름):1})가 오면 '명단 외 미체크 입교자(구경꾼)'는 셔틀 집계에서 제외.
+  //  rosterSet 미전달(구버전 호출·driver.html 등)이면 기존처럼 전원 집계(하위호환).
+  var _inRoster = function(nm){ return !rosterSet || rosterSet[_nm(nm)]; };
   var DEST = { osong:'오송역', terminal:'터미널', airport:'공항', car:'자차' };
   var counts = { osong:0, terminal:0, airport:0, car:0 };
   var items = [];
@@ -17277,6 +17296,7 @@ function kacShuttleMerge(reqObj, stuObj){
   Object.keys(reqs).forEach(function(k){
     var r = reqs[k]; if(!r) return;
     var nm = (r.name || r.student || r.studentName || r.prof || '교육생');
+    if(r.name && !_inRoster(r.name)) return;  // [K35] 명단 외 미체크 입교자의 신청은 제외
     var type = r.type || 'car';
     if(type==='osong' || type==='terminal' || type==='airport') counts[type]++;
     else counts.car++;                        // 신청 자차 + 미지정 타입
@@ -17299,6 +17319,7 @@ function kacShuttleMerge(reqObj, stuObj){
     var nm = String(s.name==null?'':s.name).trim();
     if(!nm || nm==='undefined') return;
     var key = _nm(nm);
+    if(!_inRoster(nm)) return;                 // [K35] 명단 외 미체크 입교자는 자차간주에서 제외
     if(dupe[key]) return; dupe[key] = 1;
     if(seen[key]) return;                      // 이미 신청함
     nonApp.push(nm);
