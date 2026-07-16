@@ -3683,13 +3683,30 @@ function updateIndividualView() {
     }
 
     // 차량 신청 인원 실시간 업데이트
+    // [K35] 강사플랫폼과 동일: 미신청 입교완료 교육생 = 자차(미선택) 간주로 합산, 총 = 전원(명단).
+    //   단 명단 외 미체크 입교자(구경꾼)는 신청·자차간주 어디에도 넣지 않는다.
     const requests = room.shuttle?.requests || {};
-    const reqEntries = Object.values(requests).filter(r => r && r.type);
+    const _cNorm = v => String(v||'').replace(/\s+/g,'').toLowerCase();
+    const _cRiKey = n => String(n||'').trim().replace(/[.#$\[\]\/]/g,'_');
+    const _cExpRaw = Array.isArray(room.expectedStudents) ? room.expectedStudents : (room.expectedStudents ? Object.values(room.expectedStudents) : []);
+    const _cExp = _cExpRaw.map(n => String(n||'').trim()).filter(Boolean);
+    const _cStu = Object.values(room.students||{}).filter(s => s && s.name && s.name!=='undefined');
+    let _cRset = null;
+    if (_cExp.length) {
+        _cRset = {}; _cExp.forEach(n => _cRset[_cNorm(n)] = 1);
+        const _cInc = room.rosterInclude || {};
+        _cStu.forEach(s => { const nm = String(s.name).trim(); if (_cInc[_cRiKey(nm)]) _cRset[_cNorm(nm)] = 1; });
+    }
+    const _cInRos = nm => !_cRset || _cRset[_cNorm(nm)];
+    const reqEntries = Object.values(requests).filter(r => r && r.type && !(r.name && !_cInRos(r.name)));
     const osongCnt    = reqEntries.filter(r => r.type === 'osong').length;
     const terminalCnt = reqEntries.filter(r => r.type === 'terminal').length;
     const airportCnt  = reqEntries.filter(r => r.type === 'airport').length;
-    const carCnt      = reqEntries.filter(r => r.type === 'car').length;
-    const totalCnt    = reqEntries.length;
+    const _cApplied = {}; reqEntries.forEach(r => { if (r.name) _cApplied[_cNorm(r.name)] = 1; });
+    let _cNonApp = 0; const _cDupe = {};
+    _cStu.forEach(s => { const nm = String(s.name).trim(); const k = _cNorm(nm); if (_cDupe[k]) return; _cDupe[k]=1; if (!_cInRos(nm)) return; if (_cApplied[k]) return; _cNonApp++; });
+    const carCnt      = reqEntries.filter(r => r.type === 'car').length + _cNonApp;   // 자차 = 신청 자차 + 미선택 간주
+    const totalCnt    = osongCnt + terminalCnt + airportCnt + carCnt;                 // 총 = 전원(명단)
 
     const setEl = (id, val) => { const el=document.getElementById(id); if(el) el.innerText=val; };
     setEl('ind-shuttle-total', totalCnt);
