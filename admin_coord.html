@@ -3432,9 +3432,11 @@ function updateGlobalStatus() {
             if (!rosterPeriod || !curPeriod || rosterPeriod === curPeriod) rosterSource = coordRoster.list;
         }
         if (!rosterSource.length && room.students) rosterSource = Object.values(room.students);
-        if (rosterSource.length) { 
+        if (rosterSource.length) {
+            const _rs2 = _coordRosterSet(room);   // [K36] 명단 외 미체크 입교자(구경꾼) 제외
             rosterSource.forEach(s => {
                 if (s && s.name && s.name !== "undefined" && s.name.trim() !== "") {
+                    if (_rs2 && !_rs2[_coordShNorm(s.name)]) return;   // 명단 외 미체크 입교자 제외
                     const cleanPhone = (s.empNo || s.sabun || s.id || s.phone || "0000").replace(/[^0-9]/g, "");
                     const last4 = cleanPhone; // 식별번호 전체(사번/전화) 그대로 사용
                     // 중복 제거를 위해 리스트에 수집
@@ -3449,9 +3451,14 @@ function updateGlobalStatus() {
             Object.keys(_acts).forEach(_k => { const _a = _acts[_k] || {}; if (!(_a.returned === true || _a.returnReportTime)) todayA++; }); // 복귀완료 차감
         }
 
-        // 교육생 퇴교 셔틀 신청 인원 (자차 제외 여부는 기획에 맞게 조정 가능, 여기선 전체 신청자 카운트)
-        if (room.shuttle?.requests) {
-            totalShuttle += Object.keys(room.shuttle.requests).length;
+        // [K36] 퇴교차량 = 전원(명단): 신청(walk-in 제외) + 미선택(자차간주). 과정별 팝업의 '총 신청'과 동일 기준.
+        {
+            const _rs3 = _coordRosterSet(room);
+            const _reqArr = Object.values((room.shuttle && room.shuttle.requests) || {}).filter(x => !(_rs3 && x && x.name && !_rs3[_coordShNorm(x.name)]));
+            const _app = {}; _reqArr.forEach(x => { if (x && x.name) _app[_coordShNorm(x.name)] = 1; });
+            const _dp = {}; let _nonApp = 0;
+            Object.values(room.students || {}).forEach(s => { const nm = String(s && s.name || '').trim(); if (!nm || nm === 'undefined') return; const k = _coordShNorm(nm); if (_dp[k]) return; _dp[k] = 1; if (_rs3 && !_rs3[k]) return; if (_app[k]) return; _nonApp++; });
+            totalShuttle += _reqArr.length + _nonApp;
         }
     });
 
@@ -9302,16 +9309,41 @@ function _coordShuttleTotalsHtml(g){
     +'</div>'
   +'</div>';
 }
+/* [K36] 명단(정원) 이름셋 — coordRoster.list · expectedStudents · 'rosterInclude 체크' 합집합.
+   명단 외 미체크 입교자(구경꾼)를 셔틀 집계에서 걸러내는 데 쓴다. 명단 근거가 전혀 없으면 null(=전원). */
+function _coordShNorm(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); }
+function _coordRosterSet(room){
+  var names=[];
+  var cr=room&&room.coordRoster&&room.coordRoster.list;
+  if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) names.push(x.name); });
+  var es=room&&room.expectedStudents;
+  if(Array.isArray(es)) es.forEach(function(n){ names.push(n); });
+  else if(es&&typeof es==='object') Object.values(es).forEach(function(n){ names.push(n); });
+  names=names.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
+  if(!names.length) return null;
+  var set={}; names.forEach(function(n){ set[_coordShNorm(n)]=1; });
+  var inc=(room&&room.rosterInclude)||{};
+  Object.values((room&&room.students)||{}).forEach(function(s){ var nm=String(s&&s.name||'').trim(); if(nm && inc[nm.replace(/[.#$\[\]\/]/g,'_')]) set[_coordShNorm(nm)]=1; });
+  return set;
+}
 function openShuttleSummary(){
   const rooms=_coordActiveRooms();
   var _labelMap={osong:'오송역',terminal:'터미널',airport:'공항',car:'자차'};
   var _colorMap={osong:'#ef4444',terminal:'#3b82f6',airport:'#10b981',car:'#64748b'};
   var grand={car:0,osong:0,terminal:0,airport:0,tot:0};
-  let blocks=rooms.map(function(r,idx){ var reqs=r.room.shuttle&&r.room.shuttle.requests; var arr=reqs?Object.values(reqs):[]; var tot=arr.length;
+  let blocks=rooms.map(function(r,idx){ var reqs=r.room.shuttle&&r.room.shuttle.requests; var arr0=reqs?Object.values(reqs):[];
+    // [K36] 명단(예정∪체크된 명단외) 기준 — 명단 외 미체크 입교자(구경꾼)의 신청은 제외
+    var _rset=_coordRosterSet(r.room);
+    var arr=_rset?arr0.filter(function(x){ return !(x&&x.name&&!_rset[_coordShNorm(x.name)]); }):arr0;
     var c={osong:0,terminal:0,airport:0,car:0}; arr.forEach(function(x){ if(c[x.type]!==undefined) c[x.type]++; });
-    grand.car+=c.car; grand.osong+=c.osong; grand.terminal+=c.terminal; grand.airport+=c.airport; grand.tot+=tot;
+    // 미선택(자차 간주) = 명단 입교자 중 아무것도 신청 안 한 사람 (walk-in 제외, 이름 중복 1회)
+    var _applied={}; arr.forEach(function(x){ if(x&&x.name) _applied[_coordShNorm(x.name)]=1; });
+    var _dupe={}, carDefault=0;
+    Object.values(r.room.students||{}).forEach(function(s){ var nm=String(s&&s.name||'').trim(); if(!nm||nm==='undefined')return; var k=_coordShNorm(nm); if(_dupe[k])return; _dupe[k]=1; if(_rset&&!_rset[k])return; if(_applied[k])return; carDefault++; });
+    var carApplied=c.car; var carTotal=carApplied+carDefault; var tot=c.osong+c.terminal+c.airport+carTotal;
+    grand.car+=carTotal; grand.osong+=c.osong; grand.terminal+=c.terminal; grand.airport+=c.airport; grand.tot+=tot;
     arr.sort(function(a,b){ return (a.timestamp||0)-(b.timestamp||0); });
-    var rows = tot ? arr.map(function(a,i){
+    var rows = arr.length ? arr.map(function(a,i){
         var dt=a.timestamp?new Date(a.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'-';
         var dest=a.typeText||_labelMap[a.type]||a.typeName||'-';
         var col=_colorMap[a.type]||'#475569';
@@ -9331,7 +9363,7 @@ function openShuttleSummary(){
           +'<i class="fa-solid fa-chevron-down crow-chev" id="coordShtChev'+idx+'" style="flex-shrink:0;color:#94a3b8;"></i>'
         +'</div>'
         +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-          +'<div style="flex:1;text-align:center;min-width:44px;background:#f8fafc;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#64748b;">자차</div><div style="font-size:22px;font-weight:900;color:#64748b;line-height:1.15;">'+c.car+'</div></div>'
+          +'<div style="flex:1.6;text-align:center;min-width:78px;background:#f8fafc;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#64748b;">자차 <span style="font-weight:900;color:#334155;">'+carTotal+'</span></div><div style="font-size:11px;font-weight:900;color:#64748b;line-height:1.2;margin-top:2px;">신청 '+carApplied+' <span style="color:#cbd5e1;">|</span> 미선택 '+carDefault+'</div></div>'
           +'<div style="flex:1;text-align:center;min-width:44px;background:#fef2f2;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#ef4444;">오송역</div><div style="font-size:22px;font-weight:900;color:#ef4444;line-height:1.15;">'+c.osong+'</div></div>'
           +'<div style="flex:1;text-align:center;min-width:44px;background:#eff6ff;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#3b82f6;">터미널</div><div style="font-size:22px;font-weight:900;color:#3b82f6;line-height:1.15;">'+c.terminal+'</div></div>'
           +'<div style="flex:1;text-align:center;min-width:44px;background:#ecfdf5;border-radius:8px;padding:6px 4px;"><div style="font-size:11.5px;font-weight:800;color:#10b981;">공항</div><div style="font-size:22px;font-weight:900;color:#10b981;line-height:1.15;">'+c.airport+'</div></div>'
@@ -9342,7 +9374,7 @@ function openShuttleSummary(){
     +'</div>';
   }).join('');
   if(!blocks.trim()) blocks='<div class="cpop-empty">신청된 퇴교차량이 없습니다.</div>';
-  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;"><div style="flex:0 0 360px;max-width:100%;min-width:300px;display:flex;flex-direction:column;gap:12px;">'+_coordShuttleRoundsHtml()+'<div style="margin:0;padding:12px 15px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.85;"><b style="color:#334155;font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:5px;"></i>표기 안내</b><br>· <b style="color:#64748b;">자차</b>·<b style="color:#dc2626;">오송역</b>·<b style="color:#2563eb;">터미널</b>·<b style="color:#16a34a;">공항</b> = 교육생이 신청한 <b>목적지별 인원</b> / <b style="color:#1e3a8a;">총 신청</b> = 합계<br>· <b>출발시간(1차·2차)</b>은 전 과정 공통 · <b>확인</b>을 누르면 강사·교육생 화면에 공지됩니다 (미정=추후 공지 / 운행안함=차량 미운행)</div>'+'</div><div style="flex:1 1 380px;min-width:320px;display:flex;flex-direction:column;gap:12px;">'+blocks+'</div></div>'+'');
+  _cpop('<i class="fa-solid fa-bus"></i> 퇴교차량 신청 현황 (과정별)', '<div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;"><div style="flex:0 0 360px;max-width:100%;min-width:300px;display:flex;flex-direction:column;gap:12px;">'+_coordShuttleRoundsHtml()+'<div style="margin:0;padding:12px 15px;background:#f8fafc;border:1px solid #e5eaf1;border-radius:11px;font-size:12.5px;color:#64748b;line-height:1.85;"><b style="color:#334155;font-size:13px;"><i class="fa-solid fa-circle-info" style="color:#2563eb;margin-right:5px;"></i>표기 안내</b><br>· <b style="color:#64748b;">자차</b> = <b>자차 신청</b> + <b>미선택</b>(아무것도 신청 안 해서 자차로 간주) · <b style="color:#dc2626;">오송역</b>·<b style="color:#2563eb;">터미널</b>·<b style="color:#16a34a;">공항</b> = 교육생이 신청한 <b>목적지별 인원</b> · <b style="color:#1e3a8a;">총 신청</b> = 전원(명단) 합계<br>· <b>출발시간(1차·2차)</b>은 전 과정 공통 · <b>확인</b>을 누르면 강사·교육생 화면에 공지됩니다 (미정=추후 공지 / 운행안함=차량 미운행)</div>'+'</div><div style="flex:1 1 380px;min-width:320px;display:flex;flex-direction:column;gap:12px;">'+blocks+'</div></div>'+'');
   window._coordPopupRefresh=openShuttleSummary;
   if(window._coordShtOpenIdx!=null){ var _ob=document.getElementById('coordShtBody'+window._coordShtOpenIdx); var _oc=document.getElementById('coordShtChev'+window._coordShtOpenIdx); if(_ob){ _ob.style.display='block'; if(_oc) _oc.style.transform='rotate(180deg)'; } }
 }
