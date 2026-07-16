@@ -343,7 +343,7 @@ async function init() {
     if (_archiveId) {
         const arSnap = await db.ref('system/course_archive/' + _archiveId).once('value');
         const ar = arSnap.val() || {};
-        SHEET_ROOM = null; window._archiveMode = true; window._archiveId = _archiveId; window._archiveExpected = ar.expectedStudents || null;
+        SHEET_ROOM = null; window._archiveMode = true; window._archiveId = _archiveId; window._archiveExpected = ar.expectedStudents || null; window._archiveInclude = ar.rosterInclude || null;
         HEADER.courseName = ar.courseName || '지난 과정'; HEADER.period = ar.period || '-'; HEADER.coordName = ar.coord || '-'; HEADER.profName = ar.prof ? ar.prof + ' 교수' : '-';
         dateArray = generateDates(ar.period || '');
         await loadHolidays();                       // 보관 출석부에도 공휴일 적용
@@ -540,7 +540,7 @@ async function init() {
                 uniqueStudentsMap.set(id, { name: s.name.trim(), phone: cleanPhone });
             }
         });
-        const sortedStudents = Array.from(uniqueStudentsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+        let sortedStudents = Array.from(uniqueStudentsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
         if (sortedStudents.length === 0) {
             root.innerHTML = `<div class="sheet-container"><div class="title">교 육 생 출 석 부</div><div style="padding:50px; color:#999; text-align:center;">현재 입교 완료된 교육생이 없습니다.</div></div>`;
             return;
@@ -590,14 +590,34 @@ async function init() {
            → 렌더마다 번호를 매기고, 콜백이 돌아왔을 때 '가장 최근 렌더'가 아니면 버린다.
              그리고 붙이기 직전에 한 번 더 비운다.                                        */
         const _myRun = ++_renderSeq;
-        const _apply = (rawList) => {
+        const _apply = (rawList, incMap) => {
             if (_myRun !== _renderSeq) return;      // 그 사이 다시 그려졌으면 이 결과는 버린다
             root.innerHTML = '';                    // 붙이기 직전에 한 번 더 비운다 (중복 방지)
+            /* [K36] 명단 외 미체크 입교자(구경꾼 = 과정담당 직원 등)는 출석부에서 제외.
+               예정명단(rawList)에 있거나, rosterInclude 에 '명단 포함' 체크된 사람만 남긴다.
+               예정명단 근거가 전혀 없으면(=미업로드) 기존처럼 전원 표시(안전 폴백). */
+            try {
+                const _expArr = (Array.isArray(rawList) ? rawList : (rawList && typeof rawList === 'object' ? Object.values(rawList) : []))
+                                .map(n => String(n || '').trim()).filter(Boolean);
+                if (_expArr.length) {
+                    const _nrm = n => String(n == null ? '' : n).replace(/\s+/g, '').toLowerCase();
+                    const _set = {}; _expArr.forEach(n => _set[_nrm(n)] = 1);
+                    const _inc = incMap || {};
+                    sortedStudents.forEach(s => { const k = String(s.name).trim().replace(/[.#$\[\]\/]/g, '_'); if (_inc[k]) _set[_nrm(s.name)] = 1; });
+                    sortedStudents = sortedStudents.filter(s => _set[_nrm(s.name)]);
+                }
+            } catch (e) {}
             _renderWithExp(rawList);
         };
 
-        if (window._archiveMode) { _apply(window._archiveExpected); }
-        else { db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _apply(expSnap.val())); }
+        if (window._archiveMode) { _apply(window._archiveExpected, window._archiveInclude || null); }
+        else {
+            Promise.all([
+                db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value'),
+                db.ref(`courses/${SHEET_ROOM}/rosterInclude`).once('value')
+            ]).then(([expSnap, incSnap]) => _apply(expSnap.val(), incSnap.val()))
+              .catch(() => db.ref(`courses/${SHEET_ROOM}/expectedStudents`).once('value', expSnap => _apply(expSnap.val(), null)));
+        }
     }
 
     function buildPage(dates, students, startIdx, pageNo, totalPages, attendanceData, rawList, rowH, sw, sf) {
