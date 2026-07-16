@@ -3571,16 +3571,20 @@ function submitQ() {
             }
 
             dbRef.qa.child(key).once('value', s => {
-                const el = document.getElementById('qInput'); 
-                el.value = s.val().text;
-                el.style.height = '1px'; 
+                const v = s.val() || {};
+                const el = document.getElementById('qInput');
+                el.value = v.text;
+                el.style.height = '1px';
                 el.style.height = (el.scrollHeight) + 'px';
                 document.getElementById('charCount').innerText = `${el.value.length} / 100`;
-                document.getElementById('submitBtn').classList.add('editing'); 
+                // [Q-EDIT] 수정 진입 시 이 질문의 '대상(강사)'을 선택칸에 복원 → 글과 대상을 함께 수정 가능.
+                //  (복원 안 하면 편집 후 저장 시 대상이 엉뚱하게 바뀌던 문제도 함께 해결)
+                try { if (typeof selectSubject === 'function') selectSubject(v.subject || '공통질문'); } catch(e){}
+                document.getElementById('submitBtn').classList.add('editing');
                 document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-check"></i>';
-                editingKey = key; 
-                el.focus(); 
-                checkCooldown(); 
+                editingKey = key;
+                el.focus();
+                checkCooldown();
             });
         }
         function deleteQ(key) { showKacConfirm("삭제하시겠습니까?", function(){ dbRef.qa.child(key).remove(); }); }
