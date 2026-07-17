@@ -6570,29 +6570,33 @@ updateShuttleETA: function(departureTime, counts) {
 
 
 
-// [자동 리셋] 금요일 18시 이후 차량 명단 리셋 체크
+// [자동 리셋] 금요일 18시가 '한 번이라도 지난 뒤'에 강사플랫폼을 열면(주말·월요일 포함) 지난주 차량 신청을 즉시 비운다.
+//  · 페이지 로드 시 1회만 체크 — 별도 타이머 없음(Firebase 부하 없음).
+//  · '가장 최근 지난 금요일 18:00'(cutoff) 이전에 낸 신청이 남아 있으면 초기화 → 금요일 저녁에 아무도 안 열어도 월요일 첫 오픈 때 비워짐.
+//  · 초기화 뒤 새로 낸 2주차 신청은 cutoff 이후라 다시 지워지지 않는다. 주차별 키로 중복 알림 방지.
 autoResetShuttleIfNeeded: function(room) {
+    if (state.isObserver) return;   // 옵저버는 초기화하지 않음
     const now = new Date();
-    const day = now.getDay(); // 0=일, 5=금
-    const hour = now.getHours();
-    if(day !== 5 || hour < 18) return; // 금요일 18시 이후만 체크
+    // 가장 최근에 '지난' 금요일 18:00 (오늘이 금요일이고 18시 전이면 지난주 금요일로)
+    const cutoff = new Date(now); cutoff.setHours(18, 0, 0, 0);
+    const back = (cutoff.getDay() - 5 + 7) % 7;                 // 금요일까지 되돌릴 일수 (금=0, 토=1, …, 목=6)
+    cutoff.setDate(cutoff.getDate() - back); cutoff.setHours(18, 0, 0, 0);
+    if (cutoff > now) cutoff.setDate(cutoff.getDate() - 7);     // 아직 이번 금요일 18시 전이면 지난주로
 
-    const resetKey = `kac_shuttle_reset_${room}_${getTodayString()}`;
-    if(localStorage.getItem(resetKey)) return; // 오늘 이미 처리됨
+    const ck = cutoff.getFullYear() + '-' + String(cutoff.getMonth() + 1).padStart(2, '0') + '-' + String(cutoff.getDate()).padStart(2, '0');
+    const resetKey = `kac_shuttle_reset_${room}_${ck}`;
+    if (localStorage.getItem(resetKey)) return;                // 이 주차(cutoff)는 이미 처리됨
 
     firebase.database().ref(`courses/${room}/shuttle/requests`).once('value', snap => {
-        if(!snap.exists()) return;
-        // 금요일 18시 이후에 지난주 명단이 남아있는 경우 자동 초기화
+        if (!snap.exists()) { try { localStorage.setItem(resetKey, 'done'); } catch(e){} return; }
         const reqs = snap.val() || {};
-        const anyOld = Object.values(reqs).some(r => {
-            const d = new Date(r.timestamp);
-            return d.getDay() !== 5 || d < new Date(now.setHours(18,0,0,0));
-        });
-        if(anyOld && !state.isObserver) {
-            ui.showAlert("📢 금요일 18시가 지났습니다.\n차량 신청 명단이 자동으로 초기화되었습니다.");
+        // cutoff(가장 최근 지난 금요일 18:00) 이전에 낸 신청 = 지난주 것 → 남아 있으면 초기화
+        const anyOld = Object.values(reqs).some(r => r && new Date(r.timestamp || 0) < cutoff);
+        if (anyOld) {
+            ui.showAlert("📢 지난주 차량 신청 명단이 자동으로 초기화되었습니다.\n(금요일 18시 기준 · 새 주차 수요조사를 위해 비움)");
             firebase.database().ref(`courses/${room}/shuttle/requests`).set(null);
-            localStorage.setItem(resetKey, 'done');
         }
+        try { localStorage.setItem(resetKey, 'done'); } catch(e){}
     });
 },
 
