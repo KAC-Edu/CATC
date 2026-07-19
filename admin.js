@@ -11214,105 +11214,100 @@ init: function() {
 // --- 5. Print & Report (최종 보강 버전) ---
 // [최종 고도화] 교육과정 종합 결과 보고서 생성 및 인쇄 매니저
 const printMgr = {
-    openInputModal: function() { 
+    _qa: [], _subjects: [], _filter: '전체', _meta: {},
+
+    // [Q&A출력] 사이드바 'Q&A 출력하기' → 리포트 정보 입력 팝업 없이 바로 미리보기.
+    //  (기존 onclick 호환용으로 openInputModal/confirmPrint도 openPreview로 연결)
+    openInputModal: function() { this.openPreview(); },
+    confirmPrint: function() { this.openPreview(); },
+    closeInputModal: function() { const m=document.getElementById('printInputModal'); if(m) m.style.display='none'; },
+    _esc: function(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); },
+
+
+
+
+
+
+
+
+// [Q&A출력] 과정 Q&A 현황 미리보기 — 강사(대상)별 필터 지원
+    openPreview: function() {
         if(!state.room) return ui.showAlert("강의실을 먼저 선택해주세요.");
-        const today = new Date();
-        const dateIn = document.getElementById('printDateInput');
-        const profIn = document.getElementById('printProfInput');
-        const modal = document.getElementById('printInputModal');
-        
-        if(modal) {
-            if(dateIn) dateIn.value = document.getElementById('dashPeriod')?.innerText || "";
-            if(profIn) profIn.value = document.getElementById('dashProfNameOnly')?.innerText || ""; 
-            modal.style.display = 'flex'; 
+        const g = id => (document.getElementById(id)?.innerText || '').trim();
+        this._meta = {
+            cname:   g('dashCourseTitle') || '과정명 미설정',
+            coord:   g('dashCoordName') || '-',
+            roomLoc: g('dashRoomDetail') || '-',
+            period:  g('dashPeriod') || '-',
+            prof:    g('dashProfNameOnly') || '-'
+        };
+        // Q&A 수집 (대상 강사 subject 없으면 '공통질문')
+        const items = Object.values(state.qaData || {}).filter(q => q && q.status !== 'delete');
+        this._qa = items.map(q => ({
+            text: String(q.text || ''),
+            likes: (q.likes || 0),
+            subject: (String(q.subject || '').trim() || '공통질문')
+        }));
+        // 대상 강사별 건수 집계 (공통질문은 맨 뒤, 나머지는 건수 많은 순)
+        const cnt = {};
+        this._qa.forEach(q => { cnt[q.subject] = (cnt[q.subject] || 0) + 1; });
+        const subs = Object.keys(cnt).sort((a,b) => {
+            if(a === '공통질문') return 1; if(b === '공통질문') return -1;
+            return (cnt[b] - cnt[a]) || a.localeCompare(b, 'ko');
+        });
+        this._subjects = subs.map(s => ({ name: s, n: cnt[s] }));
+        this._filter = '전체';
+        this._render();
+        const pm = document.getElementById('printPreviewModal'); if(pm) pm.style.display = 'flex';
+    },
+
+    // 강사 칩 클릭 → 그 강사 질문만 (다시 '전체' 누르면 전체)
+    filterBy: function(name) { this._filter = name || '전체'; this._render(); },
+
+    _render: function() {
+        const m = this._meta, esc = this._esc;
+        const total = this._qa.length;
+        const filtered = (this._filter === '전체') ? this._qa : this._qa.filter(q => q.subject === this._filter);
+        const chip = (label, n, key, active) =>
+            `<span onclick="printMgr.filterBy('${String(key).replace(/['\\]/g,'')}')" data-noprint-click="1" style="cursor:pointer; display:inline-block; margin:4px 7px 4px 0; padding:7px 15px; border-radius:999px; border:1.5px solid ${active?'#003366':'#cbd5e1'}; background:${active?'#003366':'#fff'}; color:${active?'#fff':'#334155'}; font-weight:800; font-size:14px;">${esc(label)} <b style="color:${active?'#93c5fd':'#2563eb'};">${n}</b></span>`;
+        let chips = chip('전체', total, '전체', this._filter === '전체');
+        this._subjects.forEach(s => { chips += chip(s.name, s.n, s.name, this._filter === s.name); });
+        let rows = '';
+        if(filtered.length === 0){
+            rows = `<tr><td colspan='4' style='text-align:center; padding:30px; color:#94a3b8; border:1px solid #000;'>해당 강사에게 등록된 질문이 없습니다.</td></tr>`;
+        } else {
+            filtered.slice().sort((a,b)=>(b.likes||0)-(a.likes||0)).forEach((q,i)=>{
+                rows += `<tr><td style='text-align:center; border:1px solid #000; padding:8px;'>${i+1}</td><td style='text-align:center; border:1px solid #000; padding:8px; white-space:nowrap;'>${esc(q.subject)}</td><td style='text-align:left; border:1px solid #000; padding:8px;'>${esc(q.text)}</td><td style='text-align:center; border:1px solid #000; padding:8px;'>❤️ ${q.likes||0}</td></tr>`;
+            });
         }
-    },
-    
-    confirmPrint: function() { 
-        this.closeInputModal(); 
-        const date = document.getElementById('printDateInput')?.value || "-";
-        const prof = document.getElementById('printProfInput')?.value || "-";
-        this.openPreview(date, prof); 
-    },
-    
-    closeInputModal: function() { 
-        document.getElementById('printInputModal').style.display = 'none'; 
-    },
-    
-
-
-
-
-
-
-
-// [수정] 결재란이 삭제된 종합 결과 보고서 렌더링 로직
-    openPreview: async function(date, prof) { 
-        const cname = document.getElementById('dashCourseTitle')?.innerText || "과정명 미설정";
-        const coord = document.getElementById('dashCoordName')?.innerText || "-";
-        const roomLoc = document.getElementById('dashRoomDetail')?.innerText || "-";
-        
-        // --- [종합 데이터 집계] ---
-        const arrivedCount = document.getElementById('dashArrivedCount')?.innerText || "0";
-        const totalCount = document.getElementById('dashTotalCount')?.innerText || "0";
-        const qaTotal = document.getElementById('dashQaCount')?.innerText || "0";
-        const actionTotal = document.getElementById('dashActionCount')?.innerText || "0";
-        const shuttleTotal = document.getElementById('dashShuttleTotal')?.innerText || "0";
-        
-        const previewModal = document.getElementById('printPreviewModal');
-
-        // 1. Q&A 리스트 생성 (공감순 정렬)
-        let qaHtml = "";
-        const qaItems = Object.values(state.qaData || {}).filter(q => q.status !== 'delete');
-        if (qaItems.length === 0) {
-            qaHtml = "<tr><td colspan='3' style='text-align:center; padding:30px; color:#94a3b8;'>수집된 질문이 없습니다.</td></tr>";
-        } else { 
-            qaItems.sort((a, b) => (b.likes || 0) - (a.likes || 0)).forEach((item, idx) => { 
-                qaHtml += `<tr><td style='text-align:center; border:1px solid #000; padding:8px;'>${idx + 1}</td><td style='text-align:left; border:1px solid #000; padding:8px;'>${item.text}</td><td style='text-align:center; border:1px solid #000; padding:8px;'>❤️ ${item.likes || 0}</td></tr>`; 
-            }); 
-        }
-
-        // 2. 보고서 본문(HTML) 조립 - [결재란 삭제 버전]
+        const flabel = (this._filter === '전체') ? '전체' : this._filter;
         document.getElementById('official-document').innerHTML = `
-            <div style="text-align:center; padding-top:20px; margin-bottom:50px;">
-                <h2 style="font-size:35px; font-weight:900; margin:0; letter-spacing:2px;">교육과정 운영 결과 보고서</h2>
-                <div style="width:100px; height:4px; background:#003366; margin:15px auto;"></div>
+            <div style="text-align:center; padding-top:12px; margin-bottom:34px;">
+                <h2 style="font-size:31px; font-weight:900; margin:0; letter-spacing:1px;">${esc(m.cname)} Q&A 현황</h2>
+                <div style="width:100px; height:4px; background:#003366; margin:13px auto;"></div>
             </div>
-            
-            <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:15px; font-size:19px; color:#333;">1. 교육 개요</h4>
-            <table style="width:100%; border-collapse:collapse; margin-bottom:40px; border:2px solid #000;">
-                <tr style="height:45px;"><th style="width:150px; background:#f1f5f9; border:1px solid #000; text-align:center;">교 육 과 정 명</th><td colspan="3" style="padding-left:15px; border:1px solid #000; font-weight:bold; font-size:16px;">${cname}</td></tr>
-                <tr style="height:45px;"><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">교 육 기 간</th><td style="padding-left:15px; border:1px solid #000; width:35%;">${date}</td><th style="width:120px; background:#f1f5f9; border:1px solid #000; text-align:center;">강 의 장</th><td style="padding-left:15px; border:1px solid #000;">${roomLoc}</td></tr>
-                <tr style="height:45px;"><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">담 임 교 수</th><td style="padding-left:15px; border:1px solid #000;">${prof} 교수</td><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">과 정 담 당</th><td style="padding-left:15px; border:1px solid #000;">${coord}</td></tr>
+            <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:14px; font-size:19px; color:#333;">1. 교육 개요</h4>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:30px; border:2px solid #000;">
+                <tr style="height:44px;"><th style="width:150px; background:#f1f5f9; border:1px solid #000; text-align:center;">교 육 과 정 명</th><td colspan="3" style="padding-left:15px; border:1px solid #000; font-weight:bold; font-size:16px;">${esc(m.cname)}</td></tr>
+                <tr style="height:44px;"><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">교 육 기 간</th><td style="padding-left:15px; border:1px solid #000; width:35%;">${esc(m.period)}</td><th style="width:120px; background:#f1f5f9; border:1px solid #000; text-align:center;">강 의 장</th><td style="padding-left:15px; border:1px solid #000;">${esc(m.roomLoc)}</td></tr>
+                <tr style="height:44px;"><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">담 임 교 수</th><td style="padding-left:15px; border:1px solid #000;">${esc(m.prof)} 교수</td><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">과 정 담 당</th><td style="padding-left:15px; border:1px solid #000;">${esc(m.coord)}</td></tr>
             </table>
-
-            <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:15px; font-size:19px; color:#333;">2. 운영 및 참여 현황</h4>
-            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-bottom:40px; text-align:center;">
-                <div style="padding:20px; border:1px solid #000; background:#fff;"><span style="font-size:13px; color:#64748b; font-weight:bold;">입교/접속</span><br><b style="font-size:22px; color:#003366;">${arrivedCount}</b> <small>/ ${totalCount}명</small></div>
-                <div style="padding:20px; border:1px solid #000; background:#fff;"><span style="font-size:13px; color:#64748b; font-weight:bold;">학습질문 건수</span><br><b style="font-size:22px; color:#003366;">${qaTotal}</b> <small>건</small></div>
-                <div style="padding:20px; border:1px solid #000; background:#fff;"><span style="font-size:13px; color:#64748b; font-weight:bold;">외출/외박 신청</span><br><b style="font-size:22px; color:#003366;">${actionTotal}</b> <small>건</small></div>
-                <div style="padding:20px; border:1px solid #000; background:#fff;"><span style="font-size:13px; color:#64748b; font-weight:bold;">차량 지원 수요</span><br><b style="font-size:22px; color:#003366;">${shuttleTotal}</b> <small>건</small></div>
-            </div>
-
-            <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:15px; font-size:19px; color:#333;">3. 학습 소통 현황 (Q&A)</h4>
+            <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:12px; font-size:19px; color:#333;">2. 강사별 질문 현황 <span style="font-size:13px; color:#64748b; font-weight:700;">(총 ${total}건 · 강사를 클릭하면 그 강사 질문만 표시)</span></h4>
+            <div style="margin-bottom:28px; line-height:2;">${chips}</div>
+            <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:14px; font-size:19px; color:#333;">3. 질문 목록 <span style="font-size:14px; color:#2563eb; font-weight:800;">— ${esc(flabel)} (${filtered.length}건)</span></h4>
             <table style="width:100%; border-collapse:collapse; border:1px solid #000;">
-                <thead style="background:#f1f5f9;">
-                    <tr style="height:40px;">
-                        <th style="width:60px; border:1px solid #000; text-align:center;">순번</th>
-                        <th style="border:1px solid #000; text-align:center;">질 문 내 용 (교육생 공감순 정렬)</th>
-                        <th style="width:80px; border:1px solid #000; text-align:center;">공감</th>
-                    </tr>
-                </thead>
-                <tbody>${qaHtml}</tbody>
+                <thead style="background:#f1f5f9;"><tr style="height:40px;">
+                    <th style="width:56px; border:1px solid #000; text-align:center;">순번</th>
+                    <th style="width:130px; border:1px solid #000; text-align:center;">대상 강사</th>
+                    <th style="border:1px solid #000; text-align:center;">질 문 내 용 (공감순)</th>
+                    <th style="width:76px; border:1px solid #000; text-align:center;">공감</th>
+                </tr></thead>
+                <tbody>${rows}</tbody>
             </table>
-            
-            <div style="margin-top:70px; text-align:center; font-size:15px; color:#333; font-weight:bold;">위와 같이 교육과정 운영 결과를 보고합니다.</div>
-            <div style="margin-top:10px; text-align:center; font-size:14px; color:#666;">${new Date().toLocaleDateString('ko-KR', {year: 'numeric', month: 'long', day: 'numeric'})}</div>
+            <div style="margin-top:34px; text-align:right; font-size:14px; color:#666;">${new Date().toLocaleDateString('ko-KR', {year:'numeric', month:'long', day:'numeric'})} 기준</div>
         `;
-        
-        if(previewModal) previewModal.style.display = 'flex'; 
     },
-    
+
 
 
 
@@ -11327,16 +11322,16 @@ const printMgr = {
         document.getElementById('printPreviewModal').style.display = 'none'; 
     },
     
-    executePrint: function() { 
+    // 'Q&A PDF저장' — 브라우저 인쇄→PDF. 현재 선택된 강사(필터)만 저장. 파일명 = "~과정 Q&A 현황".
+    executePrint: function() {
         const content = document.getElementById('official-document').innerHTML;
-        const printWindow = window.open('', '', 'height=900,width=900');
-        printWindow.document.write('<html><head><title>KAC Report</title>');
-        printWindow.document.write('<style>@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"); * { box-sizing: border-box; } body { font-family: "Pretendard", sans-serif; padding: 40px; } table { width:100%; border-collapse:collapse; } th, td { border:1px solid #000; padding:8px; font-size:13px; } </style>');
-        printWindow.document.write('</head><body>');
-        printWindow.document.write(content);
-        printWindow.document.write('</body></html>');
-        printWindow.document.close();
-        setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
+        const base = (this._meta.cname || '과정') + ' Q&A 현황' + (this._filter && this._filter !== '전체' ? (' - ' + this._filter) : '');
+        const w = window.open('', '', 'height=900,width=900');
+        w.document.write('<html><head><title>' + this._esc(base) + '</title>');
+        w.document.write('<style>@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"); *{box-sizing:border-box;} body{font-family:"Pretendard",sans-serif; padding:0; color:#000;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #000; padding:8px; font-size:13px;} h2,h4{margin:0;} thead{display:table-header-group;} tr{page-break-inside:avoid;} @page{size:A4; margin:12mm;}</style>');
+        w.document.write('</head><body>' + content + '</body></html>');
+        w.document.close();
+        setTimeout(() => { w.print(); w.close(); }, 500);
     }
 };
 
