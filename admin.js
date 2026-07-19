@@ -11352,7 +11352,7 @@ const printMgr = {
         const base = (this._meta.cname || '과정') + ' Q&A 현황' + (this._filter && this._filter !== '전체' ? (' - ' + this._filter) : '');
         const w = window.open('', '', 'height=900,width=900');
         w.document.write('<html><head><title>' + this._esc(base) + '</title>');
-        w.document.write('<style>@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"); *{box-sizing:border-box;} body{font-family:"Pretendard",sans-serif; padding:0; color:#000;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #000; padding:8px; font-size:13px;} h2,h4{margin:0;} thead{display:table-header-group;} tr{page-break-inside:avoid;} @page{size:A4; margin:12mm;}</style>');
+        w.document.write('<style>@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"); *{box-sizing:border-box; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;} html,body{-webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;} body{font-family:"Pretendard",sans-serif; padding:14mm; color:#000;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #000; padding:8px; font-size:13px;} h2,h4{margin:0;} thead{display:table-header-group;} tr{page-break-inside:avoid;} @page{size:A4; margin:0;}</style>');
         w.document.write('</head><body>' + content + '</body></html>');
         w.document.close();
         setTimeout(() => { w.print(); w.close(); }, 500);
