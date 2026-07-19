@@ -11281,7 +11281,7 @@ const printMgr = {
         const filtered = (this._filter === '전체') ? this._qa : this._qa.filter(q => q.subject === this._filter);
         const attr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const chip = (label, n, key, active) =>
-            `<span data-sub="${attr(key)}" style="cursor:pointer; display:inline-block; margin:4px 7px 4px 0; padding:7px 15px; border-radius:999px; border:1.5px solid ${active?'#003366':'#cbd5e1'}; background:${active?'#003366':'#fff'}; color:${active?'#fff':'#334155'}; font-weight:800; font-size:14px;">${esc(label)} <b style="color:${active?'#93c5fd':'#2563eb'};">${n}</b></span>`;
+            `<span data-sub="${attr(key)}" class="${active?'qa-chip-on':'qa-chip'}" style="cursor:pointer; display:inline-block; margin:4px 7px 4px 0; padding:7px 15px; border-radius:999px; border:1.5px solid ${active?'#dc2626':'#cbd5e1'}; background:${active?'#dc2626':'#fff'}; color:${active?'#fff':'#334155'}; font-weight:800; font-size:14px;">${esc(label)} <b style="color:${active?'#fecaca':'#2563eb'};">${n}</b></span>`;
         let chips = chip('전체', total, '전체', this._filter === '전체');
         this._subjects.forEach(s => { chips += chip(s.name, s.n, s.name, this._filter === s.name); });
         let rows = '';
@@ -11340,7 +11340,15 @@ const printMgr = {
     
     // 'Q&A PDF저장' — 브라우저 인쇄→PDF. 현재 선택된 강사(필터)만 저장. 파일명 = "~과정 Q&A 현황".
     executePrint: function() {
-        const content = document.getElementById('official-document').innerHTML;
+        // [Q&A출력] 특정 강사가 선택된 경우: 그 강사 칩만 남기고 나머지 강사 칩은 PDF에서 제거
+        const _src = document.getElementById('official-document');
+        const _clone = _src.cloneNode(true);
+        if (this._filter && this._filter !== '전체') {
+            _clone.querySelectorAll('[data-sub]').forEach(el => {
+                if (el.getAttribute('data-sub') !== this._filter) el.remove();
+            });
+        }
+        const content = _clone.innerHTML;
         const base = (this._meta.cname || '과정') + ' Q&A 현황' + (this._filter && this._filter !== '전체' ? (' - ' + this._filter) : '');
         const w = window.open('', '', 'height=900,width=900');
         w.document.write('<html><head><title>' + this._esc(base) + '</title>');
