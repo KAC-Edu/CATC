@@ -11289,7 +11289,7 @@ const printMgr = {
             rows = `<tr><td colspan='4' style='text-align:center; padding:30px; color:#94a3b8; border:1px solid #000;'>해당 강사에게 등록된 질문이 없습니다.</td></tr>`;
         } else {
             filtered.slice().sort((a,b)=>(b.likes||0)-(a.likes||0)).forEach((q,i)=>{
-                rows += `<tr><td style='text-align:center; border:1px solid #000; padding:8px;'>${i+1}</td><td style='text-align:center; border:1px solid #000; padding:8px; white-space:nowrap;'>${esc(q.subject)}</td><td style='text-align:left; border:1px solid #000; padding:8px;'>${esc(q.text)}</td><td style='text-align:center; border:1px solid #000; padding:8px;'>❤️ ${q.likes||0}</td></tr>`;
+                rows += `<tr><td style='text-align:center; border:1px solid #000; padding:8px; word-break:break-all;'>${i+1}</td><td style='text-align:center; border:1px solid #000; padding:8px; word-break:break-all;'>${esc(q.subject)}</td><td style='text-align:left; border:1px solid #000; padding:8px; word-break:break-all; white-space:normal;'>${esc(q.text)}</td><td style='text-align:center; border:1px solid #000; padding:8px; white-space:nowrap;'>❤️ ${q.likes||0}</td></tr>`;
             });
         }
         const flabel = (this._filter === '전체') ? '전체' : this._filter;
@@ -11299,20 +11299,22 @@ const printMgr = {
                 <div style="width:100px; height:4px; background:#003366; margin:13px auto;"></div>
             </div>
             <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:14px; font-size:19px; color:#333;">1. 교육 개요</h4>
-            <table style="width:100%; border-collapse:collapse; margin-bottom:30px; border:2px solid #000;">
-                <tr style="height:44px;"><th style="width:150px; background:#f1f5f9; border:1px solid #000; text-align:center;">교 육 과 정 명</th><td colspan="3" style="padding-left:15px; border:1px solid #000; font-weight:bold; font-size:16px;">${esc(m.cname)}</td></tr>
-                <tr style="height:44px;"><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">교 육 기 간</th><td style="padding-left:15px; border:1px solid #000; width:35%;">${esc(m.period)}</td><th style="width:120px; background:#f1f5f9; border:1px solid #000; text-align:center;">강 의 장</th><td style="padding-left:15px; border:1px solid #000;">${esc(m.roomLoc)}</td></tr>
-                <tr style="height:44px;"><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">담 임 교 수</th><td style="padding-left:15px; border:1px solid #000;">${esc(m.prof)} 교수</td><th style="background:#f1f5f9; border:1px solid #000; text-align:center;">과 정 담 당</th><td style="padding-left:15px; border:1px solid #000;">${esc(m.coord)}</td></tr>
+            <table style="width:100%; border-collapse:collapse; margin-bottom:30px; border:2px solid #000; table-layout:fixed; word-break:break-all;">
+                <colgroup><col style="width:17%"><col style="width:33%"><col style="width:17%"><col style="width:33%"></colgroup>
+                <tr><th style="padding:11px 6px; background:#f1f5f9; border:1px solid #000; text-align:center; white-space:nowrap;">교육과정명</th><td colspan="3" style="padding:11px 14px; border:1px solid #000; font-weight:bold; font-size:16px;">${esc(m.cname)}</td></tr>
+                <tr><th style="padding:11px 6px; background:#f1f5f9; border:1px solid #000; text-align:center; white-space:nowrap;">교육기간</th><td style="padding:11px 14px; border:1px solid #000;">${esc(m.period)}</td><th style="padding:11px 6px; background:#f1f5f9; border:1px solid #000; text-align:center; white-space:nowrap;">강의장</th><td style="padding:11px 14px; border:1px solid #000;">${esc(m.roomLoc)}</td></tr>
+                <tr><th style="padding:11px 6px; background:#f1f5f9; border:1px solid #000; text-align:center; white-space:nowrap;">담임교수</th><td style="padding:11px 14px; border:1px solid #000;">${esc(m.prof)} 교수</td><th style="padding:11px 6px; background:#f1f5f9; border:1px solid #000; text-align:center; white-space:nowrap;">과정담당</th><td style="padding:11px 14px; border:1px solid #000;">${esc(m.coord)}</td></tr>
             </table>
             <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:12px; font-size:19px; color:#333;">2. 강사별 질문 현황 <span style="font-size:13px; color:#64748b; font-weight:700;">(총 ${total}건 · 강사를 클릭하면 그 강사 질문만 표시)</span></h4>
             <div style="margin-bottom:28px; line-height:2;">${chips}</div>
             <h4 style="border-left:6px solid #003366; padding-left:12px; margin-bottom:14px; font-size:19px; color:#333;">3. 질문 목록 <span style="font-size:14px; color:#2563eb; font-weight:800;">— ${esc(flabel)} (${filtered.length}건)</span></h4>
-            <table style="width:100%; border-collapse:collapse; border:1px solid #000;">
-                <thead style="background:#f1f5f9;"><tr style="height:40px;">
-                    <th style="width:56px; border:1px solid #000; text-align:center;">순번</th>
-                    <th style="width:130px; border:1px solid #000; text-align:center;">대상 강사</th>
-                    <th style="border:1px solid #000; text-align:center;">질 문 내 용 (공감순)</th>
-                    <th style="width:76px; border:1px solid #000; text-align:center;">공감</th>
+            <table style="width:100%; border-collapse:collapse; border:1px solid #000; table-layout:fixed; word-break:break-all;">
+                <colgroup><col style="width:9%"><col style="width:22%"><col style="width:56%"><col style="width:13%"></colgroup>
+                <thead style="background:#f1f5f9;"><tr>
+                    <th style="padding:9px 4px; border:1px solid #000; text-align:center; white-space:nowrap;">순번</th>
+                    <th style="padding:9px 4px; border:1px solid #000; text-align:center; white-space:nowrap;">대상 강사</th>
+                    <th style="padding:9px 4px; border:1px solid #000; text-align:center;">질문 내용 (공감순)</th>
+                    <th style="padding:9px 4px; border:1px solid #000; text-align:center; white-space:nowrap;">공감</th>
                 </tr></thead>
                 <tbody>${rows}</tbody>
             </table>
