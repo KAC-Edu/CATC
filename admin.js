@@ -11234,12 +11234,20 @@ const printMgr = {
     openPreview: function() {
         if(!state.room) return ui.showAlert("강의실을 먼저 선택해주세요.");
         const g = id => (document.getElementById(id)?.innerText || '').trim();
+        // [담임교수 전원] 대표 1명만이 아니라 지정된 교수 전원 표시 (외 N명 → 모두 나오게)
+        let _profFull = '';
+        try {
+            const _st = (window.latestCoursesData && window.latestCoursesData[state.room] && window.latestCoursesData[state.room].status) || {};
+            const _arr = (typeof kacProfAll === 'function') ? kacProfAll(_st) : [];
+            if (_arr && _arr.length) _profFull = _arr.join(', ');
+        } catch(e){}
+        if (!_profFull) _profFull = g('dashProfNameOnly') || '-';
         this._meta = {
             cname:   g('dashCourseTitle') || '과정명 미설정',
             coord:   g('dashCoordName') || '-',
             roomLoc: g('dashRoomDetail') || '-',
             period:  g('dashPeriod') || '-',
-            prof:    g('dashProfNameOnly') || '-'
+            prof:    _profFull
         };
         // Q&A 수집 (대상 강사 subject 없으면 '공통질문')
         const items = Object.values(state.qaData || {}).filter(q => q && q.status !== 'delete');
@@ -11258,6 +11266,9 @@ const printMgr = {
         this._subjects = subs.map(s => ({ name: s, n: cnt[s] }));
         this._filter = '전체';
         this._render();
+        // 강사 칩 클릭 → 그 강사 질문만 (위임 방식이라 이름에 공백·특수문자 있어도 안전)
+        const _doc = document.getElementById('official-document');
+        if (_doc) _doc.onclick = function(e){ const c = e.target && e.target.closest && e.target.closest('[data-sub]'); if(c){ printMgr.filterBy(c.getAttribute('data-sub')); } };
         const pm = document.getElementById('printPreviewModal'); if(pm) pm.style.display = 'flex';
     },
 
@@ -11268,8 +11279,9 @@ const printMgr = {
         const m = this._meta, esc = this._esc;
         const total = this._qa.length;
         const filtered = (this._filter === '전체') ? this._qa : this._qa.filter(q => q.subject === this._filter);
+        const attr = s => String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         const chip = (label, n, key, active) =>
-            `<span onclick="printMgr.filterBy('${String(key).replace(/['\\]/g,'')}')" data-noprint-click="1" style="cursor:pointer; display:inline-block; margin:4px 7px 4px 0; padding:7px 15px; border-radius:999px; border:1.5px solid ${active?'#003366':'#cbd5e1'}; background:${active?'#003366':'#fff'}; color:${active?'#fff':'#334155'}; font-weight:800; font-size:14px;">${esc(label)} <b style="color:${active?'#93c5fd':'#2563eb'};">${n}</b></span>`;
+            `<span data-sub="${attr(key)}" style="cursor:pointer; display:inline-block; margin:4px 7px 4px 0; padding:7px 15px; border-radius:999px; border:1.5px solid ${active?'#003366':'#cbd5e1'}; background:${active?'#003366':'#fff'}; color:${active?'#fff':'#334155'}; font-weight:800; font-size:14px;">${esc(label)} <b style="color:${active?'#93c5fd':'#2563eb'};">${n}</b></span>`;
         let chips = chip('전체', total, '전체', this._filter === '전체');
         this._subjects.forEach(s => { chips += chip(s.name, s.n, s.name, this._filter === s.name); });
         let rows = '';
