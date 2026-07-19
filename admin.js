@@ -11306,6 +11306,8 @@ const printMgr = {
             </table>
             <div style="margin-top:34px; text-align:right; font-size:14px; color:#666;">${new Date().toLocaleDateString('ko-KR', {year:'numeric', month:'long', day:'numeric'})} 기준</div>
         `;
+        // 미리보기는 항상 맨 위(교육개요·강사 칩)부터 보이게 스크롤 리셋
+        try { const _pc = document.querySelector('#printPreviewModal .preview-content'); if(_pc) _pc.scrollTop = 0; } catch(e){}
     },
 
 
