@@ -11349,11 +11349,18 @@ const printMgr = {
             });
         }
         const content = _clone.innerHTML;
+        // [Q&A출력] @page margin:0 으로 브라우저 머리글/꼬리글(날짜·about:blank·페이지번호)은 제거하고,
+        //  대신 반복되는 thead/tfoot 스페이서로 모든 페이지 상·하단에 여백을 확보한다(2페이지부터 여백 없음 문제 해결).
+        const wrapped = '<table class="pagewrap" style="width:100%; border-collapse:collapse;">'
+            + '<thead><tr><td style="border:none !important; padding:0; height:14mm;"></td></tr></thead>'
+            + '<tfoot><tr><td style="border:none !important; padding:0; height:12mm;"></td></tr></tfoot>'
+            + '<tbody><tr><td style="border:none !important; padding:0;">' + content + '</td></tr></tbody>'
+            + '</table>';
         const base = (this._meta.cname || '과정') + ' Q&A 현황' + (this._filter && this._filter !== '전체' ? (' - ' + this._filter) : '');
         const w = window.open('', '', 'height=900,width=900');
         w.document.write('<html><head><title>' + this._esc(base) + '</title>');
-        w.document.write('<style>@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"); *{box-sizing:border-box; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;} html,body{-webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;} body{font-family:"Pretendard",sans-serif; padding:14mm; color:#000;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #000; padding:8px; font-size:13px;} h2,h4{margin:0;} thead{display:table-header-group;} tr{page-break-inside:avoid;} @page{size:A4; margin:0;}</style>');
-        w.document.write('</head><body>' + content + '</body></html>');
+        w.document.write('<style>@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css"); *{box-sizing:border-box; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;} html,body{-webkit-print-color-adjust:exact !important; print-color-adjust:exact !important;} body{font-family:"Pretendard",sans-serif; padding:0 14mm; color:#000;} table{width:100%; border-collapse:collapse;} th,td{border:1px solid #000; padding:8px; font-size:13px;} h2,h4{margin:0;} table.pagewrap{page-break-inside:auto;} table.pagewrap>thead{display:table-header-group;} table.pagewrap>tfoot{display:table-footer-group;} table.pagewrap>tbody>tr>td{border:none !important;} tbody tr{page-break-inside:avoid;} @page{size:A4; margin:0;}</style>');
+        w.document.write('</head><body>' + wrapped + '</body></html>');
         w.document.close();
         setTimeout(() => { w.print(); w.close(); }, 500);
     }
