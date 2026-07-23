@@ -169,16 +169,12 @@ body {
 
 
 /* Q&A 필터 전체 컨테이너 */
-.qa-filters { 
-    position: -webkit-sticky;
-    position: sticky;
-    top: 0;             
-    
-    /* ★ 핵심 수정: 탭 메뉴(2000)보다 낮게 조정 ★ */
-    z-index: 1000;      
-    
-    background: var(--bg-color) !important; 
-    padding: 8px 0 10px;   /* 위로 끌어올림 */
+/* [비고정] sticky 고정을 제거 — 강사 리스트가 본문과 함께 위로 스크롤되어 질문 영역이 넓어지고,
+   스크롤 중 고정 헤더를 접었다 폈다 하며 화면이 튀던(딸각거림) 문제를 원천 제거한다. */
+.qa-filters {
+    position: static;
+    background: var(--bg-color) !important;
+    padding: 8px 0 10px;
     margin-bottom: 10px;
     width: 100%;
 }
