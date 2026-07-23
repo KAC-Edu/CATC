@@ -5029,13 +5029,16 @@ setMode: function(mode) {
                 //  (저장된 퀴즈가 있으면 선택, 없으면 샘플 문항으로 시작)
                 // [J15] 진입 시 quizStep을 무조건 'none'(선택 중)으로 — 강사가 '퀴즈 시작'을 누르기 전에는
                 //  교육생 화면에 문항이 절대 표시되지 않도록 상태를 명확히 초기화
-                firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
-                // [J50] 강사가 퀴즈 중 창/노트북을 그냥 닫아도(정상 종료 미실행) 교육생이 퀴즈 화면에 갇히지 않도록,
-                //  접속 끊김 시 서버가 자동으로 quizStep='none'·mode='qa'로 되돌려 교육생을 즉시 풀어줌(onDisconnect 예약).
-                try {
-                    firebase.database().ref(`courses/${state.room}/status/quizStep`).onDisconnect().set('none');
-                    firebase.database().ref(`courses/${state.room}/status/mode`).onDisconnect().set('qa');
-                } catch(e){}
+                // [옵저버 차단] 옵저버는 공유 상태(quizStep)를 건드리면 안 됨 — 진행 중인 퀴즈를 흔들 수 있어 쓰기 금지.
+                if (!state.isObserver) {
+                    firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none');
+                    // [J50] 강사가 퀴즈 중 창/노트북을 그냥 닫아도(정상 종료 미실행) 교육생이 퀴즈 화면에 갇히지 않도록,
+                    //  접속 끊김 시 서버가 자동으로 quizStep='none'·mode='qa'로 되돌려 교육생을 즉시 풀어줌(onDisconnect 예약).
+                    try {
+                        firebase.database().ref(`courses/${state.room}/status/quizStep`).onDisconnect().set('none');
+                        firebase.database().ref(`courses/${state.room}/status/mode`).onDisconnect().set('qa');
+                    } catch(e){}
+                }
                 document.getElementById('quizSelectModal').style.display = 'flex';
                 // [J85] 아직 고른 문항이 없으면 뒤 화면을 '빈 상태'로 완전히 정리한다.
                 //  (예전엔 O/X 선택지가 남아 있어서 모달을 닫으면 문제 없는 O/X 카드만 떠 있었다)
@@ -8525,7 +8528,7 @@ prevNext: function(d) {
             const ctrl0 = document.getElementById('quizControls');
             if (ctrl0) ctrl0.style.display = 'none';                  // 하단 버튼 전체 숨김
             try { this.stopAnswerMonitor && this.stopAnswerMonitor(); } catch(e){}
-            try { firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none'); } catch(e){}
+            if(!state.isObserver){ try { firebase.database().ref(`courses/${state.room}/status/quizStep`).set('none'); } catch(e){} }
             return;                                                    // ★ 여기서 끝 — activeQuiz 안 씀
         }
 
@@ -8542,15 +8545,18 @@ prevNext: function(d) {
         // [J15] quizStep은 여기서 건드리지 않음 — 문항 전환마다 'none'으로 리셋되면
         //  진행 중(live)이던 교육생 화면이 문항 사이마다 퀴즈에서 튕겨나가는 문제 발생.
         //  'none'→'live' 전환은 퀴즈 탭 진입(none)과 '현재 퀴즈 시작' 버튼(live)에서만 관리.
-        firebase.database().ref(`courses/${state.room}/activeQuiz`).set({ 
-            id: `Q${state.currentQuizIdx}`, 
-            status: 'ready', 
-            type: q.isOX?'OX':'MULTIPLE', 
-            ...q 
-        });
-        // [J61] 문항이 화면에 뜨는 순간(ready) quizStep='live'로 — 교육생 화면에도 그 문항이 보이게(1번부터 적용).
-        //  'ready'라 교육생은 문제만 보이고 답안 버튼은 '현재 퀴즈 시작'(open) 후에 나타남. (문항 전환마다 'none' 리셋 안 하므로 튕김 없음)
-        firebase.database().ref(`courses/${state.room}/status/quizStep`).set('live');
+        // [옵저버 차단] 옵저버가 퀴즈를 열람·선택하더라도 교육생 화면(activeQuiz·quizStep)에는 절대 쓰지 않는다.
+        if (!state.isObserver) {
+            firebase.database().ref(`courses/${state.room}/activeQuiz`).set({
+                id: `Q${state.currentQuizIdx}`,
+                status: 'ready',
+                type: q.isOX?'OX':'MULTIPLE',
+                ...q
+            });
+            // [J61] 문항이 화면에 뜨는 순간(ready) quizStep='live'로 — 교육생 화면에도 그 문항이 보이게(1번부터 적용).
+            //  'ready'라 교육생은 문제만 보이고 답안 버튼은 '현재 퀴즈 시작'(open) 후에 나타남. (문항 전환마다 'none' 리셋 안 하므로 튕김 없음)
+            firebase.database().ref(`courses/${state.room}/status/quizStep`).set('live');
+        }
         const ctrl = document.getElementById('quizControls');
         if(ctrl) ctrl.style.display = 'flex';
         state.remainingTime = 8;
