@@ -17647,5 +17647,35 @@ ui.applyShuttleFilter = function () {
     } catch (e) { try { console.warn('[J96] 브랜드 뒤로가기 설치 실패', e); } catch (_) {} }
 })();
 
+/* [Q&A 강사필터 자동 접힘] 질문 리스트를 아래로 스크롤하면 상단 '출강 강사 리스트'를 접어
+   질문 보는 영역을 넓히고, 위로 올리거나 맨 위에서는 다시 펼친다. (수동 ▾ 버튼과 병행) */
+(function(){
+    function initQaFilterFold(){
+        try {
+            var scroller = document.querySelector('.content-area');
+            var filters  = document.querySelector('#view-qa .qa-filters');
+            if(!scroller || !filters) return;
+            if(scroller._qaFoldBound) return;
+            scroller._qaFoldBound = true;
+            var lastY = 0;
+            scroller.addEventListener('scroll', function(){
+                var qa = document.getElementById('view-qa');
+                if(!qa || qa.style.display === 'none') return;   // Q&A 화면일 때만
+                var y = scroller.scrollTop;
+                if(y < 40){ filters.classList.remove('chips-folded'); lastY = y; return; }  // 맨 위면 항상 펼침
+                var dy = y - lastY;
+                if(dy > 6){ filters.classList.add('chips-folded'); }        // 아래로 → 접기
+                else if(dy < -6){ filters.classList.remove('chips-folded'); } // 위로 → 펼치기
+                lastY = y;
+            }, { passive:true });
+        } catch(e){}
+    }
+    try {
+        if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initQaFilterFold);
+        else initQaFilterFold();
+        setTimeout(initQaFilterFold, 1500);   // content-area가 늦게 생성되는 경우 대비
+    } catch(e){}
+})();
+
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
  
