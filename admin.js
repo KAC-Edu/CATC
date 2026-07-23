@@ -10282,32 +10282,33 @@ init: function() {
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
         } catch (e) {}
         // 교육 인원 = 명단 기준 입교완료 (수강생 현황의 '입교 완료'와 동일 · 명단 외 미체크 입교자=구경꾼 제외)  [K36]
-        //  ★ [K37] 명단(예정) = expectedStudents ∪ 운영부(coordRoster) ∪ 지원부(system/dorm/rosters, 과정명 매칭).
-        //     대시보드와 동일 기준으로 병합해야 함. 이 병합을 빼먹으면 expectedStudents가 비어있는 과정에서
-        //     예정명단이 0으로 잡혀(_rset=null) 명단 외 입교자(전은영 등)까지 전원 합산돼 67로 나온다.
+        //  ★ [K37] 명단(예정) = expectedStudents ∪ 지원부(system/dorm/rosters, 과정명 매칭).
+        //     수강생 현황 화면(loadStudentList)·대시보드와 '완전히 동일한' 소스로 맞춘다.
+        //     └ coordRoster(운영부)는 쓰지 않는다 — 명단 리스트가 '명단 외'로 판정하는 기준과 어긋나면
+        //       전은영 같은 명단 외 입교자가 다시 합산돼 67로 나온다.
+        //     명단(총원) = 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자. 예정명단이 없으면 전원(폴백).
         try {
-            const [sSnap, eSnap, iSnap, cSnap] = await Promise.all([
+            const [sSnap, eSnap, iSnap] = await Promise.all([
                 firebase.database().ref(`courses/${room}/students`).once('value'),
                 firebase.database().ref(`courses/${room}/expectedStudents`).once('value'),
-                firebase.database().ref(`courses/${room}/rosterInclude`).once('value'),
-                firebase.database().ref(`courses/${room}/coordRoster`).once('value')
+                firebase.database().ref(`courses/${room}/rosterInclude`).once('value')
             ]);
             const stu = sSnap.val() || {};
             const _ev = eSnap.val();
-            let exp = (Array.isArray(_ev) ? _ev : (_ev && typeof _ev === 'object' ? Object.values(_ev) : [])).map(n => String(n||'').trim()).filter(Boolean);
-            // 운영부(coordRoster) 명단 병합
-            try { const _cr = cSnap.val(); const _list = _cr && _cr.list; if (Array.isArray(_list)) _list.forEach(x => { if (x && x.name) exp.push(String(x.name).trim()); }); } catch(e){}
-            // 지원부(system/dorm/rosters, 과정명 매칭) 명단 병합 — 대시보드와 동일
-            try { const _rn = await ui._gatherRosterNames(room); if (_rn && _rn.length) exp = exp.concat(_rn); } catch(e){}
-            exp = Array.from(new Set(exp.filter(Boolean)));
+            let expected = (Array.isArray(_ev) ? _ev : (_ev && typeof _ev === 'object' ? Object.values(_ev) : [])).map(n => String(n||'').trim()).filter(Boolean);
+            // 지원부(system/dorm/rosters, 과정명 매칭) 명단 병합 — loadStudentList의 gatherRosterNames와 동일
+            try { const _rn = await ui._gatherRosterNames(room); if (_rn && _rn.length) expected = expected.concat(_rn); } catch(e){}
+            expected = Array.from(new Set(expected.filter(Boolean)));
             const _nrm = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
-            let _rset = null;
-            if (exp.length) {
-                _rset = {}; exp.forEach(n => _rset[_nrm(n)] = 1);
-                const inc = iSnap.val() || {};
-                Object.values(stu).forEach(s => { const nm = String(s && s.name || '').trim(); if (nm && inc[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset[_nrm(nm)] = 1; });
-            }
-            ci.count = new Set(Object.values(stu).filter(x => x && x.name && x.name !== 'undefined' && (!_rset || _rset[_nrm(String(x.name).trim())])).map(x => String(x.name).trim())).size;
+            const _rik = n => String(n==null?'':n).trim().replace(/[.#$\[\]\/]/g,'_');
+            const inc = iSnap.val() || {};
+            const expSet = {}; expected.forEach(n => expSet[String(n).trim()] = 1);
+            const arrivedNames = Object.values(stu).map(s => s && s.name).filter(n => n && n !== 'undefined').map(n => String(n).trim());
+            const hasRoster = expected.length > 0;
+            const rosterSet = {};
+            expected.forEach(n => rosterSet[_nrm(n)] = 1);
+            arrivedNames.forEach(n => { if (!expSet[n] && inc[_rik(n)]) rosterSet[_nrm(n)] = 1; });   // 체크된 명단 외 입교자만 합산
+            ci.count = new Set(arrivedNames.filter(n => hasRoster ? rosterSet[_nrm(n)] : true)).size;
         } catch (e) {}
         // 교육 시간표 사진 존재 여부 (+ 업로드 30분 경과 시 자동 삭제로 Firebase 부담 경감)
         slot.scheduleTs = 0;
