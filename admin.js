@@ -17656,43 +17656,11 @@ ui.applyShuttleFilter = function () {
     } catch (e) { try { console.warn('[J96] 브랜드 뒤로가기 설치 실패', e); } catch (_) {} }
 })();
 
-/* [Q&A 강사필터 자동 접힘] 질문 리스트를 아래로 스크롤하면 상단 '출강 강사 리스트'를 접어
-   질문 보는 영역을 넓히고, 위로 올리거나 맨 위에서는 다시 펼친다. (수동 ▾ 버튼과 병행) */
-(function(){
-    function initQaFilterFold(){
-        try {
-            var scroller = document.querySelector('.content-area');
-            var filters  = document.querySelector('#view-qa .qa-filters');
-            if(!scroller || !filters) return;
-            if(scroller._qaFoldBound) return;
-            scroller._qaFoldBound = true;
-            // [떨림 방지] 방향 감지 대신 '위치 기준 + 이력현상(hysteresis) + 토글 직후 잠금'.
-            //  접힘/펼침 임계값을 벌려(140/70) 사이 구간(dead-zone)에선 상태를 바꾸지 않고,
-            //  토글 직후 380ms는 무시해 애니메이션 중 높이변화가 다시 스크롤을 튕기며 흔드는 루프를 차단.
-            var ticking = false, lockUntil = 0;
-            scroller.addEventListener('scroll', function(){
-                if(ticking) return;
-                ticking = true;
-                requestAnimationFrame(function(){
-                    ticking = false;
-                    var qa = document.getElementById('view-qa');
-                    if(!qa || qa.style.display === 'none') return;   // Q&A 화면일 때만
-                    var now = Date.now();
-                    if(now < lockUntil) return;                      // 토글 직후 잠깐 무시
-                    var y = scroller.scrollTop;
-                    var folded = filters.classList.contains('chips-folded');
-                    if(!folded && y > 140){ filters.classList.add('chips-folded'); lockUntil = now + 380; }
-                    else if(folded && y < 70){ filters.classList.remove('chips-folded'); lockUntil = now + 380; }
-                });
-            }, { passive:true });
-        } catch(e){}
-    }
-    try {
-        if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initQaFilterFold);
-        else initQaFilterFold();
-        setTimeout(initQaFilterFold, 1500);   // content-area가 늦게 생성되는 경우 대비
-    } catch(e){}
-})();
+/* [Q&A 강사필터] 스크롤 연동 자동 접힘 로직은 제거함.
+   강사 리스트를 sticky 고정 대신 본문과 함께 스크롤(비고정, admin.css)하도록 바꿔서,
+   아래로 내리면 리스트가 위로 같이 올라가고 위로 올리면 다시 보인다.
+   → 스크롤 중 고정 헤더를 접었다 폈다 하며 화면이 튀던(딸각거림) 문제 원천 제거.
+   (수동 ▾ 버튼: .qa-fold-btn 은 그대로 두어 원하면 손으로 접었다 펼 수 있음) */
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
  
