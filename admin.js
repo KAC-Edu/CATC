@@ -17657,16 +17657,24 @@ ui.applyShuttleFilter = function () {
             if(!scroller || !filters) return;
             if(scroller._qaFoldBound) return;
             scroller._qaFoldBound = true;
-            var lastY = 0;
+            // [떨림 방지] 방향 감지 대신 '위치 기준 + 이력현상(hysteresis) + 토글 직후 잠금'.
+            //  접힘/펼침 임계값을 벌려(140/70) 사이 구간(dead-zone)에선 상태를 바꾸지 않고,
+            //  토글 직후 380ms는 무시해 애니메이션 중 높이변화가 다시 스크롤을 튕기며 흔드는 루프를 차단.
+            var ticking = false, lockUntil = 0;
             scroller.addEventListener('scroll', function(){
-                var qa = document.getElementById('view-qa');
-                if(!qa || qa.style.display === 'none') return;   // Q&A 화면일 때만
-                var y = scroller.scrollTop;
-                if(y < 40){ filters.classList.remove('chips-folded'); lastY = y; return; }  // 맨 위면 항상 펼침
-                var dy = y - lastY;
-                if(dy > 6){ filters.classList.add('chips-folded'); }        // 아래로 → 접기
-                else if(dy < -6){ filters.classList.remove('chips-folded'); } // 위로 → 펼치기
-                lastY = y;
+                if(ticking) return;
+                ticking = true;
+                requestAnimationFrame(function(){
+                    ticking = false;
+                    var qa = document.getElementById('view-qa');
+                    if(!qa || qa.style.display === 'none') return;   // Q&A 화면일 때만
+                    var now = Date.now();
+                    if(now < lockUntil) return;                      // 토글 직후 잠깐 무시
+                    var y = scroller.scrollTop;
+                    var folded = filters.classList.contains('chips-folded');
+                    if(!folded && y > 140){ filters.classList.add('chips-folded'); lockUntil = now + 380; }
+                    else if(folded && y < 70){ filters.classList.remove('chips-folded'); lockUntil = now + 380; }
+                });
             }, { passive:true });
         } catch(e){}
     }
