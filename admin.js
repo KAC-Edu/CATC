@@ -5021,6 +5021,7 @@ setMode: function(mode) {
             }
 
             if (mode === 'quiz') {
+                try { ui._initSvOffset(); } catch(e){}   // [K37] 서버시간 보정 미리 동기화 → 퀴즈 타이머가 교육생과 정확히 맞도록
                 // 퀴즈 탭 진입 시 리포트 오버레이(종료화면)가 떠있다면 강제로 닫기
                 const summaryOverlay = document.getElementById('quizSummaryOverlay');
                 if (summaryOverlay) summaryOverlay.style.display = 'none';
@@ -8275,6 +8276,7 @@ loadFile: function(e) {
     },
     
     completeQuizLoading: function() {
+        state.quizStarted = false;   // [K37] 새로 문항을 가져오면 '이번에 시작 눌렀나' 표식 초기화 → 안 건드리고 X로 나가면 팝업 없이 닫힘
         const modal = document.getElementById('quizSelectModal');
         if(modal) modal.style.display = 'none';
         const viewQa = document.getElementById('view-qa');
@@ -8796,13 +8798,17 @@ action: function(act) {
             d.classList.remove('urgent');
             d.innerText = `00:${t < 10 ? '0' + t : t}`;
         }
-        const endTime = Date.now() + (t * 1000);
+        // [K37] 종료시각을 '서버시간 기준'으로 기록·계산 — 강사PC와 교육생 기기의 로컬 시계차 때문에
+        //  교육생 타이머가 어긋나(음수→00:00 정지) 카운트가 안 되던 문제 해결. 교육생도 serverTimeOffset을 쓰므로 정렬된다.
+        try { ui._initSvOffset(); } catch(e){}
+        const _svNow = () => Date.now() + (Number((typeof ui !== 'undefined' && ui._svOffset) || 0));
+        const endTime = _svNow() + (t * 1000);
         if(dbRef.quiz) dbRef.quiz.update({ endTime: endTime });
         if(t <= 5 && d) d.classList.add('urgent');
         let lastPlayedSec = -1;
         if (!state.timerAudio) state.timerAudio = new Audio('timer.mp3');
         state.timerInterval = setInterval(() => {
-            const r = Math.ceil((endTime - Date.now()) / 1000);
+            const r = Math.ceil((endTime - _svNow()) / 1000);
             const displaySec = r < 0 ? 0 : r;
             state.remainingTime = displaySec; 
             if (d) { 
@@ -9271,15 +9277,11 @@ closeSummaryAndExit: function(silent) {
            ⚠️ kac_quiz_idx_ 는 쓰지 않는다.
               그 값은 '퀴즈를 시작하지 않고 ▶▶로 문항만 넘겨도' 저장되기 때문에,
               그걸 근거로 삼으면 정확히 이 문제(문항만 봤는데 팝업이 뜸)가 그대로 재현된다. */
+        // [J97→K37] 오직 '이번에 현재 퀴즈 시작(open)을 실제로 눌렀는가'(state.quizStarted)만 본다.
+        //  문항만 가져와 훑어보고(시작 안 누름) X를 누르면 무조건 조용히 닫는다.
+        //  지난 세션 흔적(resume 마커·이전 응답수)으로는 팝업을 띄우지 않는다 — 바로 그게 오작동(불필요한 팝업) 원인이었음.
         var _started = false;
-        try {
-            if (state.quizStarted) _started = true;
-            if (!_started && state.room && localStorage.getItem('kac_quiz_resume_' + state.room)) _started = true;
-            if (!_started) {
-                var _ans = parseInt((document.getElementById('answeredCount') || {}).innerText || '0', 10);
-                if (_ans > 0) _started = true;
-            }
-        } catch (e) { _started = true; }   // 판정 실패 시엔 안전하게 물어본다
+        try { _started = !!state.quizStarted; } catch (e) { _started = false; }
 
         if (!_started) {
             // 훑어보기만 했으니 지울 게 없다 → 문항 번호 흔적만 정리하고 조용히 나간다
