@@ -10903,13 +10903,32 @@ init: function() {
             // 교육 인원 실시간 반영 (학생 입교 시 새로고침 없이 즉시 갱신)
             try { if (ui._ciRegRef) { ui._ciRegRef.off(); ui._ciRegRef = null; } } catch (e) {}
             try {
-                ui._ciRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
+                const _ciRoom = guideMgr._room();
+                ui._ciRegRef = firebase.database().ref('courses/' + _ciRoom + '/students');
                 ui._ciRegRef.on('value', function (s) {
+                    // [K37] ★ 교육 인원 실시간 갱신도 반드시 '명단 기준'으로 — 예전엔 입교자 전원(raw)을 세서
+                    //  명단 외 미체크 입교자(전은영 등)까지 잡혀 67로 되돌아갔다(_loadSlot의 66을 이 리스너가 덮어씀).
+                    //  → 예정명단(expectedStudents ∪ 지원부) + rosterInclude 체크를 반영해 수강생 현황과 동일하게 재계산.
                     const _stu = s.val() || {};
-                    const _cnt = new Set(Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim())).size;
-                    const _el = document.getElementById('ciCount'); if (_el) _el.textContent = _cnt;
-                    // 슬롯 캐시도 동기화(다시 그릴 때 정확한 값 사용)
-                    try { if (guideMgr._slot().courseInfo) guideMgr._slot().courseInfo.count = _cnt; } catch (e) {}
+                    Promise.all([
+                        firebase.database().ref('courses/' + _ciRoom + '/expectedStudents').once('value'),
+                        firebase.database().ref('courses/' + _ciRoom + '/rosterInclude').once('value')
+                    ]).then(async function (res) {
+                        let expected = (function (v) { return Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []); })(res[0].val()).map(function (n) { return String(n || '').trim(); }).filter(Boolean);
+                        try { const _rn = await ui._gatherRosterNames(_ciRoom); if (_rn && _rn.length) expected = expected.concat(_rn); } catch (e) {}
+                        expected = Array.from(new Set(expected.filter(Boolean)));
+                        const _nrm = function (n) { return String(n == null ? '' : n).replace(/\s+/g, '').toLowerCase(); };
+                        const _rik = function (n) { return String(n == null ? '' : n).trim().replace(/[.#$\[\]\/]/g, '_'); };
+                        const inc = res[1].val() || {};
+                        const expSet = {}; expected.forEach(function (n) { expSet[String(n).trim()] = 1; });
+                        const arrivedNames = Object.values(_stu).map(function (x) { return x && x.name; }).filter(function (n) { return n && n !== 'undefined'; }).map(function (n) { return String(n).trim(); });
+                        const hasRoster = expected.length > 0;
+                        const rosterSet = {}; expected.forEach(function (n) { rosterSet[_nrm(n)] = 1; });
+                        arrivedNames.forEach(function (n) { if (!expSet[n] && inc[_rik(n)]) rosterSet[_nrm(n)] = 1; });
+                        const _cnt = new Set(arrivedNames.filter(function (n) { return hasRoster ? rosterSet[_nrm(n)] : true; })).size;
+                        const _el = document.getElementById('ciCount'); if (_el) _el.textContent = _cnt;
+                        try { if (guideMgr._slot().courseInfo) guideMgr._slot().courseInfo.count = _cnt; } catch (e) {}
+                    }).catch(function () {});
                 });
             } catch (e) {}
             slot.pageNum = num;
