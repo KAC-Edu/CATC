@@ -193,12 +193,34 @@ body {
 
 /* 하단 강사 필터 바 */
 #subjectFilterBar {
-    display: flex; 
+    display: flex;
     flex-wrap: wrap; /* 강사가 많아지면 다음 줄로 자동 줄바꿈 (핵심) */
-    gap: 8px; 
-    margin: 0; 
+    gap: 8px;
+    margin: 0;
     padding: 0;   /* 기본 상태탭 제거로 단독 줄 → 구분선·상단여백 없앰 */
+    max-height: 640px;
+    overflow: hidden;
+    transition: max-height .3s ease, opacity .22s ease, margin .3s ease;
 }
+
+/* [Q&A 필터 접힘] 질문을 아래로 스크롤하면 강사 칩 리스트를 접어 화면을 넓게 사용,
+   위로 올리면 다시 펼침. 수동 토글(▾ 버튼)로도 열고 닫을 수 있음. */
+.qa-filters.chips-folded #subjectFilterBar {
+    max-height: 0 !important;
+    opacity: 0;
+    margin-top: 0;
+    pointer-events: none;
+}
+.qa-fold-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; margin-left: 2px;
+    border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;
+    border-radius: 9px; cursor: pointer; transition: all .18s;
+    flex-shrink: 0;
+}
+.qa-fold-btn:hover { background: #eef2f7; color: #334155; border-color: #cbd5e1; }
+.qa-fold-btn i { transition: transform .28s ease; }
+.qa-filters.chips-folded .qa-fold-btn i { transform: rotate(180deg); }
 
 /* 공통 필터 칩 디자인 (예전 디자인 복구 및 세련미 추가) */
 .filter-chip {
