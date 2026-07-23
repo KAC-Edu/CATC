@@ -1698,6 +1698,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
     <div class="qa-filters">
         <div class="qa-filters-line">
             <button class="qa-add-btn" onclick="subjectMgr.toggleQaAdd()"><i class="fa-solid fa-chalkboard-user"></i> 출강 강사·과목 추가</button>
+            <button class="qa-fold-btn" title="강사 리스트 접기/펼치기" onclick="var f=this.closest('.qa-filters'); if(f) f.classList.toggle('chips-folded');"><i class="fa-solid fa-chevron-up"></i></button>
             <div id="subjectFilterBar"></div>
         </div>
         <div id="qaAddRow" class="qa-add-row" style="display:none; flex-direction:column; align-items:flex-start; gap:7px;">
