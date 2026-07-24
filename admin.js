@@ -16214,10 +16214,16 @@ ui.openLeaderRouletteStage = async function(){
 };
 // 시간표 사진과 업로드 안내를 한 번에 정리하고, 현재 PDF 전체화면/페이지는 유지한다.
 ui.closeScheduleGuide = function(){
-  // 시간표 보려고 우리가 진입한 전체화면이면 해제(원래 전체화면은 유지)
+  // [J-fs] 시간표 볼 때 전체화면을 '전환(스왑)'했으므로, 닫을 때는 전체화면을 해제하지 말고
+  //  원래 입교안내 전체화면 요소로 다시 requestFullscreen → 모니터 전체화면이 그대로 유지된다.
   if(ui._scheduleEnteredFs){
     ui._scheduleEnteredFs = false;
-    try{ var _ef = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen; if(_ef && (document.fullscreenElement || document.webkitFullscreenElement)) _ef.call(document); }catch(e){}
+    var _returnEl = ui._scheduleReturnFsEl; ui._scheduleReturnFsEl = null;
+    if(_returnEl && document.contains(_returnEl)){
+      try{ var _rrf = _returnEl.requestFullscreen || _returnEl.webkitRequestFullscreen || _returnEl.msRequestFullscreen; if(_rrf){ var _rp = _rrf.call(_returnEl); if(_rp && _rp.catch) _rp.catch(function(){}); } }catch(e){}
+    } else {
+      try{ var _ef = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen; if(_ef && (document.fullscreenElement || document.webkitFullscreenElement)) _ef.call(document); }catch(e){}
+    }
   }
   ['guideScheduleModal','guideScheduleUploadModal'].forEach(function(id){
     var layer=document.getElementById(id);
@@ -16275,6 +16281,8 @@ ui.openScheduleView = function(){
   //  넣었는데, PDF 래퍼의 scale/transform 때문에 vh/vw 기준이 축소되어 사진이 작게 보였음.
   document.body.appendChild(modal);
   ui._scheduleEnteredFs = false;
+  // [J-fs] 지금 전체화면(입교안내 PDF)을 기억해 두고, 시간표는 그 위로 '전환(스왑)'한다. 닫을 때 이 요소로 되돌린다.
+  ui._scheduleReturnFsEl = document.fullscreenElement || document.webkitFullscreenElement || null;
   try{
     var _rf = modal.requestFullscreen || modal.webkitRequestFullscreen || modal.msRequestFullscreen;
     if(_rf){ var _p = _rf.call(modal); ui._scheduleEnteredFs = true; if(_p && _p.catch) _p.catch(function(){ ui._scheduleEnteredFs = false; }); }
