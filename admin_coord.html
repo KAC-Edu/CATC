@@ -9314,12 +9314,16 @@ function _coordShuttleTotalsHtml(g){
    명단 외 미체크 입교자(구경꾼)를 셔틀 집계에서 걸러내는 데 쓴다. 명단 근거가 전혀 없으면 null(=전원). */
 function _coordShNorm(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); }
 function _coordRosterSet(room){
+  try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); }catch(e){}
   var names=[];
   var cr=room&&room.coordRoster&&room.coordRoster.list;
   if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) names.push(x.name); });
   var es=room&&room.expectedStudents;
   if(Array.isArray(es)) es.forEach(function(n){ names.push(n); });
   else if(es&&typeof es==='object') Object.values(es).forEach(function(n){ names.push(n); });
+  // [K41] 지원부(생활관, system/dorm/rosters) 명단도 '과정명'으로 매칭해 병합 — 예정·운영부 명단이 비어도
+  //  실제 명단(66)이 잡혀서, 명단 외 모니터링 입교자(3명)를 제외한다. (강사 플랫폼과 동일 기준)
+  try{ var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room&&room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) _dn.forEach(function(n){ names.push(n); }); }catch(e){}
   names=names.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
   if(!names.length) return null;
   var set={}; names.forEach(function(n){ set[_coordShNorm(n)]=1; });
@@ -9327,6 +9331,8 @@ function _coordRosterSet(room){
   Object.values((room&&room.students)||{}).forEach(function(s){ var nm=String(s&&s.name||'').trim(); if(nm && inc[nm.replace(/[.#$\[\]\/]/g,'_')]) set[_coordShNorm(nm)]=1; });
   return set;
 }
+// [K41] 지원부 명단 캐시가 로드/변경되면 현황판을 다시 계산 → 인원(66)이 늦어도 정확히 반영
+try{ document.addEventListener('kac-dorm-updated', function(){ try{ if(typeof updateGlobalStatus==='function') updateGlobalStatus(); }catch(e){} }); }catch(e){}
 function openShuttleSummary(){
   const rooms=_coordActiveRooms();
   var _labelMap={osong:'오송역',terminal:'터미널',airport:'공항',car:'자차'};
