@@ -3394,7 +3394,9 @@ function init() {
 
 // [3. 전체 현황판 실시간 집계 및 명단 팝업] - 기간 및 방 상태 필터링 완벽 적용본
 function updateGlobalStatus() {
-    let globalList = []; 
+    // [K41] 실행 토큰 — 지원부 명단 로드로 재계산될 때, 옛 실행의 비동기 콜백이 새 결과(66)를 69로 덮어쓰는 경합 방지.
+    var _myRun = (window._coordRunSeq = (window._coordRunSeq || 0) + 1);
+    let globalList = [];
     let todayA = 0; 
     let totalShuttle = 0; 
     const tStr = (typeof _coordOpDate==='function'?_coordOpDate():getTodayString()); // 외출·외박 집계: 운영일(KST 09시 롤오버)
@@ -3472,6 +3474,7 @@ function updateGlobalStatus() {
 
     // 3. 강사 픽업 요청 건수 집계 (비동기 처리)
     firebase.database().ref('system/transport_requests').once('value', snap => {
+        if (_myRun !== window._coordRunSeq) return;   // [K41] 더 최신 실행이 있으면 이 옛 콜백은 무시(69로 덮어쓰기 방지)
         const pickupData = snap.val() || {};
         let validPickupCount = 0;
 
