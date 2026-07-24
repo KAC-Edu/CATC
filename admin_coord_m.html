@@ -661,6 +661,9 @@ function rosterCountOf(room){
   if(!room) return 0;
   var es=room.expectedStudents, exp=[];
   if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  // [K41] 운영부(coordRoster)+지원부(생활관) 명단도 병합 — 예정명단이 비어도 실제 명단(66) 기준으로.
+  try{ var cr=room.coordRoster&&room.coordRoster.list; if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) exp.push(x.name); }); }catch(e){}
+  try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) exp=exp.concat(_dn); }catch(e){}
   exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
   if(!exp.length) return studentsOf(room).length;
   var expSet={}; exp.forEach(function(n){expSet[n]=1;});
@@ -677,6 +680,9 @@ function _rosterNorm(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerC
 function rosterNameSet(room){
   var es=room&&room.expectedStudents, exp=[];
   if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  // [K41] 운영부(coordRoster)+지원부(생활관) 명단도 병합 — 예정명단이 비어도 실제 명단(66) 기준으로.
+  try{ var cr=room&&room.coordRoster&&room.coordRoster.list; if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) exp.push(x.name); }); }catch(e){}
+  try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room&&room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) exp=exp.concat(_dn); }catch(e){}
   exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
   if(!exp.length) return null;
   var set={}; exp.forEach(function(n){ set[_rosterNorm(n)]=1; });
@@ -1424,6 +1430,9 @@ db.ref('courses').on('value', function(snap){
     updateDetail();
   }
 });
+// [K41] 지원부(생활관) 명단 캐시 로드/변경 시 목록·상세 재계산 → 인원(66) 정확 반영
+try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); }catch(e){}
+try{ document.addEventListener('kac-dorm-updated', function(){ try{ if(typeof renderList==='function') renderList(); }catch(e){} try{ if(curRID && document.getElementById('detailOv') && document.getElementById('detailOv').classList.contains('open')) updateDetail(); }catch(e){} }); }catch(e){}
 db.ref('system/eduLocations').on('value', function(snap){ EDU=snap.val()||{}; renderEdu(); });
 db.ref('system/coordinators').on('value', function(snap){
   var data=snap.val()||{}, map={};
