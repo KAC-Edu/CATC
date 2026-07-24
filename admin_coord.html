@@ -8503,13 +8503,25 @@ function _studentsOf(room){ return room.students ? Object.values(room.students).
 
 /* 1) 운영 과정: 강의실/과정명/담당자/담임교수/기간/인원 */
 function _courseOverviewCount(r){
-  var arrived=(typeof _studentsOf==='function'?_studentsOf(r.room):[]).length;
+  var room=r.room;
+  var students=(typeof _studentsOf==='function'?_studentsOf(room):[]);
+  // [K41] 명단(예정∪운영부∪지원부∪'명단 포함' 체크된 명단외) 기준으로 입교·명단을 센다 →
+  //  명단 외 모니터링 입교자(3명)를 제외해 66으로 통일. (여기가 입교자 전원을 세서 69로 덮어쓰던 원인)
+  var rset=(typeof _coordRosterSet==='function')?_coordRosterSet(room):null;
+  if(rset){
+    var norm=(typeof _coordShNorm==='function')?_coordShNorm:function(n){return String(n||'').replace(/\s+/g,'').toLowerCase();};
+    var expectedR=Object.keys(rset).length;
+    var arrivedR=students.filter(function(s){ return rset[norm(String(s&&s.name||'').trim())]; }).length;
+    return {expected:expectedR, arrived:arrivedR};
+  }
+  // 폴백(명단이 전혀 없을 때만): 기존 방식 — 입교자 전원
+  var arrived=students.length;
   var roster=[]; var curPeriod=(''+(r.s.period||'')).trim();
-  var cr=r.room.coordRoster;
+  var cr=room.coordRoster;
   if(cr&&Array.isArray(cr.list)&&cr.list.length){ var crP=(''+(cr.period||'')).trim(); if(!crP||!curPeriod||crP===curPeriod) roster=cr.list; }
   if(!roster.length){ var ext=window._coordRosterExt||{}; var k=String(r.s.courseName||'').replace(/\s+/g,'').toLowerCase(); var cands=ext[k]||[]; var pick=cands.find(function(c){return curPeriod&&(''+(c.period||'')).trim()===curPeriod;})||cands.find(function(c){return (''+(c.room||''))===(''+r.rid);})||cands.slice().sort(function(a,b){return (b.list?b.list.length:0)-(a.list?a.list.length:0);})[0]; if(pick&&Array.isArray(pick.list)) roster=pick.list; }
   var expected=roster.length;
-  if(!expected){ var es=r.room.expectedStudents; if(typeof es==='number') expected=es; else if(es&&typeof es==='object') expected=Object.keys(es).length; }
+  if(!expected){ var es=room.expectedStudents; if(typeof es==='number') expected=es; else if(es&&typeof es==='object') expected=Object.keys(es).length; }
   return {expected:expected, arrived:arrived};
 }
 function _coordSyncTotalStudentsFromOverview(){
