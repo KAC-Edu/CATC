@@ -10046,7 +10046,34 @@ const guideMgr = {
 
     // 1. 초기화 — Firebase DB 리스너 없음, 리사이즈 감시만 설정
     //    실제 PDF 로드는 사용자가 '입교안내' 탭을 클릭할 때 refresh()에서 수행
+_schedWatchRef: null, _schedWatchRoom: null, _schedSeenTs: 0,
+// [자동표시] 입교안내 화면에 있는 동안 새 시간표 사진이 올라오면(QR 업로드/직접 업로드 등 어떤 경로든)
+//  자동으로 띄운다. 진입 시점의 값은 '기준'으로만 삼아 자동표시하지 않고, 그 이후 '새 업로드'에서만 표시.
+_watchScheduleUpload: function() {
+    var room = state.room; if (!room) return;
+    if (this._schedWatchRoom === room && this._schedWatchRef) return;   // 이미 이 방 감시 중
+    try { if (this._schedWatchRef) this._schedWatchRef.off(); } catch (e) {}
+    this._schedWatchRoom = room;
+    this._schedSeenTs = 0;
+    var self = this; var first = true;
+    try {
+        this._schedWatchRef = firebase.database().ref(kacMedia.path(room, 'scheduleImage') + '/updatedAt');
+        this._schedWatchRef.on('value', function (snap) {
+            if (state.room !== room) return;
+            var ts = Number(snap.val() || 0);
+            if (first) { first = false; self._schedSeenTs = ts; return; }   // 진입 시점 값 = 기준(자동표시 안 함)
+            if (ts && ts > self._schedSeenTs) {
+                self._schedSeenTs = ts;
+                if (state.currentMode === 'guide' && !state.isObserver) {
+                    try { guideMgr.renderPage(guideMgr._slot().pageNum); } catch (e) {}   // 버튼 '보기'로 갱신
+                    try { if (ui.openScheduleView) ui.openScheduleView(); } catch (e) {}    // 새 시간표 자동 표시
+                }
+            }
+        });
+    } catch (e) {}
+},
 init: function() {
+    try { guideMgr._watchScheduleUpload(); } catch(e){}
     if (typeof pdfjsLib !== 'undefined') {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     }
