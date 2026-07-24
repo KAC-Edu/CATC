@@ -4191,7 +4191,7 @@ window._kacFeatureBlockedCard=function(label){
     +'<div style="max-width:360px;width:100%;background:#fff;border-radius:22px;box-shadow:0 20px 60px rgba(180,83,9,.2);padding:34px 26px;text-align:center;box-sizing:border-box;">'
     +'<div style="width:74px;height:74px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,#f59e0b,#fbbf24);display:flex;align-items:center;justify-content:center;font-size:34px;">🚫</div>'
     +'<div style="font-size:19px;font-weight:900;color:#7c2d12;margin-bottom:8px;">이용할 수 없는 기능이에요</div>'
-    +'<div style="font-size:14px;color:#78350f;line-height:1.6;margin-bottom:14px;"><b style="color:#b45309;">'+label+'</b>은(는) 본 과정에서 <b>제공되지 않습니다.</b></div>'
+    +'<div style="font-size:14px;color:#78350f;line-height:1.6;margin-bottom:14px;word-break:keep-all;"><b style="color:#b45309;">'+label+'</b>'+(window.kacEun?window.kacEun(label):'은(는)')+' 본 과정에서 <b>제공되지 않습니다.</b></div>'
     +'<div style="font-size:12.5px;color:#a16207;font-weight:800;">오른쪽 위 <b>✕ 닫기</b>를 눌러 나가 주세요.</div>'
     +'</div>';
   document.body.appendChild(ov);
@@ -7578,7 +7578,7 @@ body.kac-quiz-active .quiz-overlay,
     ov.innerHTML='<div style="max-width:360px;width:100%;background:#fff;border-radius:22px;box-shadow:0 20px 60px rgba(37,99,235,.25);padding:34px 26px;text-align:center;box-sizing:border-box;">'
       +'<div style="width:74px;height:74px;margin:0 auto 18px;border-radius:20px;background:linear-gradient(135deg,#2563eb,#60a5fa);display:flex;align-items:center;justify-content:center;font-size:34px;box-shadow:0 10px 26px rgba(37,99,235,.4);">🔒</div>'
       +'<div style="font-size:19px;font-weight:900;color:#0f172a;margin-bottom:8px;">입교등록이 필요해요</div>'
-      +'<div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:24px;"><b style="color:#1d4ed8;">'+label+'</b>은(는) 입교등록 후 이용할 수 있어요.<br>먼저 입교등록을 완료해 주세요.</div>'
+      +'<div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:24px;word-break:keep-all;"><b style="color:#1d4ed8;">'+label+'</b>'+(window.kacEun?window.kacEun(label):'은(는)')+' 입교등록 후 이용할 수 있어요.<br>먼저 입교등록을 완료해 주세요.</div>'
       +'<button id="kacEnrollGateGo" style="width:100%;border:none;border-radius:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:16px;font-weight:900;padding:15px;cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.35);">📝 입교등록 하러 가기</button>'
       +'</div>';
     document.body.appendChild(ov);
