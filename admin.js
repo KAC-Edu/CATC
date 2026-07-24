@@ -2944,6 +2944,7 @@ loadDashboardStats: function() {
         if (document.getElementById('dashPeriod')) document.getElementById('dashPeriod').innerText = s.period || "기간 미설정";
         if (document.getElementById('dashRoomDetail')) document.getElementById('dashRoomDetail').innerText = s.roomDetailName || "장소 미설정";
         try { if (window.gradMgr) gradMgr.refreshHeroBtn(s.period); } catch (e) {}   // [J14] 수료일 06시부터 기념사진 버튼
+        try { if (window.gradMgr) gradMgr.refreshGuideBtn(s.period); } catch (e) {}  // [K38] 입교안내 버튼: 첫날 다음날 08시부터 숨김
         // [I34] 교육생 앱 메뉴에서 외출/외박 비활성화한 과정: 오늘의 운영의 외출·외박·석식제외 행을 '본 과정 해당없음'으로 표기
         try {
             var _mf = s.menuFeatures || {};
@@ -15289,13 +15290,33 @@ window.gradMgr = {
         const show = !!end && end === today && now.getHours() >= 6;
         // .info-pill의 display !important와 충돌하지 않도록 전용 클래스로 노출을 제어한다.
         btn.classList.toggle('is-visible', show);
-        // [K37] 수료일(수료 기념사진 버튼이 뜨는 날)에는 '입교안내' 버튼을 숨긴다. 그 외 날엔 정상 표시.
-        try { const _gfb = document.getElementById('dashGuideFsBtn'); if (_gfb) _gfb.style.display = show ? 'none' : ''; } catch (e) {}
         if (this._heroTimer) { clearTimeout(this._heroTimer); this._heroTimer = null; }
         // 수료일 새벽에 열어둔 화면: 06:00이 되는 순간 자동 노출
         if (end === today && now.getHours() < 6) {
             const t = new Date(); t.setHours(6, 0, 5, 0);
             this._heroTimer = setTimeout(function () { try { gradMgr.refreshHeroBtn(period); } catch (e) {} }, Math.max(1000, t - now));
+        }
+    },
+
+    // [K38] '입교안내' 버튼 노출 제어 — 교육 첫날에는 보이고, 첫날 '다음날 오전 08:00'부터 숨긴다(이후 계속 숨김).
+    _startDateOf: function (period) { const p = String(period || ''); const sep = p.indexOf(' ~ ') >= 0 ? ' ~ ' : '~'; const parts = p.split(sep); return (parts[0] || '').trim(); },
+    _guideTimer: null,
+    refreshGuideBtn: function (period) {
+        const btn = document.getElementById('dashGuideFsBtn');
+        if (!btn) return;
+        if (this._guideTimer) { clearTimeout(this._guideTimer); this._guideTimer = null; }
+        const start = this._startDateOf(period);
+        const m = String(start).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+        if (!m) { btn.style.display = ''; return; }   // 기간 불명 → 안전하게 표시
+        // 숨김 시작 시각 = 첫날 다음날 08:00 (Date가 날짜 넘침을 자동 처리: 예) 31일+1 → 다음달 1일)
+        const hideFrom = new Date(+m[1], +m[2] - 1, +m[3] + 1, 8, 0, 0, 0);
+        const now = new Date();
+        const hide = now.getTime() >= hideFrom.getTime();
+        btn.style.display = hide ? 'none' : '';
+        // 페이지를 열어둔 채 그 시각이 되면 자동으로 숨기도록 예약
+        if (!hide) {
+            const ms = hideFrom.getTime() - now.getTime();
+            this._guideTimer = setTimeout(function () { try { gradMgr.refreshGuideBtn(period); } catch (e) {} }, Math.max(1000, Math.min(ms + 1000, 2000000000)));
         }
     }
 };
