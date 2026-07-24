@@ -16214,23 +16214,36 @@ ui.openLeaderRouletteStage = async function(){
 };
 // 시간표 사진과 업로드 안내를 한 번에 정리하고, 현재 PDF 전체화면/페이지는 유지한다.
 ui.closeScheduleGuide = function(){
-  // [J-fs] 시간표 볼 때 전체화면을 '전환(스왑)'했으므로, 닫을 때는 전체화면을 해제하지 말고
-  //  원래 입교안내 전체화면 요소로 다시 requestFullscreen → 모니터 전체화면이 그대로 유지된다.
-  if(ui._scheduleEnteredFs){
-    ui._scheduleEnteredFs = false;
-    var _returnEl = ui._scheduleReturnFsEl; ui._scheduleReturnFsEl = null;
-    if(_returnEl && document.contains(_returnEl)){
-      try{ var _rrf = _returnEl.requestFullscreen || _returnEl.webkitRequestFullscreen || _returnEl.msRequestFullscreen; if(_rrf){ var _rp = _rrf.call(_returnEl); if(_rp && _rp.catch) _rp.catch(function(){}); } }catch(e){}
-    } else {
-      try{ var _ef = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen; if(_ef && (document.fullscreenElement || document.webkitFullscreenElement)) _ef.call(document); }catch(e){}
-    }
+  var _returnEl = ui._scheduleReturnFsEl; ui._scheduleReturnFsEl = null;
+  var _entered = ui._scheduleEnteredFs; ui._scheduleEnteredFs = false;
+  var _removeModals = function(){
+    ['guideScheduleModal','guideScheduleUploadModal'].forEach(function(id){
+      var layer=document.getElementById(id);
+      if(!layer) return;
+      try{ if(typeof layer._cleanup==='function') layer._cleanup(); }catch(e){}
+      layer.remove();
+    });
+  };
+  // [J-fs] 시간표는 전체화면을 '전환(스왑)'해서 띄웠다. 닫을 때 원래 입교안내 전체화면 요소로 다시 스왑하되,
+  //  ★ 스왑이 '끝난 뒤'에 모달을 제거해야 한다. (모달이 아직 전체화면 요소일 때 제거하면 전체화면 자체가 해제됨)
+  if(_entered && _returnEl && document.contains(_returnEl)){
+    try{
+      var _rrf = _returnEl.requestFullscreen || _returnEl.webkitRequestFullscreen || _returnEl.msRequestFullscreen;
+      if(_rrf){
+        var _rp = _rrf.call(_returnEl);
+        if(_rp && _rp.then){ _rp.then(_removeModals).catch(function(){ _removeModals(); }); }
+        else { setTimeout(_removeModals, 0); }
+        return;
+      }
+    }catch(e){}
+    _removeModals();
+    return;
   }
-  ['guideScheduleModal','guideScheduleUploadModal'].forEach(function(id){
-    var layer=document.getElementById(id);
-    if(!layer) return;
-    try{ if(typeof layer._cleanup==='function') layer._cleanup(); }catch(e){}
-    layer.remove();
-  });
+  // 되돌릴 전체화면이 없을 때만 기존처럼 해제
+  if(_entered){
+    try{ var _ef = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen; if(_ef && (document.fullscreenElement || document.webkitFullscreenElement)) _ef.call(document); }catch(e){}
+  }
+  _removeModals();
 };
 // 입교안내 13p '교육시간표 보기' → 시간표 사진을 '모니터 전체화면'으로 표출
 // [J27 근본수정] 기존엔 사진 로드(await kacMedia.read)가 끝난 '뒤'에 전체화면을 요청 — Firebase 대기 동안
