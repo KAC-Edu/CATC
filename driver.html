@@ -380,14 +380,28 @@ function rebuild(){
     //  입교완료(유효 이름) 중 미신청자는 자차(미선택)로 나열. B3 과대집계 원인이던 무필터 카운트 대신
     //  유효 이름 필터 + 공백제거·소문자 정규화 매칭 + 중복 이름 1회.
     var _nm=function(n){ return String(n||'').replace(/\s+/g,'').toLowerCase(); };
+    // [K41] 명단(예정∪운영부∪지원부∪'명단 포함' 체크된 명단외) 기준 — 명단 외 미체크 입교자(모니터링)는
+    //  자차·신청 어디에도 세지 않는다. 예정명단이 비어도 지원부 명단으로 실제 인원(66)이 잡히도록 병합.
+    var _rset=(function(){
+      var nm=[]; var es=room.expectedStudents;
+      if(Array.isArray(es)) es.forEach(function(n){ nm.push(n); }); else if(es&&typeof es==='object') Object.values(es).forEach(function(n){ nm.push(n); });
+      var cr=room.coordRoster&&room.coordRoster.list; if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) nm.push(x.name); });
+      try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) _dn.forEach(function(n){ nm.push(n); }); }catch(e){}
+      nm=nm.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
+      if(!nm.length) return null;
+      var set={}; nm.forEach(function(n){ set[_nm(n)]=1; });
+      var inc=room.rosterInclude||{}; Object.values(room.students||{}).forEach(function(s){ var n2=String(s&&s.name||'').trim(); if(n2 && inc[n2.replace(/[.#$\[\]\/]/g,'_')]) set[_nm(n2)]=1; });
+      return set;
+    })();
     var _seen={};
-    Object.keys(reqs).forEach(function(k){ var r=reqs[k]; if(!r) return; if(r.name) _seen[_nm(r.name)]=1; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
+    Object.keys(reqs).forEach(function(k){ var r=reqs[k]; if(!r) return; if(_rset && r.name && !_rset[_nm(r.name)]) return; if(r.name) _seen[_nm(r.name)]=1; people.push({ name:(r.name||r.student||r.studentName||r.prof||'교육생'), dest:(DTYPE[r.type]||'자차') }); });
     var _dupe={};
     Object.values(room.students||{}).forEach(function(s){
       if(!s||!s.name||s.name==='undefined') return;
       var nm=String(s.name).trim(); if(!nm) return;
       var key=_nm(nm); if(_dupe[key]) return; _dupe[key]=1;
       if(_seen[key]) return;
+      if(_rset && !_rset[key]) return;   // [K41] 명단 외 미체크 입교자(모니터링) 제외
       people.push({ name:nm, dest:'자차', assumed:true });
     });
     var dep=room.shuttle&&room.shuttle.departure;
@@ -462,6 +476,9 @@ function initFirebase(){
   db.ref('system/driver_dayoff').on('value', function(s){ var raw=s.val()||{}; dayoffsR=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
   db.ref('system/driver_fixed').on('value', function(s){ var raw=s.val()||{}; fixedsR=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
   db.ref('system/driver_schedule').on('value', function(s){ var raw=s.val()||{}; schedulesR=Object.keys(raw).map(function(id){ var o=raw[id]||{}; o.id=id; return o; }); rebuild(); });
+  // [K41] 지원부(생활관) 명단 캐시 로드/변경 시 다시 계산 → 인원(66)이 늦어도 정확히 반영
+  try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); }catch(e){}
+  try{ document.addEventListener('kac-dorm-updated', function(){ try{ rebuild(); }catch(e){} }); }catch(e){}
 }
 
 /* ---------- 액션 (쓰기) ---------- */
