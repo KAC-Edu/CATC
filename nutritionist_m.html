@@ -500,6 +500,9 @@ function studentsCount(room){
   // [K36] 명단 외 미체크 입교자(구경꾼 = 과정담당 직원 등)는 식수 인원에서 제외. 예정명단 없으면 전원(폴백).
   var es=room.expectedStudents, exp=[];
   if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
+  // [K41] 운영부(coordRoster)+지원부(생활관) 명단도 병합 — 예정명단이 비어도 실제 명단(66) 기준으로 식수 산정.
+  try{ var cr=room.coordRoster&&room.coordRoster.list; if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) exp.push(x.name); }); }catch(e){}
+  try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) exp=exp.concat(_dn); }catch(e){}
   exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
   if(!exp.length) return entries.length;
   var set={}; exp.forEach(function(n){ set[_nmN(n)]=1; });
@@ -507,6 +510,9 @@ function studentsCount(room){
   entries.forEach(function(x){ var nm=String(x.name).trim(); if(inc[nm.replace(/[.#$\[\]\/]/g,'_')]) set[_nmN(nm)]=1; });
   return entries.filter(function(x){ return set[_nmN(String(x.name).trim())]; }).length;
 }
+// [K41] 지원부(생활관) 명단 캐시 로드/변경 시 식당 인원 다시 계산 → 66 정확 반영
+try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); }catch(e){}
+try{ document.addEventListener('kac-dorm-updated', function(){ try{ if(typeof renderCourses==='function') renderCourses(); }catch(e){} }); }catch(e){}
 function renderCourses(){
   var rows=[], total=0, td=getToday();
   for(var i=65;i<=90;i++){
