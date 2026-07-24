@@ -15,6 +15,15 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
 
+// [App Check] reCAPTCHA v3 — 외부 무단 접근(스크래핑) 차단용. 각 페이지가 firebase-app-check.js 를
+//  먼저 로드해야 firebase.appCheck 가 존재한다. 활성화만 하고, 실제 차단은 Firebase 콘솔에서
+//  '적용(Enforce)'을 켜야 시작된다(그 전에는 모니터링만 — 아무도 안 막힘). 사이트키는 공개키라 코드에 둠.
+try {
+    if (firebase.appCheck) {
+        firebase.appCheck().activate('6LcAu2ItAAAAAAqwjmZ0DbxUkPwrn5ExWqCOTEtf', true);
+    }
+} catch (e) { try { console.warn('[App Check] 활성화 실패', e); } catch (_) {} }
+
 // [중요] 비동기 코드 조회 함수
 async function resolveRoomFromCode(code) {
     try {
