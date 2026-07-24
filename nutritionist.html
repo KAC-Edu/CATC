@@ -2183,6 +2183,8 @@ function _courseCounts(c){
         _cr.forEach(s=>{ if(s&&s.name) _roster.push(s.name); });
         const _esC = m.room.expectedStudents;
         if(Array.isArray(_esC)) _roster = _roster.concat(_esC); else if(_esC && typeof _esC==='object') _roster = _roster.concat(Object.values(_esC));
+        // [K41] 지원부(생활관) 명단도 과정명으로 병합 — 예정·운영부 명단이 비어도 실제 명단(66) 기준으로 식수 산정.
+        try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); const _dnC=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((m.room.settings&&m.room.settings.courseName)||c.name||''):[]); if(_dnC&&_dnC.length) _roster=_roster.concat(_dnC); }catch(e){}
         _roster = _roster.map(n=>String(n||'').trim()).filter(Boolean);
         let _rsetC = null;
         if(_roster.length){ _rsetC = {}; _roster.forEach(n=>_rsetC[_nrmC(n)]=1); const _incC = m.room.rosterInclude||{}; Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _incC[nm.replace(/[.#$\[\]\/]/g,'_')]) _rsetC[_nrmC(nm)]=1; }); }
@@ -2207,16 +2209,31 @@ function _setEstBasis(v){
     if (typeof renderMealStats === 'function') renderMealStats();   // 상단 아침·점심·석식 예상값
     if (_courseCache) renderCourseWeek(_courseCache.courses, _courseCache.ctx); // 과정 현황 카드
 }
+// [K41] 지원부(생활관) 명단 캐시가 로드/변경되면 식당 인원(입교·식수)을 다시 계산 → 66 정확 반영
+try{ document.addEventListener('kac-dorm-updated', function(){
+    try{ if(typeof renderMealStats==='function') renderMealStats(); }catch(e){}
+    try{ if(_courseCache && typeof renderCourseWeek==='function') renderCourseWeek(_courseCache.courses, _courseCache.ctx); }catch(e){}
+    try{ if(typeof _renderMealWeek==='function') _renderMealWeek(); }catch(e){}
+}); }catch(e){}
 // 실제 입교완료(students)와 올린 명단(roster)을 분리해 반환
 function _courseCounts2(c){
     if(_isCourseHidden(c)) return { found:false, arrived:0, roster:0 };   // 비노출 과정은 식수 집계 제외
     let arrived = 0, roster = 0;
     const m = _roomMatchForCourse(c);
     if(m){
-        const aN = new Set();
-        Object.values(m.room.students || {}).forEach(s => { if(s && s.name && s.name !== 'undefined') aN.add(String(s.name).trim()); });
-        arrived = aN.size;
+        const _nrmC = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
+        // [K41] 명단(예정∪운영부∪지원부∪'명단 포함' 체크된 명단외) — '실제 입교'에서도 명단 외 미체크 입교자(모니터링) 제외.
         const list = (m.room.coordRoster && Array.isArray(m.room.coordRoster.list)) ? m.room.coordRoster.list : [];
+        let _rn = []; list.forEach(s=>{ if(s&&s.name) _rn.push(s.name); });
+        const _es = m.room.expectedStudents;
+        if(Array.isArray(_es)) _rn = _rn.concat(_es); else if(_es && typeof _es==='object') _rn = _rn.concat(Object.values(_es));
+        try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); const _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((m.room.settings&&m.room.settings.courseName)||c.name||''):[]); if(_dn&&_dn.length) _rn=_rn.concat(_dn); }catch(e){}
+        _rn = _rn.map(n=>String(n||'').trim()).filter(Boolean);
+        let _rset = null;
+        if(_rn.length){ _rset={}; _rn.forEach(n=>_rset[_nrmC(n)]=1); const _inc=m.room.rosterInclude||{}; Object.values(m.room.students||{}).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset[_nrmC(nm)]=1; }); }
+        const aN = new Set();
+        Object.values(m.room.students || {}).forEach(s => { if(s && s.name && s.name !== 'undefined'){ const nm=String(s.name).trim(); if(!_rset || _rset[_nrmC(nm)]) aN.add(nm); } });
+        arrived = aN.size;
         const rN = new Set();
         list.forEach(s => { const nm = ((s && s.name) || '').trim(); if(nm && nm !== 'undefined') rN.add(nm); });
         roster = rN.size;
