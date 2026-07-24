@@ -15289,6 +15289,8 @@ window.gradMgr = {
         const show = !!end && end === today && now.getHours() >= 6;
         // .info-pill의 display !important와 충돌하지 않도록 전용 클래스로 노출을 제어한다.
         btn.classList.toggle('is-visible', show);
+        // [K37] 수료일(수료 기념사진 버튼이 뜨는 날)에는 '입교안내' 버튼을 숨긴다. 그 외 날엔 정상 표시.
+        try { const _gfb = document.getElementById('dashGuideFsBtn'); if (_gfb) _gfb.style.display = show ? 'none' : ''; } catch (e) {}
         if (this._heroTimer) { clearTimeout(this._heroTimer); this._heroTimer = null; }
         // 수료일 새벽에 열어둔 화면: 06:00이 되는 순간 자동 노출
         if (end === today && now.getHours() < 6) {
