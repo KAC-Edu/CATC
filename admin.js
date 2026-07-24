@@ -14567,14 +14567,27 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
     // 2) 풀에서 '보존된 방에 이미 있는 과정명' 제외 → 나머지만 빈 방에 배치
     const toPlace = pool.filter(c => !keptNames.has(norm(c.name)));
 
+    // [K40] 중복 '생성' 최종 차단 — '강한 정규화'(모든 공백 제거 + 소문자)로, 같은 과정이 이미 어느 방에든
+    //  있으면(보존된 방 포함) 새 방에 다시 배치하지 않는다. 약한 trim 정규화가 놓치던 내부 공백·대소문자
+    //  차이까지 잡아, 같은 과정이 두 방(예: B·D)에 생기던 문제를 '생성 단계'에서 막는다. (파괴 없이 배치만 금지)
+    const _normStrong = s => String(s || '').replace(/\s+/g, '').toLowerCase();
+    const _occupied = new Set();
+    this.ROOMS.forEach(r => {
+        const _k = `courses/${r}/settings/courseName`;
+        const _cn = Object.prototype.hasOwnProperty.call(updates, _k) ? updates[_k] : (((roomsData[r] || {}).settings || {}).courseName || '');
+        const _n = _normStrong(_cn); if (_n) _occupied.add(_n);
+    });
+
     const usedNames = new Set(keptNames);
     let placeCount = 0, _ri = 0;
     for (const course of toPlace) {
         const _cnm = norm(course.name);
-        if (usedNames.has(_cnm)) continue;        // 같은 과정명 중복 배치 금지(중복 생성 원천 차단)
+        if (usedNames.has(_cnm)) continue;        // 같은 과정명 중복 배치 금지(약한 정규화)
+        if (_occupied.has(_normStrong(course.name))) continue;   // [K40] 강한 정규화 — 이미 어느 방에든 있으면 배치 금지
         if (_ri >= freeRooms.length) break;
         const room = freeRooms[_ri++]; placeCount++;
         usedNames.add(_cnm);
+        _occupied.add(_normStrong(course.name));   // [K40] 이번 배치도 점유로 등록 → 같은 실행 내 중복도 방지
 
         // [Clean Start] 새 과정 배치 시 이전 기수 데이터 일괄 소거
         //  (학생 명단·출결·질문·설문·셔틀·석식 등 전부 초기화 → 이전 기수 잔류 방지)
