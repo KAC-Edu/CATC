@@ -6298,7 +6298,7 @@
  #boardMapArea .fm-needmove{display:block;font-size:9.5px;font-weight:900;color:#fff;background:#ef4444;text-align:center;padding:1px 0;letter-spacing:-0.3px;}
  #boardMapArea .dm-chip{display:inline-flex;align-items:center;gap:1px;background:#fff;border:1.5px solid #94a3b8;border-radius:9px;padding:2px 8px;font-size:12px;font-weight:800;cursor:grab;line-height:1.3;user-select:none;white-space:nowrap;}
  /* [R15] 국제동(1인1실) 칩: 좁은 칸에서 이름이 2줄로 꺾이던 문제 → 아이콘 위·이름 아래(한 줄) 세로 배치, ✕는 우상단 */
- #boardMapArea .fm-intl .dm-chip{flex-direction:column;align-items:center;justify-content:center;white-space:nowrap;overflow-wrap:normal;word-break:keep-all;font-size:11px;text-align:center;gap:0;padding:3px 5px;position:relative;line-height:1.15;}
+ #boardMapArea .fm-intl .dm-chip{flex-direction:column;align-items:center;justify-content:center;white-space:normal;overflow-wrap:anywhere;word-break:break-word;max-width:100%;box-sizing:border-box;font-size:11px;text-align:center;gap:0;padding:3px 5px;position:relative;line-height:1.15;}
  #boardMapArea .fm-intl .dm-chip .gd-ic{order:-1;margin-left:0!important;margin-bottom:1px;}
  #boardMapArea .fm-intl .dm-chip .dm-del{position:absolute;top:1px;right:3px;margin-left:0;}
  #boardMapArea .dm-chip.dm-foreign{flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:3px 6px;max-width:100%;}
@@ -6564,7 +6564,7 @@
                 .pf-largemode .fm-gk { font-size:13px; }
                 /* 국제동(1인1실): '배정제외'/이름 한 줄 고정 — 2줄 꺾임 방지 */
                 .pf-largemode .fm-intl .fm-body { padding:6px 5px; }
-                .pf-largemode .fm-intl .fm-pill { font-size:14px; white-space:nowrap; word-break:keep-all; overflow-wrap:normal; padding:3px 6px; }
+                .pf-largemode .fm-intl .fm-pill { font-size:13px; white-space:normal; word-break:break-word; overflow-wrap:anywhere; padding:3px 6px; max-width:100%; box-sizing:border-box; line-height:1.2; }
                 .pf-largemode .fm-exbadge { font-size:14px; padding:2px 9px; white-space:nowrap; }
                 .pf-largemode .fm-fac { font-size:15px; border-width:2px; }
                 .pf-largemode .fm-corridor { font-size:11px; }
