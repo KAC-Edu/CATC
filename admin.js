@@ -16330,9 +16330,25 @@ ui.openScheduleView = function(){
   var cb = document.getElementById('guideScheduleClose');
   if(cb) cb.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); ui.closeScheduleGuide(); });
   // ── 사진은 전체화면 진입 '후' 로드해 채움 ──
+  // 업로드 직후엔 updatedAt만 먼저 기록되고 dataUrl(사진 본문)은 잠깐 뒤 써질 수 있어
+  // → 한 번 읽고 비면 짧게 재시도한다. 각 읽기는 타임아웃을 걸어 절대 멈추지 않게 한다.
   (async function(){
+    function _readOnce(){
+      return new Promise(function(resolve){
+        var done=false;
+        var t=setTimeout(function(){ if(!done){ done=true; resolve(''); } }, 3000); // 3초 타임아웃
+        Promise.resolve().then(function(){ return kacMedia.read(room, 'scheduleImage', 'dataUrl'); })
+          .then(function(v){ if(!done){ done=true; clearTimeout(t); resolve(v||''); } })
+          .catch(function(){ if(!done){ done=true; clearTimeout(t); resolve(''); } });
+      });
+    }
     var dataUrl = '';
-    try { dataUrl = (await kacMedia.read(room, 'scheduleImage', 'dataUrl')) || ''; } catch(e){}
+    for(var _try=0; _try<10; _try++){            // 최대 10회(사진 미완성 대비)
+      if(!document.getElementById('guideScheduleModal')) return; // 기다리는 중 닫힘
+      dataUrl = await _readOnce();
+      if(dataUrl) break;
+      await new Promise(function(r){ setTimeout(r, 700); });
+    }
     var m = document.getElementById('guideScheduleModal');
     if(!m) return;   // 로드 중 사용자가 닫은 경우
     if(!dataUrl){
@@ -16340,9 +16356,16 @@ ui.openScheduleView = function(){
       if(ui.showAlert) ui.showAlert('등록된 교육 시간표 사진이 없습니다.');
       return;
     }
-    var sp = document.getElementById('guideScheduleSpin'); if(sp) sp.style.display = 'none';
     var im = document.getElementById('guideScheduleImg');
-    if(im){ im.src = dataUrl; im.style.display = 'block'; }
+    if(im){
+      im.onload = function(){ var sp = document.getElementById('guideScheduleSpin'); if(sp) sp.style.display = 'none'; im.style.display = 'block'; };
+      im.onerror = function(){ var sp = document.getElementById('guideScheduleSpin'); if(sp) sp.style.display = 'none'; };
+      im.src = dataUrl;
+      // 캐시로 즉시 완료된 경우 onload가 안 걸릴 수 있어 보정
+      if(im.complete && im.naturalWidth>0){ var sp = document.getElementById('guideScheduleSpin'); if(sp) sp.style.display = 'none'; im.style.display = 'block'; }
+    } else {
+      var sp = document.getElementById('guideScheduleSpin'); if(sp) sp.style.display = 'none';
+    }
   })();
 };
 // 입교안내 13p '시간표 업로드' → QR 표출(폰으로 촬영·업로드) → 올라오면 자동으로 화면에 표시 (깜빡한 교수 즉석 업로드)
