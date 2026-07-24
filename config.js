@@ -33,6 +33,30 @@ if (document.readyState === 'loading') {
     _kacActivateAppCheck();
 }
 
+/* [K41] 공통 '명단(66)' 기준 — 지원부(생활관, system/dorm/rosters) 명단을 '과정명'으로 매칭해 제공.
+   운영부·차량지원 등 여러 플랫폼이 예정명단이 비어도 이 명단으로 실제 입교자만 세도록(명단 외 모니터링 입교자 제외) 공유한다.
+   구독은 '필요한 플랫폼이 호출할 때만'(lazy) 시작해 불필요한 Firebase 부하를 막는다. */
+window._kacDormRostersAll = null;
+window._kacDormSubscribed = false;
+window.kacEnsureDormCache = function () {
+    if (window._kacDormSubscribed) return;
+    window._kacDormSubscribed = true;
+    try {
+        firebase.database().ref('system/dorm/rosters').on('value', function (s) {
+            window._kacDormRostersAll = s.val() || {};
+            try { document.dispatchEvent(new Event('kac-dorm-updated')); } catch (e) {}
+        });
+    } catch (e) { window._kacDormSubscribed = false; }
+};
+window.kacDormNamesForCourse = function (courseName) {
+    var out = []; var cn = String(courseName || '').trim(); var all = window._kacDormRostersAll;
+    if (!cn || !all) return out;
+    var best = null;
+    for (var k in all) { var dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName || '').trim() === cn) { if (!best || (dv.updatedAt || 0) > (best.updatedAt || 0)) best = dv; } }
+    if (best) best.list.forEach(function (x) { if (x && x.name) out.push(String(x.name).trim()); });
+    return out;
+};
+
 // [중요] 비동기 코드 조회 함수
 async function resolveRoomFromCode(code) {
     try {
