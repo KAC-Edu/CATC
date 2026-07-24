@@ -57,6 +57,14 @@ window.kacDormNamesForCourse = function (courseName) {
     return out;
 };
 
+// [K42] 조사(은/는) 자동 선택 — 마지막 글자 받침 유무로 판단. 한글이 아니면 '은(는)' 그대로.
+window.kacEun = function (w) {
+    w = String(w || '').trim(); if (!w) return '은(는)';
+    var c = w.charCodeAt(w.length - 1);
+    if (c >= 0xAC00 && c <= 0xD7A3) { return ((c - 0xAC00) % 28 !== 0) ? '은' : '는'; }
+    return '은(는)';
+};
+
 // [중요] 비동기 코드 조회 함수
 async function resolveRoomFromCode(code) {
     try {
