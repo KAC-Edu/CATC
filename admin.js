@@ -14609,6 +14609,13 @@ annualPlanMgr._syncRoomsLockAware = async function(courses) {
             var score=function(r){ var c=roomsData[r]||{}, s=c.settings||{}, st=c.status||{}; var stu=c.students?Object.keys(c.students).length:0; return stu*1000+(st.ownerSessionId?100:0)+((s.roomDetailName||'').trim()?10:0)+(s.autoAssignLocked?500:0); };
             rooms.sort(function(a,b){ return score(b)-score(a); });
             rooms.slice(1).forEach(function(r){
+                // [K39] 안전장치 — 데이터(학생·출결)나 잠금이 있는 방은 중복이어도 절대 비우지 않는다(데이터 유실 방지).
+                //  '완전히 빈 중복 방'(학생 0·출결 0·잠금 아님)만 미개설로 정리. (_assignRooms 자가치유와 동일 규칙)
+                var _c=roomsData[r]||{};
+                var _stu=_c.students?Object.keys(_c.students).length:0;
+                var _att=_c.internal_attendance?Object.keys(_c.internal_attendance).length:(_c.attendance?Object.keys(_c.attendance).length:0);
+                var _lck=!!((_c.settings||{}).autoAssignLocked);
+                if(_lck || _stu>0 || _att>0) return;   // 데이터·잠금 있으면 보존(사람이 판단)
                 updates['courses/'+r+'/settings/courseName']='';
                 updates['courses/'+r+'/settings/period']='';
                 updates['courses/'+r+'/settings/roomDetailName']='';
