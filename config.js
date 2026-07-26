@@ -21,16 +21,30 @@ if (!firebase.apps.length) {
 //  ★ reCAPTCHA는 화면(document.body)에 배지를 붙이므로, body가 준비된 뒤에 활성화해야 한다.
 //    (head에서 즉시 실행하면 appendChild 대상이 null → TypeError로 App Check가 반쯤 깨지고 DB 연결이 멈춘다.)
 function _kacActivateAppCheck() {
+    if (window._kacAppCheckDone) return;            // 중복 활성화 방지(옵저버+안전망 이중 호출 대비)
     try {
         if (firebase.appCheck) {
             firebase.appCheck().activate('6LcAu2ItAAAAAAqwjmZ0DbxUkPwrn5ExWqCOTEtf', true);
+            window._kacAppCheckDone = true;
         }
     } catch (e) { try { console.warn('[App Check] 활성화 실패', e); } catch (_) {} }
 }
-if (document.readyState === 'loading') {
+//  ★★ 타이밍 중요: DOMContentLoaded는 '너무 늦다' — 그 전에 각 페이지 초기 스크립트가 DB 요청을
+//    토큰 없이 먼저 내보내 '오래된 클라이언트'로 집계되고, 강화(Enforce) 시 그 초기 요청이 막힌다.
+//    → body가 '생기는 즉시'(=body 파싱되어 <html>의 자식으로 추가되는 순간, body 내부 스크립트가
+//      실행되기 직전) 활성화한다. 이때 body는 존재하므로 reCAPTCHA 배지 appendChild도 안전.
+if (document.body) {
+    _kacActivateAppCheck();                       // 이미 body 있음(예: 지연 로드) → 즉시
+} else if (typeof MutationObserver !== 'undefined') {
+    var _kacBodyObs = new MutationObserver(function () {
+        if (document.body) { try { _kacBodyObs.disconnect(); } catch (e) {} _kacActivateAppCheck(); }
+    });
+    try { _kacBodyObs.observe(document.documentElement, { childList: true }); }
+    catch (e) { document.addEventListener('DOMContentLoaded', _kacActivateAppCheck); }
+    // 안전망: 옵저버가 어떤 이유로든 놓쳐도 DOMContentLoaded에 한 번 더 시도(이미 됐으면 무해)
     document.addEventListener('DOMContentLoaded', _kacActivateAppCheck);
 } else {
-    _kacActivateAppCheck();
+    document.addEventListener('DOMContentLoaded', _kacActivateAppCheck);
 }
 
 /* [K41] 공통 '명단(66)' 기준 — 지원부(생활관, system/dorm/rosters) 명단을 '과정명'으로 매칭해 제공.
