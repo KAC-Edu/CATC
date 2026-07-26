@@ -65,6 +65,29 @@ window.kacEun = function (w) {
     return '은(는)';
 };
 
+// [K43] 차주 자동배치 '단일 실행' 락 — 어느 플랫폼이든 열리면 배치를 '시도'하되,
+//  Firebase 트랜잭션으로 '오직 한 클라이언트'만 실제 배치를 실행하게 해 중복 방 생성 충돌을 막는다.
+//  weekKey(대상 주 월요일)별로 관리하며, 최근 60초 내 다른 곳이 이미 잡았으면 이번엔 양보(false).
+//  → 반환 true 인 곳만 배치 실행. (강사·운영부 둘 다 켜져 있어도 동시 실행 충돌 없음)
+window.kacClaimAutoPlace = function (weekKey) {
+    try {
+        if (!weekKey || typeof firebase === 'undefined' || !firebase.database) return Promise.resolve(false);
+        var safe = String(weekKey).replace(/[.#$\[\]\/]/g, '_');
+        var ref = firebase.database().ref('system/autoPlaceRun/' + safe);
+        var now = Date.now();
+        return ref.transaction(function (cur) {
+            if (cur && cur.ts && (now - Number(cur.ts)) < 60000) return;   // 최근 60초 내 누군가 실행 중/실행함 → 중단(양보)
+            return { ts: now, by: (window._kacPlatformName || (location && location.pathname) || '?') };
+        }).then(function (res) {
+            // committed=true → 내가 락 획득(배치 실행). committed=false → 다른 곳이 이미 잡음(양보).
+            return !!(res && res.committed);
+        }).catch(function () {
+            // 권한/네트워크 오류 등 락 자체 실패 → 교착 방지 위해 fail-open(배치 진행). 알고리즘 내 중복가드가 보완.
+            return true;
+        });
+    } catch (e) { return Promise.resolve(true); }
+};
+
 // [중요] 비동기 코드 조회 함수
 async function resolveRoomFromCode(code) {
     try {
