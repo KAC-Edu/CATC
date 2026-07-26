@@ -13822,6 +13822,11 @@ const annualPlanMgr = {
             [`${rPath}/notice`]:              "",
             [`${rPath}/coordNotice`]:         "",
             [`${rPath}/coordNoticeHistory`]:  null,
+            [`${rPath}/settings/hideFromBoard`]: null,  // [K44] 전면 현황판 총괄표 '노출' 기본 복귀 — 이전 과정(테스트 등)의 '비노출' 값이 새 과정에 상속돼 모든 플랫폼에서 숨겨지던 문제 차단
+            [`${rPath}/settings/subjects`]:   null,  // [K44] 출강 강사 리스트 초기화 — 이전 과정의 강사·과목(예: 테스트 과정 담임)이 새 과정에 그대로 남던 문제 차단
+            [`${rPath}/settings/menuFeatures`]: null, // [K44] 교육생 앱 메뉴 활성화 기본 복귀 — 이전 과정의 메뉴 on/off가 새 과정에 상속되던 문제 차단
+            [`${rPath}/settings/planId`]:     null,  // [K44] 방↔연간계획 연결고리 초기화 — 이전 과정 링크가 남아 새 과정 계획 매칭이 어긋나던 문제 차단(다음 매칭은 이름 기준)
+            [`${rPath}/status/quizStep`]:     'none', // [K44] 퀴즈 진행 상태 초기화 — 이전 과정의 'live' 등 잔여 플래그로 새 과정 교육생이 퀴즈 화면에 걸리던 소지 차단
             [`${rPath}/settings/password`]:   null,  // [비번 옵션화] 차주 새 과정 배치 전 비번 제거(없음 상태)
             [`${rPath}/settings/quickTabs`]:  null,  // [퀵 탭] 새 과정은 기본(공지관리·수강생현황)으로 복귀
             [`${rPath}/settings/remoteMenu`]: null,  // [육각 리모컨] 새 과정은 기본 메뉴로 복귀
