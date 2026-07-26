@@ -16201,6 +16201,10 @@ ui._deptToRegion = function(dept){
   if(d.indexOf('훈련원')>=0||d.indexOf('항공기술')>=0||d.indexOf('오송')>=0) return '청주';
   var keys=['양양','원주','청주','예천','군산','포항','울산','부안','광주','무안','여수','사천','김해','부산','제주','대구','강원','송탄'];
   for(var i=0;i<keys.length;i++){ if(d.indexOf(keys[i])>=0) return keys[i]; }
+  // [K45] KAC 본사(서울 공항동 소재) 조직 — 지명이 없어 지도에서 빠지던 문제.
+  //  각 공항·항로시설본부(대구)·인천 등은 위에서 이미 지역 매칭됨. 그 외 '본부' 및 본사 실·단은 서울(본사)로 인식.
+  if(d.indexOf('본부')>=0) return '서울';   // 안전보안본부·전략기획본부·운영본부·글로컬사업본부·미래사업본부 등 (항로시설본부는 위에서 대구 처리)
+  if(d.indexOf('홍보실')>=0||d.indexOf('감사실')>=0||d.indexOf('공항시설실')>=0||d.indexOf('항행시설실')>=0||d.indexOf('공항운영실')>=0||d.indexOf('경영관리실')>=0||d.indexOf('인사혁신실')>=0||d.indexOf('기획조정실')>=0||d.indexOf('ESG')>=0||d.indexOf('신공항')>=0||d.indexOf('해외사업')>=0||d.indexOf('글로컬')>=0) return '서울';
   return '';
 };
 ui.closeStudentMap = function(){ var m=document.getElementById('studentMapModal'); if(m) m.remove(); };
