@@ -13902,10 +13902,18 @@ const annualPlanMgr = {
                 }
             }
 
-            // [충돌 방지] 강사 플랫폼은 방 자동 재배치를 하지 않음 — 방 배정은 운영부에서만 수행.
-            //  (여러 플랫폼이 동시에 배정하면 같은 과정이 방마다 번갈아 생기는 충돌이 발생)
+            // [K43] 강사 플랫폼도 자동 재배치를 수행한다 — 단, 여러 플랫폼 동시 실행 시 중복 방 생성을
+            //  막기 위해 Firebase 트랜잭션 락(kacClaimAutoPlace)을 획득한 '한 곳'만 실제 배치한다.
+            //  → 강사 플랫폼만 열어도 차주 과정이 배치됨(운영부 의존성 제거). 동시에 열려도 충돌 없음.
             if (needsUpdate) {
-                console.log('[annualPlanMgr] 재배치 필요 감지 — 강사 플랫폼에선 미수행(운영부 전담).');
+                var _claimed = false;
+                try { _claimed = (typeof window.kacClaimAutoPlace === 'function') ? await window.kacClaimAutoPlace(targetMon) : true; } catch (e) { _claimed = false; }
+                if (_claimed) {
+                    console.log('[annualPlanMgr] 재배치 필요 감지 — 강사 플랫폼에서 실행(락 획득).');
+                    try { await this._applyCurrentWeek(courses); } catch (e) { console.warn('[annualPlanMgr] 배치 실패:', e); }
+                } else {
+                    console.log('[annualPlanMgr] 재배치 필요 감지 — 다른 플랫폼이 배치 중이라 스킵(락 미획득).');
+                }
             }
         } catch (err) {
             console.warn('[annualPlanMgr] checkAndReset 오류:', err);
