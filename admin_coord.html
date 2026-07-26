@@ -6496,8 +6496,13 @@ const annualPlanMgrCoord = {
                 .filter(c => c && c.name && c.startDate && c.endDate)
                 .sort((a, b) => a.startDate.localeCompare(b.startDate));
             if (!courses.length) return;
+            // [K43] 여러 플랫폼(강사·운영부)이 동시에 열려도 배치는 '한 곳'만 — 트랜잭션 락 획득 시에만 실행.
+            var _wk = this._getTargetMonday(this._today());
+            var _claimed = false;
+            try { _claimed = (typeof window.kacClaimAutoPlace === 'function') ? await window.kacClaimAutoPlace(_wk) : true; } catch (e) { _claimed = false; }
+            if (!_claimed) { console.log('[annualPlanMgrCoord] 자동 동기화 스킵 — 다른 플랫폼이 배치 중(락 미획득).'); return; }
             await this._syncRoomsLockAware(courses);
-            console.log('[annualPlanMgrCoord] 자동 동기화 완료');
+            console.log('[annualPlanMgrCoord] 자동 동기화 완료(락 획득)');
         } catch (e) {
             console.warn('[annualPlanMgrCoord] autoSync 오류:', e);
         }
