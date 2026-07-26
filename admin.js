@@ -13686,6 +13686,22 @@ const annualPlanMgr = {
         const updates = {};
         const assigned = [];
         const wiped = [];
+        // [K44] 자동배치가 방을 비우기 '전' 출결·외출외박·학생을 90일 보관소(course_archive)로 아카이브.
+        //  (expire가 못 잡은 방을 자동배치가 지워도 출석부·외출대장 데이터가 유실되지 않도록)
+        const _archives = [];
+        const _archiveRoomData = (room) => {
+            const _rd = curRooms[room] || {};
+            const _aa = _rd.admin_actions || {}, _ia = _rd.internal_attendance || {}, _stu = _rd.students || {};
+            if (!Object.keys(_aa).length && !Object.keys(_ia).length && !Object.keys(_stu).length) return; // 데이터 없으면 스킵(중복 아카이브 방지)
+            const _st = _rd.settings || {}, _stt = _rd.status || {};
+            _archives.push(firebase.database().ref('system/course_archive/' + room + '_' + Date.now()).set({
+                room: room, courseName: _st.courseName || '', period: _st.period || '',
+                prof: _stt.professorName || '', coord: _st.coordinatorName || '',
+                admin_actions: _aa, internal_attendance: _ia, students: _stu,
+                expectedStudents: (_rd.expectedStudents || null),
+                archivedAt: firebase.database.ServerValue.TIMESTAMP
+            }).catch(function(){}));
+        };
 
         // [J72 self-heal] 같은 과정명이 2개 이상 방에 남아있으면(과거 버그 잔재) — 학생·출결·잠금이 전혀 없는 '완전히 빈 중복 방'만 미개설로 정리.
         //   데이터(학생/출결)나 잠금이 있는 방은 절대 건드리지 않음(과거 데이터 유실 재발 방지). 실행될 때마다 스스로 중복을 치유.
@@ -13734,6 +13750,7 @@ const annualPlanMgr = {
             if (course) {
                 if (course.name !== prevName) {
                     // 새/다른 과정 → 리셋 후 배치
+                    _archiveRoomData(room);   // [K44] 이전 과정 출결·외출외박 90일 보관
                     Object.assign(updates, this._cleanStartUpdates(room));
                     // [명단 보존] 자동배치는 지원부·운영부 명단을 지우지 않음 (삭제는 과정 종료 expire에서만)
                     wiped.push(`${room}(${prevName || '비어있음'}→${course.name})`);
@@ -13769,6 +13786,7 @@ const annualPlanMgr = {
                     c && c.cancelled && String(c.name || '').trim() === _nm &&
                     (!_pd || !c.period || String(c.period).trim() === _pd));
                 if (_nm && _isCancelled) {
+                    _archiveRoomData(room);   // [K44] 폐강 과정 출결·외출외박 90일 보관
                     Object.assign(updates, this._cleanStartUpdates(room));
                     updates[`courses/${room}/settings/courseName`] = '';
                     updates[`courses/${room}/settings/period`] = null;
@@ -13779,6 +13797,7 @@ const annualPlanMgr = {
                     updates[`courses/${room}/status/roomStatus`] = 'idle';
                     wiped.push(`${room}(${_nm} 폐강→미개설)`);
                 } else if (_act && _nm && _end && _end < targetMon) {
+                    _archiveRoomData(room);   // [K44] 종료 과정 출결·외출외박 90일 보관
                     Object.assign(updates, this._cleanStartUpdates(room));
                     updates[`courses/${room}/settings/courseName`] = '';
                     updates[`courses/${room}/settings/period`] = null;
@@ -13792,6 +13811,7 @@ const annualPlanMgr = {
             }
         }
 
+        if (_archives.length) { try { await Promise.all(_archives); } catch (e) {} }   // [K44] 아카이브 완료 후 방 비움
         if (Object.keys(updates).length) {
             await firebase.database().ref().update(updates);
             console.log('[annualPlanMgr] 배치 완료:', assigned.join(' | '));
