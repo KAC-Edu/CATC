@@ -10372,11 +10372,22 @@ init: function() {
                NAS 설치 전처럼 교육생이 앱에 접속하지 않는 기간에는 실입교가 0이라 0명으로 표기되므로,
                설정에서 '예정명단' 기준을 고르면 업로드된 명단 인원수로 표시한다. (대면/비대면 공통 설정) */
             if (slot.countBasis === 'roster') {
-                ci.count = Object.keys(rosterSet).length || expected.length;
+                ci.count = expected.length || Object.keys(rosterSet).length;
             } else {
                 ci.count = new Set(arrivedNames.filter(n => hasRoster ? rosterSet[_nrm(n)] : true)).size;
             }
-        } catch (e) {}
+        } catch (e) {
+            /* [K48] 위 계산이 실패해도 '예정명단' 기준이면 명단 인원만이라도 채운다(0명 방지). */
+            try {
+                if (slot.countBasis === 'roster') {
+                    const _e2 = await firebase.database().ref(`courses/${room}/expectedStudents`).once('value');
+                    const _v2 = _e2.val();
+                    let _list = (Array.isArray(_v2) ? _v2 : (_v2 && typeof _v2 === 'object' ? Object.values(_v2) : [])).map(n => String(n||'').trim()).filter(Boolean);
+                    try { const _rn2 = await ui._gatherRosterNames(room); if (_rn2 && _rn2.length) _list = _list.concat(_rn2); } catch(_){}
+                    ci.count = Array.from(new Set(_list)).length;
+                }
+            } catch(_) {}
+        }
         // 교육 시간표 사진 존재 여부 (+ 업로드 30분 경과 시 자동 삭제로 Firebase 부담 경감)
         slot.scheduleTs = 0;
         try {
@@ -10992,7 +11003,13 @@ init: function() {
                         const hasRoster = expected.length > 0;
                         const rosterSet = {}; expected.forEach(function (n) { rosterSet[_nrm(n)] = 1; });
                         arrivedNames.forEach(function (n) { if (!expSet[n] && inc[_rik(n)]) rosterSet[_nrm(n)] = 1; });
-                        const _cnt = new Set(arrivedNames.filter(function (n) { return hasRoster ? rosterSet[_nrm(n)] : true; })).size;
+                        /* [K48] 교육 인원 기준 — 설정에서 '예정명단'을 고르면 명단 인원으로 표기(입교안내 화면 전용).
+                           (이 실시간 리스너가 항상 실입교로 재계산해 덮어쓰던 것이 '0명' 유지의 원인) */
+                        var _basis = 'arrived';
+                        try { _basis = (guideMgr._slot().countBasis === 'roster') ? 'roster' : 'arrived'; } catch (e) {}
+                        const _cnt = (_basis === 'roster')
+                            ? expected.length
+                            : new Set(arrivedNames.filter(function (n) { return hasRoster ? rosterSet[_nrm(n)] : true; })).size;
                         const _el = document.getElementById('ciCount'); if (_el) _el.textContent = _cnt;
                         try { if (guideMgr._slot().courseInfo) guideMgr._slot().courseInfo.count = _cnt; } catch (e) {}
                     }).catch(function () {});
