@@ -10326,6 +10326,16 @@ init: function() {
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
             slot.pageEnable = set.guidePageEnable || {};      // 오픈톡방 QR·채널안내 표시 여부(체크박스)
             slot.centerNoticeOnline = (set.centerNoticeOnline === true);   // [온라인 운영부공지] 온라인 과정은 기본 숨김, 이 토글이 켜지면 표시
+            /* [K47] 삽입 페이지 위치·표시는 '대면/비대면 각각 전체 공통' 설정을 우선 적용한다.
+               공유값이 없으면 기존 과정별 설정(위 값)을 그대로 쓴다 → 기존 설정 무손실 전환. */
+            try{
+                var _vk = /온라인|zoom/i.test(String(set.roomDetailName||'')) ? 'online' : 'offline';
+                var _sh = (await firebase.database().ref('system/sharedGuide/pagePos/'+_vk).once('value')).val() || {};
+                if(_sh.guidePagePos)    slot.pagePos    = _sh.guidePagePos;
+                if(_sh.guidePageEnable) slot.pageEnable = _sh.guidePageEnable;
+                if(_sh.guideVenuePage)  set.guideVenuePage = _sh.guideVenuePage;   // 아래 venuePage 계산에 반영
+                if(typeof _sh.centerNoticeOnline === 'boolean') slot.centerNoticeOnline = _sh.centerNoticeOnline;
+            }catch(e){}
             slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실) — 수동/공유
             slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
@@ -13870,8 +13880,8 @@ const annualPlanMgr = {
             [`${rPath}/settings/quickTabs`]:  null,  // [퀵 탭] 새 과정은 기본(공지관리·수강생현황)으로 복귀
             [`${rPath}/settings/remoteMenu`]: null,  // [육각 리모컨] 새 과정은 기본 메뉴로 복귀
             [`${rPath}/settings/guideCourseInfo`]: null,  // [교육과정 안내] 새 과정은 기본(직무일반·없음)으로 복귀
-            [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 새 과정은 기본 위치로 복귀
-            [`${rPath}/settings/guidePageEnable`]: null,  // [오픈톡방QR·채널안내 표시] 새 과정은 기본(표시)으로 복귀
+            [`${rPath}/settings/guidePagePos`]: null,     // [삽입 페이지 위치] 과정별 잔값 제거 — [K47] 이후 실제 적용값은 대면/비대면 공통(system/sharedGuide/pagePos)
+            [`${rPath}/settings/guidePageEnable`]: null,  // [오픈톡방QR·채널안내 표시] 과정별 잔값 제거 — 실제 적용값은 위 공통 설정
             [`${rPath}/settings/centerNoticeOnline`]: null,  // [온라인 운영부공지 토글] 새 과정은 기본(온라인 숨김)으로 복귀
             [`${rPath}/settings/venuePick`]: null,        // [교육 장소] 새 과정은 강의실 선택 초기화
             [`${rPath}/settings/guideVenuePage`]: null,   // [교육 장소] 페이지 번호 기본(14)로 복귀
@@ -16529,7 +16539,7 @@ ui.openGuidePageSettings = function(){
   ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:26px 28px;width:480px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
     +'<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 삽입 페이지 위치 설정</h3>'
-    +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">삽입 위치는 <b>프로필</b> 기준 1곳만 정하면 됩니다. 오픈톡방 QR·채널 안내는 <b>프로필 바로 뒤</b>에 이어서 나오며, 체크 해제 시 표시되지 않습니다.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>이 과정에만</b> 저장됩니다. (등록 조건이 맞을 때만 표시)</p>'
+    +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">삽입 위치는 <b>프로필</b> 기준 1곳만 정하면 됩니다. 오픈톡방 QR·채널 안내는 <b>프로필 바로 뒤</b>에 이어서 나오며, 체크 해제 시 표시되지 않습니다.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>'+((typeof guideMgr!=="undefined"&&guideMgr._isOnline&&guideMgr._isOnline())?'비대면(온라인)':'대면')+' 입교안내 전 과정에 공통</b>으로 적용됩니다. (등록 조건이 맞을 때만 표시)</p>'
     +rowHtml
     +'<hr style="border:none;border-top:1px solid #eef2f7;margin:8px 0 12px;">'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
@@ -16560,14 +16570,22 @@ ui.saveGuidePageSettings = function(){
   if(vsel){ var _vc=guideMgr._venueCells||[]; for(var _ci=0;_ci<_vc.length;_ci++){ if(vsel.indexOf(_vc[_ci].filter)>=0){ vpick[_ci]=vsel; break; } } }
   // [온라인 운영부공지] 토글(온라인 과정에만 표시됨). 요소가 없으면 기존 값 유지.
   var _cnOnlineEl=document.getElementById('gpe-cnonline');
-  var upd={}; upd['courses/'+state.room+'/settings/guidePagePos']=obj; upd['courses/'+state.room+'/settings/guidePageEnable']=en; upd['courses/'+state.room+'/settings/guideVenuePage']=vp; upd['courses/'+state.room+'/settings/venuePick']=vpick;
-  if(_cnOnlineEl){ upd['courses/'+state.room+'/settings/centerNoticeOnline']=!!_cnOnlineEl.checked; }
+  /* [K47] 삽입 페이지 위치·표시 설정을 '과정별'에서 '대면/비대면 각각 전체 공통'으로 전환.
+     한 과정에서 정하면 같은 유형(대면 또는 비대면)의 모든 과정에 일괄 적용된다.
+     저장 위치: system/sharedGuide/pagePos/{offline|online}
+     ※ 교육장소 강의실 선택(venuePick)은 과정마다 강의실이 다르므로 기존대로 '과정별' 저장 유지. */
+  var _vk = (guideMgr._isOnline && guideMgr._isOnline()) ? 'online' : 'offline';
+  var _sp = 'system/sharedGuide/pagePos/'+_vk+'/';
+  var upd={};
+  upd[_sp+'guidePagePos']=obj; upd[_sp+'guidePageEnable']=en; upd[_sp+'guideVenuePage']=vp;
+  upd['courses/'+state.room+'/settings/venuePick']=vpick;   // 강의실 선택만 과정별
+  if(_cnOnlineEl){ upd[_sp+'centerNoticeOnline']=!!_cnOnlineEl.checked; }
   firebase.database().ref().update(upd)
     .then(function(){
       try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; if(_cnOnlineEl) sl.centerNoticeOnline=!!_cnOnlineEl.checked; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       if(typeof guideMgr.refresh==='function') guideMgr.refresh();
-      ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다. (이 과정)');
+      ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다.\n\n'+(_vk==='online'?'비대면(온라인)':'대면')+' 입교안내 전 과정에 공통 적용됩니다.');
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
