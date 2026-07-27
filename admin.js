@@ -7673,6 +7673,25 @@ resetShuttleRequests: function() {
                 : ('✅ 담임교수를 '+_mn+' 교수로 교체했습니다. (연간계획 반영)'));
             // 검색창을 대표 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
             try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=_mn; ui.renderHomeSearch(_mn); } }catch(e){}
+            /* [K46] 과정 화면(과정 운영 현황) 안에서 교체했을 때 이전 교수가 그대로 남던 문제 —
+               홈 검색만 갱신하고 현재 방 히어로(과정 담임)는 즉시 갱신하지 않아, 새로고침 후에야 반영됐다.
+               → 지금 보고 있는 방과 같으면 저장값을 다시 읽어 화면(대표/외 N명)을 즉시 반영한다. */
+            try{
+                if(state && state.room === room){
+                    var _s = await firebase.database().ref('courses/'+room+'/status').once('value');
+                    var _st = _s.val() || {};
+                    var _only = document.getElementById('dashProfNameOnly');
+                    if(_only) _only.innerText = kacProfMain(_st) || '미지정';
+                    var _more = document.getElementById('dashProfMore');
+                    if(_more){
+                        var _rest = kacProfAll(_st).length - 1;
+                        if(_rest > 0){
+                            _more.style.display = '';
+                            _more.innerHTML = '<button type="button" class="prof-more" onclick="event.stopPropagation(); ui.openProfPicker();" title="담임 교수 전체 보기 · 대표 변경">외 ' + _rest + '명 <i class="fa-solid fa-chevron-down"></i></button>';
+                        } else { _more.style.display = 'none'; _more.innerHTML = ''; }
+                    }
+                }
+            }catch(e){}
         }catch(err){ try{ alert('배정 중 오류: '+(err&&err.message||err)); }catch(_){} }
     },
     // [과정담당 교체] 담당자 목록 팝업 (교수 교체와 동일 UX · 프로필 버튼 없음)
