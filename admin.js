@@ -10612,7 +10612,18 @@ init: function() {
     _pageEnable: function() {
         const s = guideMgr._slot();
         const e = (s && s.pageEnable) || {};
-        return { kakaoqr: e.kakaoqr !== false, channelguide: e.channelguide !== false, centernotice: e.centernotice !== false };
+        return { kakaoqr: e.kakaoqr !== false, channelguide: e.channelguide !== false, centernotice: e.centernotice !== false,
+                 kakaoguide: e.kakaoguide !== false };   // [K49] 원본 PDF의 '카카오톡 채널 사용법 안내' 구간 표시 여부(기본 표시)
+    },
+    /* [K49] '카카오톡 채널 사용법 안내' 구간(원본 PDF 연속 페이지) — 체크 해제 시 통째로 건너뛴다.
+       구간은 설정에서 조정 가능(기본 24~30쪽). 대면/비대면 공통 설정에 저장된다. */
+    _kakaoGuideRange: function() {
+        const s = guideMgr._slot();
+        const e = (s && s.pageEnable) || {};
+        let a = Number(e.kakaoGuideFrom) || 24;
+        let b = Number(e.kakaoGuideTo)   || 30;
+        if (a > b) { const t = a; a = b; b = t; }
+        return { from: a, to: b };
     },
     // 교육장소(14p 등) 교육동 4칸 정의. filter = setup-room-select에서 그 건물 강의실 걸러낼 키워드
     _venueCells: [
@@ -10660,8 +10671,12 @@ init: function() {
         const order = ['profile', 'kakaoqr', 'channelguide', 'courseinfo', 'centernotice'];
         const byPage = {};
         order.forEach(t => { if (!want[t]) return; const pg = clamp(pos[t]); (byPage[pg] = byPage[pg] || []).push(t); });
+        // [K49] '카카오톡 채널 사용법 안내' 구간 숨김 — 체크 해제 시 그 원본 PDF 페이지들을 목록에서 제외.
+        //  (삽입 페이지가 그 구간에 걸려 있으면 사라지지 않도록 삽입물은 그대로 유지)
+        const _kg = guideMgr._kakaoGuideRange();
+        const _skipKG = (en.kakaoguide === false);
         for (let p = 1; p <= n; p++) {
-            list.push({ t: 'pdf', pdf: p });
+            if (!(_skipKG && p >= _kg.from && p <= _kg.to)) list.push({ t: 'pdf', pdf: p });
             (byPage[p] || []).forEach(t => list.push({ t: t }));
         }
         return list;
@@ -16573,6 +16588,21 @@ ui.openGuidePageSettings = function(){
       +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
       +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-venuepage" value="'+((typeof guideMgr!=="undefined"&&guideMgr._venuePage)?guideMgr._venuePage():14)+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지</span></div>'
+      /* [K49] 원본 PDF의 '카카오톡 채널 사용법 안내' 구간 표시/숨김 + 구간 지정 */
+      +'<hr style="border:none;border-top:1px solid #eef2f7;margin:12px 0;">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">'
+        +'<i class="fa-brands fa-kickstarter-k" style="color:#eab308;width:22px;text-align:center;"></i>'
+        +'<span style="flex:1;font-size:14px;font-weight:800;color:#334155;">카카오톡 채널 사용법 안내 <span style="color:#94a3b8;font-weight:600;font-size:12px;">· 원본 PDF 구간</span></span>'
+        +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:800;color:#334155;">'
+          +'<input type="checkbox" id="gpe-kakaoguide" '+(((typeof guideMgr!=="undefined"&&guideMgr._pageEnable)?guideMgr._pageEnable().kakaoguide:true)?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"> 표시</label>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;padding-left:32px;margin-bottom:2px;">'
+        +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
+        +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-kgfrom" value="'+((typeof guideMgr!=="undefined"&&guideMgr._kakaoGuideRange)?guideMgr._kakaoGuideRange().from:24)+'" style="width:58px;padding:7px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13.5px;font-weight:800;text-align:center;">'
+        +'<span style="font-size:12px;color:#64748b;font-weight:700;">~</span>'
+        +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-kgto" value="'+((typeof guideMgr!=="undefined"&&guideMgr._kakaoGuideRange)?guideMgr._kakaoGuideRange().to:30)+'" style="width:58px;padding:7px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13.5px;font-weight:800;text-align:center;">'
+        +'<span style="font-size:12px;color:#94a3b8;font-weight:600;">쪽 (체크 해제 시 이 구간을 건너뜁니다)</span>'
+      +'</div>'
       /* [K48] 교육과정 안내 페이지의 '교육 인원' 산출 기준 선택 */
       +'<hr style="border:none;border-top:1px solid #eef2f7;margin:12px 0;">'
       +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:4px;">'
@@ -16602,6 +16632,13 @@ ui.saveGuidePageSettings = function(){
   var obj={};
   keys.forEach(function(k){ var el=document.getElementById('gpp-'+k); if(!el) return; var v=parseInt(el.value,10); if(!v||v<1) v=1; if(total&&v>total) v=total; obj[k]=v; });
   var en={ kakaoqr: !!(document.getElementById('gpe-kakaoqr')||{}).checked, channelguide: !!(document.getElementById('gpe-channelguide')||{}).checked, centernotice: !!(document.getElementById('gpe-centernotice')||{}).checked };
+  /* [K49] 카카오톡 채널 사용법 구간 표시 여부 + 구간(PDF 쪽) */
+  var _kgEl=document.getElementById('gpe-kakaoguide');
+  en.kakaoguide = _kgEl ? !!_kgEl.checked : true;
+  var _kgF=parseInt((document.getElementById('gpp-kgfrom')||{}).value,10); if(!_kgF||_kgF<1) _kgF=24; if(total&&_kgF>total) _kgF=total;
+  var _kgT=parseInt((document.getElementById('gpp-kgto')||{}).value,10);   if(!_kgT||_kgT<1) _kgT=30; if(total&&_kgT>total) _kgT=total;
+  if(_kgF>_kgT){ var _tmp=_kgF; _kgF=_kgT; _kgT=_tmp; }
+  en.kakaoGuideFrom=_kgF; en.kakaoGuideTo=_kgT;
   var vp=parseInt((document.getElementById('gpp-venuepage')||{}).value,10); if(!vp||vp<1) vp=14; if(total&&vp>total) vp=total;
   var vsel=String((document.getElementById('gvv-single')||{}).value||'').trim();
   var vpick={};
