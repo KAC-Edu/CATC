@@ -10335,6 +10335,7 @@ init: function() {
                 if(_sh.guidePageEnable) slot.pageEnable = _sh.guidePageEnable;
                 if(_sh.guideVenuePage)  set.guideVenuePage = _sh.guideVenuePage;   // 아래 venuePage 계산에 반영
                 if(typeof _sh.centerNoticeOnline === 'boolean') slot.centerNoticeOnline = _sh.centerNoticeOnline;
+                slot.countBasis = (_sh.countBasis === 'roster') ? 'roster' : 'arrived';   // [K48] 교육 인원 기준(기본=입교등록)
             }catch(e){}
             slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실) — 수동/공유
             slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
@@ -10367,7 +10368,14 @@ init: function() {
             const rosterSet = {};
             expected.forEach(n => rosterSet[_nrm(n)] = 1);
             arrivedNames.forEach(n => { if (!expSet[n] && inc[_rik(n)]) rosterSet[_nrm(n)] = 1; });   // 체크된 명단 외 입교자만 합산
-            ci.count = new Set(arrivedNames.filter(n => hasRoster ? rosterSet[_nrm(n)] : true)).size;
+            /* [K48] 교육 인원 기준 선택 — '입교등록(실제 입교한 사람)' 또는 '예정명단'.
+               NAS 설치 전처럼 교육생이 앱에 접속하지 않는 기간에는 실입교가 0이라 0명으로 표기되므로,
+               설정에서 '예정명단' 기준을 고르면 업로드된 명단 인원수로 표시한다. (대면/비대면 공통 설정) */
+            if (slot.countBasis === 'roster') {
+                ci.count = Object.keys(rosterSet).length || expected.length;
+            } else {
+                ci.count = new Set(arrivedNames.filter(n => hasRoster ? rosterSet[_nrm(n)] : true)).size;
+            }
         } catch (e) {}
         // 교육 시간표 사진 존재 여부 (+ 업로드 30분 경과 시 자동 삭제로 Firebase 부담 경감)
         slot.scheduleTs = 0;
@@ -16548,6 +16556,19 @@ ui.openGuidePageSettings = function(){
       +'<span style="font-size:12px;color:#94a3b8;font-weight:700;">PDF</span>'
       +'<input type="number" min="1" '+(total?('max="'+total+'"'):'')+' id="gpp-venuepage" value="'+((typeof guideMgr!=="undefined"&&guideMgr._venuePage)?guideMgr._venuePage():14)+'" style="width:64px;padding:8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:14px;font-weight:800;text-align:center;">'
       +'<span style="font-size:12px;color:#64748b;font-weight:700;">페이지</span></div>'
+      /* [K48] 교육과정 안내 페이지의 '교육 인원' 산출 기준 선택 */
+      +'<hr style="border:none;border-top:1px solid #eef2f7;margin:12px 0;">'
+      +'<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:4px;">'
+      +'<i class="fa-solid fa-users" style="color:#7c3aed;width:22px;text-align:center;margin-top:3px;"></i>'
+      +'<div style="flex:1;">'
+        +'<div style="font-size:14px;font-weight:800;color:#334155;margin-bottom:6px;">교육 인원 표기 기준</div>'
+        +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;font-weight:700;color:#475569;margin-bottom:5px;">'
+          +'<input type="radio" name="gppBasis" id="gpb-arrived" value="arrived" style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"'+(((typeof guideMgr!=="undefined"&&guideMgr._slot&&guideMgr._slot().countBasis)==='roster')?'':' checked')+'>'
+          +'입교등록 인원 <span style="color:#94a3b8;font-weight:600;font-size:12px;">(교육생 앱으로 실제 입교한 사람)</span></label>'
+        +'<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13.5px;font-weight:700;color:#475569;">'
+          +'<input type="radio" name="gppBasis" id="gpb-roster" value="roster" style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"'+(((typeof guideMgr!=="undefined"&&guideMgr._slot&&guideMgr._slot().countBasis)==='roster')?' checked':'')+'>'
+          +'예정명단 인원 <span style="color:#94a3b8;font-weight:600;font-size:12px;">(업로드된 명단 기준 · 교육생 미접속 기간용)</span></label>'
+      +'</div></div>'
     /* [J28] '교육 장소 · 강의실(한 곳만 선택→✓)' 수동 선택 행 제거 — 운영부 강의실 지정 시 자동 표시(roomDetailName)와 중복 */
     +'<div id="gpp-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:4px 0;"></div>'
     +'<div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">'
@@ -16577,14 +16598,16 @@ ui.saveGuidePageSettings = function(){
   var _vk = (guideMgr._isOnline && guideMgr._isOnline()) ? 'online' : 'offline';
   var _sp = 'system/sharedGuide/pagePos/'+_vk+'/';
   var upd={};
-  upd[_sp+'guidePagePos']=obj; upd[_sp+'guidePageEnable']=en; upd[_sp+'guideVenuePage']=vp;
+  var _basis = ((document.getElementById('gpb-roster')||{}).checked) ? 'roster' : 'arrived';   // [K48] 교육 인원 기준
+  upd[_sp+'guidePagePos']=obj; upd[_sp+'guidePageEnable']=en; upd[_sp+'guideVenuePage']=vp; upd[_sp+'countBasis']=_basis;
   upd['courses/'+state.room+'/settings/venuePick']=vpick;   // 강의실 선택만 과정별
   if(_cnOnlineEl){ upd[_sp+'centerNoticeOnline']=!!_cnOnlineEl.checked; }
   firebase.database().ref().update(upd)
     .then(function(){
-      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; if(_cnOnlineEl) sl.centerNoticeOnline=!!_cnOnlineEl.checked; }catch(e){}
+      try{ var sl=guideMgr._slot(); sl.pagePos=obj; sl.pageEnable=en; sl.venuePage=vp; sl.venuePick=vpick; sl.countBasis=_basis; if(_cnOnlineEl) sl.centerNoticeOnline=!!_cnOnlineEl.checked; }catch(e){}
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
-      if(typeof guideMgr.refresh==='function') guideMgr.refresh();
+      // [K48] 인원 기준이 바뀌면 교육과정 안내(교육 인원)를 다시 계산해야 하므로 과정정보부터 재로드
+      try{ if(typeof guideMgr._loadCourseInfo==='function'){ guideMgr._loadCourseInfo().then(function(){ if(typeof guideMgr.refresh==='function') guideMgr.refresh(); }); } else if(typeof guideMgr.refresh==='function'){ guideMgr.refresh(); } }catch(e){ if(typeof guideMgr.refresh==='function') guideMgr.refresh(); }
       ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다.\n\n'+(_vk==='online'?'비대면(온라인)':'대면')+' 입교안내 전 과정에 공통 적용됩니다.');
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
