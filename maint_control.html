@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>전체 서비스 점검모드 제어</title>
+<link rel="icon" href="favicon.svg">
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-check.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Malgun Gothic','맑은 고딕',sans-serif;background:linear-gradient(160deg,#0f2057 0%,#1a3a8a 75%,#1e40af 140%);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .card{background:#fff;border-radius:20px;box-shadow:0 24px 70px rgba(0,0,0,.35);width:100%;max-width:460px;padding:28px 30px;}
+  h1{margin:0 0 6px;font-size:21px;font-weight:900;color:#0f172a;}
+  h1 i{color:#b91c1c;}
+  .sub{margin:0 0 20px;font-size:12.5px;color:#64748b;font-weight:700;line-height:1.6;}
+  label{display:block;font-size:13px;font-weight:800;color:#334155;margin:14px 0 6px;}
+  input,textarea{width:100%;padding:11px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;font-family:inherit;}
+  textarea{resize:vertical;min-height:64px;}
+  .btn{width:100%;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:900;cursor:pointer;color:#fff;margin-top:14px;font-family:inherit;}
+  .b-login{background:#2563eb;}
+  .b-on{background:#b91c1c;}
+  .b-off{background:#059669;}
+  .msg{min-height:20px;font-size:13px;font-weight:800;margin-top:12px;text-align:center;}
+  .state{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:12px;font-size:15px;font-weight:900;margin-bottom:6px;}
+  .s-on{background:#fef2f2;color:#b91c1c;border:1.5px solid #fecaca;}
+  .s-off{background:#f0fdf4;color:#047857;border:1.5px solid #bbf7d0;}
+  .dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
+  .d-on{background:#dc2626;animation:pulse 1.4s infinite;}
+  .d-off{background:#10b981;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .hide{display:none;}
+  .note{font-size:11.5px;color:#94a3b8;font-weight:700;line-height:1.6;margin-top:16px;padding-top:14px;border-top:1px solid #eef2f7;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1><i>●</i> 전체 서비스 점검모드</h1>
+  <p class="sub">켜면 <b>모든 플랫폼</b>(강사·교육생·운영부·지원부·차량·식당)에 점검 안내 화면이 즉시 표시됩니다. 재배포 없이 실시간 적용·해제됩니다.</p>
+
+  <!-- 로그인 -->
+  <div id="loginBox">
+    <label for="pw">관리자 비밀번호</label>
+    <input id="pw" type="password" placeholder="비밀번호 입력 후 Enter" autocomplete="current-password">
+    <button class="btn b-login" onclick="doLogin()">로그인</button>
+  </div>
+
+  <!-- 제어 -->
+  <div id="ctrlBox" class="hide">
+    <div id="stateBox" class="state s-off"><span class="dot d-off"></span><span id="stateTxt">정상 운영 중</span></div>
+    <label for="msg">점검 안내 문구 <span style="color:#94a3b8;font-weight:600;">(선택)</span></label>
+    <textarea id="msg" placeholder="더 나은 서비스를 위해 시스템을 점검하고 있습니다."></textarea>
+    <label for="until">완료 예정 시각 <span style="color:#94a3b8;font-weight:600;">(선택 · 예: 오늘 18:00)</span></label>
+    <input id="until" type="text" placeholder="예: 오늘 18:00">
+    <button class="btn b-on"  onclick="setMaint(true)">🔴 점검모드 켜기 (전체 서비스 중단 안내)</button>
+    <button class="btn b-off" onclick="setMaint(false)">🟢 점검모드 끄기 (정상 운영 복귀)</button>
+  </div>
+
+  <div id="m" class="msg"></div>
+  <p class="note">※ 점검 중에도 관리자는 주소 뒤에 <b>?ok=우회코드</b>를 붙이면 접속할 수 있습니다.<br>※ 저장이 거부되면 Firebase 보안 규칙에서 <b>system/maintenance</b>의 쓰기 권한을 확인하세요.</p>
+</div>
+
+<script src="config.js"></script>
+<script>
+var db = firebase.database();
+var ref = db.ref('system/maintenance');
+function say(t, c){ var m=document.getElementById('m'); m.textContent=t||''; m.style.color=c||'#64748b'; }
+
+function doLogin(){
+  var pw = document.getElementById('pw').value;
+  if(!pw){ say('비밀번호를 입력하세요.', '#dc2626'); return; }
+  say('로그인 중…');
+  firebase.auth().signInWithEmailAndPassword('admin@kac.com', pw)
+    .catch(function(e){ say('로그인 실패 — 비밀번호를 확인하세요.', '#dc2626'); });
+}
+document.getElementById('pw').addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); });
+
+firebase.auth().onAuthStateChanged(function(user){
+  document.getElementById('loginBox').className = user ? 'hide' : '';
+  document.getElementById('ctrlBox').className  = user ? '' : 'hide';
+  if(user) say('');
+});
+
+// 현재 상태 실시간 표시
+ref.on('value', function(s){
+  var v = s.val() || {};
+  var on = !!v.on;
+  var box = document.getElementById('stateBox');
+  box.className = 'state ' + (on ? 's-on' : 's-off');
+  box.innerHTML = '<span class="dot ' + (on ? 'd-on' : 'd-off') + '"></span><span>'
+                + (on ? '점검모드 ON — 전 플랫폼 점검 안내 표시 중' : '정상 운영 중') + '</span>';
+  if(on){
+    if(v.msg)   document.getElementById('msg').value   = v.msg;
+    if(v.until) document.getElementById('until').value = v.until;
+  }
+}, function(){ say('상태를 읽지 못했습니다(권한 확인 필요).', '#dc2626'); });
+
+function setMaint(on){
+  if(on && !confirm('점검모드를 켭니다.\n\n모든 사용자 화면이 점검 안내로 전환됩니다. 진행할까요?')) return;
+  say('저장 중…');
+  var payload = on
+    ? { on:true,
+        msg: (document.getElementById('msg').value || '').trim() || '더 나은 서비스를 위해 시스템을 점검하고 있습니다.',
+        until: (document.getElementById('until').value || '').trim(),
+        updatedAt: firebase.database.ServerValue.TIMESTAMP }
+    : { on:false, updatedAt: firebase.database.ServerValue.TIMESTAMP };
+  ref.set(payload)
+    .then(function(){ say(on ? '✅ 점검모드를 켰습니다. 전 플랫폼에 즉시 적용됩니다.' : '✅ 점검모드를 껐습니다. 정상 운영으로 복귀했습니다.', on ? '#b91c1c' : '#047857'); })
+    .catch(function(e){
+      say('저장 실패: ' + ((e && e.message) || e) + ' — Firebase 규칙에서 system/maintenance 쓰기 권한을 확인하세요.', '#dc2626');
+    });
+}
+</script>
+</body>
+</html>
