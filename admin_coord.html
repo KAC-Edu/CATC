@@ -9106,7 +9106,17 @@ async function openOutingRegister(){
     const weeks={};
     const _push=(wk,obj)=>{ if(!wk) return; (weeks[wk]=weeks[wk]||[]).push(obj); };
     try {
-        (_coordActiveRooms()||[]).forEach(r=>{
+        // [K50] 종료 과정 포함 — 보관본 생성 전에도 대장 조회 가능하도록 진행중·종료 방을 모두 수집
+        const _olRooms=[];
+        for(let _i=65;_i<=90;_i++){
+            const _rid=String.fromCharCode(_i);
+            const _rm=(typeof globalAllData!=='undefined')?globalAllData[_rid]:null; if(!_rm) continue;
+            const _ss=_rm.settings||{};
+            if(!(_ss.courseName&&(''+_ss.courseName).trim())) continue;
+            if(_ss.hideFromBoard) continue;
+            _olRooms.push({rid:_rid, s:_ss, room:_rm});
+        }
+        _olRooms.forEach(r=>{
             const period=(''+(r.s.period||'')).trim();
             const start=period.includes('~')?period.split('~')[0].trim():'';
             const wk=_olMonday(start)||_olMonday(getTodayString());
@@ -9188,8 +9198,21 @@ async function openLedgerCenter(){
     if(!wks.length){ var w0=_olMonday(start); if(w0&&w0>=cutWk&&w0<=todayWk) wks=[w0]; }
     wks.forEach(function(wk){ var arr=(weeks[wk]=weeks[wk]||[]); if(arr.some(function(x){return x.key===obj.key;})) return; arr.push(obj); });
   }
+  /* [K50] 종료 과정도 방에서 직접 수집 — 기존엔 _coordActiveRooms()가 '종료일 지난 방'을 제외해서,
+     과정이 끝나면 강사 플랫폼이 열려 보관본(course_archive)이 만들어지기 전까지 대장에서 사라졌다.
+     → 교육운영부에서 과정 종료 즉시 출석부·외출대장을 뽑을 수 있도록 진행중·종료 방을 모두 포함한다.
+     (보관본이 생기면 같은 key로 중복 제거되어 한 번만 표시) */
   try{
-    (_coordActiveRooms()||[]).forEach(function(r){
+    var _lcRooms=[];
+    for(var _ri=65; _ri<=90; _ri++){
+      var _rid=String.fromCharCode(_ri);
+      var _rm=(typeof globalAllData!=='undefined')?globalAllData[_rid]:null; if(!_rm) continue;
+      var _ss=_rm.settings||{};
+      if(!(_ss.courseName&&(''+_ss.courseName).trim())) continue;   // 미개설 방 제외
+      if(_ss.hideFromBoard) continue;                                // 총괄표 비노출(테스트) 과정 제외
+      _lcRooms.push({ rid:_rid, s:_ss, room:_rm });
+    }
+    _lcRooms.forEach(function(r){
       var period=(''+(r.s.period||'')).trim();
       var start=period.includes('~')?period.split('~')[0].trim():''; var end=period.includes('~')?(period.split('~')[1]||'').trim():'';
       pushCourse(start, end, { courseName:r.s.courseName||('Room '+r.rid), period:period, room:r.rid, archiveId:null,
