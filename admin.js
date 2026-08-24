@@ -17091,7 +17091,27 @@ ui.openLeaderRoulette = async function(){
     }) === idx;
   });
   students.sort(function(a,b){ return a.name.localeCompare(b.name); });
-  if(students.length <= 1){ ui.showAlert('현재 입교 완료 인원이 ' + students.length + '명입니다.\n인원이 부족하여(2명 이상 필요) 학생장 룰렛을 이용할 수 없습니다.'); return; }
+  /* [K51] 교육생이 아직 QR 입교등록을 하지 않은 상태(NAS 도입 전 등)에서도 룰렛을 돌릴 수 있도록,
+     입교자가 2명 미만이면 '예정명단'(expectedStudents ∪ 지원부 생활관 명단)으로 자동 대체한다.
+     명단 인원은 token이 없으므로 당첨 시 학생 레코드를 새로 만들어 학생장으로 지정한다. */
+  ui._rouletteFromRoster = false;
+  if(students.length <= 1){
+    var _rl = [];
+    try{
+      var _es = await firebase.database().ref('courses/'+room+'/expectedStudents').once('value');
+      var _ev = _es.val();
+      _rl = (Array.isArray(_ev) ? _ev : (_ev && typeof _ev==='object' ? Object.values(_ev) : [])).map(function(n){ return String(n||'').trim(); }).filter(Boolean);
+    }catch(e){}
+    try{ var _dn = await ui._gatherRosterNames(room); if(_dn && _dn.length) _rl = _rl.concat(_dn); }catch(e){}
+    var _seen = {}; var _uniq = [];
+    _rl.forEach(function(n){ var k=String(n).replace(/\s+/g,'').toLowerCase(); if(!k||_seen[k]) return; _seen[k]=1; _uniq.push(String(n).trim()); });
+    if(_uniq.length > 1){
+      students = _uniq.map(function(n){ return { token:null, name:n }; });
+      students.sort(function(a,b){ return a.name.localeCompare(b.name); });
+      ui._rouletteFromRoster = true;
+    }
+  }
+  if(students.length <= 1){ ui.showAlert('현재 대상 인원이 ' + students.length + '명입니다.\n\n입교 완료자도, 업로드된 예정명단도 2명 미만이라\n학생장 룰렛을 이용할 수 없습니다.'); return; }
 
   ui._rouletteStudents = students;
   ui._rouletteWinner = null;
@@ -17238,9 +17258,22 @@ ui.confirmRouletteLeader = function(){
   var room=state.room;
   firebase.database().ref('courses/'+room+'/students').once('value', function(snap){
     var data=snap.val()||{}; var updates={};
+    /* [K51] 예정명단으로 추첨한 경우 당첨자에게 token이 없다.
+       → 같은 이름의 입교 레코드가 있으면 그것을 쓰고, 없으면 새 레코드를 만들어 학생장으로 지정한다. */
+    var _winToken = win.token;
+    if(!_winToken){
+      var _nrm = function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+      var _target = _nrm(win.name);
+      Object.keys(data).forEach(function(tk){ if(!_winToken && data[tk] && _nrm(data[tk].name)===_target) _winToken = tk; });
+      if(!_winToken){
+        _winToken = 'leader_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+        updates[_winToken+'/name'] = win.name;
+        updates[_winToken+'/rosterOnly'] = true;   // 명단 기준 지정(아직 QR 입교 전)
+      }
+    }
     // 단일 학생장: 기존 학생장 해제 후 당첨자 지정
-    Object.keys(data).forEach(function(tk){ if(data[tk] && data[tk].isLeader===true && tk!==win.token){ updates[tk+'/isLeader']=false; updates[tk+'/leaderPhone']=null; } });
-    updates[win.token+'/isLeader']=true;
+    Object.keys(data).forEach(function(tk){ if(data[tk] && data[tk].isLeader===true && tk!==_winToken){ updates[tk+'/isLeader']=false; updates[tk+'/leaderPhone']=null; } });
+    updates[_winToken+'/isLeader']=true;
     firebase.database().ref('courses/'+room+'/students').update(updates).then(function(){
       ui.closeLeaderRoulette();   // 룰렛 먼저 닫고 → 알림창이 전체화면(top layer) 위에 확실히 남도록
       ui.showAlert('👑 ['+win.name+'] 교육생이 학생장으로 지정되었습니다.\n모든 플랫폼에 연동됩니다.');
