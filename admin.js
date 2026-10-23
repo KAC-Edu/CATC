@@ -3075,7 +3075,7 @@ loadDashboardStats: function() {
         ui._syncOpsOtpRow(room);      // [K12] 입교 인원이 바뀌면 출석률 분모도 바뀐다
         
         // 온라인(isOnline) 여부와 상관없이 이름이 등록된 모든 학생 필터링
-        const arrivedStudents = Object.values(data).filter(s => s.name && s.name !== "undefined");
+        const arrivedStudents = Object.keys(data).filter(k => kacIsRealStudent(data[k], k)).map(k => data[k]);   // [K58] 룰렛 지정 레코드 제외
         const arrivedCount = arrivedStudents.length;
         // [K36] '입교/퀴즈 참여/대기' 표시는 모두 명단 기준(예정 ∪ 체크된 명단외).
         //  명단 외 미체크 입교자(구경꾼 = 모니터링 직원 등)는 어느 인원수에도 넣지 않는다.
@@ -6064,8 +6064,11 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
             ));
             const data = lastActual || {};
 
-            const actualStudents = Object.keys(data).map(key => ({ token: key, ...data[key] }))
-                                         .filter(s => s.name && s.name !== "undefined");
+            /* [K58] 입교자 목록·집계에서 룰렛 지정 레코드 제외.
+               단, 👑 학생장 표시는 유지해야 하므로 '학생장 전용 레코드'는 별도로 보관한다. */
+            const _allStuRecs  = Object.keys(data).map(key => ({ token: key, ...data[key] })).filter(s => s.name && s.name !== "undefined");
+            const actualStudents = _allStuRecs.filter(s => kacIsRealStudent(s, s.token));
+            const _leaderOnlyRecs = _allStuRecs.filter(s => !kacIsRealStudent(s, s.token));
             const actualNames = actualStudents.map(s => s.name);
             const combinedNames = Array.from(new Set([...expectedNames, ...actualNames])).sort((a,b) => a.localeCompare(b));
 
@@ -6082,14 +6085,14 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                     if (idx === onPlanNames.length && offPlanNames.length) {
                         tbody.innerHTML += `<tr class="roster-divider"><td colspan="5" style="padding:9px 14px;background:#f8fafc;border-top:2px dashed #cbd5e1;color:#64748b;font-size:12px;font-weight:800;text-align:left;">──  명단 외 입교자 (QR·자체 입장) — '명단 포함'을 체크하면 총원에 합산됩니다  ──</td></tr>`;
                     }
+                    /* [K56/K58] 실제 입교자 목록(actualStudents)은 이미 룰렛 지정 레코드가 제외돼 있다.
+                       👑 학생장 표시는 그 레코드에도 있을 수 있으므로 _leaderOnlyRecs에서 함께 확인한다. */
                     const sList = actualStudents.filter(student => student.name === name);
-                    /* [K56] 학생장 룰렛이 만든 '명단 기준 지정' 레코드(rosterOnly)는 실제 입교가 아니다.
-                       → 입교 완료/입교율 집계에서 제외하고, 👑 학생장 표시만 유지한다. */
-                    const _realList = sList.filter(s => s && s.rosterOnly !== true);
-                    const isArrived = _realList.length > 0;
-                    const studentData = isArrived ? _realList[0] : (sList[0] || null);
+                    const _lList = _leaderOnlyRecs.filter(student => student.name === name);
+                    const isArrived = sList.length > 0;
+                    const studentData = isArrived ? sList[0] : (_lList[0] || null);
                     const isOnline = isArrived && studentData.isOnline === true;
-                    const isLeader = sList.some(s => s && s.isLeader === true);
+                    const isLeader = sList.some(s => s && s.isLeader === true) || _lList.some(s => s && s.isLeader === true);
                     const isExpected = expectedNames.includes(name); // 명단 업로드 여부
                     const isIncluded = !!((state._rosterIncludeCache||{})[ui._riKey(name)]); // [K32] '명단 포함' 체크 여부
 
@@ -6138,10 +6141,10 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                                                 style="background:#ef4444; color:white; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer;">삭제</button>
                                         ${sList.length > 1 ? `<button class="btn-table-action" onclick="dataMgr.resolveOverlap('${encodeURIComponent(name)}')" title="같은 이름이 ${sList.length}번 중복 등록됨(일자 변경 등) — 정리하기" style="background:#f59e0b; color:#fff; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer; font-weight:800;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:3px;"></i>오버랩 ${sList.length}</button>` : ''}
                                     </div>
-                                ` : (isLeader && sList[0] ? `
+                                ` : (isLeader && (sList[0] || _lList[0]) ? `
                                     <div style="display:flex; gap:5px; justify-content:center;">
                                         <!-- [K56] 아직 입교 전이지만 룰렛으로 지정된 학생장 — 해제/재지정 가능하게 버튼 제공 -->
-                                        <button class="btn-table-action" onclick="dataMgr.toggleLeader('${sList[0].token}', '${name}')" title="학생장 해제 또는 연락처 입력" style="padding:5px 10px; font-size:11px; border-radius:6px; cursor:pointer; ${leaderBtnStyle}">학생장</button>
+                                        <button class="btn-table-action" onclick="dataMgr.toggleLeader('${(sList[0]||_lList[0]).token}', '${name}')" title="학생장 해제 또는 연락처 입력" style="padding:5px 10px; font-size:11px; border-radius:6px; cursor:pointer; ${leaderBtnStyle}">학생장</button>
                                         <button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>
                                     </div>
                                 ` : `<button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>`)}
@@ -6253,7 +6256,7 @@ loadDormitoryData: function() {
             ));
             const actualStudents = Object.entries(actData || {})
                 .map(([token, s]) => ({ token, ...s }))
-                .filter(s => s.name && s.name !== "undefined");
+                .filter(s => kacIsRealStudent(s, s.token));   // [K58] 룰렛 지정 레코드 제외
             const actualNames = actualStudents.map(s => s.name);
             // [K36] 명단 외 미체크 입교자(구경꾼 = 모니터링 직원 등)는 생활관 명단·인원에서 제외
             const _dormInc = state._rosterIncludeCache || {};
