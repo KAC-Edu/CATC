@@ -10335,10 +10335,18 @@ init: function() {
                 if(_sh.guidePageEnable) slot.pageEnable = _sh.guidePageEnable;
                 if(_sh.guideVenuePage)  set.guideVenuePage = _sh.guideVenuePage;   // 아래 venuePage 계산에 반영
                 if(typeof _sh.centerNoticeOnline === 'boolean') slot.centerNoticeOnline = _sh.centerNoticeOnline;
-                /* [K48] 교육 인원 기준(기본=입교등록) / [K52] 'manual' = 강사가 직접 입력한 인원 사용 */
-                slot.countBasis  = (_sh.countBasis === 'roster' || _sh.countBasis === 'manual') ? _sh.countBasis : 'arrived';
-                slot.countManual = Number(_sh.countManual) || 0;
+                /* [K48] 교육 인원 기준(기본=입교등록) — 공통 설정은 '입교등록/예정명단'만 담는다.
+                   [K55] '직접 입력'은 과정마다 인원이 다르므로 공통이 아니라 '과정별 설정'에 저장한다.
+                         (예전 공통값에 manual이 남아 있어도 무시 → 다른 과정에 12명이 그대로 뜨던 문제 차단) */
+                slot.countBasis  = (_sh.countBasis === 'roster') ? 'roster' : 'arrived';
+                slot.countManual = 0;
             }catch(e){}
+            /* [K55] 과정별 '직접 입력' 우선 적용 — 이 과정에만 해당하는 수기 인원.
+               해당 과정에 지정돼 있을 때만 manual로 전환하고, 없으면 공통 기준(입교등록/예정명단)을 그대로 쓴다. */
+            if (set.countBasis === 'manual') {
+                slot.countBasis  = 'manual';
+                slot.countManual = Number(set.countManual) || 0;
+            }
             slot.venuePick = set.venuePick || {};             // 교육장소 페이지 강의실 선택 (셀 index → 강의실) — 수동/공유
             slot.roomDetailName = set.roomDetailName || '';   // 과정 강의실(연간계획/과정현황 설정값) — 자동 표시용 폴백
             slot.venuePage = Number(set.guideVenuePage) || 14; // 교육장소 오버레이가 뜰 PDF 페이지 (기본 14)
@@ -13922,6 +13930,8 @@ const annualPlanMgr = {
             [`${rPath}/settings/subjects`]:   null,  // [K44] 출강 강사 리스트 초기화 — 이전 과정의 강사·과목(예: 테스트 과정 담임)이 새 과정에 그대로 남던 문제 차단
             [`${rPath}/settings/menuFeatures`]: null, // [K44] 교육생 앱 메뉴 활성화 기본 복귀 — 이전 과정의 메뉴 on/off가 새 과정에 상속되던 문제 차단
             [`${rPath}/settings/planId`]:     null,  // [K44] 방↔연간계획 연결고리 초기화 — 이전 과정 링크가 남아 새 과정 계획 매칭이 어긋나던 문제 차단(다음 매칭은 이름 기준)
+            [`${rPath}/settings/countBasis`]:  null,  // [K55] 교육 인원 '직접 입력' 해제 — 이전 과정의 수기 인원이 새 과정에 상속되지 않도록
+            [`${rPath}/settings/countManual`]: null,  // [K55] 수기 인원값 초기화
             [`${rPath}/status/quizStep`]:     'none', // [K44] 퀴즈 진행 상태 초기화 — 이전 과정의 'live' 등 잔여 플래그로 새 과정 교육생이 퀴즈 화면에 걸리던 소지 차단
             [`${rPath}/settings/password`]:   null,  // [비번 옵션화] 차주 새 과정 배치 전 비번 제거(없음 상태)
             [`${rPath}/settings/quickTabs`]:  null,  // [퀵 탭] 새 과정은 기본(공지관리·수강생현황)으로 복귀
@@ -16670,8 +16680,20 @@ ui.saveGuidePageSettings = function(){
              : ((document.getElementById('gpb-roster')||{}).checked) ? 'roster' : 'arrived';
   var _manualN = parseInt((document.getElementById('gpb-manualnum')||{}).value, 10);
   if(!(_manualN >= 0)) _manualN = 0; if(_manualN > 999) _manualN = 999;
-  upd[_sp+'guidePagePos']=obj; upd[_sp+'guidePageEnable']=en; upd[_sp+'guideVenuePage']=vp; upd[_sp+'countBasis']=_basis; upd[_sp+'countManual']=_manualN;
+  upd[_sp+'guidePagePos']=obj; upd[_sp+'guidePageEnable']=en; upd[_sp+'guideVenuePage']=vp;
   upd['courses/'+state.room+'/settings/venuePick']=vpick;   // 강의실 선택만 과정별
+  /* [K55] '직접 입력'은 과정마다 인원이 다르므로 '이 과정에만' 저장한다.
+     입교등록/예정명단은 기존대로 대면·비대면 공통 저장 + 이 과정의 수기 지정은 해제한다. */
+  var _cp = 'courses/'+state.room+'/settings/';
+  if(_basis === 'manual'){
+    upd[_cp+'countBasis']  = 'manual';
+    upd[_cp+'countManual'] = _manualN;
+  }else{
+    upd[_sp+'countBasis']  = _basis;     // 공통(전 과정) 기준
+    upd[_cp+'countBasis']  = null;       // 이 과정의 수기 지정 해제
+    upd[_cp+'countManual'] = null;
+  }
+  upd[_sp+'countManual'] = null;         // 예전에 공통으로 저장됐던 수기 인원 제거(다른 과정 오염 방지)
   if(_cnOnlineEl){ upd[_sp+'centerNoticeOnline']=!!_cnOnlineEl.checked; }
   firebase.database().ref().update(upd)
     .then(function(){
@@ -16679,7 +16701,9 @@ ui.saveGuidePageSettings = function(){
       var m=document.getElementById('guidePageSettingsModal'); if(m) m.remove();
       // [K48] 인원 기준이 바뀌면 교육과정 안내(교육 인원)를 다시 계산해야 하므로 과정정보부터 재로드
       try{ if(typeof guideMgr._loadCourseInfo==='function'){ guideMgr._loadCourseInfo().then(function(){ if(typeof guideMgr.refresh==='function') guideMgr.refresh(); }); } else if(typeof guideMgr.refresh==='function'){ guideMgr.refresh(); } }catch(e){ if(typeof guideMgr.refresh==='function') guideMgr.refresh(); }
-      ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다.\n\n'+(_vk==='online'?'비대면(온라인)':'대면')+' 입교안내 전 과정에 공통 적용됩니다.');
+      ui.showAlert('✅ 삽입 페이지 위치가 저장되었습니다.\n\n'
+        + (_vk==='online'?'비대면(온라인)':'대면') + ' 입교안내 전 과정에 공통 적용됩니다.'
+        + (_basis==='manual' ? ('\n\n※ 교육 인원 ' + _manualN + '명(직접 입력)은 이 과정에만 적용됩니다.') : ''));
     })
     .catch(function(){ var msg=document.getElementById('gpp-msg'); if(msg) msg.textContent='저장 중 오류가 발생했습니다.'; });
 };
