@@ -2630,6 +2630,12 @@ function kacProfList(raw){
         .map(function(s){ return s.trim(); })
         .filter(Boolean);
 }
+/* [K56] 실제 입교자 판정 공용 함수 — 학생장 룰렛이 만든 '명단 기준 지정'(rosterOnly) 레코드는
+   실제 QR 입교가 아니므로 입교 인원·입교율 집계에서 제외한다. (👑 학생장 표시는 그대로 유지) */
+function kacIsRealStudent(s){
+  return !!(s && s.name && s.name !== 'undefined' && s.rosterOnly !== true);
+}
+window.kacIsRealStudent = kacIsRealStudent;
 function kacProfMain(st){
     if (!st) return '';
     var arr = kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
@@ -6071,10 +6077,13 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                         tbody.innerHTML += `<tr class="roster-divider"><td colspan="5" style="padding:9px 14px;background:#f8fafc;border-top:2px dashed #cbd5e1;color:#64748b;font-size:12px;font-weight:800;text-align:left;">──  명단 외 입교자 (QR·자체 입장) — '명단 포함'을 체크하면 총원에 합산됩니다  ──</td></tr>`;
                     }
                     const sList = actualStudents.filter(student => student.name === name);
-                    const isArrived = sList.length > 0;
-                    const studentData = isArrived ? sList[0] : null;
+                    /* [K56] 학생장 룰렛이 만든 '명단 기준 지정' 레코드(rosterOnly)는 실제 입교가 아니다.
+                       → 입교 완료/입교율 집계에서 제외하고, 👑 학생장 표시만 유지한다. */
+                    const _realList = sList.filter(s => s && s.rosterOnly !== true);
+                    const isArrived = _realList.length > 0;
+                    const studentData = isArrived ? _realList[0] : (sList[0] || null);
                     const isOnline = isArrived && studentData.isOnline === true;
-                    const isLeader = isArrived && studentData.isLeader === true;
+                    const isLeader = sList.some(s => s && s.isLeader === true);
                     const isExpected = expectedNames.includes(name); // 명단 업로드 여부
                     const isIncluded = !!((state._rosterIncludeCache||{})[ui._riKey(name)]); // [K32] '명단 포함' 체크 여부
 
@@ -6123,7 +6132,13 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                                                 style="background:#ef4444; color:white; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer;">삭제</button>
                                         ${sList.length > 1 ? `<button class="btn-table-action" onclick="dataMgr.resolveOverlap('${encodeURIComponent(name)}')" title="같은 이름이 ${sList.length}번 중복 등록됨(일자 변경 등) — 정리하기" style="background:#f59e0b; color:#fff; padding:5px 10px; border-radius:6px; font-size:11px; border:none; cursor:pointer; font-weight:800;"><i class="fa-solid fa-triangle-exclamation" style="margin-right:3px;"></i>오버랩 ${sList.length}</button>` : ''}
                                     </div>
-                                ` : `<button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>`}
+                                ` : (isLeader && sList[0] ? `
+                                    <div style="display:flex; gap:5px; justify-content:center;">
+                                        <!-- [K56] 아직 입교 전이지만 룰렛으로 지정된 학생장 — 해제/재지정 가능하게 버튼 제공 -->
+                                        <button class="btn-table-action" onclick="dataMgr.toggleLeader('${sList[0].token}', '${name}')" title="학생장 해제 또는 연락처 입력" style="padding:5px 10px; font-size:11px; border-radius:6px; cursor:pointer; ${leaderBtnStyle}">학생장</button>
+                                        <button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>
+                                    </div>
+                                ` : `<button class="btn-table-action" onclick="dataMgr.deleteExpectedName('${encodeURIComponent(name)}')" style="background:#fff; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:6px; font-size:11px; cursor:pointer;">명단삭제</button>`)}
                             </td>
                         </tr>`;
                 });
@@ -7094,7 +7109,7 @@ resetShuttleRequests: function() {
                     const _inc2 = r.rosterInclude||{};
                     Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc2[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset2[_rnorm(nm)]=1; });
                 }
-                const cnt = new Set(Object.values(students).filter(s=>s&&s.name&&s.name!=='undefined' && (!_rset2 || _rset2[_rnorm(s.name)])).map(s=>s.name)).size;
+                const cnt = new Set(Object.values(students).filter(s=>kacIsRealStudent(s) && (!_rset2 || _rset2[_rnorm(s.name)])).map(s=>s.name)).size;
                 studentTotal += cnt;
                 // 예정(지원부 업로드) 인원 — 현재 과정 주차의 지원부 명단
                 try {
@@ -7366,7 +7381,7 @@ resetShuttleRequests: function() {
         var src=(window._homeSearchDetailData||{})[room]||{};
         var r=src.roomData||{}, settings=r.settings||{}, status=r.status||{};
         var esc=ui._esc, norm=function(v){return String(v||'').replace(/\s+/g,'').toLowerCase();};
-        var registered=Object.values(r.students||{}).filter(function(s){return s&&s.name&&s.name!=='undefined';});
+        var registered=Object.values(r.students||{}).filter(function(s){return kacIsRealStudent(s);});
         var roster=Array.isArray(src.roster)?src.roster:[];
         // [K36] '입교' 표시용 명단 기준 인원 — 명단 외 미체크 입교자(구경꾼) 제외
         var _regEff=(function(){ if(!roster.length) return registered.length; var _s={}; roster.forEach(function(n){_s[norm(n)]=1;}); var _i=(r.rosterInclude)||{}; registered.forEach(function(x){var nm=String(x.name||'').trim(); if(_i[nm.replace(/[.#$\[\]\/]/g,'_')]) _s[norm(nm)]=1;}); return registered.filter(function(x){return _s[norm(x.name)];}).length; })();
@@ -7789,7 +7804,7 @@ resetShuttleRequests: function() {
             var include=!ended && ((isActive && course) || thisWeek);
             if(!include) return;
             if(prof.toLowerCase().indexOf(ql)<0) return;   // 담임교수만 검색
-            var stuNames=[]; try{ Object.values(students).forEach(function(s){ if(s&&s.name&&s.name!=='undefined') stuNames.push(String(s.name).trim()); }); }catch(e){}
+            var stuNames=[]; try{ Object.values(students).forEach(function(s){ if(kacIsRealStudent(s)) stuNames.push(String(s.name).trim()); }); }catch(e){}
             var planned=0, rosterNames=[], rosterList=[];
             try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ rosterList=best.list.slice(); planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
             var cnt=new Set(stuNames).size;
@@ -7928,7 +7943,7 @@ resetShuttleRequests: function() {
                 try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
                 // 소속 분포 집계 (예정 명단 소속 기준)
                 list.forEach(function(pp){ var reg=ui._deptToRegion((pp&&pp.dept)||''); if(reg){ _agg[reg]=(_agg[reg]||0)+1; _aggTotal++; } else { _aggUnknown++; } });
-                const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined').map(s=>String(s.name).trim()));
+                const _arrivedSet=new Set(Object.values(r.students||{}).filter(s=>kacIsRealStudent(s)).map(s=>String(s.name).trim()));
                 const cnt=list.length;
                 const uid='hsR_'+room;
                 // 명단(예정)에 없어도 QR로 입교한 교육생은 표에 추가 표시
@@ -7938,7 +7953,7 @@ resetShuttleRequests: function() {
                 let stuCnt;
                 if(_rosterNm.size){ let _sc=0; _arrivedSet.forEach(function(nm){ if(_rosterNm.has(nm) || _incRC[nm.replace(/[.#$\[\]\/]/g,'_')]) _sc++; }); stuCnt=_sc; }
                 else stuCnt=_arrivedSet.size;
-                const _qrOnly=Object.values(r.students||{}).filter(s=>s&&s.name&&s.name!=='undefined'&&!_rosterNm.has(String(s.name).trim())).map(s=>({name:s.name,empNo:(s.empNo||s.employeeNo||''),dept:(s.dept||''),_qr:true}));
+                const _qrOnly=Object.values(r.students||{}).filter(s=>kacIsRealStudent(s)&&!_rosterNm.has(String(s.name).trim())).map(s=>({name:s.name,empNo:(s.empNo||s.employeeNo||''),dept:(s.dept||''),_qr:true}));
                 const _disp=list.concat(_qrOnly);
                 let detail;
                 if(_disp.length){
@@ -10373,7 +10388,7 @@ init: function() {
             const _rik = n => String(n==null?'':n).trim().replace(/[.#$\[\]\/]/g,'_');
             const inc = iSnap.val() || {};
             const expSet = {}; expected.forEach(n => expSet[String(n).trim()] = 1);
-            const arrivedNames = Object.values(stu).map(s => s && s.name).filter(n => n && n !== 'undefined').map(n => String(n).trim());
+            const arrivedNames = Object.values(stu).filter(s => kacIsRealStudent(s)).map(s => String(s.name).trim());   // [K56] 룰렛 지정 레코드 제외
             const hasRoster = expected.length > 0;
             const rosterSet = {};
             expected.forEach(n => rosterSet[_nrm(n)] = 1);
@@ -11027,7 +11042,7 @@ init: function() {
                         const _rik = function (n) { return String(n == null ? '' : n).trim().replace(/[.#$\[\]\/]/g, '_'); };
                         const inc = res[1].val() || {};
                         const expSet = {}; expected.forEach(function (n) { expSet[String(n).trim()] = 1; });
-                        const arrivedNames = Object.values(_stu).map(function (x) { return x && x.name; }).filter(function (n) { return n && n !== 'undefined'; }).map(function (n) { return String(n).trim(); });
+                        const arrivedNames = Object.values(_stu).filter(function (x) { return kacIsRealStudent(x); }).map(function (x) { return String(x.name).trim(); });
                         const hasRoster = expected.length > 0;
                         const rosterSet = {}; expected.forEach(function (n) { rosterSet[_nrm(n)] = 1; });
                         arrivedNames.forEach(function (n) { if (!expSet[n] && inc[_rik(n)]) rosterSet[_nrm(n)] = 1; });
@@ -11146,7 +11161,7 @@ init: function() {
                 ui._cgRegRef = firebase.database().ref('courses/' + guideMgr._room() + '/students');
                 ui._cgRegRef.on('value', function (s) {
                     const _stu = s.val() || {};
-                    const _names = Object.values(_stu).filter(x => x && x.name && x.name !== 'undefined').map(x => String(x.name).trim());
+                    const _names = Object.values(_stu).filter(x => kacIsRealStudent(x)).map(x => String(x.name).trim());
                     const _set = new Set(_names);
                     const _el = document.getElementById('cgCountNum'); if (_el) _el.textContent = _set.size;
                     // 신규 입교자 감지 → "○○○ 입교 완료!" 연기 효과
@@ -15594,7 +15609,7 @@ ui.renderOverviewOverlay = async function () {
         if (gi.category) cat = gi.category;
         if (gi.evaluation) ev = gi.evaluation;
         var stu = results[1].val() || {};
-        count = new Set(Object.values(stu).filter(function (x) { return x && x.name && x.name !== 'undefined'; }).map(function (x) { return String(x.name).trim(); })).size;
+        count = new Set(Object.values(stu).filter(function (x) { return kacIsRealStudent(x); }).map(function (x) { return String(x.name).trim(); })).size;
         var zv = results[2].val() || {};
         var no = String(zv.no || '').trim(), pw = String(zv.pw || '').trim();
         if (no || pw) zoomTxt = (no || '-') + (pw ? '\u00A0\u00A0/\u00A0\u00A0' + pw : '');
@@ -17314,6 +17329,13 @@ ui.confirmRouletteLeader = function(){
     }
     // 단일 학생장: 기존 학생장 해제 후 당첨자 지정
     Object.keys(data).forEach(function(tk){ if(data[tk] && data[tk].isLeader===true && tk!==_winToken){ updates[tk+'/isLeader']=false; updates[tk+'/leaderPhone']=null; } });
+    /* [K56] 이전 룰렛이 만든 '명단 기준 지정' 유령 레코드(rosterOnly) 정리 —
+       안 지우면 재추첨할 때마다 레코드가 쌓여 입교 완료·입교율이 부풀려진다. (실제 QR 입교자는 건드리지 않음) */
+    Object.keys(data).forEach(function(tk){
+      if(tk===_winToken) return;
+      var _d=data[tk];
+      if(_d && _d.rosterOnly===true) updates[tk]=null;
+    });
     updates[_winToken+'/isLeader']=true;
     firebase.database().ref('courses/'+room+'/students').update(updates).then(function(){
       ui.closeLeaderRoulette();   // 룰렛 먼저 닫고 → 알림창이 전체화면(top layer) 위에 확실히 남도록
