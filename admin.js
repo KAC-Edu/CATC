@@ -16368,6 +16368,7 @@ ui.openStudentMap = async function(){
 ui.closeLeaderRoulette = function(){
   var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
   ui._wheelSpinning=false;
+  ui._rouletteSrc=null;   // [K57] 다음에 열 때 현재 인원 기준으로 기본 대상 다시 판단
   try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
   var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='flex';
 };
@@ -17133,41 +17134,59 @@ ui.openLeaderRoulette = async function(){
   if(!state.room){ ui.showAlert('강의실을 먼저 선택하세요.'); return; }
   var esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   var room = state.room;
-  // 입교(체크인)한 학생만 대상
-  var students=[];
+  /* [K57] 룰렛 대상을 '명시적으로 선택'한다 — 입교안내의 교육 인원 기준과 동일한 개념.
+       ① 입교등록 : 실제 QR로 입교한 교육생 (룰렛이 만든 rosterOnly 레코드는 제외)
+       ② 예정명단 : 업로드된 명단(expectedStudents ∪ 지원부 생활관 명단)
+     두 목록을 모두 준비해 두고, 화면 상단 칩으로 전환할 수 있게 한다. */
+  var _dedup = function(arr){
+    return arr.filter(function(st, idx, a){
+      var k = String(st.name||'').replace(/\s+/g,'').toLowerCase();
+      return k && a.findIndex(function(x){ return String(x.name||'').replace(/\s+/g,'').toLowerCase()===k; })===idx;
+    }).sort(function(a,b){ return a.name.localeCompare(b.name); });
+  };
+  // ① 입교등록 — rosterOnly(룰렛 지정) 제외
+  var arrivedList=[];
   try{
     var snap=await firebase.database().ref('courses/'+room+'/students').once('value');
     var data=snap.val()||{};
-    Object.keys(data).forEach(function(token){ var st=data[token]; if(st && st.name && st.name!=='undefined'){ students.push({ token:token, name:String(st.name).trim() }); } });
+    Object.keys(data).forEach(function(token){
+      var st=data[token];
+      if(typeof kacIsRealStudent==='function' ? kacIsRealStudent(st) : (st && st.name && st.name!=='undefined')){
+        arrivedList.push({ token:token, name:String(st.name).trim() });
+      }
+    });
   }catch(e){}
-  students = students.filter(function(st, idx, arr){
-    var key = String(st.name || '').replace(/\s+/g, '').toLowerCase();
-    return key && arr.findIndex(function(x){
-      return String(x.name || '').replace(/\s+/g, '').toLowerCase() === key;
-    }) === idx;
-  });
-  students.sort(function(a,b){ return a.name.localeCompare(b.name); });
-  /* [K51] 교육생이 아직 QR 입교등록을 하지 않은 상태(NAS 도입 전 등)에서도 룰렛을 돌릴 수 있도록,
-     입교자가 2명 미만이면 '예정명단'(expectedStudents ∪ 지원부 생활관 명단)으로 자동 대체한다.
-     명단 인원은 token이 없으므로 당첨 시 학생 레코드를 새로 만들어 학생장으로 지정한다. */
-  ui._rouletteFromRoster = false;
-  if(students.length <= 1){
-    var _rl = [];
-    try{
-      var _es = await firebase.database().ref('courses/'+room+'/expectedStudents').once('value');
-      var _ev = _es.val();
-      _rl = (Array.isArray(_ev) ? _ev : (_ev && typeof _ev==='object' ? Object.values(_ev) : [])).map(function(n){ return String(n||'').trim(); }).filter(Boolean);
-    }catch(e){}
+  arrivedList = _dedup(arrivedList);
+  // ② 예정명단
+  var rosterList=[];
+  try{
+    var _rl=[];
+    var _es = await firebase.database().ref('courses/'+room+'/expectedStudents').once('value');
+    var _ev = _es.val();
+    _rl = (Array.isArray(_ev) ? _ev : (_ev && typeof _ev==='object' ? Object.values(_ev) : [])).map(function(n){ return String(n||'').trim(); }).filter(Boolean);
     try{ var _dn = await ui._gatherRosterNames(room); if(_dn && _dn.length) _rl = _rl.concat(_dn); }catch(e){}
-    var _seen = {}; var _uniq = [];
-    _rl.forEach(function(n){ var k=String(n).replace(/\s+/g,'').toLowerCase(); if(!k||_seen[k]) return; _seen[k]=1; _uniq.push(String(n).trim()); });
-    if(_uniq.length > 1){
-      students = _uniq.map(function(n){ return { token:null, name:n }; });
-      students.sort(function(a,b){ return a.name.localeCompare(b.name); });
-      ui._rouletteFromRoster = true;
-    }
+    var _seen={};
+    _rl.forEach(function(n){ var k=String(n).replace(/\s+/g,'').toLowerCase(); if(!k||_seen[k]) return; _seen[k]=1; rosterList.push({ token:null, name:String(n).trim() }); });
+    rosterList = _dedup(rosterList);
+  }catch(e){}
+
+  ui._rouletteArrived = arrivedList;
+  ui._rouletteRoster  = rosterList;
+  // 기본 대상: 사용자가 방금 고른 값이 있으면 유지, 없으면 입교자 2명 이상이면 입교등록 · 아니면 예정명단
+  ui._rouletteSrc = (ui._rouletteSrc === 'arrived' || ui._rouletteSrc === 'roster')
+      ? ui._rouletteSrc
+      : ((arrivedList.length >= 2) ? 'arrived' : 'roster');
+  var students = (ui._rouletteSrc==='arrived') ? arrivedList : rosterList;
+  ui._rouletteFromRoster = (ui._rouletteSrc==='roster');
+
+  if(students.length <= 1 && arrivedList.length <= 1 && rosterList.length <= 1){
+    ui.showAlert('현재 대상 인원이 부족합니다.\n\n입교 완료자도, 업로드된 예정명단도 2명 미만이라\n학생장 룰렛을 이용할 수 없습니다.'); return;
   }
-  if(students.length <= 1){ ui.showAlert('현재 대상 인원이 ' + students.length + '명입니다.\n\n입교 완료자도, 업로드된 예정명단도 2명 미만이라\n학생장 룰렛을 이용할 수 없습니다.'); return; }
+  if(students.length <= 1){   // 기본 대상이 부족하면 다른 쪽으로 자동 전환
+    ui._rouletteSrc = (ui._rouletteSrc==='arrived') ? 'roster' : 'arrived';
+    students = (ui._rouletteSrc==='arrived') ? arrivedList : rosterList;
+    ui._rouletteFromRoster = (ui._rouletteSrc==='roster');
+  }
 
   ui._rouletteStudents = students;
   ui._rouletteWinner = null;
@@ -17236,7 +17255,22 @@ ui.openLeaderRoulette = async function(){
         + '<button onclick="ui.closeLeaderRoulette()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:19px;cursor:pointer;">&times;</button>'
       + '</div>'
       + '<div style="padding:22px 28px 38px;text-align:center;">'
-        + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">입교한 학생 '+N+'명 · 가운데 <b style="color:#0f6cbd;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>'
+        /* [K57] 대상 선택 칩 — 어떤 명단으로 추첨하는지 명확히 보여주고 즉시 전환 */
+        + (function(){
+            var aN=(ui._rouletteArrived||[]).length, rN=(ui._rouletteRoster||[]).length, cur=ui._rouletteSrc||'arrived';
+            function chip(key,label,cnt){
+              var on=(cur===key), dis=(cnt<=1);
+              return '<button type="button" '+(dis?'disabled':'onclick="ui.setRouletteSrc(\''+key+'\')"')
+                +' title="'+(dis?'인원이 2명 미만이라 선택할 수 없습니다':'이 명단으로 추첨')+'"'
+                +' style="padding:7px 15px;border-radius:999px;font-size:13px;font-weight:900;cursor:'+(dis?'not-allowed':'pointer')
+                +';border:2px solid '+(on?'#0f6cbd':'#dbeafe')+';background:'+(on?'#0f6cbd':'#fff')+';color:'+(on?'#fff':(dis?'#cbd5e1':'#1e293b'))+';'+(dis?'opacity:.55;':'')+'">'
+                + label + ' <span style="font-weight:800;opacity:.85;">'+cnt+'명</span></button>';
+            }
+            return '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;">'
+                 + chip('arrived','입교등록',aN) + chip('roster','예정명단',rN) + '</div>'
+                 + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">'
+                 + (cur==='roster' ? '예정명단' : '입교등록') + ' <b style="color:#0f6cbd;">'+N+'명</b> 대상 · 가운데 <b style="color:#0f6cbd;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>';
+          })()
         + '<div style="position:relative;width:'+wheelPx+';height:'+wheelPx+';margin:0 auto 20px;">'
           + svg
           // 3시 방향 마커
@@ -17305,6 +17339,22 @@ ui._spinWheel = function(){
   wheel.addEventListener('transitionend', done);
   // 안전장치: 전환 이벤트 누락 시 강제 종료
   setTimeout(function(){ if(ui._wheelSpinning) done(); }, 6200);
+};
+/* [K57] 룰렛 대상 전환 — 입교등록 ↔ 예정명단. 추첨 중에는 막고, 전환 시 룰렛을 다시 그린다. */
+ui.setRouletteSrc = function(src){
+  if(ui._wheelSpinning){ ui.showAlert('추첨이 진행 중입니다. 잠시 후 바꿔주세요.'); return; }
+  var list = (src==='roster') ? (ui._rouletteRoster||[]) : (ui._rouletteArrived||[]);
+  if(list.length <= 1){
+    ui.showAlert((src==='roster'?'예정명단':'입교등록')+' 인원이 '+list.length+'명입니다.\n2명 이상이어야 추첨할 수 있습니다.');
+    return;
+  }
+  ui._rouletteSrc = src;
+  ui._rouletteStudents = list;
+  ui._rouletteFromRoster = (src==='roster');
+  ui._rouletteWinner = null;
+  ui._wheelRot = 0;
+  var ov=document.getElementById('leaderRouletteModal'); if(ov) ov.remove();
+  ui.openLeaderRoulette();   // 선택한 대상으로 다시 열기(최신 명단 재조회)
 };
 ui.confirmRouletteLeader = function(){
   var win=ui._rouletteWinner;
