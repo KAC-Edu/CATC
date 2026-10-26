@@ -16379,14 +16379,21 @@ ui.closeLeaderRoulette = function(){
   var m=document.getElementById('leaderRouletteModal'); if(m) m.remove();
   ui._wheelSpinning=false;
   ui._rouletteSrc=null;   // [K57] 다음에 열 때 현재 인원 기준으로 기본 대상 다시 판단
+  ui._rouletteStage=false;   // [K59] 무대 모드 해제
   try{ if(ui._spinAudio){ ui._spinAudio.pause(); } }catch(e){}
   var _fh=document.getElementById('floatingHomeBtn'); if(_fh) _fh.style.display='flex';
 };
 // 입교안내 23p '학생장 선출'에서 실행 → 오디션 무대 배경 위에서 룰렛 진행 (닫으면 23p로 복귀)
 ui.openLeaderRouletteStage = async function(){
+  ui._rouletteStage = true;   // [K59] 입교안내(무대) 경로 표시 — 제외자 저장·대상 전환 후 다시 열 때 배경 유지
   try { await ui.openLeaderRoulette(); } catch(e){}
   var m = document.getElementById('leaderRouletteModal');
   if (m) m.classList.add('roulette-stage-bg');
+};
+/* [K59] 현재 경로에 맞게 룰렛 다시 열기 — 무대 모드면 배경까지 복원 */
+ui._reopenRoulette = function(){
+  if(ui._rouletteStage) return ui.openLeaderRouletteStage();
+  return ui.openLeaderRoulette();
 };
 // 시간표 사진과 업로드 안내를 한 번에 정리하고, 현재 PDF 전체화면/페이지는 유지한다.
 ui.closeScheduleGuide = function(){
@@ -17440,7 +17447,7 @@ ui.saveLeaderExclude = function(){
     .then(function(){
       var m=document.getElementById('leaderExclModal'); if(m) m.remove();
       var ov=document.getElementById('leaderRouletteModal'); if(ov) ov.remove();
-      ui.openLeaderRoulette();   // 제외 반영해 룰렛 다시 열기
+      ui._reopenRoulette();   // 제외 반영해 룰렛 다시 열기(무대 배경 유지)
     })
     .catch(function(e){ ui.showAlert('저장 중 오류가 발생했습니다.\n' + ((e&&e.message)||'')); });
 };
@@ -17458,7 +17465,7 @@ ui.setRouletteSrc = function(src){
   ui._rouletteWinner = null;
   ui._wheelRot = 0;
   var ov=document.getElementById('leaderRouletteModal'); if(ov) ov.remove();
-  ui.openLeaderRoulette();   // 선택한 대상으로 다시 열기(최신 명단 재조회)
+  ui._reopenRoulette();   // 선택한 대상으로 다시 열기(최신 명단 재조회 · 무대 배경 유지)
 };
 ui.confirmRouletteLeader = function(){
   var win=ui._rouletteWinner;
