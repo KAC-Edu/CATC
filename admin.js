@@ -13954,6 +13954,7 @@ const annualPlanMgr = {
             [`${rPath}/settings/subjects`]:   null,  // [K44] 출강 강사 리스트 초기화 — 이전 과정의 강사·과목(예: 테스트 과정 담임)이 새 과정에 그대로 남던 문제 차단
             [`${rPath}/settings/menuFeatures`]: null, // [K44] 교육생 앱 메뉴 활성화 기본 복귀 — 이전 과정의 메뉴 on/off가 새 과정에 상속되던 문제 차단
             [`${rPath}/settings/planId`]:     null,  // [K44] 방↔연간계획 연결고리 초기화 — 이전 과정 링크가 남아 새 과정 계획 매칭이 어긋나던 문제 차단(다음 매칭은 이름 기준)
+            [`${rPath}/leaderExclude`]:       null,  // [K59] 학생장 제외자 초기화 — 이전 과정 제외자가 새 과정에 남지 않도록
             [`${rPath}/settings/countBasis`]:  null,  // [K55] 교육 인원 '직접 입력' 해제 — 이전 과정의 수기 인원이 새 과정에 상속되지 않도록
             [`${rPath}/settings/countManual`]: null,  // [K55] 수기 인원값 초기화
             [`${rPath}/status/quizStep`]:     'none', // [K44] 퀴즈 진행 상태 초기화 — 이전 과정의 'live' 등 잔여 플래그로 새 과정 교육생이 퀴즈 화면에 걸리던 소지 차단
@@ -17179,6 +17180,25 @@ ui.openLeaderRoulette = async function(){
     rosterList = _dedup(rosterList);
   }catch(e){}
 
+  /* [K59] 학생장 제외자 — 피치 못할 사정이 있는 교육생을 추첨 대상에서 뺀다.
+     과정별 저장(courses/{방}/leaderExclude), 이름 정규화 키 사용. 명단에는 보이되 룰렛에서만 제외. */
+  var _lxNorm = function(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); };
+  var _lxKey  = function(n){ return String(n==null?'':n).trim().replace(/[.#$\[\]\/]/g,'_'); };
+  ui._lxNorm = _lxNorm; ui._lxKey = _lxKey;
+  var _excl = {};
+  try{
+    var _xs = await firebase.database().ref('courses/'+room+'/leaderExclude').once('value');
+    var _xv = _xs.val() || {};
+    Object.keys(_xv).forEach(function(k){ if(_xv[k]) _excl[_lxNorm(k)] = true; });
+  }catch(e){}
+  ui._rouletteExcl = _excl;
+  var _notExcluded = function(st){ return !_excl[_lxNorm(st && st.name)]; };
+
+  ui._rouletteArrivedAll = arrivedList;           // 제외 전 전체(제외자 관리 화면용)
+  ui._rouletteRosterAll  = rosterList;
+  arrivedList = arrivedList.filter(_notExcluded); // 추첨 대상 = 제외자를 뺀 목록
+  rosterList  = rosterList.filter(_notExcluded);
+
   ui._rouletteArrived = arrivedList;
   ui._rouletteRoster  = rosterList;
   // 기본 대상: 사용자가 방금 고른 값이 있으면 유지, 없으면 입교자 2명 이상이면 입교등록 · 아니면 예정명단
@@ -17189,6 +17209,13 @@ ui.openLeaderRoulette = async function(){
   ui._rouletteFromRoster = (ui._rouletteSrc==='roster');
 
   if(students.length <= 1 && arrivedList.length <= 1 && rosterList.length <= 1){
+    /* [K59] 제외자 때문에 인원이 모자란 경우라면 그 사실을 알려주고 제외자 화면을 바로 열어준다. */
+    var _xCnt = Object.keys(ui._rouletteExcl||{}).length;
+    if(_xCnt > 0 && ((ui._rouletteArrivedAll||[]).length > 1 || (ui._rouletteRosterAll||[]).length > 1)){
+      ui.showAlert('제외자 ' + _xCnt + '명을 빼고 나니 추첨 대상이 2명 미만입니다.\n\n제외자를 일부 해제해 주세요.');
+      setTimeout(function(){ try{ ui.openLeaderExclude(); }catch(e){} }, 300);
+      return;
+    }
     ui.showAlert('현재 대상 인원이 부족합니다.\n\n입교 완료자도, 업로드된 예정명단도 2명 미만이라\n학생장 룰렛을 이용할 수 없습니다.'); return;
   }
   if(students.length <= 1){   // 기본 대상이 부족하면 다른 쪽으로 자동 전환
@@ -17275,10 +17302,19 @@ ui.openLeaderRoulette = async function(){
                 +';border:2px solid '+(on?'#0f6cbd':'#dbeafe')+';background:'+(on?'#0f6cbd':'#fff')+';color:'+(on?'#fff':(dis?'#cbd5e1':'#1e293b'))+';'+(dis?'opacity:.55;':'')+'">'
                 + label + ' <span style="font-weight:800;opacity:.85;">'+cnt+'명</span></button>';
             }
-            return '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;">'
-                 + chip('arrived','입교등록',aN) + chip('roster','예정명단',rN) + '</div>'
+            /* [K59] 제외자 관리 버튼 — 현재 제외 인원 수를 함께 표시 */
+            var xN = Object.keys(ui._rouletteExcl||{}).length;
+            var xBtn = '<button type="button" onclick="ui.openLeaderExclude()" title="피치 못할 사정이 있는 교육생을 추첨에서 제외합니다"'
+                + ' style="padding:7px 15px;border-radius:999px;font-size:13px;font-weight:900;cursor:pointer;border:2px solid '
+                + (xN>0?'#f59e0b':'#e2e8f0') + ';background:' + (xN>0?'#fffbeb':'#fff') + ';color:' + (xN>0?'#b45309':'#64748b') + ';">'
+                + '<i class="fa-solid fa-user-slash" style="margin-right:5px;"></i>제외자'
+                + (xN>0 ? ' <span style="font-weight:900;">'+xN+'명</span>' : '') + '</button>';
+            return '<div style="display:flex;gap:8px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;">'
+                 + chip('arrived','입교등록',aN) + chip('roster','예정명단',rN) + xBtn + '</div>'
                  + '<div style="font-size:13.5px;color:#64748b;font-weight:800;margin-bottom:18px;">'
-                 + (cur==='roster' ? '예정명단' : '입교등록') + ' <b style="color:#0f6cbd;">'+N+'명</b> 대상 · 가운데 <b style="color:#0f6cbd;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>';
+                 + (cur==='roster' ? '예정명단' : '입교등록') + ' <b style="color:#0f6cbd;">'+N+'명</b> 대상'
+                 + (xN>0 ? ' <span style="color:#b45309;">(제외 '+xN+'명)</span>' : '')
+                 + ' · 가운데 <b style="color:#0f6cbd;">시작</b>을 누르면 3시 방향 마커에 걸린 학생이 당첨됩니다</div>';
           })()
         + '<div style="position:relative;width:'+wheelPx+';height:'+wheelPx+';margin:0 auto 20px;">'
           + svg
@@ -17348,6 +17384,65 @@ ui._spinWheel = function(){
   wheel.addEventListener('transitionend', done);
   // 안전장치: 전환 이벤트 누락 시 강제 종료
   setTimeout(function(){ if(ui._wheelSpinning) done(); }, 6200);
+};
+/* [K59] 학생장 제외자 관리 — 체크하면 룰렛 대상에서 빠지고, 명단에는 그대로 보인다.
+   저장 위치: courses/{방}/leaderExclude/{이름키} = true (과정별) */
+ui.openLeaderExclude = function(){
+  if(ui._wheelSpinning){ ui.showAlert('추첨이 진행 중입니다. 잠시 후 이용해 주세요.'); return; }
+  if(state.isObserver){ ui.showAlert('👁️ 옵저버는 변경할 수 없습니다.'); return; }
+  var esc = ui._esc || function(s){ return String(s==null?'':s); };
+  var cur  = ui._rouletteSrc || 'roster';
+  var all  = (cur==='arrived' ? (ui._rouletteArrivedAll||[]) : (ui._rouletteRosterAll||[])).slice();
+  if(!all.length){ ui.showAlert('표시할 명단이 없습니다.'); return; }
+  var excl = ui._rouletteExcl || {};
+  var rows = all.map(function(st){
+    var nm = String(st.name||'').trim();
+    var on = !!excl[ui._lxNorm(nm)];
+    return '<label style="display:flex;align-items:center;gap:11px;padding:11px 13px;border-radius:11px;cursor:pointer;margin-bottom:7px;'
+      + 'background:' + (on?'#fffbeb':'#f8fafc') + ';border:1.5px solid ' + (on?'#fcd34d':'#e8edf3') + ';">'
+      + '<input type="checkbox" data-nm="' + esc(nm) + '" ' + (on?'checked':'')
+      + ' style="width:19px;height:19px;accent-color:#f59e0b;cursor:pointer;flex-shrink:0;">'
+      + '<span style="font-size:15px;font-weight:800;color:' + (on?'#b45309':'#1e293b') + ';">' + esc(nm) + '</span>'
+      + (on ? '<span style="margin-left:auto;font-size:12px;font-weight:900;color:#b45309;">제외됨</span>' : '')
+      + '</label>';
+  }).join('');
+  var old=document.getElementById('leaderExclModal'); if(old) old.remove();
+  var ov=document.createElement('div'); ov.id='leaderExclModal';
+  ov.style.cssText='position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px;';
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+  ov.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+  ov.innerHTML =
+    '<div onclick="event.stopPropagation()" style="background:#fff;border-radius:22px;width:100%;max-width:460px;max-height:86vh;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;padding:17px 22px;background:linear-gradient(135deg,#b45309,#f59e0b);color:#fff;">'
+      + '<div style="font-size:17px;font-weight:900;"><i class="fa-solid fa-user-slash" style="margin-right:8px;"></i>학생장 제외자 선택</div>'
+      + '<button onclick="document.getElementById(\'leaderExclModal\').remove()" style="background:rgba(255,255,255,.22);border:none;color:#fff;width:32px;height:32px;border-radius:50%;font-size:17px;cursor:pointer;">&times;</button>'
+    + '</div>'
+    + '<div style="padding:14px 20px 6px;font-size:12.5px;color:#64748b;font-weight:700;line-height:1.6;">'
+      + '체크한 교육생은 <b style="color:#b45309;">룰렛 대상에서 제외</b>됩니다. 명단에는 그대로 남습니다.<br>'
+      + '(' + (cur==='arrived'?'입교등록':'예정명단') + ' 기준 · 총 ' + all.length + '명)</div>'
+    + '<div id="lxList" style="flex:1;overflow:auto;padding:8px 20px 4px;">' + rows + '</div>'
+    + '<div style="display:flex;gap:9px;padding:14px 20px 18px;border-top:1px solid #eef2f7;">'
+      + '<button onclick="ui.clearLeaderExclude()" style="padding:12px 16px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-weight:800;font-size:13.5px;cursor:pointer;">전체 해제</button>'
+      + '<button onclick="ui.saveLeaderExclude()" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;font-weight:900;font-size:15px;cursor:pointer;">저장하고 룰렛 적용</button>'
+    + '</div></div>';
+  (document.fullscreenElement || document.webkitFullscreenElement || document.body).appendChild(ov);
+};
+ui.clearLeaderExclude = function(){
+  [].forEach.call(document.querySelectorAll('#lxList input[type=checkbox]'), function(c){ c.checked=false; });
+};
+ui.saveLeaderExclude = function(){
+  if(!state.room) return;
+  var obj={};
+  [].forEach.call(document.querySelectorAll('#lxList input[type=checkbox]'), function(c){
+    if(c.checked){ var nm=c.getAttribute('data-nm')||''; if(nm) obj[ui._lxKey(nm)]=true; }
+  });
+  firebase.database().ref('courses/'+state.room+'/leaderExclude').set(Object.keys(obj).length?obj:null)
+    .then(function(){
+      var m=document.getElementById('leaderExclModal'); if(m) m.remove();
+      var ov=document.getElementById('leaderRouletteModal'); if(ov) ov.remove();
+      ui.openLeaderRoulette();   // 제외 반영해 룰렛 다시 열기
+    })
+    .catch(function(e){ ui.showAlert('저장 중 오류가 발생했습니다.\n' + ((e&&e.message)||'')); });
 };
 /* [K57] 룰렛 대상 전환 — 입교등록 ↔ 예정명단. 추첨 중에는 막고, 전환 시 룰렛을 다시 그린다. */
 ui.setRouletteSrc = function(src){
