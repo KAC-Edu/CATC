@@ -1916,8 +1916,9 @@ async function resolveRoomFromCode(code) {
         /* [K61] 게스트 입장 — 이름·사번 없이도 과정 화면으로 바로 들어간다(질문·퀴즈만 이용).
            ※ kacIsGuest()는 파일 뒤쪽에서 정의되므로 여기서는 localStorage를 직접 본다. */
         if ((function(){ try{ return localStorage.getItem('kac_guest')==='1'; }catch(e){ return false; } })() && currentRoom) {
-            enterApp();
-            try{ setTimeout(function(){ _kacHideGuestBlockedMenus(); }, 600); }catch(e){}
+            /* [K61] 게스트도 실명 입교자와 동일하게 '입교완료 홈'까지만 보여준다.
+               거기서 질문·퀴즈 버튼을 눌러야 해당 기능으로 들어간다(화면 꼬임 방지). */
+            try{ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }catch(e){}
         } else if (enrollmentReady && isValidProfile()) {
             enterApp();
         } else if (params.get('menu') && window.__kacEnrollmentExpired && typeof window.keduShowEnroll === 'function') {
@@ -2779,7 +2780,6 @@ function _kacShowGuestBanner(){
 }
 /* [K61] 게스트에게 감출 메뉴 — 실명 입교자에게는 영향 없음 */
 function _kacHideGuestBlockedMenus(){
-    try{ _kacShowGuestBanner(); }catch(e){}
     window._adminActionDisabled = true;
     window._shuttleDisabled = true;
     ['openShuttleApply()','openAdminAction()','openAttendanceQR()','openFacilityRequest()',
@@ -2788,9 +2788,12 @@ function _kacHideGuestBlockedMenus(){
         if(el) el.style.display = 'none';
     });
     // 입교 홈 카드의 출결/정보수정/기념사진 버튼도 숨김
-    ['keduOtpBtn','keduEditBtn','keduGradBtn','khOtpBtn','khEditBtn','khGradBtn'].forEach(function(id){
+    ['keduOtpBtn','keduEditBtn','keduGradBtn','khOtpBtn','khEditBtn','khGradBtn',
+     'keduAttendBtn','keduToGuestBtn'].forEach(function(id){
         var el = document.getElementById(id); if(el) el.style.display = 'none';
     });
+    // '정보 수정하기'는 id가 없어 선택자로 숨긴다(게스트는 수정할 정보가 없음)
+    try{ var _ed=document.querySelector('#keduHome .kh-edit[onclick="keduEditInfo()"]'); if(_ed) _ed.style.display='none'; }catch(e){}
 }
 function setupListeners() {
     // 1. 서버 시간 동기화 (이전 안테나 정리)
@@ -5189,7 +5192,7 @@ async function checkProfile() {
        (이 검사를 그대로 타면 '명단에 없음'으로 판정돼 이름 입력창이 다시 떠서 입장이 안 됐다) */
     if (window.kacIsGuest && window.kacIsGuest()) {
         showMainDashboard();
-        try { setTimeout(function(){ _kacHideGuestBlockedMenus(); }, 300); } catch (e) {}
+        try { _kacHideGuestBlockedMenus(); } catch (e) {}
         return;
     }
     const uToken = localStorage.getItem('uToken');
@@ -8578,9 +8581,111 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
   }
   window.loadLeaderPanel=loadLeaderPanel; window.detachLeaderRefs=detachLeaderRefs;
 
+  /* [K61] 게스트 ↔ 실명 전환 ────────────────────────────────────────────
+     · kacSwitchToEnroll : 게스트 → 입교등록 화면(이름·사번 입력)
+     · kacSwitchToGuest  : 실명 → 게스트(기기에 저장된 개인정보 삭제 = 로그아웃 역할)
+     ※ 카카오 채널 운용에는 영향이 없다. 두 상태 모두 room 기준으로 동작하므로
+       채널 바로가기(질문·퀴즈)는 그대로 열린다. */
+  window.kacSwitchToEnroll = function(){
+    try{
+      localStorage.removeItem('kac_guest');
+      localStorage.removeItem('uToken');
+      localStorage.removeItem('kac_user_name');
+      localStorage.removeItem('kac_user_phone');
+    }catch(e){}
+    try{ var h=document.getElementById('keduHome'); if(h) h.style.display='none'; }catch(e){}
+    try{
+      if(typeof window.keduShowEnroll==='function'){ window._keduEditMode=false; window.keduShowEnroll('home'); return; }
+    }catch(e){}
+    location.reload();
+  };
+  window.kacSwitchToGuest = async function(){
+    var ok = true;
+    try{
+      ok = await showKacConfirm('게스트 모드로 전환합니다.\n\n'
+        + '· 이 기기에 저장된 이름·사번이 삭제됩니다.\n'
+        + '· 질문하기·퀴즈만 이용할 수 있습니다.\n'
+        + '· 출결·외출외박·차량·석식은 다시 입교등록해야 합니다.\n\n계속할까요?');
+    }catch(e){ ok = confirm('게스트 모드로 전환할까요? 저장된 이름·사번이 삭제됩니다.'); }
+    if(!ok) return;
+    var rm='';
+    try{ rm = (typeof currentRoom!=='undefined' && currentRoom) ? currentRoom
+              : (localStorage.getItem('kac_room') || localStorage.getItem('kac_last_visited_room') || ''); }catch(e){}
+    try{
+      localStorage.removeItem('kac_user_name');
+      localStorage.removeItem('kac_user_phone');
+      localStorage.setItem('kac_guest','1');
+      localStorage.setItem('uToken','guest_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
+      if(rm) localStorage.setItem('kac_room', rm);
+    }catch(e){}
+    try{ var u=new URL(location.href); if(rm) u.searchParams.set('room', rm); u.searchParams.delete('menu'); location.replace(u.toString()); }
+    catch(e){ location.reload(); }
+  };
+
+  /* [K61] 게스트 입장 완료 화면 — 실명 입교완료 카드와 같은 자리(keduHome)에 표시한다.
+     이름·사번 대신 '게스트'로 표기하고, 신원이 필요한 행(식별ID·생활관·출결 등)은 감춘다. */
+  function _kacRenderGuestHome(ov, homeRoom){
+    try{
+      var eN=document.getElementById('khName'), eS=document.getElementById('khSabun');
+      if(eN) eN.textContent='게스트';
+      if(eS){
+        eS.textContent='이름 없이 참여';
+        var row=eS.closest('.kh-row')||eS.parentElement;
+        if(row) row.style.display='none';          // 식별ID 행 숨김
+      }
+      var eD=document.getElementById('khDorm');
+      if(eD){ var dr=eD.closest('.kh-row')||eD.parentElement; if(dr) dr.style.display='none'; }   // 생활관 행 숨김
+      var eT=document.getElementById('khTitle'), eC=document.getElementById('khCourse'),
+          eP=document.getElementById('khPeriod'), eR=document.getElementById('khRoom');
+      if(homeRoom){
+        try{
+          firebase.database().ref('courses/'+homeRoom+'/settings').once('value').then(function(s){
+            var v=s.val()||{}; var cn=(v.courseName||('Room '+homeRoom));
+            if(eT) eT.textContent=cn;
+            if(eC) eC.textContent=cn;
+            if(eP) eP.textContent=String(v.period||'-').replace(/(\d{4})-(\d{2})-(\d{2})/g,'$1.$2.$3');
+            if(eR) eR.textContent=(v.roomDetailName||v.roomDetail||('Room '+homeRoom));
+          });
+        }catch(e){}
+      }
+      // 배지 문구를 '게스트 참여'로
+      var badge=ov.querySelector('.kh-badge');
+      if(badge) badge.innerHTML='<i class="fa-solid fa-user-secret"></i> 게스트 참여';
+      // 담임·학생장 패널은 신원 기반이라 생략
+      var prof=document.getElementById('khProf');
+      if(prof){ var pr=prof.closest('.kh-row')||prof.parentElement; if(pr) pr.style.display='none'; }
+      // 신원 필요 버튼 숨김(출결·정보수정·기념사진 등)
+      _kacHideGuestBlockedMenus();
+      // 안내 문구 — 무엇을 쓸 수 있는지 명확히
+      if(!document.getElementById('kacGuestHomeNote')){
+        var note=document.createElement('div'); note.id='kacGuestHomeNote';
+        note.style.cssText='margin:10px 0 0;padding:11px 13px;border-radius:12px;background:#f0fdfa;border:1.5px solid #99f6e4;font-size:12.5px;font-weight:800;color:#0f766e;line-height:1.6;word-break:keep-all;';
+        note.innerHTML='개인정보 없이 참여 중입니다 · <b>질문하기 · 퀴즈 풀기</b>만 이용할 수 있어요.<br>'
+          +'<span style="color:#64748b;font-weight:700;">출결·외출외박·차량·석식은 입교등록이 필요합니다.</span>';
+        var card=ov.querySelector('.kh-card'); if(card) card.appendChild(note);
+      }
+      /* [K61] 게스트 → 실명 입교등록 전환 버튼 */
+      if(!document.getElementById('kacGuestToName')){
+        var sw=document.createElement('button'); sw.id='kacGuestToName'; sw.type='button';
+        sw.style.cssText='width:100%;margin-top:10px;border:1.5px solid #bfdbfe;border-radius:13px;padding:14px 10px;background:#eff6ff;color:#1d4ed8;font-size:14.5px;font-weight:900;cursor:pointer;';
+        sw.innerHTML='<i class="fa-solid fa-id-card" style="margin-right:7px;"></i>이름 넣고 입교등록하기'
+          +'<span style="display:block;margin-top:4px;font-size:11.5px;font-weight:700;color:#64748b;">출결·외출외박·차량·석식을 이용하려면 필요합니다</span>';
+        sw.onclick=function(){ try{ window.kacSwitchToEnroll(); }catch(e){} };
+        var c2=ov.querySelector('.kh-card'); if(c2) c2.appendChild(sw);
+      }
+    }catch(e){}
+    ov.style.display='flex';
+  }
+
   window.showKakaoHome=async function(){
     var ov=document.getElementById('keduHome'); if(!ov) return;
-    var homeRoom=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : (localStorage.getItem('kac_last_visited_room')||'');
+    var homeRoom=(typeof currentRoom!=='undefined' && currentRoom) ? currentRoom : (localStorage.getItem('kac_room')||localStorage.getItem('kac_last_visited_room')||'');
+    /* [K61] 게스트 — 입교등록 검증을 건너뛰고 '게스트 입장 완료' 홈 카드를 보여준다.
+       여기서 질문·퀴즈 버튼을 눌러 각 기능으로 들어가는 흐름은 실명 입교자와 동일. */
+    if(window.kacIsGuest && window.kacIsGuest()){
+      _kacRenderGuestHome(ov, homeRoom);
+      return;
+    }
     if(!(await validateKacStoredEnrollment(homeRoom))){
       ov.style.display='none';
       showEnroll('home');
@@ -9090,6 +9195,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<button class="kh-att" id="keduAttendBtn" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduGradBtn" style="display:none; background:linear-gradient(135deg,#0f2057,#1a3a8a);" onclick="keduDownloadGradPhoto()"><i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기</button>'+
+        /* [K61] 실명 입교자 → 게스트 전환(로그아웃 역할). 기기에 저장된 이름·사번을 지운다. */
+        '<button class="kh-edit" id="keduToGuestBtn" style="background:#f0fdfa;border-color:#99f6e4;color:#0f766e;" onclick="kacSwitchToGuest()"><i class="fa-solid fa-user-secret"></i> 게스트 모드로 전환 (내 정보 지우기)</button>'+
         '<button class="kh-close" id="keduHomeClose">닫기</button></div></div>'+
         '<div id="khLeaderPanel" class="kh-leader" style="display:none;"></div>';
       document.body.appendChild(h);
