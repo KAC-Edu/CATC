@@ -1923,9 +1923,16 @@ async function resolveRoomFromCode(code) {
               if(nm && nm.toLowerCase()!=='undefined' && /^\d{4,5}$/.test(ph)){ localStorage.removeItem('kac_guest'); return false; }
               return true;
             }catch(e){ return false; } })() && currentRoom) {
-            /* [K61] 게스트도 실명 입교자와 동일하게 '입교완료 홈'까지만 보여준다.
-               거기서 질문·퀴즈 버튼을 눌러야 해당 기능으로 들어간다(화면 꼬임 방지). */
-            try{ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }catch(e){}
+            /* [K62] 카카오 채널에서 질문·퀴즈 버튼으로 들어온 경우(menu 파라미터)는
+               실명 입교자와 동일하게 앱으로 진입시켜 해당 화면이 바로 열리게 한다.
+               그 외(순수 입장)에는 [K61]대로 '게스트 입장 완료' 홈 카드까지만 보여준다. */
+            var _gm=params.get('menu');
+            if(_gm==='quiz' || _gm==='qna'){
+                try{ var _gh=document.getElementById('keduHome'); if(_gh) _gh.style.display='none'; }catch(e){}
+                try{ enterApp(); }catch(e){}
+            } else {
+                try{ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }catch(e){}
+            }
         } else if (enrollmentReady && isValidProfile()) {
             enterApp();
         } else if (params.get('menu') && window.__kacEnrollmentExpired && typeof window.keduShowEnroll === 'function') {
@@ -9165,6 +9172,19 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(room||code) return;                 // 일반 QR/직접 진입 → 기존 흐름
     if(!menu) return;                       // 카카오 딥링크 아님
     showLoader('과정을 연결하고 있습니다');
+    /* [K62] 게스트 — 실명 입교검증(validateKacStoredEnrollment)은 이름·사번이 없어 항상 실패하므로
+       그대로 두면 입교(로그인) 화면이 떠버린다. 게스트는 저장된 강의실로 바로 이동시킨다. */
+    try{
+      if(window.kacIsGuest && window.kacIsGuest()){
+        var _grm=(localStorage.getItem('kac_room')||localStorage.getItem('kac_last_visited_room')||'').trim();
+        if(_grm){
+          try{ localStorage.setItem('kac_last_visited_room', _grm); }catch(e){}
+          if(window.kacBootShow) kacBootShow('과정으로 이동 중입니다…');
+          location.replace('index.html?room='+encodeURIComponent(_grm)+'&menu='+encodeURIComponent(menu));
+          return;
+        }
+      }
+    }catch(e){}
     var cachedRoom=localStorage.getItem('kac_last_visited_room')||'';
     if(cachedRoom){
       if(await validateKacStoredEnrollment(cachedRoom)) return; // 유효한 현재 과정만 기존 init이 처리
