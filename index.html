@@ -7641,10 +7641,33 @@ body.kac-quiz-active .quiz-overlay,
       +'<div style="font-size:19px;font-weight:900;color:#0f172a;margin-bottom:8px;">입교등록이 필요해요</div>'
       +'<div style="font-size:14px;color:#475569;line-height:1.6;margin-bottom:24px;word-break:keep-all;"><b style="color:#1d4ed8;">'+label+'</b>'+(window.kacEun?window.kacEun(label):'은(는)')+' 입교등록 후 이용할 수 있어요.<br>먼저 입교등록을 완료해 주세요.</div>'
       +'<button id="kacEnrollGateGo" style="width:100%;border:none;border-radius:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:16px;font-weight:900;padding:15px;cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.35);">📝 입교등록 하러 가기</button>'
+      /* [K61] 질문·퀴즈는 게스트도 가능 — 이 게이트에서 바로 게스트 입장을 고를 수 있게 한다.
+         (카카오 메뉴로 들어오면 이 카드가 전체화면을 덮어 입교화면의 게스트 버튼이 가려지기 때문) */
+      +((label==='질문하기'||label==='퀴즈 풀기')
+        ? '<div style="margin-top:12px;padding-top:14px;border-top:1px solid #e2e8f0;">'
+          +'<button id="kacEnrollGateGuest" style="width:100%;border:1.5px solid #99f6e4;border-radius:14px;background:#f0fdfa;color:#0f766e;font-size:15px;font-weight:900;padding:14px;cursor:pointer;">'
+          +'<i class="fa-solid fa-user-secret" style="margin-right:7px;"></i>게스트로 입장 <span style="font-size:11px;background:#ccfbf1;border-radius:999px;padding:3px 8px;margin-left:4px;">이름 없이</span></button>'
+          +'<div style="margin-top:8px;font-size:12px;color:#64748b;font-weight:700;line-height:1.55;word-break:keep-all;">개인정보 없이 <b style="color:#0f766e;">질문하기·퀴즈</b>만 이용합니다.</div></div>'
+        : '')
       +'</div>';
     document.body.appendChild(ov);
     var goBtn=document.getElementById('kacEnrollGateGo');
     if(goBtn) goBtn.onclick=function(){ try{ ov.remove(); }catch(e){} try{ document.body.classList.remove('kac-locked'); document.body.classList.remove('kac-target-pending'); }catch(e){} try{ if(typeof window.showKakaoHome==='function') window.showKakaoHome(); }catch(e){} };
+    /* [K61] 게이트에서 바로 게스트 입장 — 현재 URL의 room 으로 즉시 들어간다 */
+    var gstBtn=document.getElementById('kacEnrollGateGuest');
+    if(gstBtn) gstBtn.onclick=function(){
+      var rm='';
+      try{ rm = new URLSearchParams(location.search).get('room') || localStorage.getItem('kac_room') || ''; }catch(e){}
+      if(!rm){ try{ ov.remove(); }catch(e){} try{ if(typeof window.keduShowEnroll==='function') window.keduShowEnroll(''); }catch(e){} return; }
+      try{
+        localStorage.setItem('kac_guest','1');
+        localStorage.setItem('uToken','guest_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
+        localStorage.setItem('kac_room', rm);
+        localStorage.removeItem('kac_user_name');
+        localStorage.removeItem('kac_user_phone');
+      }catch(e){}
+      try{ var u=new URL(location.href); u.searchParams.set('room',rm); location.replace(u.toString()); }catch(e){ location.reload(); }
+    };
   }
   // [vJ115.1] 미등록이면 앱 진입(entered) 여부와 무관하게 즉시 안내 카드 표시 후 종료(정상 진입/키오스크 로직 스킵)
   //  — 기존엔 tryFire(entered() 필요) 안에서만 게이트를 걸어, 미등록 시 앱이 진입 단계까지 안 가 게이트가 안 뜨던 문제 수정
