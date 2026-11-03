@@ -3327,6 +3327,9 @@ function init() {
     // [신규] 데이터 보존정책: 60일(약 2개월) 경과한 외출·외박 기록 자동 정리 (페이지 진입 시 1회)
     purgeOldOutingRecords();
 
+    /* [K60] 공휴일 자동 반영은 '강사 플랫폼'(admin.js)이 주 트리거다 — 매일 열려 가장 확실하기 때문.
+       운영부에서는 자동 실행하지 않고, 공휴일 관리 팝업의 [공휴일 자동 채우기] 버튼으로 즉시 반영할 수 있다. */
+
     // [신규] 연간계획 자동 동기화: annualPlanMgrCoord는 다음 스크립트 블록에서 정의되므로
     //  defer 호출로 안전하게 실행 (ReferenceError로 init이 중단되지 않도록)
     setTimeout(function () {
@@ -11514,6 +11517,16 @@ var holidayMgr = {
     +     'style="flex:0 0 auto; padding:10px 20px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer;">＋ 추가</button>'
     + '</div>'
 
+    /* [K60] 공휴일 자동 채우기 — 대체공휴일까지 법령 규칙대로 계산해 한 번에 등록 */
+    + '<div style="display:flex; gap:9px; align-items:center; flex-wrap:wrap; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:11px; padding:11px 14px; margin-bottom:14px;">'
+    +   '<button onclick="holidayMgr.autoFill()" '
+    +     'style="flex:0 0 auto; padding:9px 17px; border:none; border-radius:9px; background:#16a34a; color:#fff; font-size:13.5px; font-weight:900; cursor:pointer;">'
+    +     '<i class="fa-solid fa-wand-magic-sparkles" style="margin-right:6px;"></i>공휴일 자동 채우기</button>'
+    +   '<span style="flex:1 1 220px; min-width:0; font-size:12.5px; color:#15803d; font-weight:700; line-height:1.6;">'
+    +     '올해부터 3년치를 <b>대체공휴일까지 자동 계산</b>해 등록합니다. '
+    +     '<span style="color:#64748b;">이미 있는 날짜는 건드리지 않아, 직접 넣으신 임시공휴일·선거일은 그대로 유지됩니다.</span></span>'
+    + '</div>'
+
     + (shown.length
         ? '<table class="cpop-table"><thead><tr><th style="width:170px;">날짜</th><th>공휴일</th><th style="width:80px;"></th></tr></thead><tbody>' + rows + '</tbody></table>'
         : '<div class="cpop-empty">등록된 공휴일이 없습니다. 위에서 추가하세요.</div>')
@@ -11521,6 +11534,25 @@ var holidayMgr = {
     + '<div style="margin-top:12px; font-size:12px; color:#94a3b8; font-weight:700;">'
     +   '· ' + thisYear + '년 이후만 표시됩니다 · 지난 날짜는 흐리게 표시 · 총 ' + shown.length + '건'
     + '</div>';
+  },
+
+  /* [K60] 공휴일 자동 채우기 — config.js 의 계산 엔진(대체공휴일 포함)으로 올해~2년 뒤를 등록.
+     이미 등록된 날짜는 건너뛰므로 수동 입력분(임시공휴일·선거일)이 항상 우선한다. */
+  autoFill: async function(){
+    if(typeof window.kacHolidayAutoFill !== 'function'){
+      alert('공휴일 계산 기능을 불러오지 못했습니다.\nconfig.js 가 최신인지 확인해 주세요.');
+      return;
+    }
+    var y0 = new Date().getFullYear(), y1 = y0 + 2;
+    if(!confirm(y0 + '년 ~ ' + y1 + '년 공휴일을 자동으로 채웁니다.\n\n'
+      + '· 대체공휴일까지 법령 규칙대로 계산해 등록합니다.\n'
+      + '· 이미 등록된 날짜는 변경하지 않습니다(직접 넣은 임시공휴일 보존).\n\n계속할까요?')) return;
+    var r = await window.kacHolidayAutoFill(y0, y1);
+    if(r && r.error){ alert('저장 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.'); return; }
+    alert('✅ 공휴일 자동 등록 완료\n\n'
+      + '· 새로 추가: ' + ((r&&r.added)||0) + '건\n'
+      + '· 기존 유지: ' + ((r&&r.skipped)||0) + '건\n\n'
+      + '※ 임시공휴일·선거일처럼 그때그때 정해지는 날은 위에서 직접 추가해 주세요.');
   },
 
   _today: function(){
