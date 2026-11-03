@@ -1913,8 +1913,9 @@ async function resolveRoomFromCode(code) {
         }
     } catch(e) {}
     try {
-        /* [K61] 게스트 입장 — 이름·사번 없이도 과정 화면으로 바로 들어간다(질문·퀴즈만 이용). */
-        if (window.kacIsGuest && window.kacIsGuest() && currentRoom) {
+        /* [K61] 게스트 입장 — 이름·사번 없이도 과정 화면으로 바로 들어간다(질문·퀴즈만 이용).
+           ※ kacIsGuest()는 파일 뒤쪽에서 정의되므로 여기서는 localStorage를 직접 본다. */
+        if ((function(){ try{ return localStorage.getItem('kac_guest')==='1'; }catch(e){ return false; } })() && currentRoom) {
             enterApp();
             try{ setTimeout(function(){ _kacHideGuestBlockedMenus(); }, 600); }catch(e){}
         } else if (enrollmentReady && isValidProfile()) {
@@ -2634,6 +2635,8 @@ function startPresence() {
     myRef.off(); 
 
     myRef.on('value', snap => {
+        // [K61] 게스트는 students 에 기록을 남기지 않는다 → '명단 삭제'로 오판해 퇴출시키지 않도록 제외
+        if (window.kacIsGuest && window.kacIsGuest()) return;
         // 이 방에 정상적으로 등록된 상태인데 데이터가 삭제된 경우에만 퇴출 로직 작동
         if (document.getElementById('mainApp').style.display === 'flex' && !snap.exists()) {
             // 방 이동 중에는 작동하지 않도록 체크함
@@ -2646,6 +2649,8 @@ function startPresence() {
     });
 
     connectedRef.on("value", (snap) => {
+        // [K61] 게스트는 개인정보를 남기지 않는다 → students 등록/갱신을 하지 않는다
+        if (window.kacIsGuest && window.kacIsGuest()) return;
         if (snap.val() === true) {
             // [버그수정] 초기화/재개설 후 유령 재등록 방지
             //  방이 초기화되면 서버 status/resetKey 가 갱신된다. 이 값이 내가 마지막으로 본 값과
@@ -2746,8 +2751,12 @@ function applyMenuFeatures(features) {
     applyKakaoLink(window._kakaoLink || '');
     /* [K61] 게스트 입장자 — 신원 확인이 필요한 메뉴는 숨긴다(질문·퀴즈만 이용).
        출결·외출외박·차량·석식·비품·태블릿은 '누가' 신청했는지 알아야 운영되므로 제외. */
-    try{ if(window.kacIsGuest && window.kacIsGuest()) _kacHideGuestBlockedMenus(); }catch(e){}
+    try{ if(localStorage.getItem('kac_guest')==='1') _kacHideGuestBlockedMenus(); }catch(e){}
 }
+/* [K61] 게스트 여부 — 파일 앞쪽 진입 판정에서도 쓰이므로 여기서 미리 정의한다 */
+window.kacIsGuest = function(){
+    try{ return localStorage.getItem('kac_guest') === '1'; }catch(e){ return false; }
+};
 /* [K61] 게스트 안내 배너 — 현재 게스트임을 알리고, 필요하면 입교등록으로 전환 */
 function _kacShowGuestBanner(){
     if(document.getElementById('kacGuestBar')) return;
@@ -5165,6 +5174,13 @@ async function saveProfile() {
 
 // [최종 수정] 서버 명단 대조 방식의 엄격한 프로필 체크
 async function checkProfile() {
+    /* [K61] 게스트 입장 — students 에 기록을 남기지 않으므로 서버 명단 조회를 건너뛰고 바로 입장.
+       (이 검사를 그대로 타면 '명단에 없음'으로 판정돼 이름 입력창이 다시 떠서 입장이 안 됐다) */
+    if (window.kacIsGuest && window.kacIsGuest()) {
+        showMainDashboard();
+        try { setTimeout(function(){ _kacHideGuestBlockedMenus(); }, 300); } catch (e) {}
+        return;
+    }
     const uToken = localStorage.getItem('uToken');
     if (uToken) {
         try {
@@ -8064,9 +8080,6 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
          본인 질문 수정·퀴즈 중복응답 방지에만 쓰인다.
        · 출결·외출외박·차량·석식은 신원 확인이 필요하므로 게스트에게 막는다.
      ══════════════════════════════════════════════════════════════════════ */
-  window.kacIsGuest = function(){
-    try{ return localStorage.getItem('kac_guest') === '1'; }catch(e){ return false; }
-  };
   window.kacGuestEnter = async function(){
     var sel = document.getElementById('keduCourse');
     var room = sel ? sel.value : '';
