@@ -102,6 +102,117 @@ window.kacClaimAutoPlace = function (weekKey) {
     } catch (e) { return Promise.resolve(true); }
 };
 
+/* ══════════════════════════════════════════════════════════════════════════
+   [K60] 공휴일 자동 계산 — 대체공휴일 포함
+   ──────────────────────────────────────────────────────────────────────────
+   왜 직접 계산하나:
+     외부 공휴일 API(nager.at 등)는 한국 대체공휴일 처리가 부정확하다.
+     (예: 2027년 근로자의날을 5/3으로 이동 — 근로자의날은 대체 대상이 아님,
+          2028년 추석·개천절 중복 대체 누락, 설날 연휴 중 일요일 누락)
+     → 법령(관공서의 공휴일에 관한 규정 제3조) 규칙을 코드로 구현해 계산한다.
+        인터넷·CORS·API 중단에 영향받지 않고, 몇 년치를 한 번에 생성할 수 있다.
+
+   대체공휴일 규칙:
+     ① 3·1절·광복절·개천절·한글날·제헌절·부처님오신날·성탄절
+        → 토요일 또는 일요일과 겹치면 다음 비공휴일 평일로 대체
+          (다른 공휴일과 겹치는 것만으로는 대체 없음 — 예: 2028년 개천절·추석 중복)
+     ② 어린이날 → 토·일 또는 다른 공휴일과 겹치면 대체
+     ③ 설날·추석 연휴 → 일요일 또는 다른 공휴일과 겹치면 겹친 일수만큼 대체
+     ④ 신정·현충일·근로자의날 → 대체 없음
+
+   ※ 음력 공휴일(설날·추석·부처님오신날)은 음력 변환이 필요해 표로 관리한다.
+     2026~2028은 공공 데이터와 교차검증 완료. 표에 없는 해는 양력 공휴일만 생성된다.
+     임시공휴일·선거일은 법령이 아닌 그때그때 지정이므로 '공휴일 관리'에서 수동 추가한다.
+   ══════════════════════════════════════════════════════════════════════════ */
+window.KAC_LUNAR_HOLIDAYS = {
+    2026: { seol: '2026-02-17', chuseok: '2026-09-25', buddha: '2026-05-24' },
+    2027: { seol: '2027-02-07', chuseok: '2027-09-15', buddha: '2027-05-13' },
+    2028: { seol: '2028-01-27', chuseok: '2028-10-03', buddha: '2028-05-02' },
+    2029: { seol: '2029-02-13', chuseok: '2029-09-22', buddha: '2029-05-20' },
+    2030: { seol: '2030-02-03', chuseok: '2030-09-12', buddha: '2030-05-09' },
+    2031: { seol: '2031-01-23', chuseok: '2031-10-01', buddha: '2031-05-28' },
+    2032: { seol: '2032-02-11', chuseok: '2032-09-19', buddha: '2032-05-16' },
+    2033: { seol: '2033-01-31', chuseok: '2033-09-08', buddha: '2033-05-06' },
+    2034: { seol: '2034-02-19', chuseok: '2034-09-27', buddha: '2034-05-25' },
+    2035: { seol: '2035-02-08', chuseok: '2035-09-16', buddha: '2035-05-15' }
+};
+
+window.kacComputeHolidays = function (year) {
+    year = Number(year); if (!year) return {};
+    var z = function (n) { return (n < 10 ? '0' : '') + n; };
+    var ymd = function (d) { return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate()); };
+    var parse = function (s) { return new Date(s + 'T00:00:00'); };
+    var shift = function (s, days) { var d = parse(s); d.setDate(d.getDate() + days); return ymd(d); };
+    var dow = function (s) { return parse(s).getDay(); };            // 0=일 … 6=토
+    var isWeekend = function (s) { var w = dow(s); return w === 0 || w === 6; };
+
+    // 1) 기본 공휴일 수집
+    //    sub: 'we'(토·일만) / 'wed'(토·일 또는 중복=어린이날) / 'sun'(일요일 또는 중복=설날·추석) / null(대체 없음)
+    var base = [];
+    var push = function (date, name, sub) { base.push({ date: date, name: name, sub: sub || null }); };
+    push(year + '-01-01', '신정', null);
+    push(year + '-03-01', '3·1절', 'we');
+    push(year + '-05-01', '근로자의날', null);
+    push(year + '-05-05', '어린이날', 'wed');
+    push(year + '-06-06', '현충일', null);
+    push(year + '-07-17', '제헌절', 'we');
+    push(year + '-08-15', '광복절', 'we');
+    push(year + '-10-03', '개천절', 'we');
+    push(year + '-10-09', '한글날', 'we');
+    push(year + '-12-25', '성탄절', 'we');
+    var L = window.KAC_LUNAR_HOLIDAYS[year];
+    if (L) {
+        if (L.buddha) push(L.buddha, '부처님오신날', 'we');
+        if (L.seol)    [-1, 0, 1].forEach(function (o) { push(shift(L.seol, o), '설날 연휴', 'sun'); });
+        if (L.chuseok) [-1, 0, 1].forEach(function (o) { push(shift(L.chuseok, o), '추석 연휴', 'sun'); });
+    }
+
+    // 2) 날짜별 집계 — 같은 날 둘 이상이면 '중복'으로 본다(설날·추석 대체 판정에 사용)
+    var cnt = {}, out = {};
+    base.forEach(function (h) { cnt[h.date] = (cnt[h.date] || 0) + 1; });
+    base.forEach(function (h) { if (!out[h.date]) out[h.date] = h.name; });
+
+    // 3) 대체공휴일 — 겹친 날마다 '다음 비공휴일 평일' 하나씩 부여
+    var nextOpen = function (from) {
+        var d = shift(from, 1), guard = 0;
+        while (guard++ < 40 && (isWeekend(d) || out[d])) d = shift(d, 1);
+        return d;
+    };
+    base.slice().sort(function (a, b) { return a.date.localeCompare(b.date); }).forEach(function (h) {
+        if (!h.sub) return;
+        var need = false;
+        if (h.sub === 'we')  need = isWeekend(h.date);                        // 국경일 등 — 토·일만
+        if (h.sub === 'wed') need = isWeekend(h.date) || cnt[h.date] > 1;     // 어린이날 — 토·일 또는 중복
+        if (h.sub === 'sun') need = (dow(h.date) === 0) || cnt[h.date] > 1;   // 설날·추석 — 일요일 또는 중복
+        if (!need) return;
+        var t = nextOpen(h.date);
+        if (t && !out[t]) out[t] = '대체공휴일(' + h.name.replace(' 연휴', '') + ')';
+    });
+    return out;
+};
+
+/* [K60] 계산된 공휴일을 system/holidays 에 자동 반영.
+   · 이미 있는 날짜는 건드리지 않는다 → 수동 등록(임시공휴일·선거일)과 수정본이 항상 우선.
+   · 기본 올해~2년 뒤까지. 중복 실행해도 안전(이미 있으면 건너뜀). */
+window.kacHolidayAutoFill = async function (fromYear, toYear) {
+    if (typeof firebase === 'undefined' || !firebase.database) return { added: 0, skipped: 0 };
+    var y0 = Number(fromYear) || new Date().getFullYear();
+    var y1 = Number(toYear) || (y0 + 2);
+    var ref = firebase.database().ref('system/holidays');
+    var cur = {};
+    try { cur = (await ref.once('value')).val() || {}; } catch (e) { return { added: 0, skipped: 0, error: true }; }
+    var upd = {}, added = 0, skipped = 0;
+    for (var y = y0; y <= y1; y++) {
+        var h = window.kacComputeHolidays(y);
+        Object.keys(h).forEach(function (d) {
+            if (cur[d] != null) { skipped++; return; }   // 수동 등록·수정분 보존
+            upd[d] = h[d]; added++;
+        });
+    }
+    if (added) { try { await ref.update(upd); } catch (e) { return { added: 0, skipped: skipped, error: true }; } }
+    return { added: added, skipped: skipped };
+};
+
 // [중요] 비동기 코드 조회 함수
 async function resolveRoomFromCode(code) {
     try {
