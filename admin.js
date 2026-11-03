@@ -14832,6 +14832,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (typeof kacClearDefaultPw === 'function') kacClearDefaultPw();
                 annualPlanMgr.checkAndReset();
 
+                /* [K60] 공휴일 자동 반영(대체공휴일 포함) — 강사 플랫폼이 가장 자주 열리므로 여기를 주 트리거로 삼는다.
+                   하루 1회만 수행하고, 이미 등록된 날짜는 건드리지 않아 수동 등록(임시공휴일·선거일)은 보존된다. */
+                setTimeout(function () {
+                    try {
+                        var _hk = 'kacHolidayFill', _td = new Date().toISOString().slice(0, 10);
+                        if (localStorage.getItem(_hk) === _td) return;
+                        if (typeof window.kacHolidayAutoFill !== 'function') return;
+                        var _y0 = new Date().getFullYear();
+                        window.kacHolidayAutoFill(_y0, _y0 + 2).then(function (r) {
+                            try { localStorage.setItem(_hk, _td); } catch (e) {}
+                            if (r && r.added) console.log('[공휴일] 자동 등록 ' + r.added + '건(대체공휴일 포함) · 기존 유지 ' + r.skipped + '건');
+                        }).catch(function () {});
+                    } catch (e) {}
+                }, 2000);
+
                 // 탭을 열어 두어도 KST 날짜가 바뀌면 자동으로 재체크 (10분 간격).
                 // 특히 금→토 자정 또는 일→월 자정에도 차주 전환이 자동 적용됨.
                 let _lastCheckedDate = annualPlanMgr._today();
