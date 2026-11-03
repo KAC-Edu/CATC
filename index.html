@@ -1913,7 +1913,11 @@ async function resolveRoomFromCode(code) {
         }
     } catch(e) {}
     try {
-        if (enrollmentReady && isValidProfile()) {
+        /* [K61] 게스트 입장 — 이름·사번 없이도 과정 화면으로 바로 들어간다(질문·퀴즈만 이용). */
+        if (window.kacIsGuest && window.kacIsGuest() && currentRoom) {
+            enterApp();
+            try{ setTimeout(function(){ _kacHideGuestBlockedMenus(); }, 600); }catch(e){}
+        } else if (enrollmentReady && isValidProfile()) {
             enterApp();
         } else if (params.get('menu') && window.__kacEnrollmentExpired && typeof window.keduShowEnroll === 'function') {
             window.keduShowEnroll(params.get('menu'));
@@ -2740,6 +2744,40 @@ function applyMenuFeatures(features) {
     // 오픈톡방: 카카오 링크 유무 + 활성화 플래그를 함께 반영 (링크 없으면 어차피 숨김)
     window._kakaoMenuEnabled = (features.kakao !== false);
     applyKakaoLink(window._kakaoLink || '');
+    /* [K61] 게스트 입장자 — 신원 확인이 필요한 메뉴는 숨긴다(질문·퀴즈만 이용).
+       출결·외출외박·차량·석식·비품·태블릿은 '누가' 신청했는지 알아야 운영되므로 제외. */
+    try{ if(window.kacIsGuest && window.kacIsGuest()) _kacHideGuestBlockedMenus(); }catch(e){}
+}
+/* [K61] 게스트 안내 배너 — 현재 게스트임을 알리고, 필요하면 입교등록으로 전환 */
+function _kacShowGuestBanner(){
+    if(document.getElementById('kacGuestBar')) return;
+    var app = document.getElementById('mainApp'); if(!app) return;
+    var bar = document.createElement('div'); bar.id='kacGuestBar';
+    bar.style.cssText='display:flex;align-items:center;gap:9px;background:#f0fdfa;border:1.5px solid #99f6e4;border-radius:13px;padding:11px 13px;margin:0 0 12px;font-size:12.5px;font-weight:800;color:#0f766e;line-height:1.5;';
+    bar.innerHTML='<i class="fa-solid fa-user-secret" style="font-size:16px;flex-shrink:0;"></i>'
+        +'<span style="flex:1;min-width:0;word-break:keep-all;">게스트로 참여 중입니다 · <b>질문하기·퀴즈</b>만 이용할 수 있어요</span>'
+        +'<button id="kacGuestToEnroll" style="flex-shrink:0;border:none;border-radius:9px;background:#0f766e;color:#fff;font-size:12px;font-weight:900;padding:7px 11px;cursor:pointer;">입교등록</button>';
+    app.insertBefore(bar, app.firstChild);
+    var b=document.getElementById('kacGuestToEnroll');
+    if(b) b.onclick=function(){
+        try{ localStorage.removeItem('kac_guest'); localStorage.removeItem('uToken'); }catch(e){}
+        location.reload();
+    };
+}
+/* [K61] 게스트에게 감출 메뉴 — 실명 입교자에게는 영향 없음 */
+function _kacHideGuestBlockedMenus(){
+    try{ _kacShowGuestBanner(); }catch(e){}
+    window._adminActionDisabled = true;
+    window._shuttleDisabled = true;
+    ['openShuttleApply()','openAdminAction()','openAttendanceQR()','openFacilityRequest()',
+     'openTabletLoan()','openHrdAttendanceApp()','openCnsPlatform()','viewMealMenu()'].forEach(function(fn){
+        var el = document.querySelector('[onclick="' + fn + '"]');
+        if(el) el.style.display = 'none';
+    });
+    // 입교 홈 카드의 출결/정보수정/기념사진 버튼도 숨김
+    ['keduOtpBtn','keduEditBtn','keduGradBtn','khOtpBtn','khEditBtn','khGradBtn'].forEach(function(id){
+        var el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
 }
 function setupListeners() {
     // 1. 서버 시간 동기화 (이전 안테나 정리)
@@ -7570,7 +7608,14 @@ body.kac-quiz-active .quiz-overlay,
   if(!ACT[menu]) return;            // 모르는 값이면 무시(기본 화면 유지)
   // [vJ115] 미등록(입교등록 전) 상태에서 4개 기능(차량·외출외박·질문·퀴즈) 진입 시 → 입교등록 안내 카드
   var _GATE_LABELS={car:'퇴교차량 신청', outing:'외출·외박 신청', quiz:'퀴즈 풀기', qna:'질문하기'};
-  function _kacIsEnrolledForGate(){ try{ return !!localStorage.getItem('uToken') && !!localStorage.getItem('kac_user_name') && /^\d{4,5}$/.test((localStorage.getItem('kac_user_phone')||'').trim()); }catch(e){ return true; } }
+  /* [K61] 게스트는 질문·퀴즈만 허용 — 차량·외출외박은 신원 확인이 필요해 게이트로 막는다. */
+  var _GUEST_OK={quiz:1, qna:1};
+  function _kacIsEnrolledForGate(){
+    try{
+      if(localStorage.getItem('kac_guest')==='1') return !!localStorage.getItem('uToken');   // 게스트도 '입장' 자체는 완료 상태
+      return !!localStorage.getItem('uToken') && !!localStorage.getItem('kac_user_name') && /^\d{4,5}$/.test((localStorage.getItem('kac_user_phone')||'').trim());
+    }catch(e){ return true; }
+  }
   function _kacShowEnrollGate(label){
     if(document.getElementById('kacEnrollGate')) return;
     var ov=document.createElement('div'); ov.id='kacEnrollGate';
@@ -7591,6 +7636,13 @@ body.kac-quiz-active .quiz-overlay,
     var _showGate=function(){ try{ _kacShowEnrollGate(_GATE_LABELS[menu]); }catch(e){} };
     if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ setTimeout(_showGate,300); }); }
     else { setTimeout(_showGate, 300); }
+    return;
+  }
+  /* [K61] 게스트가 허용되지 않은 기능(차량·외출외박)으로 들어온 경우 — 입교등록 안내 */
+  if(_GATE_LABELS[menu] && !_GUEST_OK[menu] && (function(){ try{ return localStorage.getItem('kac_guest')==='1'; }catch(e){ return false; } })()){
+    var _showGuestGate=function(){ try{ _kacShowEnrollGate(_GATE_LABELS[menu]); }catch(e){} };
+    if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ setTimeout(_showGuestGate,300); }); }
+    else { setTimeout(_showGuestGate, 300); }
     return;
   }
   var DELAY = (menu==='quiz') ? 2600 : 450;   // 퀴즈는 activeQuiz 수신 시간 고려해 더 대기
@@ -7987,6 +8039,11 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     }).finally(function(){ hideLoader(); });
     var _kEnrollBtn=document.getElementById('keduEnrollBtn');
     if(_kEnrollBtn){ _kEnrollBtn.onclick=function(){ submitEnroll(menu); }; _kEnrollBtn.textContent = window._keduEditMode ? '정보 수정하기' : '입교 등록'; }
+    /* [K61] 게스트 입장 버튼 — 정보 수정 모드에서는 숨긴다(이미 등록된 사람) */
+    var _kGuestBtn=document.getElementById('keduGuestBtn');
+    var _kGuestWrap=document.querySelector('#keduEnroll .ke-guest-wrap');
+    if(_kGuestWrap) _kGuestWrap.style.display = window._keduEditMode ? 'none' : '';
+    if(_kGuestBtn) _kGuestBtn.onclick=function(){ try{ window.kacGuestEnter(); }catch(e){} };
     var back=document.getElementById('keduBackBtn');
     if(back) back.onclick=function(){
       ov.style.display='none';
@@ -8000,6 +8057,44 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     var h=document.getElementById('keduHome'); if(h) h.style.display='none';
     showEnroll('home', true);
   };
+  /* ══════════════════════════════════════════════════════════════════════
+     [K61] 게스트 입장 — 이름·사번을 받지 않고 질문·퀴즈만 이용한다.
+       · 개인정보를 일절 저장하지 않는다(이름/사번/연락처 미수집).
+       · 기기 구분용 임시 토큰(guest_xxx)만 만든다 — 개인을 식별하지 않으며,
+         본인 질문 수정·퀴즈 중복응답 방지에만 쓰인다.
+       · 출결·외출외박·차량·석식은 신원 확인이 필요하므로 게스트에게 막는다.
+     ══════════════════════════════════════════════════════════════════════ */
+  window.kacIsGuest = function(){
+    try{ return localStorage.getItem('kac_guest') === '1'; }catch(e){ return false; }
+  };
+  window.kacGuestEnter = async function(){
+    var sel = document.getElementById('keduCourse');
+    var room = sel ? sel.value : '';
+    if(!room){ showKacAlert('과정을 선택해 주세요.\n(게스트도 어느 과정에 참여하는지는 선택해야 합니다)'); return; }
+    var label = room;
+    try{ label = ((sel.selectedOptions[0]||{}).textContent || room).split(' · ')[0]; }catch(e){}
+    var ok = await showKacConfirm('"' + label + '" 과정에 게스트로 입장합니다.\n\n'
+      + '· 이름·사번을 저장하지 않습니다.\n'
+      + '· 질문하기와 퀴즈 풀기만 이용할 수 있습니다.\n'
+      + '· 출결·외출외박·차량·석식은 입교등록이 필요합니다.\n\n계속할까요?');
+    if(!ok) return;
+    try{
+      var gt = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem('kac_guest', '1');
+      localStorage.setItem('uToken', gt);
+      localStorage.setItem('kac_room', room);
+      localStorage.removeItem('kac_user_name');     // 개인정보 미보관
+      localStorage.removeItem('kac_user_phone');
+    }catch(e){}
+    // 과정 화면으로 이동 — 입교등록과 동일 경로를 타되 students 기록은 남기지 않는다
+    try{
+      var u = new URL(location.href);
+      u.searchParams.set('room', room);
+      u.searchParams.delete('menu');
+      location.replace(u.toString());
+    }catch(e){ location.reload(); }
+  };
+
   async function submitEnroll(menu){
     var room=document.getElementById('keduCourse').value;
     var name=document.getElementById('keduName').value.trim();
@@ -8919,6 +9014,14 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<label>이름</label><input id="keduName" placeholder="홍길동">'+
         '<label class="ke-consent" id="keduConsentBox"><input type="checkbox" id="keduPrivacyAgree"><span><b>(필수) 개인정보 수집 및 이용</b>에 동의합니다.<small>수집 항목: 성명·사번(또는 연락처 뒷자리)·소속, 외출외박 신청 시 연락처 · 목적: 교육운영, 출결, 수송, 생활관 배정 · 보유기간: 교육 종료 시까지(종료 다음 날 자동 파기)</small></span></label>'+
         '<div class="ke-actions"><button class="ke-back" id="keduBackBtn" type="button"><i class="fa-solid fa-arrow-left"></i> 뒤로가기</button><button class="ke-btn" id="keduEnrollBtn">정보 수정하기</button></div>'+
+        /* [K61] 게스트 입장 — 이름·사번 없이 질문·퀴즈만 이용. 개인정보를 전혀 남기지 않는다. */
+        '<div class="ke-guest-wrap">'+
+          '<div class="ke-guest-or"><span>또는</span></div>'+
+          '<button class="ke-guest-btn" id="keduGuestBtn" type="button">'+
+            '<i class="fa-solid fa-user-secret"></i> 게스트로 입장 <span class="ke-guest-tag">이름 없이</span>'+
+          '</button>'+
+          '<div class="ke-guest-desc">개인정보를 입력하지 않고 <b>질문하기·퀴즈 풀기</b>만 이용합니다.<br>출결·외출외박·차량·석식 신청은 입교등록이 필요합니다.</div>'+
+        '</div>'+
         '<div class="ke-note">입교 정보는 교육 운영 목적에 한해 사용되며, 과정 종료 다음 날 자동 파기됩니다. 시스템은 전 구간 암호화 통신(HTTPS)을 사용합니다.</div></div>';
       document.body.appendChild(d);
     }
@@ -10154,6 +10257,16 @@ html.kac-core-screen #realUserCount::before{
 #keduEnroll .ke-consent small{display:block;margin-top:4px;color:#64748b;font-weight:700;white-space:normal}
 #keduEnroll .ke-actions{display:grid;grid-template-columns:.82fr 1.35fr;gap:10px;margin-top:12px}
 #keduEnroll .ke-actions .ke-btn{margin:0!important}
+/* [K61] 게스트 입장 */
+#keduEnroll .ke-guest-wrap{margin-top:16px}
+#keduEnroll .ke-guest-or{display:flex;align-items:center;gap:10px;margin-bottom:12px;color:#94a3b8;font-size:12px;font-weight:800}
+#keduEnroll .ke-guest-or::before,#keduEnroll .ke-guest-or::after{content:"";flex:1;height:1px;background:#e2e8f0}
+#keduEnroll .ke-guest-btn{width:100%;padding:14px;border:1.5px solid #cbd5e1;border-radius:14px;background:#f8fafc;color:#334155;font-size:15px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+#keduEnroll .ke-guest-btn:hover{border-color:#94a3b8;background:#f1f5f9}
+#keduEnroll .ke-guest-btn i{color:#64748b}
+#keduEnroll .ke-guest-tag{font-size:11px;font-weight:800;color:#0f766e;background:#ccfbf1;border-radius:999px;padding:3px 9px}
+#keduEnroll .ke-guest-desc{margin-top:9px;font-size:12px;line-height:1.6;color:#64748b;font-weight:700;text-align:center;word-break:keep-all}
+#keduEnroll .ke-guest-desc b{color:#0f766e}
 #keduEnroll .ke-back{border:1px solid #cbd5e1;border-radius:14px;background:#f1f5f9;color:#475569;font-weight:900;cursor:pointer}
 .kac-confirm-box{width:min(390px,calc(100vw - 34px))!important;max-width:390px!important;overflow:hidden!important;border-radius:22px!important}
 .kac-confirm-box::before{content:'항공기술훈련원';display:block;padding:14px 18px;background:linear-gradient(135deg,#0f4c81,#2563eb);color:#fff;font-size:14px;font-weight:900;text-align:left}
