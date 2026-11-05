@@ -18569,12 +18569,11 @@ ui._matRenderList = function(){
           + (isPdf ? '<button onclick="ui.matViewOne(\''+id+'\')" title="새 창에서 바로 보기" style="flex-shrink:0; padding:7px 13px; border:1px solid #bbf7d0; border-radius:9px; background:#f0fdf4; color:#15803d; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-regular fa-eye"></i> 보기</button>' : '')
           + '<a href="'+ui._esc(window.kacMaterials.fileUrl(m))+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:7px 13px; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:800; text-decoration:none;">받기</a>'
           + '<button onclick="ui.matCopyOne(\''+id+'\')" title="이 교재만 받는 주소 복사 — 카카오톡 등에 붙여넣기" style="flex-shrink:0; padding:7px 13px; border:1px solid #c7d2fe; border-radius:9px; background:#eef2ff; color:#4338ca; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-link"></i> 주소</button>'
-          + '<button onclick="ui.matUnlink(\''+id+'\')" title="이번 과정에서만 빼기(자료실에는 남음)" style="flex-shrink:0; padding:7px 13px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; color:#64748b; font-size:12.5px; font-weight:800; cursor:pointer;">연결 해제</button>'
-          /* [K69] 삭제는 강사 누구나 가능 — 올린 교수가 전보·퇴직하면 아무도 못 지우는 상황을 막는다.
-                   다만 남의 자료면 누를 때 경고를 띄운다(아래 matDestroy). */
-          + '<button onclick="ui.matDestroy(\''+id+'\')" title="'+(mine?'자료실에서 영구 삭제':'다른 분이 올린 자료입니다 — 삭제 시 경고가 표시됩니다')+'" '
-            + 'style="flex-shrink:0; padding:7px 13px; border:none; border-radius:9px; background:#fef2f2; color:#dc2626; font-size:12.5px; font-weight:800; cursor:pointer;">삭제'
-            + (mine ? '' : ' <i class="fa-solid fa-triangle-exclamation" style="font-size:10.5px; color:#f59e0b;"></i>') + '</button>'
+          /* [K74] '연결 해제'와 '삭제'를 한 버튼으로 합침 — 둘 다 '없앤다'로 보여 헷갈렸다.
+                   누르면 '이번 과정에서만 빼기 / 자료실에서 완전 삭제'를 고르게 한다. */
+          + '<button onclick="ui.matRemove(\''+id+'\')" title="이번 과정에서 빼거나, 자료실에서 완전히 삭제합니다" '
+            + 'style="flex-shrink:0; padding:7px 13px; border:none; border-radius:9px; background:#fef2f2; color:#dc2626; font-size:12.5px; font-weight:800; cursor:pointer;">빼기'
+            + (mine ? '' : ' <i class="fa-solid fa-triangle-exclamation" style="font-size:10.5px; color:#f59e0b;" title="다른 분이 올린 자료"></i>') + '</button>'
         + '</div>';
     }).join('');
     /* [K70] 선택 다운로드 바 */
@@ -18716,6 +18715,77 @@ ui._matBindDrop = function(){
     });
 };
 
+/* ══ [K75] 중복 교재 감지 ═══════════════════════════════════
+   같은 교재를 기수마다 새로 올리면 용량이 쌓이고 '어느 게 최신인지' 알 수 없게 된다.
+   올리기 전에 제목이 닮은 교재가 자료실에 있는지 보고, 있으면 어떻게 할지 묻는다.
+   ────────────────────────────────────────────────────────── */
+/* 제목 비교용 정규화 — 확장자·괄호주석·연도·차수·공백·기호를 털어낸다
+   예) "(정기과정)#위기대응체계_정시택 2026 2차.pdf" → "위기대응체계정시택" */
+ui._matNorm = function(name){
+    return String(name||'')
+        .replace(/\.[^.]+$/, '')                 // 확장자
+        .replace(/\([^)]*\)/g, '')               // (정기과정) 같은 괄호
+        .replace(/\[[^\]]*\]/g, '')
+        .replace(/20\d{2}|19\d{2}/g, '')         // 연도
+        .replace(/\d+\s*차|\d+\s*기|v\d+(\.\d+)?/gi, '')  // 2차 · 3기 · v2
+        .replace(/최종|수정본|복사본|final|copy/gi, '')
+        .replace(/[\s_\-#.,·~()\[\]]/g, '')      // 공백·기호
+        .toLowerCase();
+};
+/* 자료실에서 닮은 교재 찾기 — 완전 일치 또는 한쪽이 다른 쪽을 포함(6글자 이상) */
+ui._matFindSimilar = function(fileName){
+    var a = ui._matNorm(fileName);
+    if(a.length < 4) return null;
+    var hit = null;
+    (ui._matAll||[]).forEach(function(m){
+        if(hit) return;
+        var b = ui._matNorm(m.fileName || m.title);
+        if(!b) return;
+        if(a === b) { hit = m; return; }
+        if(a.length >= 6 && b.length >= 6 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0)) hit = m;
+    });
+    return hit;
+};
+/* 중복일 때 어떻게 할지 묻는다 → 'use'(기존 사용) | 'replace'(새것+기존삭제) | 'both'(둘 다) | null(취소) */
+ui._matAskDuplicate = function(file, old){
+    return new Promise(function(resolve){
+        var d = new Date(old.uploadedAt||0), p = function(n){ return String(n).padStart(2,'0'); };
+        var ds = old.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
+        var ov = document.createElement('div');
+        ov.id = 'matDupOv';
+        ov.style.cssText = 'position:fixed; inset:0; z-index:2147483200; background:rgba(15,23,42,.65); display:flex; align-items:center; justify-content:center; padding:22px;';
+        var pick = function(v){ try{ ov.remove(); }catch(e){} resolve(v); };
+        ov.onclick = function(e){ if(e.target===ov) pick(null); };
+        ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:520px; box-shadow:0 24px 60px rgba(15,23,42,.42);">'
+          + '<div style="font-size:17px; font-weight:900; color:#b45309; margin-bottom:12px;"><i class="fa-solid fa-triangle-exclamation"></i> 비슷한 교재가 이미 있습니다</div>'
+          + '<div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">'
+            + '<div style="flex:1 1 200px; padding:12px 14px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc;">'
+              + '<div style="font-size:11px; font-weight:900; color:#94a3b8; margin-bottom:5px;">자료실에 있는 것</div>'
+              + '<div style="font-size:13px; font-weight:800; color:#0f172a; word-break:break-all; line-height:1.45;">'+ui._esc(old.title||old.fileName)+'</div>'
+              + '<div style="font-size:11px; color:#94a3b8; font-weight:700; margin-top:5px;">'+ui._esc(old.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(old.size)+'</div></div>'
+            + '<div style="flex:1 1 200px; padding:12px 14px; border:1.5px solid #bfdbfe; border-radius:12px; background:#eff6ff;">'
+              + '<div style="font-size:11px; font-weight:900; color:#1d4ed8; margin-bottom:5px;">지금 올리려는 것</div>'
+              + '<div style="font-size:13px; font-weight:800; color:#0f172a; word-break:break-all; line-height:1.45;">'+ui._esc(file.name)+'</div>'
+              + '<div style="font-size:11px; color:#64748b; font-weight:700; margin-top:5px;">'+window.kacMaterials.fmtSize(file.size)+'</div></div>'
+          + '</div>'
+          + '<button data-v="use" style="width:100%; text-align:left; margin-bottom:9px; padding:13px 15px; border:1.5px solid #bbf7d0; border-radius:12px; background:#f0fdf4; cursor:pointer;">'
+            + '<div style="font-size:14px; font-weight:900; color:#15803d;"><i class="fa-solid fa-link"></i> 기존 것을 이번 과정에 연결</div>'
+            + '<div style="font-size:11.5px; font-weight:700; color:#64748b; margin-top:3px;">새로 올리지 않습니다 · 용량이 늘지 않습니다 <b>(권장)</b></div></button>'
+          + '<button data-v="replace" style="width:100%; text-align:left; margin-bottom:9px; padding:13px 15px; border:1.5px solid #bfdbfe; border-radius:12px; background:#eff6ff; cursor:pointer;">'
+            + '<div style="font-size:14px; font-weight:900; color:#1d4ed8;"><i class="fa-solid fa-rotate"></i> 새 것으로 교체</div>'
+            + '<div style="font-size:11.5px; font-weight:700; color:#64748b; margin-top:3px;">개정판일 때 · 올린 뒤 기존 것은 자료실에서 삭제합니다</div></button>'
+          + '<button data-v="both" style="width:100%; text-align:left; padding:13px 15px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; cursor:pointer;">'
+            + '<div style="font-size:14px; font-weight:900; color:#475569;"><i class="fa-solid fa-copy"></i> 둘 다 보관</div>'
+            + '<div style="font-size:11.5px; font-weight:700; color:#94a3b8; margin-top:3px;">내용이 다른 교재일 때</div></button>'
+          + '<button data-v="" style="width:100%; margin-top:12px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">이 파일 건너뛰기</button>'
+          + '</div>';
+        document.body.appendChild(ov);
+        ov.querySelectorAll('button[data-v]').forEach(function(b){
+            b.onclick = function(){ pick(b.getAttribute('data-v') || null); };
+        });
+    });
+};
+
 ui._matUploadFiles = async function(files){
     var room = state.room, who = ui._matWho();
     var pb = document.getElementById('matProgress');
@@ -18725,13 +18795,36 @@ ui._matUploadFiles = async function(files){
         pb.style.display='block';
         pb.innerHTML = '<div style="padding:12px 15px; border-radius:11px; background:'+(color||'#eff6ff')+'; border:1px solid #dbeafe; font-size:13px; font-weight:800; color:#1d4ed8;">'+msg+'</div>';
     };
+    var skipped = 0, reused = 0;
+    // [K75] 중복 판정을 위해 자료실 최신 목록을 먼저 확보
+    try{ ui._matAll = await window.kacMaterials.listAll(); }catch(e){}
     for(var i=0;i<files.length;i++){
         var f = files[i];
+        /* [K75] 비슷한 교재가 이미 있으면 먼저 묻는다 */
+        var dupOld = null, act = null;
+        try{ dupOld = ui._matFindSimilar(f.name); }catch(e){}
+        if(dupOld){
+            if(pb) pb.style.display='none';
+            act = await ui._matAskDuplicate(f, dupOld);
+            if(act === null){ skipped++; continue; }                 // 건너뛰기
+            if(act === 'use'){                                        // 기존 것을 연결
+                try{ await window.kacMaterials.link(room, dupOld.id, who); reused++; }catch(e){}
+                continue;
+            }
+            // 'replace' · 'both' 는 아래에서 그대로 업로드 진행
+        }
         show('<i class="fa-solid fa-spinner fa-spin"></i> ('+(i+1)+'/'+files.length+') '+ui._esc(f.name)+' 올리는 중…');
         try{
             var rec = await window.kacMaterials.upload(f, who);
             await window.kacMaterials.link(room, rec.id, who);
             done++;
+            /* [K75] '새 것으로 교체'면 올린 뒤 기존 것을 자료실에서 삭제 */
+            if(act === 'replace' && dupOld){
+                try{
+                    await window.kacMaterials.destroy(dupOld);
+                    await window.kacMaterials.unlink(room, dupOld.id);
+                }catch(e){ console.warn('[교재] 기존본 삭제 실패', e); }
+            }
         }catch(e){
             fail++;
             if(e && e.message === 'NO_KEY'){ show('관리자 암호가 필요합니다.', '#fef2f2'); break; }
@@ -18740,17 +18833,56 @@ ui._matUploadFiles = async function(files){
         }
     }
     if(pb){
-        if(fail===0) show('<i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> '+done+'건을 올렸습니다. 교육생 화면에 바로 보입니다.', '#ecfdf5');
-        else show('<i class="fa-solid fa-triangle-exclamation" style="color:#d97706;"></i> 성공 '+done+'건 · 실패 '+fail+'건', '#fff7ed');
-        setTimeout(function(){ if(pb) pb.style.display='none'; }, 5000);
+        var parts = [];
+        if(done)    parts.push('새로 올림 '+done+'건');
+        if(reused)  parts.push('기존 교재 연결 '+reused+'건');
+        if(skipped) parts.push('건너뜀 '+skipped+'건');
+        if(fail)    parts.push('실패 '+fail+'건');
+        var msg = parts.length ? parts.join(' · ') : '처리할 파일이 없습니다.';
+        if(fail===0) show('<i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> '+msg+'. 교육생 화면에 바로 반영됩니다.', '#ecfdf5');
+        else show('<i class="fa-solid fa-triangle-exclamation" style="color:#d97706;"></i> '+msg, '#fff7ed');
+        setTimeout(function(){ if(pb) pb.style.display='none'; }, 6000);
     }
     window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui._matRenderList(); });
 };
 
-/* ── 연결 해제 / 삭제 ───────────────────────────────────── */
-ui.matUnlink = function(id){
+/* ══ [K74] 빼기 — 두 가지 중 고르게 한다 ════════════════════
+   · 이번 과정에서만 빼기 : 자료실에는 남아 다음 기수에 다시 씀 (잘못 연결했을 때)
+   · 자료실에서 완전 삭제 : 파일까지 지움 (다른 과정에서 쓰고 있으면 거기서도 사라짐)
+   ────────────────────────────────────────────────────────── */
+ui.matRemove = function(id){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
-    if(!confirm('이번 과정에서만 뺍니다.\n\n· 자료실에는 그대로 남아 다음에 다시 쓸 수 있습니다.\n· 교육생 화면에서는 사라집니다.')) return;
+    var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
+    if(!m) return ui.matUnlink(id);          // 자료실에서 이미 사라진 항목 → 목록에서만 제거
+    var mine = (m.uploader === ui._matWho());
+    var ov = document.createElement('div');
+    ov.id = 'matRemoveOv';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:22px;';
+    ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:470px; box-shadow:0 24px 60px rgba(15,23,42,.4);">'
+      + '<div style="font-size:17px; font-weight:900; color:#0f172a; margin-bottom:5px;">교재를 어떻게 할까요?</div>'
+      + '<div style="font-size:13px; font-weight:800; color:#475569; margin-bottom:4px; word-break:break-all;">' + ui._esc(m.title||m.fileName) + '</div>'
+      + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-bottom:16px;">' + ui._esc(m.uploader||'-') + ' · ' + window.kacMaterials.fmtSize(m.size) + '</div>'
+      + '<button onclick="document.getElementById(\'matRemoveOv\').remove(); ui.matUnlink(\''+id+'\', 1);" '
+        + 'style="width:100%; text-align:left; margin-bottom:10px; padding:14px 16px; border:1.5px solid #bfdbfe; border-radius:13px; background:#eff6ff; cursor:pointer;">'
+        + '<div style="font-size:14.5px; font-weight:900; color:#1d4ed8;"><i class="fa-solid fa-link-slash"></i> 이번 과정에서만 빼기</div>'
+        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">교육생 화면에서는 사라집니다.<br>자료실에는 그대로 남아 다음 기수에 다시 쓸 수 있습니다.</div></button>'
+      + '<button onclick="document.getElementById(\'matRemoveOv\').remove(); ui.matDestroy(\''+id+'\');" '
+        + 'style="width:100%; text-align:left; padding:14px 16px; border:1.5px solid #fecaca; border-radius:13px; background:#fef2f2; cursor:pointer;">'
+        + '<div style="font-size:14.5px; font-weight:900; color:#dc2626;"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</div>'
+        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">파일이 지워지며 되돌릴 수 없습니다.<br>다른 과정에서 쓰고 있다면 거기서도 사라집니다.'
+        + (mine ? '' : '<br><b style="color:#b45309;">⚠️ 다른 분(' + ui._esc(m.uploader||'미상') + ')이 올린 자료입니다.</b>') + '</div></button>'
+      + '<button onclick="document.getElementById(\'matRemoveOv\').remove();" '
+        + 'style="width:100%; margin-top:12px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">취소</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+};
+
+/* ── 연결 해제 / 삭제 ───────────────────────────────────── */
+ui.matUnlink = function(id, skipConfirm){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
+    // 선택 모달에서 이미 고른 경우(skipConfirm)에는 다시 묻지 않는다
+    if(!skipConfirm && !confirm('이번 과정에서만 뺍니다.\n\n· 자료실에는 그대로 남아 다음에 다시 쓸 수 있습니다.\n· 교육생 화면에서는 사라집니다.')) return;
     window.kacMaterials.unlink(state.room, id);
 };
 /* [K69] 삭제 권한은 강사 전원 — 올린 교수가 전보·퇴직해도 정리할 수 있어야 하기 때문.
