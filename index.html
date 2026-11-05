@@ -5271,6 +5271,12 @@ function _menuTableHTML(menu){
 window._kacMatList = [];
 function _kacMatWatch(room){
     if(!room) return;
+    /* [K83] 단독 화면 머리말에 쓸 과정명 */
+    try{
+        firebase.database().ref('courses/'+room+'/settings/courseName').once('value').then(function(s){
+            window._kacMatCourseName = String(s.val()||'').trim();
+        });
+    }catch(e){}
     try{ if(window._kacMatRef) window._kacMatRef.off(); }catch(e){}
     window._kacMatRef = firebase.database().ref('courses/'+room+'/materials');
     window._kacMatRef.on('value', async function(s){
@@ -5308,21 +5314,33 @@ function _kacMatApplyMenu(){
         if(hc) hc.textContent = n ? (n + '건') : '';
     }
 }
-function openMaterials(){
+/* [K83] 카카오톡 링크(?menu=materials)로 들어오면 교재만 보여야 한다.
+         반투명 시트로 띄우면 뒤의 질문 화면이 비쳐 지저분하므로,
+         그 경우에는 화면 전체를 덮는 단독 화면으로 연다. */
+function openMaterials(fullScreen){
     var list = window._kacMatList || [];
     if(!list.length) return showKacAlert('아직 등록된 교육 자료가 없습니다.\n강사님이 올리면 여기에 표시됩니다.');
     window._kacMatOpen = true;
+    var full = (fullScreen === true) || (window._kacMatDeepLink === true);
     var ov = document.getElementById('kacMatOverlay');
+    if(ov){ try{ ov.remove(); }catch(e){} ov = null; }   // 모드가 바뀔 수 있으므로 다시 만든다
     if(!ov){
         ov = document.createElement('div');
         ov.id = 'kacMatOverlay';
-        ov.style.cssText = 'position:fixed; inset:0; z-index:12000; background:rgba(15,23,42,.55); display:flex; align-items:flex-end; justify-content:center;';
-        ov.onclick = function(e){ if(e.target===ov) closeMaterials(); };
-        ov.innerHTML = '<div style="background:#fff; width:100%; max-width:560px; max-height:86vh; border-radius:22px 22px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(15,23,42,.3);">'
-          + '<div style="padding:18px 20px 12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px;">'
+        ov.style.cssText = 'position:fixed; inset:0; z-index:12000; background:'
+            + (full ? '#eef2f9' : 'rgba(15,23,42,.55)')
+            + '; display:flex; align-items:' + (full ? 'stretch' : 'flex-end') + '; justify-content:center;';
+        ov.onclick = function(e){ if(!full && e.target===ov) closeMaterials(); };
+        ov.innerHTML = '<div style="background:#fff; width:100%; max-width:560px; '
+            + (full ? 'height:100%; border-radius:0;' : 'max-height:86vh; border-radius:22px 22px 0 0;')
+            + ' display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(15,23,42,.3);">'
+          + '<div style="padding:' + (full ? 'calc(env(safe-area-inset-top,0px) + 16px)' : '18px') + ' 20px 12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px;">'
             + '<i class="fa-solid fa-book-open" style="color:#6366f1; font-size:19px;"></i>'
-            + '<div style="flex:1; font-size:17px; font-weight:900; color:#0f172a;">교육 자료</div>'
-            + '<button onclick="closeMaterials()" aria-label="닫기" style="width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:19px; font-weight:800; cursor:pointer;">&times;</button>'
+            + '<div style="flex:1; min-width:0;">'
+              + '<div style="font-size:17px; font-weight:900; color:#0f172a;">교육 자료</div>'
+              + (full ? '<div style="font-size:12px; font-weight:700; color:#94a3b8; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(window._kacMatCourseName || '') + '</div>' : '')
+            + '</div>'
+            + '<button onclick="closeMaterials()" aria-label="' + (full ? '홈으로' : '닫기') + '" style="flex-shrink:0; height:34px; padding:0 ' + (full ? '14px' : '0') + '; min-width:34px; border:none; border-radius:' + (full ? '10px' : '50%') + '; background:#f1f5f9; color:#475569; font-size:' + (full ? '13px' : '19px') + '; font-weight:800; cursor:pointer;">' + (full ? '홈으로' : '&times;') + '</button>'
           + '</div>'
           + '<div id="kacMatBody" style="flex:1; min-height:0; overflow-y:auto; padding:14px 16px 24px; -webkit-overflow-scrolling:touch;"></div>'
           + '</div>';
@@ -5333,6 +5351,12 @@ function openMaterials(){
 }
 function closeMaterials(){
     window._kacMatOpen = false;
+    /* [K83] 카카오 링크로 들어와 단독 화면이었다면, 닫을 때 빈 질문 화면이 드러나지 않도록 홈 카드로 보낸다 */
+    if(window._kacMatDeepLink){
+        window._kacMatDeepLink = false;
+        try{ var _o=document.getElementById('kacMatOverlay'); if(_o) _o.remove(); }catch(e){}
+        try{ if(typeof window.showKakaoHome==='function'){ window.showKakaoHome(); return; } }catch(e){}
+    }
     var ov = document.getElementById('kacMatOverlay');
     if(ov) ov.style.display='none';
 }
@@ -7755,7 +7779,7 @@ body.kac-quiz-active .quiz-overlay,
     food:   function(){ if(typeof openFoodModal==='function')       return openFoodModal(); },         // 항기원 맛집
     supply: function(){ if(typeof openFacilityRequest==='function') return openFacilityRequest(); },   // 생활관 비품
     home:   function(){ if(typeof window.showKakaoHome==='function') return window.showKakaoHome(); }, // 입교/홈
-    materials: function(){ if(typeof window.openMaterials==='function') return window.openMaterials(); }, // [K68] 교육 자료
+    materials: function(){ window._kacMatDeepLink = true; if(typeof window.openMaterials==='function') return window.openMaterials(true); }, // [K68] 교육 자료 — 링크 진입은 단독 화면
     qna:    function(){ /* Q&A = 메인 화면 자체 → 별도 동작 없음 */ },
     quiz:   function(){                                                                          // LIVE 퀴즈
       var ov=document.getElementById('quizOverlay');
