@@ -658,6 +658,15 @@ window.kacMaterials = (function () {
   function setKey(v) { try { sessionStorage.setItem(SKEY, v || ''); } catch (e) {} }
   function clearKey() { try { sessionStorage.removeItem(SKEY); } catch (e) {} }
 
+  /* [K68] 다운로드 주소는 저장된 url 이 아니라 '키'에서 그때그때 만든다.
+     파일명에 # 같은 특수문자가 들어간 예전 기록도 이 방식이면 정상 동작한다. */
+  function fileUrl(m) {
+    try {
+      if (m && m.key) return API + '/f/' + String(m.key).split('/').map(encodeURIComponent).join('/');
+    } catch (e) {}
+    return (m && m.url) || '';
+  }
+
   function fmtSize(n) {
     n = Number(n) || 0;
     if (n >= 1048576) return (n / 1048576).toFixed(1) + 'MB';
@@ -722,11 +731,11 @@ window.kacMaterials = (function () {
   function destroy(mat) {
     var key = getKey();
     if (!key) return Promise.reject(new Error('NO_KEY'));
-    return fetch(API + '/f/' + mat.key, { method: 'DELETE', headers: { 'X-Upload-Key': key } })
+    return fetch(fileUrl(mat), { method: 'DELETE', headers: { 'X-Upload-Key': key } })
       .then(function () { return firebase.database().ref('system/materials/' + mat.id).remove(); });
   }
 
   return { API: API, getKey: getKey, setKey: setKey, clearKey: clearKey,
-           fmtSize: fmtSize, ping: ping, upload: upload, listAll: listAll,
+           fmtSize: fmtSize, fileUrl: fileUrl, ping: ping, upload: upload, listAll: listAll,
            link: link, unlink: unlink, destroy: destroy };
 })();
