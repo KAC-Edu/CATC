@@ -6903,32 +6903,69 @@ resetShuttleRequests: function() {
         'driver.html':'vD', 'nutritionist.html':'vE', 'facility_admin.html':'vC', 'student_leader.html':'vA'
     },
     // [버전 실시간 로드] 각 플랫폼 파일 배지를 읽어 'Firebase 최신 기준'과 비교 (없으면 코드 기본값)
+    /* [K65] 플랫폼 상태 신호등 ─────────────────────────────────────────────
+       버전 글자만으로는 vJ129 / I43 / D65 처럼 서로 비교가 안 돼 상태를 알 수 없었다.
+       이제 배포본을 직접 받아 아래 네 가지로 판정해 한눈에 보여준다.
+         🟢 정상      — 파일 온전(</html> 로 끝남) + 등록된 기준과 일치
+         🟡 기준과 다름 — 새로 올렸거나(기준 갱신 필요) 예전 파일이 남아 있음
+         🔴 파일 잘림  — 끝이 잘려 그 화면 전체가 멈출 수 있음(과거 실제 사고)
+         ⚪ 미배포     — 파일이 없거나 버전 표기가 없음
+       ──────────────────────────────────────────────────────────────────── */
     _loadPlatVersions: function(list){
         const box = document.getElementById('platVerList'); if(!box) return;
         const fbP = firebase.database().ref('system/platformVersions').once('value').then(function(s){ return s.val()||null; }).catch(function(){ return null; });
         const filesP = Promise.all(list.map(function(it){
             return fetch(it.file + '?t=' + Date.now())
-                .then(function(r){ return r.ok ? r.text() : ''; })
-                .then(function(t){ var m = t.match(/id="__catcVer"[^>]*>([^<·]+)/); return { name: it.name, file: it.file, ver: (m ? m[1].trim() : '-') }; })
-                .catch(function(){ return { name: it.name, file: it.file, ver: '-' }; });
+                .then(function(r){ return r.ok ? r.text() : null; })
+                .then(function(t){
+                    if (t === null) return { name: it.name, file: it.file, ver: '-', gone: true, whole: false };
+                    var m = t.match(/id="__catcVer"[^>]*>([^<·]+)/);
+                    // 파일 끝까지 온전히 내려왔는지 — 저장/업로드 중 잘림 사고 탐지.
+                    //  일부 파일은 </html> 뒤에 빌드 주석이 붙어 있어 '맨 끝'으로 보면 오탐 → 끝부분 구간에서 확인.
+                    var whole = /<\/html>/i.test(t.slice(-3000));
+                    return { name: it.name, file: it.file, ver: (m ? m[1].trim() : '-'), gone: false, whole: whole };
+                })
+                .catch(function(){ return { name: it.name, file: it.file, ver: '-', gone: true, whole: false }; });
         }));
         Promise.all([fbP, filesP]).then(function(res){
             var baseline = res[0];                       // Firebase 등록 기준만 사용(코드 폴백으로 빨강 오표시 방지)
             var hasBase = baseline && Object.keys(baseline).length > 0;
             var arr = res[1]; ui._lastPlatVers = arr;
-            var diffN = 0;
-            box.innerHTML = arr.map(function(v){
+            var nDiff = 0, nBad = 0, nNone = 0, nOk = 0;
+
+            function judge(v){
+                if (v.gone)                return { k:'none', c:'#cbd5e1', t:'미배포',      d:'파일이 없습니다' };
+                if (!v.whole)              return { k:'bad',  c:'#ef4444', t:'파일 잘림',   d:'파일 끝이 잘렸습니다 — 다시 배포하세요' };
+                if (v.ver === '-')         return { k:'none', c:'#cbd5e1', t:'버전 없음',   d:'버전 표기가 없습니다' };
                 var base = hasBase ? (baseline[v.file] || null) : null;
-                var isDiff = base && v.ver !== '-' && v.ver !== base;
-                if (isDiff) diffN++;
-                var verBg = isDiff ? '#fee2e2' : '#dbeafe';
-                var verCol = isDiff ? '#b91c1c' : '#0f172a';
-                var note = isDiff ? '<span style="font-size:10px; color:#b91c1c; font-weight:800; margin-left:5px;">기준 '+base+'</span>' : '';
-                return '<div style="display:flex; align-items:center; justify-content:space-between; font-size:12px;"><span style="color:#475569; font-weight:700;">'+v.name+(isDiff?' <i class=\'fa-solid fa-triangle-exclamation\' style=\'color:#f59e0b;\'></i>':'')+'</span><span><span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:'+verCol+'; background:'+verBg+'; padding:1px 8px; border-radius:6px;">'+v.ver+'</span>'+note+'</span></div>';
-            }).join('') + (
-                !hasBase ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:9px; color:#1d4ed8; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-circle-info"></i> 최신 기준이 등록되지 않았습니다. 모든 파일을 올린 뒤 아래 버튼으로 등록하세요.</div>'
-                : diffN ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; color:#b45309; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-triangle-exclamation"></i> 기준과 다른 플랫폼 '+diffN+'개 — 빨간 항목을 확인하세요. (새로 배포했다면 아래 버튼으로 기준 갱신)</div>'
-                : '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:9px; color:#047857; font-size:11.5px; font-weight:800;"><i class="fa-solid fa-circle-check"></i> 모든 플랫폼이 기준과 일치합니다.</div>');
+                if (base && v.ver !== base) return { k:'diff', c:'#f59e0b', t:'기준과 다름', d:'등록된 기준: ' + base };
+                return { k:'ok', c:'#22c55e', t:'정상', d:'기준과 일치합니다' };
+            }
+
+            box.innerHTML = arr.map(function(v){
+                var s = judge(v);
+                if (s.k==='diff') nDiff++; else if (s.k==='bad') nBad++; else if (s.k==='none') nNone++; else nOk++;
+                var dot = '<span title="'+s.t+' — '+s.d+'" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+s.c+';'
+                        + 'box-shadow:0 0 0 2px '+s.c+'33;flex-shrink:0;"></span>';
+                var verCol = (s.k==='ok') ? '#0f172a' : (s.k==='bad' ? '#b91c1c' : (s.k==='diff' ? '#b45309' : '#94a3b8'));
+                var verBg  = (s.k==='ok') ? '#dbeafe' : (s.k==='bad' ? '#fee2e2' : (s.k==='diff' ? '#fff7ed' : '#f1f5f9'));
+                return '<div title="'+s.t+' — '+s.d+'" style="display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:12px;">'
+                     +   '<span style="display:flex; align-items:center; gap:7px; min-width:0; color:#475569; font-weight:700;">'+dot
+                     +     '<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+v.name+'</span></span>'
+                     +   '<span style="font-family:ui-monospace,Menlo,Consolas,monospace; font-weight:800; color:'+verCol+'; background:'+verBg+'; padding:1px 8px; border-radius:6px; white-space:nowrap;">'+v.ver+'</span>'
+                     + '</div>';
+            }).join('')
+            + '<div style="grid-column:1/-1; margin-top:9px; display:flex; flex-wrap:wrap; gap:4px 12px; font-size:10.5px; font-weight:700; color:#94a3b8;">'
+            +   '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:4px;"></span>정상</span>'
+            +   '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#f59e0b;margin-right:4px;"></span>기준과 다름</span>'
+            +   '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>파일 잘림</span>'
+            +   '<span><span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#cbd5e1;margin-right:4px;"></span>미배포</span>'
+            + '</div>'
+            + (
+                nBad ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fef2f2; border:1px solid #fecaca; border-radius:9px; color:#b91c1c; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-circle-exclamation"></i> 빨간 항목 '+nBad+'개 — 파일 끝이 잘렸습니다. 그 화면이 통째로 멈출 수 있으니 즉시 다시 배포하세요.</div>'
+                : !hasBase ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:9px; color:#1d4ed8; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-circle-info"></i> 최신 기준이 등록되지 않았습니다. 모든 파일을 올린 뒤 아래 버튼으로 등록하세요.</div>'
+                : nDiff ? '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#fff7ed; border:1px solid #fed7aa; border-radius:9px; color:#b45309; font-size:11.5px; font-weight:800; line-height:1.5;"><i class="fa-solid fa-triangle-exclamation"></i> 기준과 다른 플랫폼 '+nDiff+'개 — 방금 새로 배포했다면 아래 버튼으로 기준을 갱신하세요.</div>'
+                : '<div style="grid-column:1/-1; margin-top:8px; padding:9px 11px; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:9px; color:#047857; font-size:11.5px; font-weight:800;"><i class="fa-solid fa-circle-check"></i> 사용 중인 플랫폼 '+nOk+'개 모두 정상입니다.'+(nNone?' (미배포 '+nNone+'개)':'')+'</div>');
         });
     },
 
@@ -16273,6 +16310,7 @@ ui.foodNewsSubmit=function(){
     firebase.database().ref('system/foodspots').push({ name:ui._fnSelected.name, category:cat, address:ui._fnSelected.address||'', lat:ui._fnSelected.lat||null, lng:ui._fnSelected.lng||null, phone:ui._fnSelected.phone||'', placeUrl:ui._fnSelected.placeUrl||'', distanceKm:dist, comment:cm, likes:0, ts:Date.now() }).then(function(){ ui.closeFoodNewsAdd(); ui.showAlert('✅ 맛집이 등록되었습니다.'); }).catch(function(){ ui.showAlert('등록 중 오류가 발생했습니다.'); });
 };
 ui.foodNewsEdit=function(id){
+    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다.");   // [K66]
     var o=ui._foodNewsCache.filter(function(x){ return x.id===id; })[0]; if(!o) return;
     ui._fnInitKakao();
     var f=document.getElementById('foodNewsAddModal'); if(f) f.style.display='flex';
@@ -16289,10 +16327,17 @@ ui.foodNewsEdit=function(id){
     ui._fnRenderMap();
     try{ f.scrollIntoView({behavior:'smooth', block:'center'}); }catch(e){}
 };
+/* [K66] 맛집 삭제 — 강사 플랫폼에 들어온 사람은 누구나 가능(비밀번호로 이미 걸러짐).
+   단 ①옵저버는 비번 없이 읽기 전용으로 들어오므로 제외(다른 편집과 동일 규칙)
+      ②맛집은 전 과정 공용(system/foodspots)이라 지우면 모든 강의실에서 사라지고 복구가
+        안 되므로, 확인창에 그 사실을 분명히 적는다. */
 ui.foodNewsDelete=function(id){
+    if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 삭제할 수 없습니다.");
     var o=ui._foodNewsCache.filter(function(x){ return x.id===id; })[0];
     var nm=o?(o.name||'이 맛집'):'이 맛집';
-    ui.showConfirm('"'+nm+'" 항목을 삭제할까요? 되돌릴 수 없습니다.', function(){
+    ui.showConfirm('"'+nm+'" 항목을 삭제할까요?\n\n'
+        + '· 맛집 목록은 전 과정이 함께 보는 공용 자료입니다.\n'
+        + '· 삭제하면 모든 강의실에서 사라지며 되돌릴 수 없습니다.', function(){
         firebase.database().ref('system/foodspots/'+id).remove().then(function(){ ui.showAlert('🗑️ 삭제되었습니다.'); }).catch(function(){ ui.showAlert('삭제 중 오류가 발생했습니다.'); });
     });
 };
