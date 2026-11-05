@@ -631,3 +631,102 @@ try {
     }
   }, true);
 })();
+
+/* ══════════════════════════════════════════════════════════════════════
+   [K68] 교재 자료실 — 전 플랫폼 공통
+   ────────────────────────────────────────────────────────────────────
+   · 파일 실체는 Cloudflare R2 에 보관하고, Firebase 에는 '주소'만 기록한다.
+     → Firebase 용량·이그레스와 무관하고, 개인정보도 섞이지 않는다.
+   · 저장 구조
+       system/materials/{id}          교재 자체(영구 보관 — 과정이 끝나도 남음)
+         { title, fileName, size, url, key, uploader, uploadedAt }
+       courses/{room}/materials/{id}  이번 과정에 '연결'된 교재
+         { linkedAt, linkedBy }
+     → 과정이 끝나면 연결만 끊기고 파일은 자료실에 남아, 다음 기수에서 다시 쓴다.
+   · 업로드 암호(UPLOAD_KEY)는 코드에 넣지 않는다. 강사가 올릴 때 1회 입력받아
+     그 탭에서만(sessionStorage) 보관한다.
+   ══════════════════════════════════════════════════════════════════════ */
+window.KAC_MATERIALS_API = 'https://catcmaterials.jds0616.workers.dev';
+
+window.kacMaterials = (function () {
+  'use strict';
+  var API = window.KAC_MATERIALS_API;
+  var SKEY = 'kac_mat_key';
+
+  /* 업로드 암호 — 이 탭에서만 기억(창을 닫으면 사라짐) */
+  function getKey() { try { return sessionStorage.getItem(SKEY) || ''; } catch (e) { return ''; } }
+  function setKey(v) { try { sessionStorage.setItem(SKEY, v || ''); } catch (e) {} }
+  function clearKey() { try { sessionStorage.removeItem(SKEY); } catch (e) {} }
+
+  function fmtSize(n) {
+    n = Number(n) || 0;
+    if (n >= 1048576) return (n / 1048576).toFixed(1) + 'MB';
+    if (n >= 1024) return Math.round(n / 1024) + 'KB';
+    return n + 'B';
+  }
+
+  /* 설치 상태 확인 */
+  function ping() {
+    return fetch(API + '/ping').then(function (r) { return r.json(); }).catch(function () { return { ok: false }; });
+  }
+
+  /* 파일 1개 올리기 → R2 저장 후 system/materials 에 기록, id 반환 */
+  function upload(file, uploader) {
+    var key = getKey();
+    if (!key) return Promise.reject(new Error('NO_KEY'));
+    return fetch(API + '/upload?name=' + encodeURIComponent(file.name), {
+      method: 'POST',
+      headers: { 'X-Upload-Key': key, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    })
+    .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); })
+    .then(function (j) {
+      if (!j.ok) {
+        if (j._status === 401) { clearKey(); throw new Error('업로드 암호가 올바르지 않습니다.'); }
+        throw new Error(j.error || '업로드에 실패했습니다.');
+      }
+      var ref = firebase.database().ref('system/materials').push();
+      var rec = {
+        title: String(file.name || '').replace(/\.[^.]+$/, ''),   // 확장자 뺀 이름을 기본 제목으로
+        fileName: j.name,
+        size: Number(j.size || file.size || 0),
+        url: j.url,
+        key: j.key,
+        uploader: String(uploader || '미상'),
+        uploadedAt: Date.now()
+      };
+      return ref.set(rec).then(function () { return Object.assign({ id: ref.key }, rec); });
+    });
+  }
+
+  /* 자료실 전체 목록 (최신순) */
+  function listAll() {
+    return firebase.database().ref('system/materials').once('value').then(function (s) {
+      var v = s.val() || {}, out = [];
+      Object.keys(v).forEach(function (k) { out.push(Object.assign({ id: k }, v[k])); });
+      out.sort(function (a, b) { return (b.uploadedAt || 0) - (a.uploadedAt || 0); });
+      return out;
+    });
+  }
+
+  /* 과정에 연결 / 연결 해제 — 파일은 그대로 두고 연결만 바꾼다 */
+  function link(room, id, who) {
+    return firebase.database().ref('courses/' + room + '/materials/' + id)
+      .set({ linkedAt: Date.now(), linkedBy: String(who || '') });
+  }
+  function unlink(room, id) {
+    return firebase.database().ref('courses/' + room + '/materials/' + id).remove();
+  }
+
+  /* 자료실에서 영구 삭제 — R2 파일까지 지운다(되돌릴 수 없음) */
+  function destroy(mat) {
+    var key = getKey();
+    if (!key) return Promise.reject(new Error('NO_KEY'));
+    return fetch(API + '/f/' + mat.key, { method: 'DELETE', headers: { 'X-Upload-Key': key } })
+      .then(function () { return firebase.database().ref('system/materials/' + mat.id).remove(); });
+  }
+
+  return { API: API, getKey: getKey, setKey: setKey, clearKey: clearKey,
+           fmtSize: fmtSize, ping: ping, upload: upload, listAll: listAll,
+           link: link, unlink: unlink, destroy: destroy };
+})();
