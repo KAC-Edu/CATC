@@ -4126,17 +4126,16 @@ loadInternalAttendance: function() {
         // [K36] 명단 외 미체크 입교자(구경꾼 = 모니터링 직원 등)는 출결 대상(분모)·명단에서 제외.
         const _normF = n => String(n==null?'':n).replace(/\s+/g,'').toLowerCase();
         const _riKeyF = n => String(n||'').trim().replace(/[.#$\[\]\/]/g,'_');
-        let _rsetF = null;
+        // [K63] 명단이 비어도 '전원'으로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준.
+        let _rsetF = {};
         try {
             const _exp = (state._dashExpectedCache||[]).map(n=>String(n||'').trim()).filter(Boolean);
-            if(_exp.length){
-                _rsetF = {}; _exp.forEach(n=>_rsetF[_normF(n)]=1);
-                const _inc = state._rosterIncludeCache||{};
-                Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc[_riKeyF(nm)]) _rsetF[_normF(nm)]=1; });
-            }
+            _exp.forEach(n=>_rsetF[_normF(n)]=1);
+            const _inc = state._rosterIncludeCache||{};
+            Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc[_riKeyF(nm)]) _rsetF[_normF(nm)]=1; });
         } catch(e){}
         const sortedList = Array.from(uniqueStudentsMap.values())
-            .filter(x => !_rsetF || _rsetF[_normF(x.name)])
+            .filter(x => _rsetF[_normF(x.name)])
             .sort((a,b) => a.name.localeCompare(b.name));
 
         attendanceRef.off();
@@ -7460,7 +7459,8 @@ resetShuttleRequests: function() {
         var registered=Object.keys(r.students||{}).filter(function(k){return kacIsRealStudent((r.students||{})[k],k);}).map(function(k){return (r.students||{})[k];});
         var roster=Array.isArray(src.roster)?src.roster:[];
         // [K36] '입교' 표시용 명단 기준 인원 — 명단 외 미체크 입교자(구경꾼) 제외
-        var _regEff=(function(){ if(!roster.length) return registered.length; var _s={}; roster.forEach(function(n){_s[norm(n)]=1;}); var _i=(r.rosterInclude)||{}; registered.forEach(function(x){var nm=String(x.name||'').trim(); if(_i[nm.replace(/[.#$\[\]\/]/g,'_')]) _s[norm(nm)]=1;}); return registered.filter(function(x){return _s[norm(x.name)];}).length; })();
+        // [K63] 명단이 비어도 '입교자 전원'으로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준.
+        var _regEff=(function(){ var _s={}; roster.forEach(function(n){_s[norm(n)]=1;}); var _i=(r.rosterInclude)||{}; registered.forEach(function(x){var nm=String(x.name||'').trim(); if(_i[nm.replace(/[.#$\[\]\/]/g,'_')]) _s[norm(nm)]=1;}); return registered.filter(function(x){return _s[norm(x.name)];}).length; })();
         var requests=Object.values((r.shuttle&&r.shuttle.requests)||{}).filter(Boolean);
         var actions=[];
         (function walk(obj,date){
@@ -8026,9 +8026,9 @@ resetShuttleRequests: function() {
                 const _rosterNm=new Set(list.map(x=>String(x&&x.name||'').trim()).filter(Boolean));
                 // [K36] 입교 인원(stuCnt) = 명단 기준(예정 명단 ∪ '명단 포함' 체크). 명단 외 미체크 입교자(구경꾼) 제외.
                 const _incRC=r.rosterInclude||{};
-                let stuCnt;
-                if(_rosterNm.size){ let _sc=0; _arrivedSet.forEach(function(nm){ if(_rosterNm.has(nm) || _incRC[nm.replace(/[.#$\[\]\/]/g,'_')]) _sc++; }); stuCnt=_sc; }
-                else stuCnt=_arrivedSet.size;
+                // [K63] 명단이 비어도 '입교자 전원'으로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준.
+                let stuCnt=0;
+                _arrivedSet.forEach(function(nm){ if(_rosterNm.has(nm) || _incRC[nm.replace(/[.#$\[\]\/]/g,'_')]) stuCnt++; });
                 const _qrOnly=Object.keys(r.students||{}).map(k=>Object.assign({_k:k},(r.students||{})[k])).filter(s=>kacIsRealStudent(s,s._k)&&!_rosterNm.has(String(s.name).trim())).map(s=>({name:s.name,empNo:(s.empNo||s.employeeNo||''),dept:(s.dept||''),_qr:true}));
                 const _disp=list.concat(_qrOnly);
                 let detail;
