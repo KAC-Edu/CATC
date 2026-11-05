@@ -18822,25 +18822,29 @@ ui._matBindDrop = function(){
 ui._matNorm = function(name){
     return String(name||'')
         .replace(/\.[^.]+$/, '')                 // 확장자
-        .replace(/\([^)]*\)/g, '')               // (정기과정) 같은 괄호
-        .replace(/\[[^\]]*\]/g, '')
+        .replace(/^\s*\([^)]{1,8}과정\)/, '')     // 맨 앞 (정기과정) 같은 과정 표기만
         .replace(/20\d{2}|19\d{2}/g, '')         // 연도
-        .replace(/\d+\s*차|\d+\s*기|v\d+(\.\d+)?/gi, '')  // 2차 · 3기 · v2
         .replace(/최종|수정본|복사본|final|copy/gi, '')
-        .replace(/[\s_\-#.,·~()\[\]]/g, '')      // 공백·기호
+        .replace(/[\s_\-#.,·~]/g, '')            // 공백·기호 (괄호와 숫자는 남긴다)
         .toLowerCase();
 };
-/* 자료실에서 닮은 교재 찾기 — 완전 일치 또는 한쪽이 다른 쪽을 포함(6글자 이상) */
-ui._matFindSimilar = function(fileName){
+/* [K86] 중복 판정 — 이름이 '완전히' 같고 용량까지 비슷할 때만 묻는다.
+   예전에는 괄호 안을 통째로 지워 (PART_1)·(PART_2)가 같은 이름이 되고,
+   일부만 겹쳐도(포함 관계) 중복으로 봐서 다른 교재까지 잡혔다. */
+ui._matFindSimilar = function(file){
+    var fileName = (file && file.name) ? file.name : file;      // 문자열도 허용
+    var size = (file && typeof file.size === 'number') ? file.size : 0;
     var a = ui._matNorm(fileName);
     if(a.length < 4) return null;
     var hit = null;
     (ui._matAll||[]).forEach(function(m){
         if(hit) return;
-        var b = ui._matNorm(m.fileName || m.title);
-        if(!b) return;
-        if(a === b) { hit = m; return; }
-        if(a.length >= 6 && b.length >= 6 && (a.indexOf(b) >= 0 || b.indexOf(a) >= 0)) hit = m;
+        if(ui._matNorm(m.fileName || m.title) !== a) return;     // 이름이 완전히 같아야 한다
+        if(size && Number(m.size)){                              // 용량도 비슷해야 한다(±15%)
+            var big = Math.max(size, Number(m.size));
+            if(Math.abs(size - Number(m.size)) / big > 0.15) return;
+        }
+        hit = m;
     });
     return hit;
 };
@@ -18900,7 +18904,7 @@ ui._matUploadFiles = async function(files){
         var f = files[i];
         /* [K75] 비슷한 교재가 이미 있으면 먼저 묻는다 */
         var dupOld = null, act = null;
-        try{ dupOld = ui._matFindSimilar(f.name); }catch(e){}
+        try{ dupOld = ui._matFindSimilar(f); }catch(e){}
         if(dupOld){
             if(pb) pb.style.display='none';
             act = await ui._matAskDuplicate(f, dupOld);
