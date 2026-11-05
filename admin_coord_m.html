@@ -665,7 +665,7 @@ function rosterCountOf(room){
   try{ var cr=room.coordRoster&&room.coordRoster.list; if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) exp.push(x.name); }); }catch(e){}
   try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) exp=exp.concat(_dn); }catch(e){}
   exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
-  if(!exp.length) return studentsOf(room).length;
+  // [K63] 명단이 비어도 '입교자 전원'으로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준.
   var expSet={}; exp.forEach(function(n){expSet[n]=1;});
   var inc=room.rosterInclude||{};
   var includedOff=studentsOf(room).map(function(s){return String(s.name).trim();})
