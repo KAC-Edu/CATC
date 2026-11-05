@@ -5344,7 +5344,7 @@ function _kacMatRender(){
         + '받기를 누르면 휴대폰에 저장됩니다. 교육 기간 중에만 받을 수 있습니다.</div>'
       + list.map(function(m){
             var ic = icon(m.fileName);
-            return '<a href="'+escapeHtml(m.url)+'" target="_blank" rel="noopener" '
+            return '<a href="'+escapeHtml(window.kacMaterials ? window.kacMaterials.fileUrl(m) : (m.url||''))+'" target="_blank" rel="noopener" '
               + 'style="display:flex; align-items:center; gap:13px; padding:14px 15px; border:1px solid #eef2f7; border-radius:14px; margin-bottom:10px; text-decoration:none; background:#fff;">'
               + '<i class="fa-solid '+ic[0]+'" style="font-size:24px; color:'+ic[1]+'; flex-shrink:0;"></i>'
               + '<div style="flex:1; min-width:0;">'
