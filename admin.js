@@ -2015,6 +2015,7 @@ const profMgr = {
                 bioList: profMgr.collectBioRows()
             };
             firebase.database().ref(`system/professorProfiles/${name}`).set(profileData).then(() => {
+                try { ui.clearProfAvatarCache(name); } catch(e) {}   // [K76] 바뀐 사진 즉시 반영
                 ui.showAlert("✅ 담임 교수 프로필이 성공적으로 저장되었습니다.", () => ui.closeProfProfileModal());
             });
         };
@@ -3026,6 +3027,7 @@ loadDashboardStats: function() {
            나머지 인원은 바로 아랫줄 '외 N명' 배지로 표시하고, 그 배지를 눌러야 전체 목록이 뜬다. */
         const profOnlyEl = document.getElementById('dashProfNameOnly');
         if (profOnlyEl) profOnlyEl.innerText = kacProfMain(st) || "미지정";
+        try { ui.applyProfAvatar(kacProfMain(st)); } catch(e) {}   // [K76] 담임 사진을 동그라미에
         const moreEl = document.getElementById('dashProfMore');
         if (moreEl) {
             const rest = kacProfAll(st).length - 1;
@@ -7776,6 +7778,7 @@ resetShuttleRequests: function() {
                     var _st = _s.val() || {};
                     var _only = document.getElementById('dashProfNameOnly');
                     if(_only) _only.innerText = kacProfMain(_st) || '미지정';
+                    try { ui.applyProfAvatar(kacProfMain(_st)); } catch(e) {}   // [K76] 교체된 교수 사진
                     var _more = document.getElementById('dashProfMore');
                     if(_more){
                         var _rest = kacProfAll(_st).length - 1;
@@ -18584,6 +18587,10 @@ ui._matRenderList = function(){
       + '<button id="matBulkBtn" onclick="ui.matDownloadSelected()" disabled '
         + 'style="padding:8px 15px; border:none; border-radius:9px; background:#e2e8f0; color:#94a3b8; font-size:12.5px; font-weight:800; cursor:not-allowed;">'
         + '<i class="fa-solid fa-download"></i> 선택 다운로드</button>'
+      /* [K77] 선택한 교재 일괄 빼기 — 과정에서만 빼기 / 자료실에서 완전 삭제 중 선택 */
+      + '<button id="matBulkDelBtn" onclick="ui.matRemoveSelected()" disabled '
+        + 'style="padding:8px 15px; border:none; border-radius:9px; background:#e2e8f0; color:#94a3b8; font-size:12.5px; font-weight:800; cursor:not-allowed;">'
+        + '<i class="fa-solid fa-trash"></i> 선택 빼기</button>'
       + '</div>';
     box.innerHTML = bar + rows + ui._matUsageHtml();
     ui._matSyncBulk();
@@ -18617,18 +18624,99 @@ ui._matSyncBulk = function(){
     var chk = document.querySelectorAll('.matRowChk');
     var on  = document.querySelectorAll('.matRowChk:checked');
     var btn = document.getElementById('matBulkBtn');
+    var del = document.getElementById('matBulkDelBtn');
     var all = document.getElementById('matChkAll');
     if(all) all.checked = (chk.length > 0 && on.length === chk.length);
-    if(!btn) return;
-    if(on.length){
-        btn.disabled = false;
-        btn.style.background='#2563eb'; btn.style.color='#fff'; btn.style.cursor='pointer';
-        btn.innerHTML = '<i class="fa-solid fa-download"></i> 선택 '+on.length+'건 다운로드';
-    } else {
-        btn.disabled = true;
-        btn.style.background='#e2e8f0'; btn.style.color='#94a3b8'; btn.style.cursor='not-allowed';
-        btn.innerHTML = '<i class="fa-solid fa-download"></i> 선택 다운로드';
+    if(btn){
+        if(on.length){
+            btn.disabled = false;
+            btn.style.background='#2563eb'; btn.style.color='#fff'; btn.style.cursor='pointer';
+            btn.innerHTML = '<i class="fa-solid fa-download"></i> 선택 '+on.length+'건 다운로드';
+        } else {
+            btn.disabled = true;
+            btn.style.background='#e2e8f0'; btn.style.color='#94a3b8'; btn.style.cursor='not-allowed';
+            btn.innerHTML = '<i class="fa-solid fa-download"></i> 선택 다운로드';
+        }
     }
+    if(del){
+        if(on.length){
+            del.disabled = false;
+            del.style.background='#fef2f2'; del.style.color='#dc2626'; del.style.cursor='pointer';
+            del.innerHTML = '<i class="fa-solid fa-trash"></i> 선택 '+on.length+'건 빼기';
+        } else {
+            del.disabled = true;
+            del.style.background='#e2e8f0'; del.style.color='#94a3b8'; del.style.cursor='not-allowed';
+            del.innerHTML = '<i class="fa-solid fa-trash"></i> 선택 빼기';
+        }
+    }
+};
+
+/* ══ [K77] 선택한 교재 일괄 빼기 ═════════════════════════════
+   낱개 [빼기]와 같은 두 선택지를 한 번에 적용한다.
+   완전 삭제는 되돌릴 수 없으므로, 남의 자료가 섞여 있으면 그 수를 함께 알린다.
+   ────────────────────────────────────────────────────────── */
+ui.matRemoveSelected = function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
+    var ids = Array.from(document.querySelectorAll('.matRowChk:checked')).map(function(c){ return c.value; });
+    if(!ids.length) return;
+    var byId = {}; (ui._matAll||[]).forEach(function(m){ byId[m.id]=m; });
+    var me = ui._matWho();
+    var others = ids.filter(function(id){ var m=byId[id]; return m && m.uploader !== me; }).length;
+    var names = ids.map(function(id){ var m=byId[id]; return m ? (m.title||m.fileName) : '(삭제된 교재)'; });
+    var preview = names.slice(0,5).map(function(n){ return '· ' + ui._esc(n); }).join('<br>')
+                + (names.length > 5 ? '<br>· 외 ' + (names.length-5) + '건' : '');
+
+    var ov = document.createElement('div');
+    ov.id = 'matBulkRmOv';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:22px;';
+    ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:500px; box-shadow:0 24px 60px rgba(15,23,42,.4);">'
+      + '<div style="font-size:17px; font-weight:900; color:#0f172a; margin-bottom:10px;">선택한 교재 ' + ids.length + '건을 어떻게 할까요?</div>'
+      + '<div style="max-height:150px; overflow-y:auto; padding:11px 13px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:11px; font-size:12.5px; font-weight:700; color:#475569; line-height:1.7; margin-bottom:16px;">' + preview + '</div>'
+      + '<button onclick="document.getElementById(\'matBulkRmOv\').remove(); ui._matBulkRun(0);" '
+        + 'style="width:100%; text-align:left; margin-bottom:10px; padding:14px 16px; border:1.5px solid #bfdbfe; border-radius:13px; background:#eff6ff; cursor:pointer;">'
+        + '<div style="font-size:14.5px; font-weight:900; color:#1d4ed8;"><i class="fa-solid fa-link-slash"></i> 이번 과정에서만 빼기</div>'
+        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">교육생 화면에서만 사라집니다.<br>자료실에는 그대로 남습니다.</div></button>'
+      + '<button onclick="document.getElementById(\'matBulkRmOv\').remove(); ui._matBulkRun(1);" '
+        + 'style="width:100%; text-align:left; padding:14px 16px; border:1.5px solid #fecaca; border-radius:13px; background:#fef2f2; cursor:pointer;">'
+        + '<div style="font-size:14.5px; font-weight:900; color:#dc2626;"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</div>'
+        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">파일이 지워지며 되돌릴 수 없습니다.<br>다른 과정에서 쓰고 있다면 거기서도 사라집니다.'
+        + (others ? '<br><b style="color:#b45309;">⚠️ 이 중 ' + others + '건은 다른 분이 올린 자료입니다.</b>' : '') + '</div></button>'
+      + '<button onclick="document.getElementById(\'matBulkRmOv\').remove();" '
+        + 'style="width:100%; margin-top:12px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">취소</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    ui._matBulkIds = ids;
+};
+
+ui._matBulkRun = async function(destroy){
+    var ids = ui._matBulkIds || []; if(!ids.length) return;
+    var byId = {}; (ui._matAll||[]).forEach(function(m){ byId[m.id]=m; });
+    if(destroy && !confirm('정말 자료실에서 ' + ids.length + '건을 완전히 삭제할까요?\n되돌릴 수 없습니다.')) return;
+    if(destroy && !(await ui._matEnsureKey())) return;
+
+    var pb = document.getElementById('matProgress');
+    var show = function(msg, bg){
+        if(!pb) return;
+        pb.style.display='block';
+        pb.innerHTML = '<div style="padding:12px 15px; border-radius:11px; background:'+(bg||'#eff6ff')+'; border:1px solid #dbeafe; font-size:13px; font-weight:800; color:#1d4ed8;">'+msg+'</div>';
+    };
+    var ok = 0, fail = 0;
+    for(var i=0;i<ids.length;i++){
+        var m = byId[ids[i]];
+        show('<i class="fa-solid fa-spinner fa-spin"></i> ('+(i+1)+'/'+ids.length+') 처리 중…');
+        try{
+            if(destroy && m) await window.kacMaterials.destroy(m);
+            await window.kacMaterials.unlink(state.room, ids[i]);
+            ok++;
+        }catch(e){ fail++; console.warn('[교재 일괄] 실패', e); }
+    }
+    show('<i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> '
+        + (destroy ? '삭제' : '연결 해제') + ' ' + ok + '건 완료' + (fail ? ' · 실패 ' + fail + '건' : ''),
+        fail ? '#fff7ed' : '#ecfdf5');
+    setTimeout(function(){ if(pb) pb.style.display='none'; }, 5000);
+    ui._matBulkIds = [];
+    window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui._matRenderList(); });
 };
 ui.matToggleAll = function(on){
     document.querySelectorAll('.matRowChk').forEach(function(c){ c.checked = !!on; });
@@ -19015,6 +19103,64 @@ ui.matShowQr = function(){
         try{ new QRCode(qb, { text:url, width:200, height:200, correctLevel:QRCode.CorrectLevel.H }); }
         catch(e){ qb.textContent = url; }
     } else if(qb){ qb.textContent = url; }
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K76] 과정현황 담임 카드 — 등록된 교수 사진을 동그라미에 넣는다(카톡 프로필 느낌)
+   ──────────────────────────────────────────────────────────────────────────
+   · 사진은 이미 system/professorProfiles/{이름}/photo 에 있다(프로필 모달이 쓰는 것).
+   · 사진이 없거나 못 읽으면 기존 사람 아이콘을 그대로 둔다.
+   · 같은 이름을 다시 그릴 때는 서버를 다시 읽지 않도록 캐시한다(이그레스 절약).
+   ══════════════════════════════════════════════════════════════════════════ */
+ui._profPhotoCache = {};
+ui.applyProfAvatar = function(name){
+    var box = document.querySelector('.prof-glass-card .prof-avatar');
+    if(!box) return;
+    name = String(name||'').trim();
+
+    var paint = function(src){
+        if(box._lastSrc === src) return;          // 같은 사진이면 다시 그리지 않음(깜빡임 방지)
+        box._lastSrc = src;
+        if(src){
+            box.style.padding = '0';
+            box.style.overflow = 'hidden';
+            box.style.background = '#fff';
+            box.innerHTML = '<img alt="" src="' + src + '" '
+                + 'style="width:100%; height:100%; object-fit:cover; display:block;" '
+                + 'onerror="this.parentElement.innerHTML=&quot;<i class=\\&quot;fa-solid fa-user-tie\\&quot;></i>&quot;;">';
+        } else {
+            box.style.padding = '';
+            box.style.overflow = '';
+            box.style.background = '';
+            box.innerHTML = '<i class="fa-solid fa-user-tie"></i>';
+        }
+    };
+
+    if(!name || name === '-' || name === '미지정'){ paint(''); return; }
+    if(Object.prototype.hasOwnProperty.call(ui._profPhotoCache, name)){
+        paint(ui._profPhotoCache[name] || '');
+        return;
+    }
+    firebase.database().ref('system/professorProfiles/' + name + '/photo').once('value')
+        .then(function(s){
+            var v = s.val() || '';
+            ui._profPhotoCache[name] = v;
+            // 늦게 도착한 응답이 다른 교수 사진을 덮어쓰지 않도록 현재 이름을 다시 확인
+            var cur = (document.getElementById('dashProfNameOnly')||{}).innerText || '';
+            if(String(cur).trim() === name) paint(v);
+        })
+        .catch(function(){ ui._profPhotoCache[name] = ''; });
+};
+/* 프로필에서 사진을 새로 저장하면 캐시를 비워 즉시 반영되게 한다 */
+ui.clearProfAvatarCache = function(name){
+    try{
+        if(name) delete ui._profPhotoCache[String(name).trim()];
+        else ui._profPhotoCache = {};
+        var box = document.querySelector('.prof-glass-card .prof-avatar');
+        if(box) box._lastSrc = null;
+        ui.applyProfAvatar((document.getElementById('dashProfNameOnly')||{}).innerText || '');
+    }catch(e){}
 };
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
