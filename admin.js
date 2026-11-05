@@ -19342,29 +19342,24 @@ ui._shuttleReqText = function(){
 
     var osong = n('total-osong'), term = n('total-term'), air = n('total-air'), car = n('total-car');
     var need  = osong + term + air;                 // 차량이 실제로 필요한 인원
-    var depart = g('dashShuttleTimeInline').replace(/[·|]/g,'').trim();
 
+    /* [K82] 카카오톡 말풍선에 맞춘 형식.
+         · 앞쪽 공백 들여쓰기 금지 — 가변폭 글꼴이라 줄마다 시작점이 어긋난다.
+         · 긴 구분선 금지 — 폰 폭을 넘어 줄이 깨진다.
+         · 빈 줄은 1개만 — 폰에서 말풍선이 길어져 스크롤이 생긴다. */
     var L = [];
     L.push('[퇴교 수송 요청]');
-    L.push('');
-    if(course)  L.push('○ 과정 : ' + course);
-    if(dateStr) L.push('○ 일자 : ' + dateStr + ' 퇴교');
-    if(depart)  L.push('○ 출발 : ' + depart);
+    if(course)  L.push(course);
+    if(dateStr) L.push(dateStr + ' 퇴교');
     L.push('');
     if(need){
-        L.push('○ 수송 인원');
-        if(osong) L.push('   - 오송역 : ' + osong + '명');
-        if(term)  L.push('   - 청주터미널 : ' + term + '명');
-        if(air)   L.push('   - 청주공항 : ' + air + '명');
-        L.push('   ────────────');
-        L.push('   합계 ' + need + '명');
+        if(osong) L.push('· 오송역 ' + osong + '명');
+        if(term)  L.push('· 청주터미널 ' + term + '명');
+        if(air)   L.push('· 청주공항 ' + air + '명');
+        L.push('합계 ' + need + '명' + (car ? ' (자차 ' + car + '명 제외)' : ''));
     } else {
-        L.push('○ 수송 인원 : 없음 (전원 자차)');
+        L.push('수송 인원 없음 (전원 자차' + (car ? ' ' + car + '명' : '') + ')');
     }
-    if(car) L.push('※ 자차 ' + car + '명은 제외된 인원입니다.');
-    L.push('');
-    var who = ui._matWho ? ui._matWho() : '';
-    L.push('항공기술훈련원' + (who && who !== '강사' ? ' ' + who + ' 교수' : '') + ' 드림');
     return L.join('\n');
 };
 
