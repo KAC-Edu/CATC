@@ -5027,6 +5027,7 @@ setMode: function(mode) {
             ui.initRoomSelect();
         }
         else if (mode === 'foodnews') { if(typeof ui.loadFoodNews==='function') ui.loadFoodNews(); }
+        else if (mode === 'materials') { if(typeof ui.loadMaterials==='function') ui.loadMaterials(); }   // [K68] 교재 자료실
 
         // 4. 상단 탭 활성화 표시
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -11992,7 +11993,7 @@ loadCurrentSettings: function() {
         const features = s.menuFeatures || {};
         // [첫 개설 디폴트] 차량(shuttle)·외출외박(adminAction)·오픈톡방(kakao)만 체크, 나머지는 강사가 추가
         const defaultOn = ['shuttle','adminAction','kakao'];
-        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd','foodspots'];
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd','foodspots','materials'];   // [K68] materials 추가
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
             if (!el) return;
@@ -12175,7 +12176,7 @@ saveAll: function() {
         updates[`courses/${state.room}/status/ownerSessionId`] = state.sessionId;
 
         // menuFeatures: 체크박스 상태 저장 (false일 때만 명시, true는 기본값)
-        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd','foodspots'];
+        const featureKeys = ['facility','shuttle','adminAction','meal','attendanceQr','cns','tabletLoan','kakao','hrd','foodspots','materials'];   // [K68] materials 추가
         const menuFeatures = {};
         featureKeys.forEach(key => {
             const el = document.getElementById(`feat-${key}`);
@@ -12258,7 +12259,7 @@ saveAll: function() {
                         }).catch(function(){});
                     }
                     // 데이터 노드 비움 (settings/status 는 새 값으로 이미 updates 에 들어있어 제외)
-                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections','gradPhoto'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
+                    ['students','internal_attendance','admin_actions','dinner_skips','shuttle','tablet_loans','quizAnswers','questions','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','connections','gradPhoto','materials'].forEach(function(k){ updates[`courses/${_room}/${k}`] = null; });
                     kacMedia.nullPaths(updates, _room);   // [J16] 이전된 미디어 저장소도 함께 정리
                     updates[`courses/${_room}/boardNotice`] = "";
                     updates[`courses/${_room}/coordNotice`] = "";
@@ -14147,6 +14148,9 @@ const annualPlanMgr = {
             [`${rPath}/settings/menuFeatures`]: null, // [K44] 교육생 앱 메뉴 활성화 기본 복귀 — 이전 과정의 메뉴 on/off가 새 과정에 상속되던 문제 차단
             [`${rPath}/settings/planId`]:     null,  // [K44] 방↔연간계획 연결고리 초기화 — 이전 과정 링크가 남아 새 과정 계획 매칭이 어긋나던 문제 차단(다음 매칭은 이름 기준)
             [`${rPath}/leaderExclude`]:       null,  // [K59] 학생장 제외자 초기화 — 이전 과정 제외자가 새 과정에 남지 않도록
+            /* [K68] 교재 '연결'만 해제한다. 파일과 자료실 목록(system/materials)은 그대로 두어
+                     다음 기수에서 [자료실에서 가져오기]로 다시 쓸 수 있게 한다. */
+            [`${rPath}/materials`]:           null,
             [`${rPath}/settings/countBasis`]:  null,  // [K55] 교육 인원 '직접 입력' 해제 — 이전 과정의 수기 인원이 새 과정에 상속되지 않도록
             [`${rPath}/settings/countManual`]: null,  // [K55] 수기 인원값 초기화
             [`${rPath}/status/quizStep`]:     'none', // [K44] 퀴즈 진행 상태 초기화 — 이전 과정의 'live' 등 잔여 플래그로 새 과정 교육생이 퀴즈 화면에 걸리던 소지 차단
@@ -14693,7 +14697,7 @@ annualPlanMgr._resetRoomFull = function (room, nm, pd) {
     const upd = {};
     upd[rp + '/settings'] = { courseName: '', roomDetailName: '', period: null, coordinatorName: null, subjects: null, password: null };
     upd[rp + '/status'] = { professorName: '', professorNames: null, professorMain: null, roomStatus: 'idle', ownerSessionId: null, resetKey: 'reset_' + Date.now(), mode: 'qa', quizStep: 'none', professorManual: null, roomDetailManual: null, coordManual: null, periodManual: null };   // [J90] 리셋 시 수동 플래그 전부 해제
-    ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'attendanceOtp', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'gradPhoto', 'venuePick'].forEach(function (k) { upd[rp + '/' + k] = null; });
+    ['coordNoticeHistory', 'students', 'internal_attendance', 'questions', 'admin_actions', 'shuttle', 'dinner_skips', 'tablet_loans', 'connections', 'quizAnswers', 'expectedStudents', 'coordRoster', 'activeQuiz', 'quizFinalResults', 'quizBank', 'attendanceQR', 'attendanceOtp', 'activeSurvey', 'surveyAnswers', 'lastSurveyResult', 'scheduleImage', 'gradPhoto', 'venuePick', 'materials'].forEach(function (k) { upd[rp + '/' + k] = null; });
     if (typeof kacMedia !== 'undefined') kacMedia.nullPaths(upd, room || (rp.split('/')[1]));   // [J16] media/{room} 정리
     ['boardNotice', 'notice', 'coordNotice'].forEach(function (k) { upd[rp + '/' + k] = ''; });
     // 생활관 명단(rosters)·배정(assignments) + 재생성 방지(dismissedCourses)
@@ -15959,7 +15963,7 @@ window.kacExpireEndedCourses = async function(){
           archives.push(firebase.database().ref('system/course_archive/'+room+'_'+Date.now()).set({room:room,courseName:nm,period:pd,prof:stt.professorName||'',coord:st.coordinatorName||'',admin_actions:aa,internal_attendance:ia,students:stu,expectedStudents:(rd.expectedStudents||null),archivedAt:firebase.database.ServerValue.TIMESTAMP}).catch(function(){}));
         }
         var b='courses/'+room+'/';
-        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto','surveyAnswers','activeSurvey','lastSurveyResult','returnCheckAck','zoomMeeting'].forEach(function(k){ updates[b+k]=null; });
+        ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto','surveyAnswers','activeSurvey','lastSurveyResult','returnCheckAck','zoomMeeting','materials'].forEach(function(k){ updates[b+k]=null; });
         kacMedia.nullPaths(updates, room);   // [J16] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
@@ -18421,5 +18425,251 @@ ui.applyShuttleFilter = function () {
    → 스크롤 중 고정 헤더를 접었다 폈다 하며 화면이 튀던(딸각거림) 문제 원천 제거.
    (스크롤 내리면 강사 리스트도 같이 사라져 무의미하던 수동 ▾ 토글 버튼도 함께 제거함) */
 
-/* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
  
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K68] 교재 자료실 — 강사 플랫폼
+   ──────────────────────────────────────────────────────────────────────────
+   · 파일 실체는 Cloudflare R2, Firebase 에는 주소만 기록(kacMaterials 공용함수)
+   · 과정이 끝나도 자료실(system/materials)에 남아 다음 기수에서 '연결'만 하면 됨
+   · 업로드 암호는 코드에 없고, 처음 올릴 때 1회 입력받아 그 탭에서만 기억
+   ══════════════════════════════════════════════════════════════════════════ */
+ui._matCourse = {};     // 이번 과정에 연결된 교재 { id: {linkedAt, linkedBy} }
+ui._matAll    = [];     // 자료실 전체
+ui._matLibFilter = 'all';
+
+/* 현재 담임/강사 이름 — 업로드한 사람 표기용 */
+ui._matWho = function(){
+    try{
+        var el = document.getElementById('dashProfNameOnly');
+        var n = el ? String(el.innerText||'').trim() : '';
+        if(n && n !== '-') return n;
+    }catch(e){}
+    try{ return String(localStorage.getItem('kac_admin_prof')||'').trim() || '강사'; }catch(e){ return '강사'; }
+};
+
+/* 업로드 암호 확보 — 없으면 1회 묻는다 */
+ui._matEnsureKey = async function(){
+    if(window.kacMaterials.getKey()) return true;
+    var v = prompt('교재 업로드 암호를 입력해 주세요.\n(이 창에서만 기억되며, 저장되지 않습니다)');
+    if(v === null) return false;
+    v = String(v).trim();
+    if(!v){ ui.showAlert('암호를 입력해야 올릴 수 있습니다.'); return false; }
+    window.kacMaterials.setKey(v);
+    return true;
+};
+
+ui.loadMaterials = function(){
+    if(!state.room){ ui.showAlert('강의실을 먼저 선택해 주세요.'); return; }
+    var room = state.room;
+    if(ui._matRef){ try{ ui._matRef.off(); }catch(e){} }
+    ui._matRef = firebase.database().ref('courses/'+room+'/materials');
+    ui._matRef.on('value', function(s){
+        if(state.room !== room) return;
+        ui._matCourse = s.val() || {};
+        window.kacMaterials.listAll().then(function(all){
+            ui._matAll = all;
+            ui._matRenderList();
+        });
+    });
+    ui._matBindDrop();
+};
+
+ui._matRenderList = function(){
+    var box = document.getElementById('matList'); if(!box) return;
+    var ids = Object.keys(ui._matCourse||{});
+    if(!ids.length){
+        box.innerHTML = '<div style="text-align:center; padding:34px 18px; color:#94a3b8;">'
+            + '<i class="fa-regular fa-folder-open" style="font-size:34px; display:block; margin-bottom:10px; color:#cbd5e1;"></i>'
+            + '<div style="font-size:15px; font-weight:800; color:#64748b;">이번 과정에 연결된 교재가 없습니다.</div>'
+            + '<div style="font-size:13px; font-weight:700; margin-top:6px;">위의 [새로 올리기] 또는 [자료실에서 가져오기]를 눌러 주세요.</div></div>';
+        return;
+    }
+    var byId = {}; (ui._matAll||[]).forEach(function(m){ byId[m.id]=m; });
+    var me = ui._matWho();
+    var rows = ids.map(function(id){
+        var m = byId[id];
+        if(!m) return '<div style="padding:12px 14px; color:#b91c1c; font-size:13px; font-weight:700;">삭제된 교재입니다 '
+            + '<button onclick="ui.matUnlink(\''+id+'\')" style="margin-left:8px; padding:4px 10px; border:none; border-radius:7px; background:#fee2e2; color:#b91c1c; font-weight:800; cursor:pointer;">목록에서 빼기</button></div>';
+        var d = new Date(m.uploadedAt||0);
+        var p = function(n){ return String(n).padStart(2,'0'); };
+        var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
+        var mine = (m.uploader === me);
+        return '<div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #eef2f7; border-radius:12px; margin-bottom:9px; background:#fff;">'
+          + '<i class="fa-solid fa-file-pdf" style="font-size:22px; color:#dc2626; flex-shrink:0;"></i>'
+          + '<div style="flex:1; min-width:0;">'
+            + '<div style="font-size:14.5px; font-weight:800; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
+            + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+'</div>'
+          + '</div>'
+          + '<a href="'+ui._esc(m.url)+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:7px 13px; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:800; text-decoration:none;">받기</a>'
+          + '<button onclick="ui.matUnlink(\''+id+'\')" title="이번 과정에서만 빼기(자료실에는 남음)" style="flex-shrink:0; padding:7px 13px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; color:#64748b; font-size:12.5px; font-weight:800; cursor:pointer;">연결 해제</button>'
+          + (mine ? '<button onclick="ui.matDestroy(\''+id+'\')" title="자료실에서 영구 삭제" style="flex-shrink:0; padding:7px 13px; border:none; border-radius:9px; background:#fef2f2; color:#dc2626; font-size:12.5px; font-weight:800; cursor:pointer;">삭제</button>' : '')
+        + '</div>';
+    }).join('');
+    box.innerHTML = '<div style="font-size:13px; font-weight:900; color:#334155; margin-bottom:10px;">📚 이번 과정 교재 <span style="color:#6366f1;">'+ids.length+'</span>건</div>' + rows;
+};
+
+/* ── 올리기 ─────────────────────────────────────────────── */
+ui.matPickUpload = async function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 올릴 수 없습니다.');
+    if(!state.room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
+    if(!(await ui._matEnsureKey())) return;
+    var files = await new Promise(function(res){
+        var inp = document.createElement('input');
+        inp.type='file'; inp.multiple=true;
+        inp.accept='.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.hwp,.hwpx,.zip,.jpg,.jpeg,.png,.mp4';
+        inp.onchange=function(){ res(Array.from(inp.files||[])); };
+        inp.click();
+    });
+    if(files && files.length) ui._matUploadFiles(files);
+};
+
+ui._matBindDrop = function(){
+    var dz = document.getElementById('matDrop'); if(!dz || dz._bound) return;
+    dz._bound = true;
+    ['dragenter','dragover'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){ e.preventDefault(); dz.style.background='#eef2ff'; dz.style.borderColor='#6366f1'; });
+    });
+    ['dragleave','drop'].forEach(function(ev){
+        dz.addEventListener(ev, function(e){ e.preventDefault(); dz.style.background='#f8faff'; dz.style.borderColor='#c7d2fe'; });
+    });
+    dz.addEventListener('drop', async function(e){
+        var files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+        if(!files.length) return;
+        if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 올릴 수 없습니다.');
+        if(!state.room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
+        if(!(await ui._matEnsureKey())) return;
+        ui._matUploadFiles(files);
+    });
+};
+
+ui._matUploadFiles = async function(files){
+    var room = state.room, who = ui._matWho();
+    var pb = document.getElementById('matProgress');
+    var done = 0, fail = 0;
+    var show = function(msg, color){
+        if(!pb) return;
+        pb.style.display='block';
+        pb.innerHTML = '<div style="padding:12px 15px; border-radius:11px; background:'+(color||'#eff6ff')+'; border:1px solid #dbeafe; font-size:13px; font-weight:800; color:#1d4ed8;">'+msg+'</div>';
+    };
+    for(var i=0;i<files.length;i++){
+        var f = files[i];
+        show('<i class="fa-solid fa-spinner fa-spin"></i> ('+(i+1)+'/'+files.length+') '+ui._esc(f.name)+' 올리는 중…');
+        try{
+            var rec = await window.kacMaterials.upload(f, who);
+            await window.kacMaterials.link(room, rec.id, who);
+            done++;
+        }catch(e){
+            fail++;
+            if(e && e.message === 'NO_KEY'){ show('업로드 암호가 필요합니다.', '#fef2f2'); break; }
+            show('<span style="color:#b91c1c;">'+ui._esc(f.name)+' 실패 — '+ui._esc((e&&e.message)||'')+'</span>', '#fef2f2');
+            await new Promise(function(r){ setTimeout(r, 1400); });
+        }
+    }
+    if(pb){
+        if(fail===0) show('<i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> '+done+'건을 올렸습니다. 교육생 화면에 바로 보입니다.', '#ecfdf5');
+        else show('<i class="fa-solid fa-triangle-exclamation" style="color:#d97706;"></i> 성공 '+done+'건 · 실패 '+fail+'건', '#fff7ed');
+        setTimeout(function(){ if(pb) pb.style.display='none'; }, 5000);
+    }
+    window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui._matRenderList(); });
+};
+
+/* ── 연결 해제 / 삭제 ───────────────────────────────────── */
+ui.matUnlink = function(id){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
+    ui.showConfirm('이번 과정에서만 뺍니다.\n\n· 자료실에는 그대로 남아 다음에 다시 쓸 수 있습니다.\n· 교육생 화면에서는 사라집니다.', function(){
+        window.kacMaterials.unlink(state.room, id);
+    });
+};
+ui.matDestroy = function(id){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 삭제할 수 없습니다.');
+    var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
+    if(!m) return;
+    ui.showConfirm('"'+(m.title||m.fileName)+'" 을(를) 자료실에서 영구 삭제합니다.\n\n'
+        + '· 다른 과정에서 쓰고 있다면 그 과정에서도 사라집니다.\n'
+        + '· 파일이 지워지며 되돌릴 수 없습니다.', async function(){
+        if(!(await ui._matEnsureKey())) return;
+        try{
+            await window.kacMaterials.destroy(m);
+            await window.kacMaterials.unlink(state.room, id);
+            ui.showAlert('🗑️ 삭제했습니다.');
+            window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui._matRenderList(); });
+        }catch(e){ ui.showAlert('삭제에 실패했습니다. ' + ((e&&e.message)||'')); }
+    });
+};
+
+/* ── 자료실에서 가져오기 ────────────────────────────────── */
+ui.matOpenLibrary = function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
+    var f = document.getElementById('matLibModal'); if(!f) return;
+    f.style.display='flex';
+    window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui.matRenderLibrary(); });
+};
+ui.matCloseLibrary = function(){ var f=document.getElementById('matLibModal'); if(f) f.style.display='none'; };
+ui.matSetLibFilter = function(v){
+    ui._matLibFilter = v;
+    var a=document.getElementById('matFilAll'), m=document.getElementById('matFilMine');
+    [[a,'all'],[m,'mine']].forEach(function(p){
+        if(!p[0]) return;
+        var on = (ui._matLibFilter===p[1]);
+        p[0].style.background = on ? '#2563eb' : '#fff';
+        p[0].style.color      = on ? '#fff'    : '#64748b';
+        p[0].style.borderColor= on ? '#2563eb' : '#cbd5e1';
+    });
+    ui.matRenderLibrary();
+};
+ui.matRenderLibrary = function(){
+    var box = document.getElementById('matLibList'); if(!box) return;
+    var q = (document.getElementById('matLibSearch')||{}).value || '';
+    q = String(q).trim().toLowerCase();
+    var me = ui._matWho();
+    var list = (ui._matAll||[]).filter(function(m){
+        if(ui._matLibFilter==='mine' && m.uploader!==me) return false;
+        if(!q) return true;
+        return ((m.title||'')+' '+(m.fileName||'')+' '+(m.uploader||'')).toLowerCase().indexOf(q)>=0;
+    });
+    if(!list.length){ box.innerHTML='<div style="padding:30px; text-align:center; color:#94a3b8; font-size:14px; font-weight:700;">해당하는 교재가 없습니다.</div>'; return; }
+    box.innerHTML = list.map(function(m){
+        var already = !!(ui._matCourse||{})[m.id];
+        var d=new Date(m.uploadedAt||0), p=function(n){return String(n).padStart(2,'0');};
+        var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
+        return '<label style="display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:10px; cursor:'+(already?'default':'pointer')+'; background:'+(already?'#f8fafc':'#fff')+';">'
+          + '<input type="checkbox" class="matLibChk" value="'+m.id+'"'+(already?' disabled':'')+' style="width:17px; height:17px; flex-shrink:0;">'
+          + '<div style="flex:1; min-width:0;">'
+            + '<div style="font-size:14px; font-weight:800; color:'+(already?'#94a3b8':'#0f172a')+'; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
+            + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:2px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+(already?' · <span style="color:#16a34a;">이미 연결됨</span>':'')+'</div>'
+          + '</div></label>';
+    }).join('');
+};
+ui.matLinkSelected = async function(){
+    var chk = Array.from(document.querySelectorAll('.matLibChk:checked')).map(function(c){ return c.value; });
+    if(!chk.length) return ui.showAlert('연결할 교재를 선택해 주세요.');
+    var who = ui._matWho();
+    for(var i=0;i<chk.length;i++){ await window.kacMaterials.link(state.room, chk[i], who); }
+    ui.matCloseLibrary();
+    ui.showAlert('✅ ' + chk.length + '건을 이번 과정에 연결했습니다.');
+};
+
+/* ── 교육생용 QR ────────────────────────────────────────── */
+ui.matShowQr = function(){
+    if(!state.room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
+    var url = location.origin + location.pathname.replace(/admin\.html$/,'index.html')
+            + '?room=' + encodeURIComponent(state.room) + '&menu=materials';
+    var ov = document.createElement('div');
+    ov.style.cssText='position:fixed; inset:0; z-index:2147483000; background:rgba(15,23,42,.72); display:flex; align-items:center; justify-content:center; padding:24px;';
+    ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
+    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:30px 34px; text-align:center; max-width:380px;">'
+      + '<div style="font-size:19px; font-weight:900; color:#0f172a; margin-bottom:6px;">📚 교재 받기</div>'
+      + '<div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:18px;">교육생이 휴대폰으로 스캔하면<br>이번 과정 교재 목록이 열립니다.</div>'
+      + '<div id="matQrBox" style="display:inline-block; padding:14px; border:1px solid #e2e8f0; border-radius:14px;"></div>'
+      + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="display:block; width:100%; margin-top:18px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    var qb = ov.querySelector('#matQrBox');
+    if(qb && typeof QRCode !== 'undefined'){
+        try{ new QRCode(qb, { text:url, width:210, height:210, correctLevel:QRCode.CorrectLevel.H }); }
+        catch(e){ qb.textContent = url; }
+    } else if(qb){ qb.textContent = url; }
+};
+
+/* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
