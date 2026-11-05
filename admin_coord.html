@@ -7039,6 +7039,8 @@ const annualPlanMgrCoord = {
             updates[`courses/${r}/settings/planId`]        = null;  // 방↔연간계획 연결고리 초기화(다음 매칭은 이름 기준)
             updates[`courses/${r}/settings/password`]      = null;  // 이전 과정 비밀번호 제거
             updates[`courses/${r}/status/quizStep`]        = 'none'; // 퀴즈 진행 상태 초기화
+            // [K68] 교재 '연결'만 해제 — 파일과 자료실(system/materials)은 보존해 다음 기수에 재사용
+            updates[`courses/${r}/materials`]              = null;
         };
 
         // 1) 방별 판정
