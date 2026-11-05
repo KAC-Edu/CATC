@@ -19340,7 +19340,7 @@ ui._shuttleReqText = function(){
         if(!isNaN(d)) dateStr = (d.getMonth()+1) + '월 ' + d.getDate() + '일(' + '일월화수목금토'.charAt(d.getDay()) + ')';
     }
 
-    var osong = n('total-osong'), term = n('total-term'), air = n('total-air'), car = n('total-car');
+    var osong = n('total-osong'), term = n('total-term'), air = n('total-air');   // 자차는 기사님께 알릴 필요가 없어 제외
     var need  = osong + term + air;                 // 차량이 실제로 필요한 인원
 
     /* [K82] 카카오톡 말풍선에 맞춘 형식.
@@ -19356,9 +19356,9 @@ ui._shuttleReqText = function(){
         if(osong) L.push('· 오송역 ' + osong + '명');
         if(term)  L.push('· 청주터미널 ' + term + '명');
         if(air)   L.push('· 청주공항 ' + air + '명');
-        L.push('합계 ' + need + '명' + (car ? ' (자차 ' + car + '명 제외)' : ''));
+        L.push('합계 ' + need + '명');
     } else {
-        L.push('수송 인원 없음 (전원 자차' + (car ? ' ' + car + '명' : '') + ')');
+        L.push('수송 인원 없음');
     }
     return L.join('\n');
 };
