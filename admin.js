@@ -16466,11 +16466,12 @@ ui.foodNewsDelete=function(id){
     if(state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 삭제할 수 없습니다.");
     var o=ui._foodNewsCache.filter(function(x){ return x.id===id; })[0];
     var nm=o?(o.name||'이 맛집'):'이 맛집';
-    ui.showConfirm('"'+nm+'" 항목을 삭제할까요?\n\n'
+    if(!confirm('"'+nm+'" 항목을 삭제할까요?\n\n'
         + '· 맛집 목록은 전 과정이 함께 보는 공용 자료입니다.\n'
-        + '· 삭제하면 모든 강의실에서 사라지며 되돌릴 수 없습니다.', function(){
-        firebase.database().ref('system/foodspots/'+id).remove().then(function(){ ui.showAlert('🗑️ 삭제되었습니다.'); }).catch(function(){ ui.showAlert('삭제 중 오류가 발생했습니다.'); });
-    });
+        + '· 삭제하면 모든 강의실에서 사라지며 되돌릴 수 없습니다.')) return;
+    firebase.database().ref('system/foodspots/'+id).remove()
+        .then(function(){ ui.showAlert('🗑️ 삭제되었습니다.'); })
+        .catch(function(){ ui.showAlert('삭제 중 오류가 발생했습니다.'); });
 };
 ui.foodNewsRouteById=function(id){
     var o=ui._foodNewsCache.filter(function(x){return x.id===id;})[0]; if(!o) return;
@@ -18749,9 +18750,8 @@ ui._matUploadFiles = async function(files){
 /* ── 연결 해제 / 삭제 ───────────────────────────────────── */
 ui.matUnlink = function(id){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
-    ui.showConfirm('이번 과정에서만 뺍니다.\n\n· 자료실에는 그대로 남아 다음에 다시 쓸 수 있습니다.\n· 교육생 화면에서는 사라집니다.', function(){
-        window.kacMaterials.unlink(state.room, id);
-    });
+    if(!confirm('이번 과정에서만 뺍니다.\n\n· 자료실에는 그대로 남아 다음에 다시 쓸 수 있습니다.\n· 교육생 화면에서는 사라집니다.')) return;
+    window.kacMaterials.unlink(state.room, id);
 };
 /* [K69] 삭제 권한은 강사 전원 — 올린 교수가 전보·퇴직해도 정리할 수 있어야 하기 때문.
          대신 '남의 자료'를 지울 때는 누가 올린 것인지와 파급을 분명히 알린다. */
@@ -18767,10 +18767,11 @@ ui.matDestroy = function(id){
           + '올린 사람: ' + (m.uploader||'미상') + '\n\n'
           + '삭제하면 이 자료를 쓰고 있는 다른 과정에서도 사라져\n'
           + '교육 운영에 문제가 생길 수 있습니다.\n\n';
-    ui.showConfirm(head
+    if(!confirm(head
         + '· 다른 과정에서 쓰고 있다면 그 과정에서도 사라집니다.\n'
         + '· 파일이 지워지며 되돌릴 수 없습니다.'
-        + (mine ? '' : '\n\n그래도 삭제하시겠습니까?'), async function(){
+        + (mine ? '' : '\n\n그래도 삭제하시겠습니까?'))) return;
+    (async function(){
         if(!(await ui._matEnsureKey())) return;
         try{
             await window.kacMaterials.destroy(m);
@@ -18778,7 +18779,7 @@ ui.matDestroy = function(id){
             ui.showAlert('🗑️ 삭제했습니다.');
             window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui._matRenderList(); });
         }catch(e){ ui.showAlert('삭제에 실패했습니다. ' + ((e&&e.message)||'')); }
-    });
+    })();
 };
 
 /* ── 자료실에서 가져오기 ────────────────────────────────── */
