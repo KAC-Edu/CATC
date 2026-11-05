@@ -18446,6 +18446,16 @@ ui._matCourse = {};     // 이번 과정에 연결된 교재 { id: {linkedAt, li
 ui._matAll    = [];     // 자료실 전체
 ui._matLibFilter = 'all';
 
+/* [K78] 현재 과정명 — 교재를 과정별로 묶어 찾기 위해 올릴 때 함께 기록 */
+ui._matCourseName = function(){
+    try{
+        var el = document.getElementById('dashCourseTitle');
+        var n = el ? String(el.innerText||'').trim() : '';
+        if(n && n.indexOf('설정') < 0) return n;
+    }catch(e){}
+    return '';
+};
+
 /* 현재 담임/강사 이름 — 업로드한 사람 표기용 */
 ui._matWho = function(){
     try{
@@ -18903,7 +18913,7 @@ ui._matUploadFiles = async function(files){
         }
         show('<i class="fa-solid fa-spinner fa-spin"></i> ('+(i+1)+'/'+files.length+') '+ui._esc(f.name)+' 올리는 중…');
         try{
-            var rec = await window.kacMaterials.upload(f, who);
+            var rec = await window.kacMaterials.upload(f, who, ui._matCourseName());
             await window.kacMaterials.link(room, rec.id, who);
             done++;
             /* [K75] '새 것으로 교체'면 올린 뒤 기존 것을 자료실에서 삭제 */
@@ -19007,11 +19017,14 @@ ui.matOpenLibrary = function(){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
     var f = document.getElementById('matLibModal'); if(!f) return;
     f.style.display='flex';
+    ui._matLibPath = null;                                        // [K78] 항상 교수 폴더 목록부터
+    var sb = document.getElementById('matLibSearch'); if(sb) sb.value = '';
     window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui.matRenderLibrary(); });
 };
 ui.matCloseLibrary = function(){ var f=document.getElementById('matLibModal'); if(f) f.style.display='none'; };
 ui.matSetLibFilter = function(v){
     ui._matLibFilter = v;
+    ui._matLibPath = null;                                        // [K78] 필터 바꾸면 폴더 목록으로
     var a=document.getElementById('matFilAll'), m=document.getElementById('matFilMine');
     [[a,'all'],[m,'mine']].forEach(function(p){
         if(!p[0]) return;
@@ -19022,28 +19035,114 @@ ui.matSetLibFilter = function(v){
     });
     ui.matRenderLibrary();
 };
+/* ══ [K78] 자료실 — 교수별 폴더 → 과정별 묶음 ══════════════════
+   교재가 쌓이면 한 줄로 늘어놓은 목록에서는 찾기 어렵다.
+     1단계: 교수 폴더 (보유 교재 수 표시)
+     2단계: 그 교수의 교재를 '과정별'로 묶어 표시
+   검색어를 넣으면 폴더를 건너뛰고 전체에서 바로 찾는다.
+   ※ 과정명이 없는 예전 자료는 '분류 없음'으로 모인다.
+   ────────────────────────────────────────────────────────── */
+ui._matLibPath = null;        // null = 교수 목록, 문자열 = 그 교수 폴더 안
+
+ui.matOpenFolder = function(name){ ui._matLibPath = name || null; ui.matRenderLibrary(); };
+ui.matLibBack    = function(){ ui._matLibPath = null; ui.matRenderLibrary(); };
+
+ui._matLibSource = function(){
+    var me = ui._matWho();
+    return (ui._matAll||[]).filter(function(m){
+        return !(ui._matLibFilter==='mine' && m.uploader!==me);
+    });
+};
+/* 교재 한 줄 (체크박스 포함) */
+ui._matLibRow = function(m, indent){
+    var already = !!(ui._matCourse||{})[m.id];
+    var d=new Date(m.uploadedAt||0), p=function(n){return String(n).padStart(2,'0');};
+    var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
+    return '<label style="display:flex; align-items:center; gap:11px; padding:10px 12px; margin-left:'+(indent||0)+'px; border-radius:10px; cursor:'+(already?'default':'pointer')+'; background:'+(already?'#f8fafc':'#fff')+';">'
+      + '<input type="checkbox" class="matLibChk" value="'+m.id+'"'+(already?' disabled':'')+' style="width:17px; height:17px; flex-shrink:0;">'
+      + '<i class="fa-solid fa-file-pdf" style="color:'+(already?'#cbd5e1':'#dc2626')+'; font-size:16px; flex-shrink:0;"></i>'
+      + '<div style="flex:1; min-width:0;">'
+        + '<div style="font-size:13.5px; font-weight:800; color:'+(already?'#94a3b8':'#0f172a')+'; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
+        + '<div style="font-size:11px; color:#94a3b8; font-weight:700; margin-top:2px;">'+ds+' · '+window.kacMaterials.fmtSize(m.size)+(already?' · <span style="color:#16a34a;">이미 연결됨</span>':'')+'</div>'
+      + '</div></label>';
+};
+
 ui.matRenderLibrary = function(){
     var box = document.getElementById('matLibList'); if(!box) return;
-    var q = (document.getElementById('matLibSearch')||{}).value || '';
-    q = String(q).trim().toLowerCase();
-    var me = ui._matWho();
-    var list = (ui._matAll||[]).filter(function(m){
-        if(ui._matLibFilter==='mine' && m.uploader!==me) return false;
-        if(!q) return true;
-        return ((m.title||'')+' '+(m.fileName||'')+' '+(m.uploader||'')).toLowerCase().indexOf(q)>=0;
+    var q = String((document.getElementById('matLibSearch')||{}).value || '').trim().toLowerCase();
+    var src = ui._matLibSource();
+
+    /* ── 검색 중이면 폴더 없이 전체에서 찾아 보여준다 ── */
+    if(q){
+        var hit = src.filter(function(m){
+            return ((m.title||'')+' '+(m.fileName||'')+' '+(m.uploader||'')+' '+(m.course||'')).toLowerCase().indexOf(q)>=0;
+        });
+        box.innerHTML = hit.length
+            ? '<div style="padding:8px 12px 10px; font-size:12px; font-weight:800; color:#64748b;">검색 결과 '+hit.length+'건</div>'
+              + hit.map(function(m){
+                  return '<div>' + ui._matLibRow(m) + '<div style="margin:-6px 0 6px 52px; font-size:11px; color:#94a3b8; font-weight:700;">'
+                       + ui._esc(m.uploader||'-') + (m.course ? ' · ' + ui._esc(m.course) : '') + '</div></div>';
+                }).join('')
+            : '<div style="padding:30px; text-align:center; color:#94a3b8; font-size:14px; font-weight:700;">검색 결과가 없습니다.</div>';
+        return;
+    }
+
+    /* ── 1단계: 교수 폴더 ── */
+    if(!ui._matLibPath){
+        var byProf = {};
+        src.forEach(function(m){
+            var k = String(m.uploader||'미상').trim() || '미상';
+            (byProf[k] = byProf[k] || []).push(m);
+        });
+        var profs = Object.keys(byProf).sort(function(a,b){ return byProf[b].length - byProf[a].length; });
+        if(!profs.length){ box.innerHTML='<div style="padding:30px; text-align:center; color:#94a3b8; font-size:14px; font-weight:700;">자료실이 비어 있습니다.</div>'; return; }
+        var me = ui._matWho();
+        box.innerHTML = '<div style="padding:8px 12px 10px; font-size:12px; font-weight:800; color:#64748b;">교수 폴더를 눌러 교재를 고르세요.</div>'
+          + profs.map(function(p){
+              var arr = byProf[p];
+              var sz = arr.reduce(function(a,m){ return a + (Number(m.size)||0); }, 0);
+              var mine = (p === me);
+              return '<button type="button" onclick="ui.matOpenFolder(\'' + ui._esc(p).replace(/'/g,"\\'") + '\')" '
+                + 'style="width:100%; display:flex; align-items:center; gap:12px; padding:13px 14px; margin-bottom:7px; border:1px solid '+(mine?'#bfdbfe':'#eef2f7')+'; border-radius:12px; background:'+(mine?'#f5f9ff':'#fff')+'; cursor:pointer; text-align:left;">'
+                + '<i class="fa-solid fa-folder" style="font-size:22px; color:'+(mine?'#2563eb':'#94a3b8')+'; flex-shrink:0;"></i>'
+                + '<div style="flex:1; min-width:0;">'
+                  + '<div style="font-size:14.5px; font-weight:900; color:#0f172a;">'+ui._esc(p)+(mine?' <span style="font-size:11px; color:#2563eb;">(나)</span>':'')+'</div>'
+                  + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:2px;">'+arr.length+'건 · '+window.kacMaterials.fmtSize(sz)+'</div>'
+                + '</div>'
+                + '<span style="flex-shrink:0; font-size:13px; font-weight:900; color:#6366f1;">'+arr.length+'</span>'
+                + '<i class="fa-solid fa-chevron-right" style="color:#cbd5e1; font-size:12px; flex-shrink:0;"></i>'
+                + '</button>';
+            }).join('');
+        return;
+    }
+
+    /* ── 2단계: 그 교수 폴더 안 — 과정별 묶음 ── */
+    var mine2 = src.filter(function(m){ return String(m.uploader||'미상').trim() === ui._matLibPath; });
+    var byCourse = {};
+    mine2.forEach(function(m){
+        var c = String(m.course||'').trim() || '분류 없음';
+        (byCourse[c] = byCourse[c] || []).push(m);
     });
-    if(!list.length){ box.innerHTML='<div style="padding:30px; text-align:center; color:#94a3b8; font-size:14px; font-weight:700;">해당하는 교재가 없습니다.</div>'; return; }
-    box.innerHTML = list.map(function(m){
-        var already = !!(ui._matCourse||{})[m.id];
-        var d=new Date(m.uploadedAt||0), p=function(n){return String(n).padStart(2,'0');};
-        var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
-        return '<label style="display:flex; align-items:center; gap:11px; padding:11px 13px; border-radius:10px; cursor:'+(already?'default':'pointer')+'; background:'+(already?'#f8fafc':'#fff')+';">'
-          + '<input type="checkbox" class="matLibChk" value="'+m.id+'"'+(already?' disabled':'')+' style="width:17px; height:17px; flex-shrink:0;">'
-          + '<div style="flex:1; min-width:0;">'
-            + '<div style="font-size:14px; font-weight:800; color:'+(already?'#94a3b8':'#0f172a')+'; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
-            + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:2px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+(already?' · <span style="color:#16a34a;">이미 연결됨</span>':'')+'</div>'
-          + '</div></label>';
-    }).join('');
+    var courses = Object.keys(byCourse).sort(function(a,b){
+        if(a === '분류 없음') return 1;          // '분류 없음'은 항상 맨 아래
+        if(b === '분류 없음') return -1;
+        return a.localeCompare(b, 'ko');
+    });
+    box.innerHTML = '<button type="button" onclick="ui.matLibBack()" '
+        + 'style="display:flex; align-items:center; gap:7px; margin-bottom:10px; padding:8px 13px; border:1px solid #e2e8f0; border-radius:10px; background:#fff; color:#475569; font-size:12.5px; font-weight:800; cursor:pointer;">'
+        + '<i class="fa-solid fa-chevron-left"></i> 교수 목록</button>'
+      + '<div style="padding:0 4px 10px; font-size:14.5px; font-weight:900; color:#0f172a;"><i class="fa-solid fa-folder-open" style="color:#2563eb;"></i> '+ui._esc(ui._matLibPath)+' <span style="font-size:12px; font-weight:800; color:#94a3b8;">'+mine2.length+'건</span></div>'
+      + courses.map(function(c){
+          var arr = byCourse[c];
+          return '<div style="margin-bottom:10px;">'
+            + '<div style="display:flex; align-items:center; gap:7px; padding:7px 10px; background:#f1f5f9; border-radius:9px; margin-bottom:5px;">'
+              + '<i class="fa-solid fa-graduation-cap" style="color:#64748b; font-size:12px;"></i>'
+              + '<span style="font-size:12.5px; font-weight:900; color:#334155;">'+ui._esc(c)+'</span>'
+              + '<span style="font-size:11px; font-weight:800; color:#94a3b8;">'+arr.length+'건</span>'
+            + '</div>'
+            + arr.map(function(m){ return ui._matLibRow(m, 8); }).join('')
+            + '</div>';
+        }).join('');
 };
 ui.matLinkSelected = async function(){
     var chk = Array.from(document.querySelectorAll('.matLibChk:checked')).map(function(c){ return c.value; });
