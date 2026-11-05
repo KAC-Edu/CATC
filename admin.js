@@ -18448,15 +18448,51 @@ ui._matWho = function(){
     try{ return String(localStorage.getItem('kac_admin_prof')||'').trim() || '강사'; }catch(e){ return '강사'; }
 };
 
-/* 업로드 암호 확보 — 없으면 1회 묻는다 */
-ui._matEnsureKey = async function(){
-    if(window.kacMaterials.getKey()) return true;
-    var v = prompt('교재 업로드 암호를 입력해 주세요.\n(이 창에서만 기억되며, 저장되지 않습니다)');
-    if(v === null) return false;
-    v = String(v).trim();
-    if(!v){ ui.showAlert('암호를 입력해야 올릴 수 있습니다.'); return false; }
-    window.kacMaterials.setKey(v);
-    return true;
+/* 업로드 암호 확보 — 없으면 1회 묻는다.
+   [K68] 브라우저 기본 prompt 는 입력값이 그대로 보여서, 가려지는 전용 입력창을 쓴다. */
+ui._matEnsureKey = function(){
+    if(window.kacMaterials.getKey()) return Promise.resolve(true);
+    return new Promise(function(resolve){
+        var ov = document.createElement('div');
+        ov.id = 'matKeyOv';
+        ov.style.cssText = 'position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.72); display:flex; align-items:center; justify-content:center; padding:22px;';
+        ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:28px 30px; width:100%; max-width:420px; box-shadow:0 24px 60px rgba(15,23,42,.4);">'
+          + '<div style="font-size:18px; font-weight:900; color:#0f172a; margin-bottom:8px;"><i class="fa-solid fa-lock" style="color:#6366f1;"></i> 관리자 암호</div>'
+          + '<div style="font-size:12.5px; color:#64748b; font-weight:700; line-height:1.65; margin-bottom:16px;">'
+            + '교재를 <b>올리거나 삭제</b>할 때만 필요합니다.<br>'
+            + '교육생이 받을 때는 필요 없습니다.<br>'
+            + '<span style="color:#94a3b8;">이 창(탭)을 닫으면 지워집니다.</span></div>'
+          + '<input id="matKeyInput" type="password" autocomplete="current-password" placeholder="암호 입력" '
+            + 'style="width:100%; box-sizing:border-box; padding:13px 14px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:16px; letter-spacing:2px;">'
+          + '<div id="matKeyErr" style="display:none; margin-top:8px; font-size:12.5px; font-weight:800; color:#b91c1c;"></div>'
+          + '<div style="display:flex; gap:9px; margin-top:16px;">'
+            + '<button id="matKeyCancel" type="button" style="flex:1; padding:13px; border:1px solid #cbd5e1; border-radius:11px; background:#fff; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">취소</button>'
+            + '<button id="matKeyOk" type="button" style="flex:2; padding:13px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer;">확인</button>'
+          + '</div></div>';
+        document.body.appendChild(ov);
+        var inp = ov.querySelector('#matKeyInput');
+        var err = ov.querySelector('#matKeyErr');
+        var finish = function(ok){ try{ ov.remove(); }catch(e){} resolve(ok); };
+        var submit = function(){
+            var v = String(inp.value||'').trim();
+            if(!v){
+                err.style.display='block';
+                err.textContent = '암호를 입력해 주세요.';
+                inp.focus();
+                return;
+            }
+            window.kacMaterials.setKey(v);
+            finish(true);
+        };
+        ov.querySelector('#matKeyOk').onclick = submit;
+        ov.querySelector('#matKeyCancel').onclick = function(){ finish(false); };
+        inp.onkeydown = function(e){
+            if(e.key === 'Enter'){ e.preventDefault(); submit(); }
+            else if(e.key === 'Escape'){ e.preventDefault(); finish(false); }
+        };
+        ov.onclick = function(e){ if(e.target === ov) finish(false); };
+        setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
+    });
 };
 
 ui.loadMaterials = function(){
@@ -18502,6 +18538,7 @@ ui._matRenderList = function(){
             + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+'</div>'
           + '</div>'
           + '<a href="'+ui._esc(m.url)+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:7px 13px; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:800; text-decoration:none;">받기</a>'
+          + '<button onclick="ui.matCopyOne(\''+id+'\')" title="이 교재만 받는 주소 복사 — 카카오톡 등에 붙여넣기" style="flex-shrink:0; padding:7px 13px; border:1px solid #c7d2fe; border-radius:9px; background:#eef2ff; color:#4338ca; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-link"></i> 주소</button>'
           + '<button onclick="ui.matUnlink(\''+id+'\')" title="이번 과정에서만 빼기(자료실에는 남음)" style="flex-shrink:0; padding:7px 13px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; color:#64748b; font-size:12.5px; font-weight:800; cursor:pointer;">연결 해제</button>'
           + (mine ? '<button onclick="ui.matDestroy(\''+id+'\')" title="자료실에서 영구 삭제" style="flex-shrink:0; padding:7px 13px; border:none; border-radius:9px; background:#fef2f2; color:#dc2626; font-size:12.5px; font-weight:800; cursor:pointer;">삭제</button>' : '')
         + '</div>';
@@ -18561,7 +18598,7 @@ ui._matUploadFiles = async function(files){
             done++;
         }catch(e){
             fail++;
-            if(e && e.message === 'NO_KEY'){ show('업로드 암호가 필요합니다.', '#fef2f2'); break; }
+            if(e && e.message === 'NO_KEY'){ show('관리자 암호가 필요합니다.', '#fef2f2'); break; }
             show('<span style="color:#b91c1c;">'+ui._esc(f.name)+' 실패 — '+ui._esc((e&&e.message)||'')+'</span>', '#fef2f2');
             await new Promise(function(r){ setTimeout(r, 1400); });
         }
@@ -18650,24 +18687,53 @@ ui.matLinkSelected = async function(){
     ui.showAlert('✅ ' + chk.length + '건을 이번 과정에 연결했습니다.');
 };
 
-/* ── 교육생용 QR ────────────────────────────────────────── */
+/* ── 주소 복사 공용 ─────────────────────────────────────── */
+ui._matCopy = function(text, msg){
+    var done = function(){ ui.showAlert(msg || ('📋 주소를 복사했습니다.\n\n' + text)); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(done).catch(function(){ ui._matCopyFallback(text, done); });
+    } else { ui._matCopyFallback(text, done); }
+};
+ui._matCopyFallback = function(text, done){
+    var t=document.createElement('textarea');
+    t.value=text; t.style.cssText='position:fixed;left:-9999px;';
+    document.body.appendChild(t); t.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(t); done();
+};
+/* 이번 과정 교재 목록 주소 — 카톡 등으로 공유 */
+ui.matListUrl = function(){
+    if(!state.room) return '';
+    return location.origin + location.pathname.replace(/admin\.html$/,'index.html')
+         + '?room=' + encodeURIComponent(state.room) + '&menu=materials';
+};
+/* 교재 1건 직접 다운로드 주소 복사 */
+ui.matCopyOne = function(id){
+    var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
+    if(!m) return;
+    ui._matCopy(m.url, '📋 "' + (m.title||m.fileName) + '" 다운로드 주소를 복사했습니다.\n\n카카오톡 등에 붙여넣으면 바로 받을 수 있습니다.');
+};
+
+/* ── 교육생 공유 (QR + 주소 복사) ───────────────────────── */
 ui.matShowQr = function(){
     if(!state.room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
-    var url = location.origin + location.pathname.replace(/admin\.html$/,'index.html')
-            + '?room=' + encodeURIComponent(state.room) + '&menu=materials';
+    var url = ui.matListUrl();
     var ov = document.createElement('div');
+    ov.id = 'matShareOv';
     ov.style.cssText='position:fixed; inset:0; z-index:2147483000; background:rgba(15,23,42,.72); display:flex; align-items:center; justify-content:center; padding:24px;';
     ov.onclick=function(e){ if(e.target===ov) ov.remove(); };
-    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:30px 34px; text-align:center; max-width:380px;">'
-      + '<div style="font-size:19px; font-weight:900; color:#0f172a; margin-bottom:6px;">📚 교재 받기</div>'
-      + '<div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:18px;">교육생이 휴대폰으로 스캔하면<br>이번 과정 교재 목록이 열립니다.</div>'
+    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:28px 30px; text-align:center; max-width:400px; width:100%;">'
+      + '<div style="font-size:19px; font-weight:900; color:#0f172a; margin-bottom:6px;">📚 교육생에게 교재 보내기</div>'
+      + '<div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:16px; line-height:1.55;">QR을 띄워 스캔하게 하거나,<br>주소를 복사해 카카오톡으로 보내세요.</div>'
       + '<div id="matQrBox" style="display:inline-block; padding:14px; border:1px solid #e2e8f0; border-radius:14px;"></div>'
-      + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="display:block; width:100%; margin-top:18px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>'
+      + '<div style="margin-top:16px; padding:11px 13px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:11px; font-size:11.5px; color:#475569; font-weight:700; word-break:break-all; text-align:left; line-height:1.5;">' + ui._esc(url) + '</div>'
+      + '<button onclick="ui._matCopy(ui.matListUrl())" style="width:100%; margin-top:11px; padding:13px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-size:14.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-copy"></i> 주소 복사 (카카오톡으로 보내기)</button>'
+      + '<button onclick="document.getElementById(\'matShareOv\').remove()" style="width:100%; margin-top:9px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button>'
       + '</div>';
     document.body.appendChild(ov);
     var qb = ov.querySelector('#matQrBox');
     if(qb && typeof QRCode !== 'undefined'){
-        try{ new QRCode(qb, { text:url, width:210, height:210, correctLevel:QRCode.CorrectLevel.H }); }
+        try{ new QRCode(qb, { text:url, width:200, height:200, correctLevel:QRCode.CorrectLevel.H }); }
         catch(e){ qb.textContent = url; }
     } else if(qb){ qb.textContent = url; }
 };
