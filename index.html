@@ -5341,18 +5341,21 @@ function _kacMatRender(){
         return ['fa-file-lines','#64748b'];
     };
     body.innerHTML = '<div style="font-size:12.5px; color:#64748b; font-weight:700; margin-bottom:12px; line-height:1.55;">'
-        + '받기를 누르면 휴대폰에 저장됩니다. 교육 기간 중에만 받을 수 있습니다.</div>'
+        + '<b>보기</b>는 바로 열어보고, <b>받기</b>는 휴대폰에 저장합니다.<br>교육 기간 중에만 이용할 수 있습니다.</div>'
       + list.map(function(m){
             var ic = icon(m.fileName);
-            return '<a href="'+escapeHtml(window.kacMaterials ? window.kacMaterials.fileUrl(m) : (m.url||''))+'" target="_blank" rel="noopener" '
-              + 'style="display:flex; align-items:center; gap:13px; padding:14px 15px; border:1px solid #eef2f7; border-radius:14px; margin-bottom:10px; text-decoration:none; background:#fff;">'
+            var url = window.kacMaterials ? window.kacMaterials.fileUrl(m) : (m.url||'');
+            var isPdf = /\.pdf$/i.test(m.fileName||'');
+            return '<div style="display:flex; align-items:center; gap:12px; padding:14px 15px; border:1px solid #eef2f7; border-radius:14px; margin-bottom:10px; background:#fff;">'
               + '<i class="fa-solid '+ic[0]+'" style="font-size:24px; color:'+ic[1]+'; flex-shrink:0;"></i>'
               + '<div style="flex:1; min-width:0;">'
                 + '<div style="font-size:14.5px; font-weight:800; color:#0f172a; line-height:1.4; word-break:break-all;">'+escapeHtml(m.title||m.fileName)+'</div>'
                 + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+escapeHtml(String(m.size>=1048576?(m.size/1048576).toFixed(1)+'MB':Math.round((m.size||0)/1024)+'KB'))+'</div>'
               + '</div>'
-              + '<span style="flex-shrink:0; padding:8px 14px; border-radius:10px; background:#eef2ff; color:#4338ca; font-size:13px; font-weight:800;">받기</span>'
-              + '</a>';
+              /* [K70] PDF 는 내려받지 않고 바로 볼 수 있게 — Worker 의 ?view=1 */
+              + (isPdf ? '<a href="'+escapeHtml(url)+'?view=1" target="_blank" rel="noopener" style="flex-shrink:0; padding:8px 13px; border-radius:10px; background:#f0fdf4; color:#15803d; font-size:13px; font-weight:800; text-decoration:none;">보기</a>' : '')
+              + '<a href="'+escapeHtml(url)+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:8px 13px; border-radius:10px; background:#eef2ff; color:#4338ca; font-size:13px; font-weight:800; text-decoration:none;">받기</a>'
+              + '</div>';
         }).join('');
 }
 
