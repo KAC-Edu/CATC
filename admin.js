@@ -3052,6 +3052,8 @@ loadDashboardStats: function() {
         document.querySelectorAll('.opsStuMirror').forEach(function(e){ e.textContent = '-'; });
         document.querySelectorAll('.opsStuSub').forEach(function(e){ e.textContent = '확인 중…'; e.style.color = '#94a3b8'; });
         document.querySelectorAll('.opsOtpSub').forEach(function(e){ e.textContent = '확인 중…'; e.style.color = '#94a3b8'; });
+        window.kacDashMatCount = null;                       // [K73] 방 전환 시 교재 건수 초기화
+        if(ui.watchMaterialCount) ui.watchMaterialCount(room);   // [K73] 이 방 교재 건수 구독
     }catch(e){}
 
     // 5. ★핵심 수정★ 실시간 입교 완료 현황 집계 (온라인 여부 상관없이 전체 카운트)
@@ -18494,6 +18496,25 @@ ui._matEnsureKey = function(){
         };
         ov.onclick = function(e){ if(e.target === ov) finish(false); };
         setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
+    });
+};
+
+/* [K73] 교재 건수 상시 집계 — 과정현황 '오늘 한눈에' 칩에서 쓴다.
+   교재 자료실 화면에 들어가지 않아도 방 입장 시 한 번 걸어 둔다. */
+window.kacDashMatCount = null;
+ui.watchMaterialCount = function(room){
+    if(!room) return;
+    if(ui._matCntRef){ try{ ui._matCntRef.off(); }catch(e){} }
+    ui._matCntRef = firebase.database().ref('courses/'+room+'/materials');
+    ui._matCntRef.on('value', function(s){
+        if(state.room !== room) return;
+        window.kacDashMatCount = Object.keys(s.val() || {}).length;
+        // 요약줄 갱신 트리거 (admin.html 의 MutationObserver 가 다시 그린다)
+        try{
+            var el = document.getElementById('dashQaCount');
+            if(el) el.textContent = el.textContent;
+        }catch(e){}
+        try{ if(window.kacRefreshDashSummary) window.kacRefreshDashSummary(); }catch(e){}
     });
 };
 
