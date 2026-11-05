@@ -579,13 +579,12 @@ function rosterCountOf(room){
 }
 /* [K35] 명단(정원) 이름 집합 { norm(이름):1 } — 예정명단 ∪ '명단 포함' 체크된 명단 외 입교자.
    셔틀·외출 등 인원 집계에서 '명단 외 미체크 입교자(구경꾼)'를 걸러내는 데 쓴다.
-   예정명단이 없으면 null 반환(= 전원 허용, 기존 동작 유지). */
+   [K63] 예정명단이 없어도 null(=전원 허용)로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준. */
 function _rosterNorm(n){ return String(n==null?'':n).replace(/\s+/g,'').toLowerCase(); }
 function rosterNameSet(room){
   var es=room&&room.expectedStudents, exp=[];
   if(Array.isArray(es)) exp=es.slice(); else if(es&&typeof es==='object') exp=Object.keys(es).map(function(k){return es[k];});
   exp=exp.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
-  if(!exp.length) return null;
   var set={}; exp.forEach(function(n){ set[_rosterNorm(n)]=1; });
   var inc=(room&&room.rosterInclude)||{};
   studentsOf(room).forEach(function(s){ var nm=String(s.name==null?'':s.name).trim(); if(nm && inc[_riKeyM(nm)]) set[_rosterNorm(nm)]=1; });
