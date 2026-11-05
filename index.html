@@ -975,6 +975,8 @@ try{
             <div class="menu-item" id="menu-kakao" style="display:none;" onclick="openKakaoChat()"><svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:-3px;" aria-hidden="true"><path d="M12 5C7 5 3.2 8.1 3.2 11.9c0 2.45 1.66 4.6 4.2 5.78-.18.66-.66 2.42-.74 2.78-.1.45.16.45.35.33.16-.1 2.5-1.7 3.5-2.4.49.07.98.1 1.49.1 5 0 8.8-3.1 8.8-6.9S17 5 12 5z" fill="#2563eb"/></svg> 카카오톡 오픈톡방 입장</div>
             <div class="menu-item" id="menu-survey-instant" style="display:none;" onclick="openInstantSurvey();"><i class="fa-solid fa-square-poll-vertical"></i> 설문 응답 / 수정</div>
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn"></i> 공지사항 </div>
+            <!-- [K68] 교육 자료(교재) — 이번 과정에 연결된 교재가 있을 때만 표시 -->
+            <div class="menu-item" id="menu-materials" style="display:none;" onclick="openMaterials()"><i class="fa-solid fa-book-open" style="color:#6366f1;"></i> 교육 자료 받기 <span id="matCountBadge" style="display:none; background:#6366f1; color:#fff; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:800; margin-left:6px;"></span></div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
             <div class="menu-item" onclick="openFoodModal()" style="display:none;"><i class="fa-solid fa-burger"></i> 항기원 맛집 추천</div>
             <div id="svcGateBanner" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#b45309; border-radius:12px; padding:11px 13px; font-size:12.5px; font-weight:700; line-height:1.5; margin-bottom:4px;"><i class="fa-solid fa-lock" style="margin-right:5px;"></i> 현재 담당 교수님이 신청 기능을 열어두지 않아 <b>차량·외출/외박·석식·비품·태블릿 신청이 비활성화</b>되어 있습니다.</div>
@@ -1927,7 +1929,7 @@ async function resolveRoomFromCode(code) {
                실명 입교자와 동일하게 앱으로 진입시켜 해당 화면이 바로 열리게 한다.
                그 외(순수 입장)에는 [K61]대로 '게스트 입장 완료' 홈 카드까지만 보여준다. */
             var _gm=params.get('menu');
-            if(_gm==='quiz' || _gm==='qna'){
+            if(_gm==='quiz' || _gm==='qna' || _gm==='materials'){
                 try{ var _gh=document.getElementById('keduHome'); if(_gh) _gh.style.display='none'; }catch(e){}
                 try{ enterApp(); }catch(e){}
             } else {
@@ -2731,6 +2733,7 @@ function applyMenuFeatures(features) {
         { key: 'cns',          selector: '[onclick="openCnsPlatform()"]' },
         { key: 'tabletLoan',   selector: '[onclick="openTabletLoan()"]' },
         { key: 'hrd',          selector: '[onclick="openHrdAttendanceApp()"]' },
+        { key: 'materials',    selector: '[onclick="openMaterials()"]' },   // [K68] 교육 자료
     ];
     menuMap.forEach(({ key, selector }) => {
         const el = document.querySelector(selector);
@@ -2761,6 +2764,13 @@ function applyMenuFeatures(features) {
     // 항기원 맛집: 기본 OFF — 강사가 켰을 때만 노출
     var _food = document.querySelector('[onclick="openFoodModal()"]');
     if (_food) _food.style.display = (features.foodspots === true) ? '' : 'none';
+    /* [K68] 교육 자료: 강사가 끈 경우(false)는 무조건 숨기고, 그 외에는
+       '연결된 교재가 있을 때만' 보이게 한다(_kacMatApplyMenu 가 판단). */
+    var _mat = document.getElementById('menu-materials');
+    if (_mat) {
+        _mat.dataset.featOff = (features.materials === false) ? '1' : '0';
+        try { _kacMatApplyMenu(); } catch (e) { }
+    }
     // 오픈톡방: 카카오 링크 유무 + 활성화 플래그를 함께 반영 (링크 없으면 어차피 숨김)
     window._kakaoMenuEnabled = (features.kakao !== false);
     applyKakaoLink(window._kakaoLink || '');
@@ -2810,7 +2820,8 @@ function setupListeners() {
         serverTimeOffset = snap.val() || 0;
     });
 
-    watchNotices(); 
+    watchNotices();
+    try{ _kacMatWatch(currentRoom); }catch(e){}   // [K68] 이번 과정 교재 목록 실시간 구독
 
     // 2. 과정명 및 기본 설정 감시
     dbRef.settings.off();
@@ -5250,6 +5261,101 @@ function _menuTableHTML(menu){
     return note+`<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;min-width:520px;">${head}${rows}</table></div>`;
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   [K68] 교육 자료(교재) 받기 — 교육생
+   ──────────────────────────────────────────────────────────────────────────
+   · 강사가 이번 과정에 '연결'한 교재만 보인다(courses/{room}/materials).
+   · 파일 실체는 Cloudflare R2 에 있고 Firebase 에는 주소만 있어, 용량·개인정보와 무관.
+   · 연결된 교재가 하나도 없으면 메뉴 자체를 숨긴다.
+   ══════════════════════════════════════════════════════════════════════════ */
+window._kacMatList = [];
+function _kacMatWatch(room){
+    if(!room) return;
+    try{ if(window._kacMatRef) window._kacMatRef.off(); }catch(e){}
+    window._kacMatRef = firebase.database().ref('courses/'+room+'/materials');
+    window._kacMatRef.on('value', async function(s){
+        var linked = s.val() || {};
+        var ids = Object.keys(linked);
+        if(!ids.length){ window._kacMatList=[]; _kacMatApplyMenu(); return; }
+        try{
+            var all = await firebase.database().ref('system/materials').once('value');
+            var v = all.val() || {};
+            window._kacMatList = ids.map(function(id){
+                return v[id] ? Object.assign({ id:id }, v[id]) : null;
+            }).filter(Boolean).sort(function(a,b){ return (a.uploadedAt||0)-(b.uploadedAt||0); });
+        }catch(e){ window._kacMatList=[]; }
+        _kacMatApplyMenu();
+        if(window._kacMatOpen) _kacMatRender();
+    });
+}
+function _kacMatApplyMenu(){
+    var el = document.getElementById('menu-materials');
+    if(!el) return;
+    var n = (window._kacMatList||[]).length;
+    // 강사가 메뉴를 끈 과정(menuFeatures.materials===false)은 applyMenuFeatures 가 숨기므로 건드리지 않는다
+    if(el.dataset.featOff === '1'){ el.style.display='none'; return; }
+    el.style.display = n ? '' : 'none';
+    var b = document.getElementById('matCountBadge');
+    if(b){ b.style.display = n ? '' : 'none'; b.textContent = n + '건'; }
+}
+function openMaterials(){
+    var list = window._kacMatList || [];
+    if(!list.length) return showKacAlert('아직 등록된 교육 자료가 없습니다.\n강사님이 올리면 여기에 표시됩니다.');
+    window._kacMatOpen = true;
+    var ov = document.getElementById('kacMatOverlay');
+    if(!ov){
+        ov = document.createElement('div');
+        ov.id = 'kacMatOverlay';
+        ov.style.cssText = 'position:fixed; inset:0; z-index:12000; background:rgba(15,23,42,.55); display:flex; align-items:flex-end; justify-content:center;';
+        ov.onclick = function(e){ if(e.target===ov) closeMaterials(); };
+        ov.innerHTML = '<div style="background:#fff; width:100%; max-width:560px; max-height:86vh; border-radius:22px 22px 0 0; display:flex; flex-direction:column; box-shadow:0 -10px 40px rgba(15,23,42,.3);">'
+          + '<div style="padding:18px 20px 12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px;">'
+            + '<i class="fa-solid fa-book-open" style="color:#6366f1; font-size:19px;"></i>'
+            + '<div style="flex:1; font-size:17px; font-weight:900; color:#0f172a;">교육 자료</div>'
+            + '<button onclick="closeMaterials()" aria-label="닫기" style="width:34px; height:34px; border:none; border-radius:50%; background:#f1f5f9; color:#475569; font-size:19px; font-weight:800; cursor:pointer;">&times;</button>'
+          + '</div>'
+          + '<div id="kacMatBody" style="flex:1; min-height:0; overflow-y:auto; padding:14px 16px 24px; -webkit-overflow-scrolling:touch;"></div>'
+          + '</div>';
+        document.body.appendChild(ov);
+    }
+    ov.style.display = 'flex';
+    _kacMatRender();
+}
+function closeMaterials(){
+    window._kacMatOpen = false;
+    var ov = document.getElementById('kacMatOverlay');
+    if(ov) ov.style.display='none';
+}
+function _kacMatRender(){
+    var body = document.getElementById('kacMatBody'); if(!body) return;
+    var list = window._kacMatList || [];
+    if(!list.length){ body.innerHTML = '<div style="padding:40px 10px; text-align:center; color:#94a3b8; font-weight:700;">등록된 자료가 없습니다.</div>'; return; }
+    var icon = function(fn){
+        var e = String(fn||'').split('.').pop().toLowerCase();
+        if(e==='pdf') return ['fa-file-pdf','#dc2626'];
+        if(e==='ppt'||e==='pptx') return ['fa-file-powerpoint','#ea580c'];
+        if(e==='xls'||e==='xlsx') return ['fa-file-excel','#16a34a'];
+        if(e==='zip') return ['fa-file-zipper','#7c3aed'];
+        if(e==='mp4') return ['fa-file-video','#0891b2'];
+        if(['jpg','jpeg','png'].indexOf(e)>=0) return ['fa-file-image','#0ea5e9'];
+        return ['fa-file-lines','#64748b'];
+    };
+    body.innerHTML = '<div style="font-size:12.5px; color:#64748b; font-weight:700; margin-bottom:12px; line-height:1.55;">'
+        + '받기를 누르면 휴대폰에 저장됩니다. 교육 기간 중에만 받을 수 있습니다.</div>'
+      + list.map(function(m){
+            var ic = icon(m.fileName);
+            return '<a href="'+escapeHtml(m.url)+'" target="_blank" rel="noopener" '
+              + 'style="display:flex; align-items:center; gap:13px; padding:14px 15px; border:1px solid #eef2f7; border-radius:14px; margin-bottom:10px; text-decoration:none; background:#fff;">'
+              + '<i class="fa-solid '+ic[0]+'" style="font-size:24px; color:'+ic[1]+'; flex-shrink:0;"></i>'
+              + '<div style="flex:1; min-width:0;">'
+                + '<div style="font-size:14.5px; font-weight:800; color:#0f172a; line-height:1.4; word-break:break-all;">'+escapeHtml(m.title||m.fileName)+'</div>'
+                + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+escapeHtml(String(m.size>=1048576?(m.size/1048576).toFixed(1)+'MB':Math.round((m.size||0)/1024)+'KB'))+'</div>'
+              + '</div>'
+              + '<span style="flex-shrink:0; padding:8px 14px; border-radius:10px; background:#eef2ff; color:#4338ca; font-size:13px; font-weight:800;">받기</span>'
+              + '</a>';
+        }).join('');
+}
+
 // 식단표 보기 함수 (성능 최적화 버전)
 async function viewMealMenu() {
 
@@ -7636,6 +7742,7 @@ body.kac-quiz-active .quiz-overlay,
     food:   function(){ if(typeof openFoodModal==='function')       return openFoodModal(); },         // 항기원 맛집
     supply: function(){ if(typeof openFacilityRequest==='function') return openFacilityRequest(); },   // 생활관 비품
     home:   function(){ if(typeof window.showKakaoHome==='function') return window.showKakaoHome(); }, // 입교/홈
+    materials: function(){ if(typeof window.openMaterials==='function') return window.openMaterials(); }, // [K68] 교육 자료
     qna:    function(){ /* Q&A = 메인 화면 자체 → 별도 동작 없음 */ },
     quiz:   function(){                                                                          // LIVE 퀴즈
       var ov=document.getElementById('quizOverlay');
@@ -7646,8 +7753,9 @@ body.kac-quiz-active .quiz-overlay,
   if(!ACT[menu]) return;            // 모르는 값이면 무시(기본 화면 유지)
   // [vJ115] 미등록(입교등록 전) 상태에서 4개 기능(차량·외출외박·질문·퀴즈) 진입 시 → 입교등록 안내 카드
   var _GATE_LABELS={car:'퇴교차량 신청', outing:'외출·외박 신청', quiz:'퀴즈 풀기', qna:'질문하기'};
-  /* [K61] 게스트는 질문·퀴즈만 허용 — 차량·외출외박은 신원 확인이 필요해 게이트로 막는다. */
-  var _GUEST_OK={quiz:1, qna:1};
+  /* [K61] 게스트는 질문·퀴즈만 허용 — 차량·외출외박은 신원 확인이 필요해 게이트로 막는다.
+     [K68] 교육 자료도 신원과 무관한 열람이라 게스트에게 허용한다. */
+  var _GUEST_OK={quiz:1, qna:1, materials:1};
   function _kacIsEnrolledForGate(){
     try{
       if(window.kacIsGuest && window.kacIsGuest()) return !!localStorage.getItem('uToken');   // 게스트도 '입장' 자체는 완료 상태
