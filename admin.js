@@ -9895,14 +9895,19 @@ const scheduleMgr = {
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:center;">
                         ${tsStr ? `<span style="font-size:13px; color:#94a3b8; font-weight:700;">마지막 업로드: ${tsStr}</span>` : ''}
                         <button onclick="scheduleMgr.showPhotoQr()" style="background:#eef2ff; color:#1e3a8a; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-qrcode"></i> QR로 교체</button>
+                        <button onclick="scheduleMgr.pickFromPC()" style="background:#ecfdf5; color:#047857; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-folder-open"></i> PC에서 교체</button>
                         <button onclick="scheduleMgr.deletePhoto()" style="background:#fef2f2; color:#dc2626; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i> 삭제</button>
                     </div>
                 </div>`;
         } else {
             block.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:18px 0;">
-                    <div style="color:#64748b; font-weight:800; font-size:15px;">등록된 시간표 사진이 없습니다. <span style="color:#94a3b8;">(내용 없음)</span></div>
-                    <button onclick="scheduleMgr.showPhotoQr()" style="background:#2563eb; color:#fff; border:none; border-radius:12px; padding:14px 22px; font-weight:900; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:9px;"><i class="fa-solid fa-camera"></i> 사진 업로드</button>
+                    <div style="color:#64748b; font-weight:800; font-size:15px;">등록된 시간표가 없습니다. <span style="color:#94a3b8;">(내용 없음)</span></div>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center;">
+                        <button onclick="scheduleMgr.showPhotoQr()" style="background:#2563eb; color:#fff; border:none; border-radius:12px; padding:14px 22px; font-weight:900; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:9px;"><i class="fa-solid fa-camera"></i> 사진 업로드 (휴대폰)</button>
+                        <button onclick="scheduleMgr.pickFromPC()" style="background:#059669; color:#fff; border:none; border-radius:12px; padding:14px 22px; font-weight:900; font-size:16px; cursor:pointer; display:flex; align-items:center; gap:9px;"><i class="fa-solid fa-folder-open"></i> PC에서 선택 (PDF·이미지)</button>
+                    </div>
+                    <div style="font-size:12.5px; color:#94a3b8; font-weight:700;">PDF는 이미지로 변환해 등록되므로 교육생 화면에서도 그대로 보입니다.</div>
                 </div>`;
         }
     },
@@ -9926,11 +9931,131 @@ const scheduleMgr = {
             catch (e) { qrDiv.textContent = url; }
         } else if (qrDiv) { qrDiv.textContent = url; }
     },
+    /* ══════════════════════════════════════════════════════════════════════
+       [K67] 교육 시간표 — PC에서 PDF·이미지 직접 올리기
+       ────────────────────────────────────────────────────────────────────
+       기존엔 휴대폰 QR 촬영만 가능했다. 시간표를 PDF로 받는 경우가 많아
+       PC에서 바로 고를 수 있게 한다.
+       · 파일 선택창은 가능하면 '다운로드' 폴더에서 열린다
+         (크롬 File System Access API 의 startIn:'downloads'. 미지원 브라우저는
+          일반 파일 선택창으로 자동 폴백 — 이때 시작 폴더는 브라우저가 정한다.)
+       · PDF 는 pdf.js 로 각 장을 그려 '세로로 이어붙인 한 장의 이미지'로 변환해 저장한다.
+         → 저장 형식이 기존과 똑같아 교육생 화면·전체화면·삭제·차주 자동정리가 전부 그대로 동작.
+       ══════════════════════════════════════════════════════════════════════ */
+    MAX_W: 1600,          // 저장 이미지 가로 상한(용량/화질 균형)
+    MAX_PDF_PAGES: 5,     // 이어붙일 최대 장수
+    pickFromPC: async function() {
+        if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다.");
+        if (!state.room) return ui.showAlert("강의실을 먼저 선택해 주세요.");
+        let file = null;
+        try {
+            if (window.showOpenFilePicker) {
+                const [h] = await window.showOpenFilePicker({
+                    startIn: 'downloads',                 // 다운로드 폴더에서 열기
+                    excludeAcceptAllOption: false,
+                    types: [{ description: '시간표 파일 (PDF·이미지)',
+                              accept: { 'application/pdf': ['.pdf'],
+                                        'image/*': ['.png', '.jpg', '.jpeg', '.webp'] } }]
+                });
+                file = await h.getFile();
+            }
+        } catch (e) {
+            if (e && e.name === 'AbortError') return;      // 사용자가 취소 — 조용히 종료
+            file = null;                                   // 그 외 오류는 아래 폴백으로
+        }
+        if (!file) {
+            file = await new Promise(res => {
+                const inp = document.createElement('input');
+                inp.type = 'file';
+                inp.accept = 'application/pdf,image/*';
+                inp.onchange = () => res(inp.files && inp.files[0] ? inp.files[0] : null);
+                inp.click();
+            });
+        }
+        if (!file) return;
+        await this._uploadLocalFile(file);
+    },
+    _uploadLocalFile: async function(file) {
+        const room = state.room;
+        const isPdf = /pdf$/i.test(file.type) || /\.pdf$/i.test(file.name || '');
+        const block = document.getElementById('schedulePhotoBlock');
+        if (block) block.innerHTML = '<div style="padding:40px 0; text-align:center; color:#475569; font-weight:800;">'
+            + '<i class="fa-solid fa-spinner fa-spin"></i> ' + (isPdf ? 'PDF를 변환하는 중입니다…' : '이미지를 준비하는 중입니다…') + '</div>';
+        try {
+            const dataUrl = isPdf ? await this._pdfToDataUrl(file) : await this._imgToDataUrl(file);
+            if (!dataUrl) throw new Error('변환 결과가 비어 있습니다.');
+            const updatedAt = Date.now();
+            await kacMedia.write(room, 'scheduleImage', { dataUrl: dataUrl, updatedAt: updatedAt });
+            try { await this._idbSet(room, { updatedAt: updatedAt, dataUrl: dataUrl }); } catch (e) {}
+            if (state.room === room) this._renderPhoto({ dataUrl: dataUrl, updatedAt: updatedAt });
+            ui.showAlert('✅ 교육 시간표를 등록했습니다.\n교육생 화면에도 바로 반영됩니다.');
+        } catch (e) {
+            console.warn('[시간표 업로드] 실패', e);
+            ui.showAlert('등록에 실패했습니다.\n' + ((e && e.message) ? e.message : '파일을 다시 확인해 주세요.'));
+            this.loadPhoto();
+        }
+    },
+    /* 이미지 → 가로 MAX_W 로 줄여 JPEG dataUrl (휴대폰 업로더와 같은 규격) */
+    _imgToDataUrl: function(file) {
+        const MAX_W = this.MAX_W;
+        return new Promise((resolve, reject) => {
+            const fr = new FileReader();
+            fr.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
+            fr.onload = () => {
+                const img = new Image();
+                img.onerror = () => reject(new Error('이미지 형식을 인식하지 못했습니다.'));
+                img.onload = () => {
+                    const sc = Math.min(1, MAX_W / img.width);
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.width * sc);
+                    c.height = Math.round(img.height * sc);
+                    const g = c.getContext('2d');
+                    g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+                    g.drawImage(img, 0, 0, c.width, c.height);
+                    resolve(c.toDataURL('image/jpeg', 0.85));
+                };
+                img.src = fr.result;
+            };
+            fr.readAsDataURL(file);
+        });
+    },
+    /* PDF → 각 장을 그려 세로로 이어붙인 한 장의 JPEG dataUrl */
+    _pdfToDataUrl: async function(file) {
+        if (typeof pdfjsLib === 'undefined') throw new Error('PDF 변환 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+        try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; } catch (e) {}
+        const buf = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+        const n = Math.min(pdf.numPages, this.MAX_PDF_PAGES);
+        const MAX_W = this.MAX_W, GAP = 16;
+        const pages = [];
+        for (let i = 1; i <= n; i++) {
+            const page = await pdf.getPage(i);
+            const base = page.getViewport({ scale: 1 });
+            const vp = page.getViewport({ scale: MAX_W / base.width });
+            const c = document.createElement('canvas');
+            c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+            const g = c.getContext('2d');
+            g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+            await page.render({ canvasContext: g, viewport: vp }).promise;
+            pages.push(c);
+        }
+        if (!pages.length) throw new Error('PDF에 페이지가 없습니다.');
+        if (pages.length === 1) return pages[0].toDataURL('image/jpeg', 0.85);
+        const totalH = pages.reduce((s, c) => s + c.height, 0) + GAP * (pages.length - 1);
+        const out = document.createElement('canvas');
+        out.width = MAX_W; out.height = totalH;
+        const og = out.getContext('2d');
+        og.fillStyle = '#fff'; og.fillRect(0, 0, out.width, out.height);
+        let y = 0;
+        pages.forEach(c => { og.drawImage(c, 0, y); y += c.height + GAP; });
+        return out.toDataURL('image/jpeg', 0.82);
+    },
+
     deletePhoto: function() {
         if (state.isObserver) return ui.showAlert("👁️ 옵저버 모드에서는 수정할 수 없습니다.");
         const room = state.room;
         if (!room) return;
-        if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
+        if (!confirm('등록된 시간표를 삭제할까요?')) return;
         // [J16] media 주경로 + 레거시 양쪽 모두 삭제
         firebase.database().ref(kacMedia.path(room, 'scheduleImage')).remove()
             .then(() => { kacMedia.remove(room, 'scheduleImage'); this._idbDelete(room); ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'); })
