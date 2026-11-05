@@ -5282,7 +5282,7 @@ function _kacMatWatch(room){
     window._kacMatRef.on('value', async function(s){
         var linked = s.val() || {};
         var ids = Object.keys(linked);
-        if(!ids.length){ window._kacMatList=[]; _kacMatApplyMenu(); return; }
+        if(!ids.length){ window._kacMatList=[]; window._kacMatLoaded=true; _kacMatApplyMenu(); if(window._kacMatOpen) _kacMatRender(); return; }
         try{
             var all = await firebase.database().ref('system/materials').once('value');
             var v = all.val() || {};
@@ -5290,6 +5290,7 @@ function _kacMatWatch(room){
                 return v[id] ? Object.assign({ id:id }, v[id]) : null;
             }).filter(Boolean).sort(function(a,b){ return (a.uploadedAt||0)-(b.uploadedAt||0); });
         }catch(e){ window._kacMatList=[]; }
+        window._kacMatLoaded = true;          // [K85] 서버 응답을 받았다는 표시
         _kacMatApplyMenu();
         if(window._kacMatOpen) _kacMatRender();
     });
@@ -5319,7 +5320,11 @@ function _kacMatApplyMenu(){
          그 경우에는 화면 전체를 덮는 단독 화면으로 연다. */
 function openMaterials(fullScreen){
     var list = window._kacMatList || [];
-    if(!list.length) return showKacAlert('아직 등록된 교육 자료가 없습니다.\n강사님이 올리면 여기에 표시됩니다.');
+    /* [K85] 아직 서버 응답 전이면 '없다'고 단정하지 않는다. 화면을 열어 두고
+             자료가 도착하면 리스너가 다시 그린다(그래도 없으면 그때 안내가 뜬다). */
+    if(!list.length && window._kacMatLoaded){
+        return showKacAlert('아직 등록된 교육 자료가 없습니다.\n강사님이 올리면 여기에 표시됩니다.');
+    }
     window._kacMatOpen = true;
     var full = (fullScreen === true) || (window._kacMatDeepLink === true);
     var ov = document.getElementById('kacMatOverlay');
@@ -5337,7 +5342,8 @@ function openMaterials(fullScreen){
           + '<div style="padding:' + (full ? 'calc(env(safe-area-inset-top,0px) + 16px)' : '18px') + ' 20px 12px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:10px;">'
             + '<i class="fa-solid fa-book-open" style="color:#6366f1; font-size:19px;"></i>'
             + '<div style="flex:1; min-width:0;">'
-              + '<div style="font-size:17px; font-weight:900; color:#0f172a;">교육 자료</div>'
+              + '<div style="font-size:17px; font-weight:900; color:#0f172a;">교육 자료'
+                + '<span style="margin-left:7px; font-size:12px; font-weight:800; color:#6366f1; background:#eef2ff; border-radius:999px; padding:2px 9px;">' + list.length + '건</span></div>'
               + (full ? '<div style="font-size:12px; font-weight:700; color:#94a3b8; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escapeHtml(window._kacMatCourseName || '') + '</div>' : '')
             + '</div>'
             + '<button onclick="closeMaterials()" aria-label="' + (full ? '홈으로' : '닫기') + '" style="flex-shrink:0; height:34px; padding:0 ' + (full ? '14px' : '0') + '; min-width:34px; border:none; border-radius:' + (full ? '10px' : '50%') + '; background:#f1f5f9; color:#475569; font-size:' + (full ? '13px' : '19px') + '; font-weight:800; cursor:pointer;">' + (full ? '홈으로' : '&times;') + '</button>'
@@ -5363,7 +5369,14 @@ function closeMaterials(){
 function _kacMatRender(){
     var body = document.getElementById('kacMatBody'); if(!body) return;
     var list = window._kacMatList || [];
-    if(!list.length){ body.innerHTML = '<div style="padding:40px 10px; text-align:center; color:#94a3b8; font-weight:700;">등록된 자료가 없습니다.</div>'; return; }
+    /* [K85] 목록이 아직 서버에서 안 왔는데 '없음'으로 단정하면 안 된다.
+             카카오 링크로 들어오면 자료가 도착하기 전에 화면이 먼저 열린다. */
+    if(!list.length){
+        body.innerHTML = window._kacMatLoaded
+            ? '<div style="padding:40px 10px; text-align:center; color:#94a3b8; font-weight:700;">등록된 자료가 없습니다.</div>'
+            : '<div style="padding:40px 10px; text-align:center; color:#94a3b8; font-weight:700;"><i class="fa-solid fa-spinner fa-spin"></i> 교육 자료를 불러오는 중…</div>';
+        return;
+    }
     var icon = function(fn){
         var e = String(fn||'').split('.').pop().toLowerCase();
         if(e==='pdf') return ['fa-file-pdf','#dc2626'];
@@ -5374,9 +5387,25 @@ function _kacMatRender(){
         if(['jpg','jpeg','png'].indexOf(e)>=0) return ['fa-file-image','#0ea5e9'];
         return ['fa-file-lines','#64748b'];
     };
+    /* [K84] 교재가 많으면 찾기 어려워 간단 검색창을 띄운다(6건 이상일 때만) */
+    var q = String(window._kacMatQ || '').trim().toLowerCase();
+    var shown = q ? list.filter(function(m){
+            return String((m.title||'') + ' ' + (m.fileName||'')).toLowerCase().indexOf(q) >= 0;
+        }) : list;
+    var searchBox = (list.length >= 6)
+        ? '<input id="kacMatSearch" type="search" value="' + escapeHtml(window._kacMatQ || '') + '" '
+          + 'placeholder="교재 이름으로 찾기" oninput="window._kacMatQ=this.value; _kacMatRender();" '
+          + 'style="width:100%; box-sizing:border-box; margin-bottom:12px; padding:11px 13px; border:1px solid #e2e8f0; border-radius:11px; font-size:14px;">'
+        : '';
+    if(!shown.length){
+        body.innerHTML = searchBox + '<div style="padding:34px 10px; text-align:center; color:#94a3b8; font-weight:700;">찾는 자료가 없습니다.</div>';
+        var si0 = document.getElementById('kacMatSearch'); if(si0){ si0.focus(); si0.setSelectionRange(si0.value.length, si0.value.length); }
+        return;
+    }
     body.innerHTML = '<div style="font-size:12.5px; color:#64748b; font-weight:700; margin-bottom:12px; line-height:1.55;">'
         + '<b>보기</b>는 바로 열어보고, <b>받기</b>는 휴대폰에 저장합니다.<br>교육 기간 중에만 이용할 수 있습니다.</div>'
-      + list.map(function(m){
+      + searchBox
+      + shown.map(function(m){
             var ic = icon(m.fileName);
             var url = window.kacMaterials ? window.kacMaterials.fileUrl(m) : (m.url||'');
             var isPdf = /\.pdf$/i.test(m.fileName||'');
@@ -5391,6 +5420,9 @@ function _kacMatRender(){
               + '<a href="'+escapeHtml(url)+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:8px 13px; border-radius:10px; background:#eef2ff; color:#4338ca; font-size:13px; font-weight:800; text-decoration:none;">받기</a>'
               + '</div>';
         }).join('');
+    /* 다시 그리면 포커스가 날아가 한 글자씩만 입력되므로 커서를 되돌려 놓는다 */
+    var si = document.getElementById('kacMatSearch');
+    if(si && q){ si.focus(); si.setSelectionRange(si.value.length, si.value.length); }
 }
 
 // 식단표 보기 함수 (성능 최적화 버전)
