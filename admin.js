@@ -18566,10 +18566,24 @@ ui._matRenderList = function(){
     ui._matSyncBulk();
 };
 
-/* [K70] 바로 보기 — Worker 의 ?view=1 로 열면 내려받지 않고 브라우저에서 바로 뜬다 */
-ui.matViewOne = function(id){
+/* [K70] 바로 보기 — Worker 의 ?view=1 로 열면 내려받지 않고 브라우저에서 바로 뜬다.
+   Worker 가 예전 코드면 '보기'가 '받기'처럼 동작하므로, 그 경우 안내를 띄운다. */
+ui.MAT_WORKER_MIN = '2026.11.05-2';
+ui.matViewOne = async function(id){
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
     if(!m) return;
+    if(ui._matWorkerOld === undefined){
+        try{
+            var p = await window.kacMaterials.ping();
+            ui._matWorkerOld = !(p && p.version && p.version >= ui.MAT_WORKER_MIN);
+        }catch(e){ ui._matWorkerOld = false; }
+    }
+    if(ui._matWorkerOld){
+        return ui.showAlert('⚠️ 교재 저장소(Cloudflare Worker)가 예전 코드입니다.\n\n'
+            + '이 상태에서는 [보기]를 눌러도 다운로드로 동작합니다.\n'
+            + '_교재자료실_Worker.js 내용을 Cloudflare 에 다시 붙여넣고\n'
+            + 'Deploy 하시면 바로 보기가 됩니다.');
+    }
     window.open(window.kacMaterials.fileUrl(m) + '?view=1', '_blank', 'noopener');
 };
 
