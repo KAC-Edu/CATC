@@ -388,7 +388,7 @@ function rebuild(){
       var cr=room.coordRoster&&room.coordRoster.list; if(Array.isArray(cr)) cr.forEach(function(x){ if(x&&x.name) nm.push(x.name); });
       try{ if(window.kacEnsureDormCache) window.kacEnsureDormCache(); var _dn=(window.kacDormNamesForCourse?window.kacDormNamesForCourse((room.settings&&room.settings.courseName)||''):[]); if(_dn&&_dn.length) _dn.forEach(function(n){ nm.push(n); }); }catch(e){}
       nm=nm.map(function(n){return String(n==null?'':n).trim();}).filter(Boolean);
-      if(!nm.length) return null;
+      // [K63] 명단이 비어도 null(=전원 집계)로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준.
       var set={}; nm.forEach(function(n){ set[_nm(n)]=1; });
       var inc=room.rosterInclude||{}; Object.values(room.students||{}).forEach(function(s){ var n2=String(s&&s.name||'').trim(); if(n2 && inc[n2.replace(/[.#$\[\]\/]/g,'_')]) set[_nm(n2)]=1; });
       return set;
