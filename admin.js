@@ -19316,4 +19316,92 @@ ui.matLibDeleteSelected = async function(){
     ui._matRenderList();
 };
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K80] 퇴교 수송 요청문 복사 — 기사님 카카오톡방에 붙여넣는 용도
+   ──────────────────────────────────────────────────────────────────────────
+   기존 카톡방에서 쓰던 형식("퇴교 수송 요청드립니다 / 날짜 / 오송역 - N")을
+   표준화해 한 번에 만들어 준다. 숫자는 화면의 차량 소요조사 결과와 같은 값이다.
+   ══════════════════════════════════════════════════════════════════════════ */
+ui._shuttleReqText = function(){
+    var g = function(id){ var e=document.getElementById(id); return e ? String(e.innerText||e.textContent||'').trim() : ''; };
+    var n = function(id){ var v=parseInt(String(g(id)).replace(/[^0-9]/g,''),10); return isNaN(v)?0:v; };
+
+    var course = g('dashCourseTitle'); if(!course || course.indexOf('설정')>=0) course = '';
+    var period = g('dashPeriod') || '';
+    /* 퇴교일 = 교육 기간의 끝날. "2026-11-02 ~ 2026-11-06" 형태에서 뒤쪽을 쓴다. */
+    var endRaw = '';
+    var mm = period.match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})\s*~\s*(\d{4})[-.](\d{1,2})[-.](\d{1,2})/);
+    if(mm) endRaw = mm[4]+'-'+mm[5]+'-'+mm[6];
+    else { var m1 = period.match(/(\d{4})[-.](\d{1,2})[-.](\d{1,2})/); if(m1) endRaw = m1[1]+'-'+m1[2]+'-'+m1[3]; }
+    var dateStr = '';
+    if(endRaw){
+        var d = new Date(endRaw.replace(/-/g,'/'));
+        if(!isNaN(d)) dateStr = (d.getMonth()+1) + '월 ' + d.getDate() + '일(' + '일월화수목금토'.charAt(d.getDay()) + ')';
+    }
+
+    var osong = n('total-osong'), term = n('total-term'), air = n('total-air'), car = n('total-car');
+    var need  = osong + term + air;                 // 차량이 실제로 필요한 인원
+    var depart = g('dashShuttleTimeInline').replace(/[·|]/g,'').trim();
+
+    var L = [];
+    L.push('[퇴교 수송 요청]');
+    L.push('');
+    if(course)  L.push('○ 과정 : ' + course);
+    if(dateStr) L.push('○ 일자 : ' + dateStr + ' 퇴교');
+    if(depart)  L.push('○ 출발 : ' + depart);
+    L.push('');
+    if(need){
+        L.push('○ 수송 인원');
+        if(osong) L.push('   - 오송역 : ' + osong + '명');
+        if(term)  L.push('   - 청주터미널 : ' + term + '명');
+        if(air)   L.push('   - 청주공항 : ' + air + '명');
+        L.push('   ────────────');
+        L.push('   합계 ' + need + '명');
+    } else {
+        L.push('○ 수송 인원 : 없음 (전원 자차)');
+    }
+    if(car) L.push('※ 자차 ' + car + '명은 제외된 인원입니다.');
+    L.push('');
+    var who = ui._matWho ? ui._matWho() : '';
+    L.push('항공기술훈련원' + (who && who !== '강사' ? ' ' + who + ' 교수' : '') + ' 드림');
+    return L.join('\n');
+};
+
+ui.copyShuttleRequest = function(){
+    var txt = ui._shuttleReqText();
+    var ov = document.createElement('div');
+    ov.id = 'shReqOv';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:22px;';
+    ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
+    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:470px; box-shadow:0 24px 60px rgba(15,23,42,.4);">'
+      + '<div style="font-size:17px; font-weight:900; color:#0f172a; margin-bottom:5px;"><i class="fa-solid fa-bus" style="color:#0ea5e9;"></i> 기사님께 보낼 수송 요청문</div>'
+      + '<div style="font-size:12.5px; color:#64748b; font-weight:700; margin-bottom:14px;">복사해서 기사님 카카오톡방에 붙여넣으세요.</div>'
+      + '<textarea id="shReqText" readonly style="width:100%; box-sizing:border-box; height:260px; padding:14px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; font-family:inherit; font-size:13px; line-height:1.75; color:#0f172a; resize:none;"></textarea>'
+      + '<button onclick="ui._shReqCopy()" style="width:100%; margin-top:12px; padding:13px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-size:14.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-copy"></i> 복사하기</button>'
+      + '<button onclick="document.getElementById(\'shReqOv\').remove();" style="width:100%; margin-top:9px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">닫기</button>'
+      + '</div>';
+    document.body.appendChild(ov);
+    var ta = ov.querySelector('#shReqText');
+    if(ta) ta.value = txt;      // value 로 넣어야 줄바꿈이 그대로 보존된다
+};
+
+ui._shReqCopy = function(){
+    var ta = document.getElementById('shReqText'); if(!ta) return;
+    var txt = ta.value;
+    var done = function(){
+        var ov = document.getElementById('shReqOv'); if(ov) ov.remove();
+        ui.showAlert('📋 복사했습니다.\n\n기사님 카카오톡방에 붙여넣기(Ctrl+V) 하세요.');
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done).catch(function(){
+            try{ ta.select(); document.execCommand('copy'); }catch(e){}
+            done();
+        });
+    } else {
+        try{ ta.select(); document.execCommand('copy'); }catch(e){}
+        done();
+    }
+};
+
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
