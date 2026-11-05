@@ -3138,6 +3138,8 @@ loadDashboardStats: function() {
         try { recalcTotal(state._dashStudentsCache || {}); } catch(e){}
         try { ui._syncOpsStuRow(room); } catch(e){}
         try { ui._syncOpsOtpRow(room); } catch(e){}
+        try { ui._recalcDashShuttle(room); } catch(e){}        // [K63] 차량 소요조사도 즉시 반영
+        try { if(ui._recountDashMisc) ui._recountDashMisc(); } catch(e){}  // [K63] 외출외박·석식·전자기기
     });
 
     // [본 과정 수강생(예정)] 수강생현황과 100% 동일한 로직을 인라인으로 직접 실행 — 리스너/캐시/메서드 의존 없이 무조건 표시
@@ -3172,6 +3174,16 @@ loadDashboardStats: function() {
     // 7. 행정 신청(외출/외박) 실시간 카운트
     //  자정이 아닌 '익일 09:00'에 초기화되도록, 오늘+어제 노드를 읽어 09:00 윈도우(timestamp)로 집계
     refs._outToday = {}; refs._outYest = {};
+    /* [K63] '명단 포함' 미체크자(구경꾼)는 외출외박·석식·전자기기 현황에도 넣지 않는다.
+       — 셔틀(kacShuttleMerge)과 동일 기준. 이름이 없는 기록은 거르지 않는다(오차단 방지). */
+    function _onRoster(nm){
+        try{
+            var set = ui._rosterNameSet(state._dashExpectedCache || [], state._dashStudentsCache || {});
+            var n = String(nm==null?'':nm).trim();
+            if(!n || n==='undefined') return true;       // 이름 미기록 → 판정 불가, 종전대로 집계
+            return !!set[n.replace(/\s+/g,'').toLowerCase()];
+        }catch(e){ return true; }
+    }
     function _recountOutings() {
         if (state.room !== room) return;
         const w = getOutingWindowKST();
@@ -3179,6 +3191,7 @@ loadDashboardStats: function() {
         [refs._outToday, refs._outYest].forEach(obj => {
             Object.keys(obj || {}).forEach(k => {
                 const it = obj[k]; const ts = (it && it.timestamp) || 0;
+                if (!_onRoster(it && (it.name || it.student || it.studentName))) return;   // [K63]
                 // 복귀완료(자동 포함) 인원은 차감 → 미복귀 인원만 카운팅
                 if (ts >= w.start && ts < w.end && !(it && (it.returned === true || it.returnReportTime))) count++;
             });
@@ -3188,16 +3201,25 @@ loadDashboardStats: function() {
     }
     refs.action.on('value', s => { if (state.room !== room) return; refs._outToday = s.val() || {}; _recountOutings(); });
     refs.actionY.on('value', s => { if (state.room !== room) return; refs._outYest = s.val() || {}; _recountOutings(); });
-    refs.dinner.on('value', s => {
+    function _recountDinner() {
         if (state.room !== room) return;
-        const count = Object.keys(s.val() || {}).length;
+        const v = refs._dinnerCache || {};
+        let count = 0;
+        Object.keys(v).forEach(k => { const it = v[k]; if (_onRoster(it && (it.name || it.student || it.studentName))) count++; });   // [K63]
         if (document.getElementById('dashDinnerSkipCount')) document.getElementById('dashDinnerSkipCount').innerText = count;
-    });
-    refs.tablet.on('value', s => {
+    }
+    function _recountTablet() {
         if (state.room !== room) return;
-        const count = Object.keys(s.val() || {}).length;
+        const v = refs._tabletCache || {};
+        let count = 0;
+        Object.keys(v).forEach(k => { const it = v[k]; if (_onRoster(it && (it.name || it.student || it.studentName))) count++; });   // [K63]
         if (document.getElementById('dashTabletLoanCount')) document.getElementById('dashTabletLoanCount').innerText = count;
-    });
+    }
+    refs._dinnerCache = {}; refs._tabletCache = {};
+    refs.dinner.on('value', s => { if (state.room !== room) return; refs._dinnerCache = s.val() || {}; _recountDinner(); });
+    refs.tablet.on('value', s => { if (state.room !== room) return; refs._tabletCache = s.val() || {}; _recountTablet(); });
+    /* [K63] 체크가 바뀌면 이 세 현황도 즉시 다시 센다 */
+    ui._recountDashMisc = function(){ try{ _recountOutings(); _recountDinner(); _recountTablet(); }catch(e){} };
     refs.attend.on('value', s => {
         if (state.room !== room) return;
         const _av = s.val() || {};
@@ -3291,12 +3313,15 @@ _rosterNames: function(expectedNames, actualData){
     exp.concat(includedOff).forEach(function(n){ if(!seen[n]){ seen[n]=1; out.push(n); } });
     return out;
 },
-/* [K35] 명단 이름 집합 { norm(이름):1 } — 셔틀 등 집계에서 명단 외 미체크 입교자를 거르는 데 쓴다. 예정명단 없으면 null(=전원). */
+/* [K35] 명단 이름 집합 { norm(이름):1 } — 셔틀 등 집계에서 명단 외 미체크 입교자를 거르는 데 쓴다.
+   [K63] 예정명단이 없을 때 null(=전원 집계)로 폴백하던 것을 제거.
+     예정명단이 없으면 입교자 전원이 '명단 외 입교자'로 체크박스를 갖게 되는데,
+     아무도 체크하지 않았는데도 차량·외출외박 등에 집계되어 '수강생 0명'과 어긋났다.
+     이제 '명단 포함' 체크가 유일한 기준 — 미체크자는 어떤 현황에도 반영하지 않는다. */
 _rosterNameSet: function(expectedNames, actualData){
     var arr = ui._rosterNames(expectedNames, actualData);
-    if(!arr.length) return null;
     var set={}; arr.forEach(function(n){ set[String(n).replace(/\s+/g,'').toLowerCase()]=1; });
-    return set;
+    return set;   // 빈 객체여도 truthy → 호출부(kacShuttleMerge)에서 전원 제외로 동작
 },
 
 /* 과정현황 '오늘의 운영 > 수강생 현황' 줄을 이 방의 값으로 직접 계산해 채운다.
@@ -7112,13 +7137,15 @@ resetShuttleRequests: function() {
                 const _es2 = Array.isArray(r.expectedStudents) ? r.expectedStudents : (r.expectedStudents ? Object.values(r.expectedStudents) : []);
                 _es2.forEach(n=>_rosterNames.push(n));
                 _rosterNames = _rosterNames.map(n=>String(n||'').trim()).filter(Boolean);
-                let _rset2 = null;
-                if(_rosterNames.length){
-                    _rset2={}; _rosterNames.forEach(n=>_rset2[_rnorm(n)]=1);
-                    const _inc2 = r.rosterInclude||{};
-                    Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc2[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset2[_rnorm(nm)]=1; });
-                }
-                const cnt = new Set(Object.keys(students).filter(k=>kacIsRealStudent(students[k],k) && (!_rset2 || _rset2[_rnorm(students[k].name)])).map(k=>students[k].name)).size;
+                /* [K63] 예정명단이 없을 때 '전원 집계'로 폴백하던 것을 제거 —
+                   명단이 없으면 입교자 전원이 '명단 외 입교자'가 되는데, 체크를 안 했는데도
+                   통합 현황판 교육 인원에 잡혀 과정현황의 '수강생 0명'과 어긋났다.
+                   '명단 포함' 체크가 유일한 기준. */
+                const _rset2 = {};
+                _rosterNames.forEach(n=>_rset2[_rnorm(n)]=1);
+                const _inc2 = r.rosterInclude||{};
+                Object.values(students).forEach(s=>{ const nm=String(s&&s.name||'').trim(); if(nm && _inc2[nm.replace(/[.#$\[\]\/]/g,'_')]) _rset2[_rnorm(nm)]=1; });
+                const cnt = new Set(Object.keys(students).filter(k=>kacIsRealStudent(students[k],k) && _rset2[_rnorm(students[k].name)]).map(k=>students[k].name)).size;
                 studentTotal += cnt;
                 // 예정(지원부 업로드) 인원 — 현재 과정 주차의 지원부 명단
                 try {
@@ -7130,6 +7157,9 @@ resetShuttleRequests: function() {
                     Object.values(_allActs[_dt]||{}).forEach(a=>{
                         if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')){
                             const _ts=a.timestamp||0;
+                            // [K63] '명단 포함' 미체크자는 외출외박 집계에서도 제외(이름 없는 기록은 종전대로)
+                            const _an=String((a.name||a.student||a.studentName)||'').trim();
+                            if(_an && _an!=='undefined' && !_rset2[_rnorm(_an)]) return;
                             if(_ts>=_ow.start && _ts<_ow.end && !(a.returned===true||a.returnReportTime)) outingTotal++;
                         }
                     });
