@@ -19058,8 +19058,9 @@ ui._matLibRow = function(m, indent){
     var already = !!(ui._matCourse||{})[m.id];
     var d=new Date(m.uploadedAt||0), p=function(n){return String(n).padStart(2,'0');};
     var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
-    return '<label style="display:flex; align-items:center; gap:11px; padding:10px 12px; margin-left:'+(indent||0)+'px; border-radius:10px; cursor:'+(already?'default':'pointer')+'; background:'+(already?'#f8fafc':'#fff')+';">'
-      + '<input type="checkbox" class="matLibChk" value="'+m.id+'"'+(already?' disabled':'')+' style="width:17px; height:17px; flex-shrink:0;">'
+    return '<label style="display:flex; align-items:center; gap:11px; padding:10px 12px; margin-left:'+(indent||0)+'px; border-radius:10px; cursor:pointer; background:'+(already?'#f8fafc':'#fff')+';">'
+      /* [K79] 이미 연결된 교재도 체크 가능 — 자료실에서 삭제하려면 고를 수 있어야 한다 */
+      + '<input type="checkbox" class="matLibChk" value="'+m.id+'" style="width:17px; height:17px; flex-shrink:0;">'
       + '<i class="fa-solid fa-file-pdf" style="color:'+(already?'#cbd5e1':'#dc2626')+'; font-size:16px; flex-shrink:0;"></i>'
       + '<div style="flex:1; min-width:0;">'
         + '<div style="font-size:13.5px; font-weight:800; color:'+(already?'#94a3b8':'#0f172a')+'; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
@@ -19265,6 +19266,54 @@ ui.clearProfAvatarCache = function(name){
         if(box) box._lastSrc = null;
         ui.applyProfAvatar((document.getElementById('dashProfNameOnly')||{}).innerText || '');
     }catch(e){}
+};
+
+
+/* ══ [K79] 자료실 모달 — 선택한 교재를 자료실에서 완전 삭제 ══
+   여기는 '자료실' 화면이므로 연결 해제가 아니라 파일까지 지우는 삭제다.
+   되돌릴 수 없고 다른 과정에도 영향이 가므로, 목록과 남의 자료 수를 보여주고 확인받는다.
+   ────────────────────────────────────────────────────────── */
+ui.matLibDeleteSelected = async function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 삭제할 수 없습니다.');
+    var ids = Array.from(document.querySelectorAll('.matLibChk:checked')).map(function(c){ return c.value; });
+    if(!ids.length) return ui.showAlert('삭제할 교재를 선택해 주세요.');
+
+    var byId = {}; (ui._matAll||[]).forEach(function(m){ byId[m.id]=m; });
+    var me = ui._matWho();
+    var others = ids.filter(function(id){ var m=byId[id]; return m && m.uploader !== me; }).length;
+    var linked = ids.filter(function(id){ return !!(ui._matCourse||{})[id]; }).length;
+    var names  = ids.map(function(id){ var m=byId[id]; return m ? (m.title||m.fileName) : '(알 수 없음)'; });
+
+    var msg = '자료실에서 ' + ids.length + '건을 완전히 삭제합니다.\n\n'
+        + names.slice(0,6).map(function(n){ return '· ' + n; }).join('\n')
+        + (names.length > 6 ? '\n· 외 ' + (names.length-6) + '건' : '')
+        + '\n\n· 파일이 지워지며 되돌릴 수 없습니다.'
+        + '\n· 이 교재를 쓰는 다른 과정에서도 사라집니다.'
+        + (others ? '\n\n⚠️ 이 중 ' + others + '건은 다른 분이 올린 자료입니다.' : '')
+        + (linked ? '\n⚠️ 이 중 ' + linked + '건은 이번 과정에서 쓰고 있습니다.' : '')
+        + '\n\n계속할까요?';
+    if(!confirm(msg)) return;
+    if(!(await ui._matEnsureKey())) return;
+
+    var ok = 0, fail = 0;
+    var box = document.getElementById('matLibList');
+    var note = function(html){
+        if(box) box.innerHTML = '<div style="padding:40px 20px; text-align:center; font-size:14px; font-weight:800; color:#475569;">' + html + '</div>';
+    };
+    for(var i=0;i<ids.length;i++){
+        var m = byId[ids[i]];
+        note('<i class="fa-solid fa-spinner fa-spin"></i> (' + (i+1) + '/' + ids.length + ') 삭제 중…');
+        try{
+            if(m) await window.kacMaterials.destroy(m);
+            await window.kacMaterials.unlink(state.room, ids[i]);   // 이번 과정 연결도 함께 정리
+            ok++;
+        }catch(e){ fail++; console.warn('[자료실 삭제] 실패', e); }
+    }
+    ui.showAlert('🗑️ ' + ok + '건을 자료실에서 삭제했습니다.' + (fail ? '\n실패 ' + fail + '건' : ''));
+    var all = await window.kacMaterials.listAll();
+    ui._matAll = all;
+    ui.matRenderLibrary();
+    ui._matRenderList();
 };
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
