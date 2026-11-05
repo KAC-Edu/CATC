@@ -18532,12 +18532,17 @@ ui._matRenderList = function(){
         var p = function(n){ return String(n).padStart(2,'0'); };
         var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
         var mine = (m.uploader === me);
+        var isPdf = /\.pdf$/i.test(m.fileName||'');
         return '<div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #eef2f7; border-radius:12px; margin-bottom:9px; background:#fff;">'
+          /* [K70] 일괄 다운로드용 선택 */
+          + '<input type="checkbox" class="matRowChk" value="'+id+'" onchange="ui._matSyncBulk()" style="width:17px; height:17px; flex-shrink:0; cursor:pointer;">'
           + '<i class="fa-solid fa-file-pdf" style="font-size:22px; color:#dc2626; flex-shrink:0;"></i>'
           + '<div style="flex:1; min-width:0;">'
             + '<div style="font-size:14.5px; font-weight:800; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
             + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+'</div>'
           + '</div>'
+          /* [K70] 바로 보기 — 내려받지 않고 새 창에서 연다(PDF 미리보기) */
+          + (isPdf ? '<button onclick="ui.matViewOne(\''+id+'\')" title="새 창에서 바로 보기" style="flex-shrink:0; padding:7px 13px; border:1px solid #bbf7d0; border-radius:9px; background:#f0fdf4; color:#15803d; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-regular fa-eye"></i> 보기</button>' : '')
           + '<a href="'+ui._esc(window.kacMaterials.fileUrl(m))+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:7px 13px; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:800; text-decoration:none;">받기</a>'
           + '<button onclick="ui.matCopyOne(\''+id+'\')" title="이 교재만 받는 주소 복사 — 카카오톡 등에 붙여넣기" style="flex-shrink:0; padding:7px 13px; border:1px solid #c7d2fe; border-radius:9px; background:#eef2ff; color:#4338ca; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-link"></i> 주소</button>'
           + '<button onclick="ui.matUnlink(\''+id+'\')" title="이번 과정에서만 빼기(자료실에는 남음)" style="flex-shrink:0; padding:7px 13px; border:1px solid #e2e8f0; border-radius:9px; background:#fff; color:#64748b; font-size:12.5px; font-weight:800; cursor:pointer;">연결 해제</button>'
@@ -18548,8 +18553,72 @@ ui._matRenderList = function(){
             + (mine ? '' : ' <i class="fa-solid fa-triangle-exclamation" style="font-size:10.5px; color:#f59e0b;"></i>') + '</button>'
         + '</div>';
     }).join('');
-    box.innerHTML = '<div style="font-size:13px; font-weight:900; color:#334155; margin-bottom:10px;">📚 이번 과정 교재 <span style="color:#6366f1;">'+ids.length+'</span>건</div>'
-        + rows + ui._matUsageHtml();
+    /* [K70] 선택 다운로드 바 */
+    var bar = '<div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px;">'
+      + '<div style="font-size:13px; font-weight:900; color:#334155;">📚 이번 과정 교재 <span style="color:#6366f1;">'+ids.length+'</span>건</div>'
+      + '<label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:800; color:#64748b; cursor:pointer; margin-left:auto;">'
+        + '<input type="checkbox" id="matChkAll" onchange="ui.matToggleAll(this.checked)" style="width:16px; height:16px; cursor:pointer;"> 전체 선택</label>'
+      + '<button id="matBulkBtn" onclick="ui.matDownloadSelected()" disabled '
+        + 'style="padding:8px 15px; border:none; border-radius:9px; background:#e2e8f0; color:#94a3b8; font-size:12.5px; font-weight:800; cursor:not-allowed;">'
+        + '<i class="fa-solid fa-download"></i> 선택 다운로드</button>'
+      + '</div>';
+    box.innerHTML = bar + rows + ui._matUsageHtml();
+    ui._matSyncBulk();
+};
+
+/* [K70] 바로 보기 — Worker 의 ?view=1 로 열면 내려받지 않고 브라우저에서 바로 뜬다 */
+ui.matViewOne = function(id){
+    var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
+    if(!m) return;
+    window.open(window.kacMaterials.fileUrl(m) + '?view=1', '_blank', 'noopener');
+};
+
+/* [K70] 선택 상태에 따라 버튼 활성/비활성 */
+ui._matSyncBulk = function(){
+    var chk = document.querySelectorAll('.matRowChk');
+    var on  = document.querySelectorAll('.matRowChk:checked');
+    var btn = document.getElementById('matBulkBtn');
+    var all = document.getElementById('matChkAll');
+    if(all) all.checked = (chk.length > 0 && on.length === chk.length);
+    if(!btn) return;
+    if(on.length){
+        btn.disabled = false;
+        btn.style.background='#2563eb'; btn.style.color='#fff'; btn.style.cursor='pointer';
+        btn.innerHTML = '<i class="fa-solid fa-download"></i> 선택 '+on.length+'건 다운로드';
+    } else {
+        btn.disabled = true;
+        btn.style.background='#e2e8f0'; btn.style.color='#94a3b8'; btn.style.cursor='not-allowed';
+        btn.innerHTML = '<i class="fa-solid fa-download"></i> 선택 다운로드';
+    }
+};
+ui.matToggleAll = function(on){
+    document.querySelectorAll('.matRowChk').forEach(function(c){ c.checked = !!on; });
+    ui._matSyncBulk();
+};
+
+/* [K70] 선택한 교재 한꺼번에 내려받기
+   — 숨은 iframe 으로 하나씩 호출해 새 탭이 뜨지 않게 한다. 브라우저가
+     '여러 파일 다운로드를 허용하시겠습니까?'를 한 번 물어볼 수 있다. */
+ui.matDownloadSelected = function(){
+    var ids = Array.from(document.querySelectorAll('.matRowChk:checked')).map(function(c){ return c.value; });
+    if(!ids.length) return;
+    var byId = {}; (ui._matAll||[]).forEach(function(m){ byId[m.id]=m; });
+    var ok = 0;
+    ids.forEach(function(id, i){
+        var m = byId[id]; if(!m) return;
+        ok++;
+        setTimeout(function(){
+            try{
+                var fr = document.createElement('iframe');
+                fr.style.display = 'none';
+                fr.src = window.kacMaterials.fileUrl(m);
+                document.body.appendChild(fr);
+                setTimeout(function(){ try{ fr.remove(); }catch(e){} }, 60000);
+            }catch(e){}
+        }, i * 700);
+    });
+    ui.showAlert('⬇️ ' + ok + '건을 내려받고 있습니다.\n\n'
+        + '브라우저가 "여러 파일 다운로드를 허용하시겠습니까?"라고 물으면 [허용]을 눌러 주세요.');
 };
 
 /* [K68] 자료실 전체 사용량 — Cloudflare 무료 한도(10GB) 대비 얼마나 썼는지 */
