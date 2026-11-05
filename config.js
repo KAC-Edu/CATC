@@ -679,8 +679,9 @@ window.kacMaterials = (function () {
     return fetch(API + '/ping').then(function (r) { return r.json(); }).catch(function () { return { ok: false }; });
   }
 
-  /* 파일 1개 올리기 → R2 저장 후 system/materials 에 기록, id 반환 */
-  function upload(file, uploader) {
+  /* 파일 1개 올리기 → R2 저장 후 system/materials 에 기록, id 반환
+     course: 올릴 당시의 과정명 — 나중에 자료실에서 '과정별'로 묶어 찾을 때 쓴다 */
+  function upload(file, uploader, course) {
     var key = getKey();
     if (!key) return Promise.reject(new Error('NO_KEY'));
     return fetch(API + '/upload?name=' + encodeURIComponent(file.name), {
@@ -702,6 +703,7 @@ window.kacMaterials = (function () {
         url: j.url,
         key: j.key,
         uploader: String(uploader || '미상'),
+        course: String(course || ''),          // [K78] 어느 과정에서 올렸는지
         uploadedAt: Date.now()
       };
       return ref.set(rec).then(function () { return Object.assign({ id: ref.key }, rec); });
