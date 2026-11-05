@@ -1274,6 +1274,8 @@ body.in-course #moreToggleTab{ display:flex !important; }
         <div id="matLibList" style="flex:1; min-height:0; overflow-y:auto; border:1px solid #eef2f7; border-radius:12px; padding:8px;"></div>
         <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
             <button type="button" onclick="ui.matCloseLibrary()" style="padding:11px 20px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#475569; font-weight:800; cursor:pointer;">취소</button>
+            <!-- [K79] 자료실에서 완전 삭제 — 여기는 자료실 자체라 '연결 해제'가 아니라 삭제다 -->
+            <button type="button" onclick="ui.matLibDeleteSelected()" style="padding:11px 20px; border:1px solid #fecaca; border-radius:10px; background:#fef2f2; color:#dc2626; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i> 자료실에서 삭제</button>
             <button type="button" onclick="ui.matLinkSelected()" style="padding:11px 22px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; cursor:pointer;">선택한 교재 연결</button>
         </div>
     </div>
