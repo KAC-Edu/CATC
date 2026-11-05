@@ -1,4 +1,5 @@
 // config.js
+// UPDATED: 2026-11-05 — [K64] 입력 중 창이 닫히는 문제 방지(전 플랫폼 공통 가드) 추가
 
 const firebaseConfig = {
   apiKey: "AIzaSyDo3BPMV8qayQ3MdKBglYNtsvii0ZtCHHs",
@@ -491,4 +492,142 @@ try {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
+})();
+/* ══════════════════════════════════════════════════════════════════════
+   [K64] 입력 중이던 창이 멋대로 닫히는 문제 방지 — 전 플랫폼 공통
+   ────────────────────────────────────────────────────────────────────
+   증상: 팝업/드롭다운에 내용을 입력하다가 마우스가 창 밖으로 나가거나
+         드래그로 글자를 선택하고 손을 떼면, '바깥 클릭 = 닫기' 처리가
+         실행돼 저장하기 전에 창이 사라진다.
+   원인: 누를 때는 창 안이었는데 뗄 때 밖이면, 브라우저는 두 지점의
+         공통 조상(대개 body)에서 click 을 발생시킨다. 기존 바깥클릭
+         닫기 로직은 이걸 '바깥을 눌렀다'로 오인한다.
+   처리: ① 드래그로 끝난 클릭 · ② 화면(스크롤바 등) 밖에서 끝난 클릭은
+            캡처 단계에서 전파를 끊어 닫기 로직에 전달하지 않는다.
+         ③ 입력값을 고친 팝업이 열려 있으면, 바깥을 눌러도 1차는 닫지 않고
+            안내만 띄운다. 6초 안에 한 번 더 누르면 그때는 닫는다
+            (실수로 날리는 건 막고, 정말 나가려는 건 막지 않는다).
+   ※ 개별 화면 코드는 하나도 고치지 않는다. ESC·닫기·저장 버튼은 그대로.
+   ══════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  if (window.__kacCloseGuard) return;
+  window.__kacCloseGuard = true;
+
+  var MOVE_PX = 10;          // 이 이상 움직였으면 '클릭'이 아니라 '드래그'로 본다
+  var REPEAT_MS = 6000;      // 같은 창을 다시 누르면 닫아주는 유예 시간
+  var _down = null;
+  var _warnEl = null, _warnAt = 0;
+
+  /* 입력칸이 들어있는 '떠 있는 창'을 찾는다(fixed/absolute 조상) */
+  function floatBox(el) {
+    for (var p = el; p && p !== document.body; p = p.parentElement) {
+      var cs;
+      try { cs = getComputedStyle(p); } catch (e) { return null; }
+      if (cs.position === 'fixed' || cs.position === 'absolute') return p;
+    }
+    return null;
+  }
+  function visible(el) {
+    try {
+      var cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden' || cs.opacity === '0') return false;
+      return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+    } catch (e) { return false; }
+  }
+  /* 값을 고친 채 열려 있는 창(없으면 null) — 닫힌 창의 표시는 스스로 정리 */
+  function dirtyBox() {
+    var list = document.querySelectorAll('[data-kac-dirty="1"]');
+    for (var i = 0; i < list.length; i++) {
+      if (!visible(list[i])) { list[i].removeAttribute('data-kac-dirty'); continue; }
+      return list[i];
+    }
+    return null;
+  }
+
+  /* 사용자가 입력칸을 건드리면 그 창에 '편집 중' 표시 */
+  function markDirty(e) {
+    var t = e && e.target;
+    if (!t || !t.tagName) return;
+    if (!/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;
+    if (/^(button|submit|reset|checkbox|radio|file|image)$/i.test(t.type || '')) return;
+    var box = floatBox(t);
+    if (box) box.setAttribute('data-kac-dirty', '1');
+  }
+  document.addEventListener('input',  markDirty, true);
+  document.addEventListener('change', markDirty, true);
+
+  /* 저장/닫기/취소 같은 버튼을 누르면 편집 표시 해제 — 정상 종료는 막지 않는다 */
+  document.addEventListener('mousedown', function (e) {
+    _down = { t: e.target, x: e.clientX, y: e.clientY };
+    try {
+      var b = e.target && e.target.closest && e.target.closest('button,[role="button"],a');
+      if (b) {
+        var txt = (b.innerText || b.textContent || '') + ' ' + (b.title || '') + ' ' + (b.id || '');
+        if (/저장|확인|등록|제출|적용|닫기|취소|완료|삭제/.test(txt)) {
+          var box = floatBox(b);
+          if (box) box.removeAttribute('data-kac-dirty');
+        }
+      }
+    } catch (_) {}
+  }, true);
+
+  function hint(msg) {
+    try {
+      var id = '__kacCloseHint';
+      var d = document.getElementById(id);
+      if (!d) {
+        d = document.createElement('div'); d.id = id;
+        d.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);' +
+          'top:calc(env(safe-area-inset-top,0px) + 18px);z-index:2147483600;' +
+          'max-width:min(92vw,460px);box-sizing:border-box;padding:12px 18px;' +
+          'background:rgba(15,23,42,.93);color:#fff;border-radius:999px;' +
+          'font-size:13px;font-weight:800;line-height:1.45;text-align:center;' +
+          'box-shadow:0 10px 30px rgba(15,23,42,.35);opacity:0;transition:opacity .2s;' +
+          'pointer-events:none;word-break:keep-all;';
+        document.body.appendChild(d);
+      }
+      d.textContent = msg;
+      requestAnimationFrame(function () { d.style.opacity = '1'; });
+      clearTimeout(d.__t);
+      d.__t = setTimeout(function () { d.style.opacity = '0'; }, 2600);
+    } catch (_) {}
+  }
+
+  /* 버튼·링크·입력칸 등 '진짜 누른 것'은 절대 막지 않는다.
+     막는 대상은 빈 배경처럼 아무 동작도 없는 곳에서 끝난 클릭뿐이다. */
+  function interactive(el) {
+    try {
+      return !!(el && el.closest && el.closest(
+        'button,a,input,select,textarea,label,summary,[onclick],[role="button"],[tabindex]'));
+    } catch (e) { return false; }
+  }
+
+  document.addEventListener('click', function (e) {
+    var cw = document.documentElement.clientWidth;
+    var ch = document.documentElement.clientHeight;
+
+    // ① 화면 밖(스크롤바 등)에서 끝난 클릭 — 사용자가 의도한 '바깥 클릭'이 아니다
+    if (e.clientX < 0 || e.clientY < 0 || e.clientX > cw || e.clientY > ch) {
+      e.stopPropagation(); return;
+    }
+    // ② 드래그(글자 선택 등)로 끝난 클릭 — 누른 곳과 뗀 곳이 다르고 많이 움직였다
+    if (_down && _down.t !== e.target && !interactive(e.target) &&
+        (Math.abs(e.clientX - _down.x) + Math.abs(e.clientY - _down.y)) > MOVE_PX) {
+      e.stopPropagation(); return;
+    }
+    // ③ 입력 중인 창이 열려 있으면, 빈 배경을 눌렀을 때 1차는 닫지 않는다
+    var box = dirtyBox();
+    if (box && !box.contains(e.target) && !interactive(e.target)) {
+      var now = Date.now();
+      if (_warnEl === box && (now - _warnAt) < REPEAT_MS) {
+        box.removeAttribute('data-kac-dirty');   // 두 번째 = 정말 나가려는 것 → 통과
+        _warnEl = null;
+        return;
+      }
+      _warnEl = box; _warnAt = now;
+      e.stopPropagation();
+      hint('입력 중인 내용이 있어 창을 닫지 않았습니다. 저장 또는 닫기를 눌러 주세요.');
+    }
+  }, true);
 })();
