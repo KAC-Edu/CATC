@@ -17740,7 +17740,9 @@ ui.confirmRouletteLeader = function(){
     {mode:'dormitory', label:'생활관배치', icon:'fa-bed'},
     {mode:'dinner-skip', label:'석식제외', icon:'fa-utensils'},
     {mode:'qa', label:'Q&A', icon:'fa-comments'},
-    {mode:'quiz', label:'퀴즈모드', icon:'fa-clipboard-question'}
+    {mode:'quiz', label:'퀴즈모드', icon:'fa-clipboard-question'},
+    {mode:'schedule', label:'교육시간표', icon:'fa-calendar-days'},
+    {mode:'materials', label:'교재자료실', icon:'fa-book-open'}   // [K72] 교재 자료실
   ];
   var defaults = ['qa','guide','notice','students','admin-action','attendance'];   // 중앙=과정현황 고정, 상단 슬롯 기본 Q&A
 
