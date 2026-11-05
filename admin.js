@@ -4324,7 +4324,7 @@ showAlert: function(msg, onConfirm) {
                 const _cr=roomData.coordRoster&&roomData.coordRoster.list; if(Array.isArray(_cr)) _cr.forEach(x=>{ if(x&&x.name) names.push(x.name); });
                 const _es=roomData.expectedStudents; if(Array.isArray(_es)) names=names.concat(_es); else if(_es&&typeof _es==='object') names=names.concat(Object.values(_es));
                 names=names.map(x=>String(x||'').trim()).filter(Boolean);
-                if(!names.length) return null;
+                // [K63] 명단이 없어도 null(=전원 집계)로 폴백하지 않는다 — '명단 포함' 체크가 유일한 기준.
                 const set={}; names.forEach(n=>set[_uNm(n)]=1);
                 const inc=roomData.rosterInclude||{};
                 validStudents.forEach(s=>{ const nm=String(s.name).trim(); if(inc[nm.replace(/[.#$\[\]\/]/g,'_')]) set[_uNm(nm)]=1; });
