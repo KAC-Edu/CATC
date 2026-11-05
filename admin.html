@@ -3234,6 +3234,10 @@ function setupAcc(btn){
     html+=chip('fa-comment-dots','#3b82f6','Q&A',(qa==null?'-':qa)+'건',qa>0,'qa');
     html+=chip('fa-bus','#0ea5e9','셔틀',(shuttle==null?'-':shuttle)+'명',shuttle>0,'shuttle');
     if(action>0) html+=chip('fa-person-walking-arrow-right','#f43f5e','외출·외박',action+'명',true,'admin-action');
+    /* [K73] 교재 — 이번 과정에 연결된 교재 수. 클릭하면 교재 자료실로 이동.
+             0건이어도 올리러 갈 수 있게 항상 표시한다. */
+    var mat = (typeof window.kacDashMatCount==='number') ? window.kacDashMatCount : null;
+    html+=chip('fa-book-open','#6366f1','교재',(mat==null?'-':mat)+'건',mat>0,'materials');
     // [I15] 값이 실제로 바뀐 경우에만 다시 그림 — 매 갱신마다 칩이 재생성되어
     //  hover가 리셋(떨림)되고 클릭이 씹히던 문제의 근본 원인 해결
     if(sum._lastHtml!==html){ sum._lastHtml=html; sum.innerHTML=html; }
@@ -3266,6 +3270,8 @@ function setupAcc(btn){
     sum.style.display=visible?'flex':'none';
   }
   var t=null; function schedule(){ clearTimeout(t); t=setTimeout(run,120); }
+  /* [K73] 교재 건수처럼 DOM 변화가 없는 값이 바뀌었을 때 밖에서 다시 그릴 수 있게 공개 */
+  try{ window.kacRefreshDashSummary = schedule; }catch(e){}
   document.addEventListener('DOMContentLoaded', function(){
     var grid=document.querySelector('.dash-premium-grid'); if(!grid) return;
     try{ new MutationObserver(schedule).observe(grid,{childList:true,characterData:true,subtree:true}); }catch(e){}
