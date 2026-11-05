@@ -682,7 +682,7 @@ window.kacMaterials = (function () {
     .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); })
     .then(function (j) {
       if (!j.ok) {
-        if (j._status === 401) { clearKey(); throw new Error('업로드 암호가 올바르지 않습니다.'); }
+        if (j._status === 401) { clearKey(); throw new Error('관리자 암호가 올바르지 않습니다. 다시 시도해 주세요.'); }
         throw new Error(j.error || '업로드에 실패했습니다.');
       }
       var ref = firebase.database().ref('system/materials').push();
