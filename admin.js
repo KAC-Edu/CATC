@@ -18568,7 +18568,7 @@ ui._matRenderList = function(){
 
 /* [K70] 바로 보기 — Worker 의 ?view=1 로 열면 내려받지 않고 브라우저에서 바로 뜬다.
    Worker 가 예전 코드면 '보기'가 '받기'처럼 동작하므로, 그 경우 안내를 띄운다. */
-ui.MAT_WORKER_MIN = '2026.11.05-2';
+ui.MAT_WORKER_MIN = '2026.11.05-2';   // 이 버전 이상이면 보기 모드 지원
 ui.matViewOne = async function(id){
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
     if(!m) return;
@@ -18584,7 +18584,9 @@ ui.matViewOne = async function(id){
             + '_교재자료실_Worker.js 내용을 Cloudflare 에 다시 붙여넣고\n'
             + 'Deploy 하시면 바로 보기가 됩니다.');
     }
-    window.open(window.kacMaterials.fileUrl(m) + '?view=1', '_blank', 'noopener');
+    /* v=2 : Worker 수정 전에 '다운로드'로 응답한 것이 24시간 캐시에 남아 있어,
+             같은 주소를 쓰면 계속 그 옛 응답이 나온다. 주소를 달리해 건너뛴다. */
+    window.open(window.kacMaterials.fileUrl(m) + '?view=1&v=2', '_blank', 'noopener');
 };
 
 /* [K70] 선택 상태에 따라 버튼 활성/비활성 */
