@@ -19094,7 +19094,12 @@ ui.matRenderLibrary = function(){
             var k = String(m.uploader||'미상').trim() || '미상';
             (byProf[k] = byProf[k] || []).push(m);
         });
-        var profs = Object.keys(byProf).sort(function(a,b){ return byProf[b].length - byProf[a].length; });
+        /* 가나다순 — 교수 이름으로 찾는 게 자연스럽다. '미상'은 맨 아래로. */
+        var profs = Object.keys(byProf).sort(function(a,b){
+            if(a === '미상') return 1;
+            if(b === '미상') return -1;
+            return a.localeCompare(b, 'ko');
+        });
         if(!profs.length){ box.innerHTML='<div style="padding:30px; text-align:center; color:#94a3b8; font-size:14px; font-weight:700;">자료실이 비어 있습니다.</div>'; return; }
         var me = ui._matWho();
         box.innerHTML = '<div style="padding:8px 12px 10px; font-size:12px; font-weight:800; color:#64748b;">교수 폴더를 눌러 교재를 고르세요.</div>'
