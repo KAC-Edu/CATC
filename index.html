@@ -5289,14 +5289,24 @@ function _kacMatWatch(room){
     });
 }
 function _kacMatApplyMenu(){
-    var el = document.getElementById('menu-materials');
-    if(!el) return;
     var n = (window._kacMatList||[]).length;
-    // 강사가 메뉴를 끈 과정(menuFeatures.materials===false)은 applyMenuFeatures 가 숨기므로 건드리지 않는다
-    if(el.dataset.featOff === '1'){ el.style.display='none'; return; }
-    el.style.display = n ? '' : 'none';
-    var b = document.getElementById('matCountBadge');
-    if(b){ b.style.display = n ? '' : 'none'; b.textContent = n + '건'; }
+    var el = document.getElementById('menu-materials');
+    if(el){
+        // 강사가 메뉴를 끈 과정(menuFeatures.materials===false)은 숨김
+        if(el.dataset.featOff === '1'){ el.style.display='none'; }
+        else { el.style.display = n ? '' : 'none'; }
+        var b = document.getElementById('matCountBadge');
+        if(b){ b.style.display = n ? '' : 'none'; b.textContent = n + '건'; }
+    }
+    /* [K71] 입교완료 카드의 교재 버튼 — 카카오 채널 진입자는 이 화면만 보므로 여기가 주 통로다.
+             게스트는 _kacHideGuestBlockedMenus 가 따로 처리하지 않으므로 그대로 보인다(교재는 신원 불필요). */
+    var hb = document.getElementById('keduMatBtn');
+    if(hb){
+        var off = (el && el.dataset.featOff === '1');
+        hb.style.display = (n && !off) ? '' : 'none';
+        var hc = document.getElementById('keduMatCount');
+        if(hc) hc.textContent = n ? (n + '건') : '';
+    }
 }
 function openMaterials(){
     var list = window._kacMatList || [];
@@ -8806,6 +8816,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
        여기서 질문·퀴즈 버튼을 눌러 각 기능으로 들어가는 흐름은 실명 입교자와 동일. */
     if(window.kacIsGuest && window.kacIsGuest()){
       _kacRenderGuestHome(ov, homeRoom);
+      /* [K71] 교재는 신원이 필요 없으므로 게스트도 받을 수 있게 한다 */
+      try{ if(homeRoom) _kacMatWatch(homeRoom); _kacMatApplyMenu(); }catch(e){}
       return;
     }
     if(!(await validateKacStoredEnrollment(homeRoom))){
@@ -8813,6 +8825,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       showEnroll('home');
       return;
     }
+    /* [K71] 카드가 열릴 때 교재 버튼 상태를 맞춘다(목록이 늦게 도착하면 리스너가 다시 갱신) */
+    try{ if(homeRoom) _kacMatWatch(homeRoom); _kacMatApplyMenu(); }catch(e){}
     var nm=(localStorage.getItem('kac_user_name')||'-').trim();
     var sb=(localStorage.getItem('kac_user_phone')||'-').trim();
     var eN=document.getElementById('khName'), eS=document.getElementById('khSabun');
@@ -9328,6 +9342,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           '<div><span>담임</span><b id="khProf">-</b></div>'+
         '</div>'+
         '<button class="kh-att" id="keduAttendBtn" onclick="startKakaoOtpAttendance()"><i class="fa-solid fa-keyboard"></i> 출결하기</button>'+
+        /* [K71] 교육 자료 — 카카오 채널로 들어오면 메인 메뉴를 거치지 않고 이 카드에 바로 떨어지므로,
+                 여기에도 교재 버튼을 둔다. 연결된 교재가 있을 때만 보인다(_kacMatApplyMenu). */
+        '<button class="kh-att" id="keduMatBtn" style="display:none; background:linear-gradient(135deg,#4f46e5,#6366f1);" onclick="openMaterials()"><i class="fa-solid fa-book-open"></i> 교육 자료 받기 <span id="keduMatCount" style="background:rgba(255,255,255,.25); border-radius:999px; padding:1px 9px; font-size:12px; margin-left:5px;"></span></button>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduGradBtn" style="display:none; background:linear-gradient(135deg,#0f2057,#1a3a8a);" onclick="keduDownloadGradPhoto()"><i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기</button>'+
         /* [K61] 실명 입교자 → 게스트 전환(로그아웃 역할). 기기에 저장된 이름·사번을 지운다. */
