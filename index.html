@@ -1923,6 +1923,15 @@ async function resolveRoomFromCode(code) {
               var nm=(localStorage.getItem('kac_user_name')||'').trim();
               var ph=(localStorage.getItem('kac_user_phone')||'').trim();
               if(nm && nm.toLowerCase()!=='undefined' && /^\d{4,5}$/.test(ph)){ localStorage.removeItem('kac_guest'); return false; }
+              /* [K88] 게스트는 '그날 하루'만 유지 — 예전엔 한 번 켜면 영원히 남아,
+                       다른 과정·몇 주 뒤에도 과정 선택 없이 게스트로 들어가 버렸다. */
+              var _kst = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
+              if(localStorage.getItem('kac_guest_day') !== _kst){
+                  localStorage.removeItem('kac_guest');
+                  localStorage.removeItem('kac_guest_day');
+                  if(String(localStorage.getItem('uToken')||'').indexOf('guest_') === 0) localStorage.removeItem('uToken');
+                  return false;
+              }
               return true;
             }catch(e){ return false; } })() && currentRoom) {
             /* [K62] 카카오 채널에서 질문·퀴즈 버튼으로 들어온 경우(menu 파라미터)는
@@ -2788,6 +2797,14 @@ window.kacIsGuest = function(){
         var ph=(localStorage.getItem('kac_user_phone')||'').trim();
         if(nm && nm.toLowerCase()!=='undefined' && /^\d{4,5}$/.test(ph)){
             localStorage.removeItem('kac_guest');
+            return false;
+        }
+        /* [K88] 게스트는 '그날 하루'만 — 날이 바뀌었거나 날짜 기록이 없는 옛 게스트는 자동 해제 */
+        var _kst = new Date(Date.now() + 9*3600*1000).toISOString().slice(0,10);
+        if(localStorage.getItem('kac_guest_day') !== _kst){
+            localStorage.removeItem('kac_guest');
+            localStorage.removeItem('kac_guest_day');
+            if(String(localStorage.getItem('uToken')||'').indexOf('guest_') === 0) localStorage.removeItem('uToken');
             return false;
         }
         return true;
@@ -5145,7 +5162,7 @@ async function saveProfile() {
     }
 
     try {
-        localStorage.removeItem('kac_guest');   // [K61] 실명 등록 → 게스트 상태 해제(잔여물 제거)
+        localStorage.removeItem('kac_guest'); localStorage.removeItem('kac_guest_day');   // [K61] 실명 등록 → 게스트 상태 해제(잔여물 제거)
         localStorage.setItem('kac_user_name', name);
         localStorage.setItem('kac_user_phone', phone);
         localStorage.setItem('uToken', newUToken);
@@ -7859,7 +7876,7 @@ body.kac-quiz-active .quiz-overlay,
       try{ rm = new URLSearchParams(location.search).get('room') || localStorage.getItem('kac_room') || ''; }catch(e){}
       if(!rm){ try{ ov.remove(); }catch(e){} try{ if(typeof window.keduShowEnroll==='function') window.keduShowEnroll(''); }catch(e){} return; }
       try{
-        localStorage.setItem('kac_guest','1');
+        localStorage.setItem('kac_guest','1'); localStorage.setItem('kac_guest_day', new Date(Date.now()+9*3600*1000).toISOString().slice(0,10));   /* [K88] 게스트는 오늘 하루만 */
         localStorage.setItem('uToken','guest_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
         localStorage.setItem('kac_room', rm);
         localStorage.removeItem('kac_user_name');
@@ -8315,7 +8332,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(!ok) return;
     try{
       var gt = 'guest_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
-      localStorage.setItem('kac_guest', '1');
+      localStorage.setItem('kac_guest', '1'); localStorage.setItem('kac_guest_day', new Date(Date.now()+9*3600*1000).toISOString().slice(0,10));   /* [K88] 게스트는 오늘 하루만 */
       localStorage.setItem('uToken', gt);
       localStorage.setItem('kac_room', room);
       localStorage.removeItem('kac_user_name');     // 개인정보 미보관
@@ -8365,7 +8382,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(!ok) return;
     var token=name+'_'+sabun;
     try{
-      localStorage.removeItem('kac_guest');   // [K61] 실명 등록 → 게스트 상태 해제(잔여물 제거)
+      localStorage.removeItem('kac_guest'); localStorage.removeItem('kac_guest_day');   // [K61] 실명 등록 → 게스트 상태 해제(잔여물 제거)
       localStorage.setItem('kac_user_name', name);
       localStorage.setItem('kac_user_phone', sabun);
       localStorage.setItem('uToken', token);
@@ -8800,7 +8817,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     try{
       localStorage.removeItem('kac_user_name');
       localStorage.removeItem('kac_user_phone');
-      localStorage.setItem('kac_guest','1');
+      localStorage.setItem('kac_guest','1'); localStorage.setItem('kac_guest_day', new Date(Date.now()+9*3600*1000).toISOString().slice(0,10));   /* [K88] 게스트는 오늘 하루만 */
       localStorage.setItem('uToken','guest_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
       if(rm) localStorage.setItem('kac_room', rm);
     }catch(e){}
