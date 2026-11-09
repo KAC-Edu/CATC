@@ -6771,7 +6771,7 @@ input:not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select 
 })();
 </script>
 <!-- @catc-version-badge (개발자 확인용 · 사용자에게는 거의 보이지 않음) -->
-<div id="__catcVer" class="no-print" aria-hidden="true" style="position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">2026.11.10</div>
+<div id="__catcVer" class="no-print" aria-hidden="true" style="display:none;position:fixed;right:5px;bottom:4px;z-index:2147483647;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10px;font-weight:700;line-height:1;letter-spacing:.4px;color:rgba(148,163,184,.5);background:rgba(120,120,120,.12);padding:2px 5px;border-radius:5px;pointer-events:none;user-select:none;">2026.11.10</div>
 <script>
 /* ===== [공용] 종료된 과정 자동 정리 (교육생 포함 전 플랫폼) — 종료일 지난 방을 다음날 미개설로 비움. 브라우저별 하루 1회 ===== */
 window.kacExpireEndedCourses = async function(){
@@ -10912,12 +10912,14 @@ html.kac-core-screen #realUserCount::before{
 #keduEnroll .kac-cp-list{
   position:absolute; left:0; right:0; top:calc(100% + 6px);
   z-index:50;
-  background:#fff;
-  border:1px solid #e2e8f0;
-  border-radius:14px;
-  box-shadow:0 14px 36px rgba(15,23,42,.18);
+  background:#eef4ff;                 /* [K90] 흰 배경과 구분되는 은은한 파랑 */
+  border:1.5px solid #bfdbfe;
+  border-radius:16px;
+  box-shadow:0 14px 36px rgba(15,23,42,.22);
   overflow:hidden auto;
-  max-height:230px;
+  max-height:260px;
+  padding:8px;
+  box-sizing:border-box;
   -webkit-overflow-scrolling:touch;
 }
 #keduEnroll .kac-cp-list[hidden]{ display:none; }
@@ -10926,12 +10928,12 @@ html.kac-core-screen #realUserCount::before{
   width:100% !important;
   display:block !important;
   box-sizing:border-box;
-  margin:0 !important;
-  padding:14px 15px !important;
-  border:none !important;
-  border-bottom:1px solid #f1f5f9 !important;
-  border-radius:0 !important;
-  background:#fff !important;
+  margin:0 0 6px 0 !important;        /* [K90] 항목마다 라운딩 카드 */
+  padding:14px 15px 14px 38px !important;
+  border:1px solid #dbe5f3 !important;
+  border-radius:12px !important;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%2393c5fd' stroke-width='2'/%3E%3C/svg%3E") no-repeat 14px center !important;
+  box-shadow:0 1px 3px rgba(15,23,42,.06);
   color:#0f172a !important;
   font-family:inherit;
   font-size:15px !important;
@@ -10943,11 +10945,12 @@ html.kac-core-screen #realUserCount::before{
   text-overflow:ellipsis;
   cursor:pointer;
 }
-#keduEnroll .kac-cp-item:last-child{ border-bottom:none !important; }
-#keduEnroll .kac-cp-item:active{ background:#f1f5f9 !important; }
+#keduEnroll .kac-cp-item:last-child{ margin-bottom:0 !important; }
+#keduEnroll .kac-cp-item:active{ background-color:#dbeafe !important; border-color:#93c5fd !important; }
 #keduEnroll .kac-cp-item.on{
-  background:#eff6ff !important;
-  color:#1d4ed8 !important;
+  background:#2563eb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='%23fff'/%3E%3Ccircle cx='8' cy='8' r='3' fill='%232563eb'/%3E%3C/svg%3E") no-repeat 14px center !important;
+  border-color:#2563eb !important;
+  color:#fff !important;
   font-weight:900 !important;
 }
 #keduEnroll .kac-cp-empty{
