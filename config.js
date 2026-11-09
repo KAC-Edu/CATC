@@ -34,6 +34,14 @@ function _kacActivateAppCheck() {
 //    토큰 없이 먼저 내보내 '오래된 클라이언트'로 집계되고, 강화(Enforce) 시 그 초기 요청이 막힌다.
 //    → body가 '생기는 즉시'(=body 파싱되어 <html>의 자식으로 추가되는 순간, body 내부 스크립트가
 //      실행되기 직전) 활성화한다. 이때 body는 존재하므로 reCAPTCHA 배지 appendChild도 안전.
+/* [K87] 가장 먼저, 조건 없이 한 번 시도한다.
+   ─ 이유: body 생성을 기다리면, body 안에서 곧바로 firebase.database() 를 만드는 화면
+     (영양사 nutritionist.html 등)이 토큰보다 먼저 요청을 보내 'Missing appcheck token' 이 된다.
+     App Check 시행(Enforce) 중이면 그 첫 요청이 거부되어 화면이 영영 안 채워진다.
+   ─ activate() 는 공급자 등록만 하고 reCAPTCHA 로드는 뒤에 일어나므로 head 에서 불러도 안전하다.
+     혹시 실패하더라도 아래 body/DOMContentLoaded 경로가 다시 시도한다. */
+_kacActivateAppCheck();
+
 if (document.body) {
     _kacActivateAppCheck();                       // 이미 body 있음(예: 지연 로드) → 즉시
 } else if (typeof MutationObserver !== 'undefined') {
