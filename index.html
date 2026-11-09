@@ -7889,9 +7889,17 @@ body.kac-quiz-active .quiz-overlay,
     /* [K61] 게이트에서 바로 게스트 입장 — 현재 URL의 room 으로 즉시 들어간다 */
     var gstBtn=document.getElementById('kacEnrollGateGuest');
     if(gstBtn) gstBtn.onclick=function(){
+      /* [K93] 예전엔 링크에 과정이 없으면 '지난번 들어갔던 과정(kac_room)'으로 바로 입장 → 과정 선택 없이 엉뚱한 방에 들어감.
+               이제 링크에 과정(room)이 명시된 경우만 바로 입장하고, 아니면 과정 선택 화면으로 보낸다. */
       var rm='';
-      try{ rm = new URLSearchParams(location.search).get('room') || localStorage.getItem('kac_room') || ''; }catch(e){}
-      if(!rm){ try{ ov.remove(); }catch(e){} try{ if(typeof window.keduShowEnroll==='function') window.keduShowEnroll(''); }catch(e){} return; }
+      try{ rm = new URLSearchParams(location.search).get('room') || ''; }catch(e){}
+      if(!rm){
+        try{ ov.remove(); }catch(e){}
+        try{ document.body.classList.remove('kac-locked'); document.body.classList.remove('kac-target-pending'); }catch(e){}
+        try{ if(typeof window.keduShowEnroll==='function') window.keduShowEnroll(menu); }catch(e){}
+        setTimeout(function(){ try{ showKacAlert('입장할 과정을 선택한 뒤\n아래 [게스트로 입장] 버튼을 눌러 주세요.'); }catch(e){} }, 400);
+        return;
+      }
       try{
         localStorage.setItem('kac_guest','1'); localStorage.setItem('kac_guest_day', new Date(Date.now()+9*3600*1000).toISOString().slice(0,10));   /* [K88] 게스트는 오늘 하루만 */
         localStorage.setItem('uToken','guest_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8));
@@ -8399,7 +8407,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     try{
       var u = new URL(location.href);
       u.searchParams.set('room', room);
-      u.searchParams.delete('menu');
+      /* [K93] 카카오 '질문하기·퀴즈·교재'로 들어온 경우엔 그 화면으로 바로 이어지게 menu 유지 */
+      var _m = String(u.searchParams.get('menu')||'').toLowerCase();
+      if(!(_m==='qna' || _m==='quiz' || _m==='materials')) u.searchParams.delete('menu');
       location.replace(u.toString());
     }catch(e){ location.reload(); }
   };
