@@ -8224,6 +8224,19 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
        → 과정 목록만큼은 웹소켓을 쓰지 않는 일반 HTTPS(REST)로 읽는다. 방화벽·프록시를 통과한다.
          REST 가 막히면 기존 SDK 방식으로 자동 폴백한다.                                  */
     var _db=firebase.database();
+    var _acP=null;   // [K89] App Check 토큰 1회만 받아 26개 방이 공유
+    var _acHeader=function(){
+      if(_acP) return _acP;
+      _acP = new Promise(function(res){
+        var done=false; var fin=function(h){ if(!done){ done=true; res(h); } };
+        setTimeout(function(){ fin({}); }, 4000);
+        try{
+          if(firebase.appCheck){ firebase.appCheck().getToken(false).then(function(t){ fin(t&&t.token?{'X-Firebase-AppCheck':t.token}:{}); }, function(){ fin({}); }); }
+          else fin({});
+        }catch(e){ fin({}); }
+      });
+      return _acP;
+    };
     var _dbUrl='';
     try{ _dbUrl=String((firebase.app().options||{}).databaseURL||'').replace(/\/+$/,''); }catch(e){}
 
@@ -8233,16 +8246,30 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
           .then(function(res){ return {room:r, s:res[0].val()||{}, st:res[1].val()||{}}; });
       };
       if(!_dbUrl) return _viaSdk();
-      return Promise.all([
-        fetch(_dbUrl+'/courses/'+r+'/settings.json', {cache:'no-store'}).then(function(x){ if(!x.ok) throw 0; return x.json(); }),
-        fetch(_dbUrl+'/courses/'+r+'/status.json',   {cache:'no-store'}).then(function(x){ if(!x.ok) throw 0; return x.json(); })
-      ]).then(function(v){ return {room:r, s:v[0]||{}, st:v[1]||{}}; })
-        .catch(function(){ return _viaSdk(); });     // REST 실패 → SDK 로 재시도
+      // [K89] App Check 적용 후 REST 는 토큰이 없으면 401 → 매번 실패 후 SDK 재시도로 시간 2배.
+      //        토큰을 헤더에 실어 REST 그대로 통과시킨다. 토큰을 못 받으면 SDK 로.
+      return _acHeader().then(function(h){
+        return Promise.all([
+          fetch(_dbUrl+'/courses/'+r+'/settings.json', {cache:'no-store', headers:h}).then(function(x){ if(!x.ok) throw 0; return x.json(); }),
+          fetch(_dbUrl+'/courses/'+r+'/status.json',   {cache:'no-store', headers:h}).then(function(x){ if(!x.ok) throw 0; return x.json(); })
+        ]);
+      }).then(function(v){ return {room:r, s:v[0]||{}, st:v[1]||{}, ok:true}; })
+        .catch(function(){ return _viaSdk().then(function(o){ o.ok=true; return o; }); });     // REST 실패 → SDK 로 재시도
     };
 
     var _reads=[];
     for(var _i=65;_i<=90;_i++){ (function(r){ _reads.push(_withTimeout(_readRoom(r), {room:r, s:{}, st:{}})); })(String.fromCharCode(_i)); }
+    // [K89] 늦거나 실패한 방은 목록에서 '조용히 빠지던' 문제(아이폰에서 2개 중 1개만 보임)
+    //        → 못 읽은 방만 한 번 더(12초) 읽어서 채운다.
     return Promise.all(_reads).then(function(arr){
+      var miss = arr.filter(function(rd){ return !rd.ok; });
+      if(!miss.length) return arr;
+      _timedOut = 0; _RTO = 12000;
+      return Promise.all(miss.map(function(rd){ return _withTimeout(_readRoom(rd.room), rd); })).then(function(again){
+        var m={}; again.forEach(function(x){ m[x.room]=x; });
+        return arr.map(function(rd){ return m[rd.room] || rd; });
+      });
+    }).then(function(arr){
       var list=[];
       arr.forEach(function(rd){ var s=rd.s||{}, st=rd.st||{}; var nm=(s.courseName||'').trim();
         if(!nm || s.hideFromBoard) return;
