@@ -9923,7 +9923,20 @@ const scheduleMgr = {
                         <button onclick="scheduleMgr.deletePhoto()" style="background:#fef2f2; color:#dc2626; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i> 삭제</button>
                     </div>
                 </div>`;
-            this._tryPdfPager(block, Number(data.updatedAt || 0));   // [K124] PDF 원본이 있으면 한 쪽씩 넘겨 보는 뷰어로
+            /* [K138] PDF 원본이 있으면 한 쪽씩 보는 뷰어로 바꾼다. 그동안 '여러 쪽 이어붙인 작은 그림'이 먼저 보였다가
+               바뀌는 깜빡임을 없애려고, 판단이 끝날 때까지 그림은 숨기고 '불러오는 중'만 보여준다. */
+            const _img = block.querySelector('img');
+            let _ph = null;
+            if (_img) {
+                _img.style.visibility = 'hidden';
+                _ph = document.createElement('div');
+                _ph.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:800; font-size:15px;';
+                _ph.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i> 시간표를 불러오는 중…';
+                const _wrap = _img.parentElement; if (_wrap) { _wrap.style.position = 'relative'; _wrap.insertBefore(_ph, _img); }
+            }
+            const _reveal = () => { try { if (_ph) _ph.remove(); if (_img && document.body.contains(_img)) _img.style.visibility = ''; } catch (e) {} };
+            const _guard = setTimeout(_reveal, 8000);   // PDF 가 너무 늦으면 일단 그림이라도
+            this._tryPdfPager(block, Number(data.updatedAt || 0)).then((ok) => { clearTimeout(_guard); _reveal(); }).catch(() => { clearTimeout(_guard); _reveal(); });
         } else {
             block.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:18px 0;">
