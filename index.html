@@ -994,6 +994,7 @@ try{
             <div class="menu-item" onclick="openNotice()"><i class="fa-solid fa-bullhorn"></i> 공지사항 </div>
             <!-- [K68] 교육 자료(교재) — 이번 과정에 연결된 교재가 있을 때만 표시 -->
             <div class="menu-item" id="menu-materials" style="display:none;" onclick="openMaterials()"><i class="fa-solid fa-book-open" style="color:#6366f1;"></i> 교육 자료 받기 <span id="matCountBadge" style="display:none; background:#6366f1; color:#fff; border-radius:999px; padding:1px 8px; font-size:11px; font-weight:800; margin-left:6px;"></span></div>
+            <div class="menu-item" id="menu-schedule" style="display:none;" onclick="openKacSchedule()"><i class="fa-solid fa-calendar-days" style="color:#0ea5e9;"></i> 교육 시간표</div>
             <div class="menu-item" onclick="viewMealMenu()"><i class="fa-solid fa-utensils"></i> 금주 식단보기</div>
             <div class="menu-item" onclick="openFoodModal()" style="display:none;"><i class="fa-solid fa-burger"></i> 항기원 맛집 추천</div>
             <div id="svcGateBanner" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#b45309; border-radius:12px; padding:11px 13px; font-size:12.5px; font-weight:700; line-height:1.5; margin-bottom:4px;"><i class="fa-solid fa-lock" style="margin-right:5px;"></i> 현재 담당 교수님이 신청 기능을 열어두지 않아 <b>차량·외출/외박·석식·비품·태블릿 신청이 비활성화</b>되어 있습니다.</div>
@@ -1587,7 +1588,7 @@ try{
 
 
 
-    <script src="config.js?v=7944b988"></script>
+    <script src="config.js?v=110e2c71"></script>
     <script>
         let serverTimeOffset = 0; // 추가
 let confirmCallback = null;
@@ -5305,6 +5306,7 @@ function _menuTableHTML(menu){
 window._kacMatList = [];
 function _kacMatWatch(room){
     if(!room) return;
+    try{ _kacSchWatch(room); }catch(e){}   // [K104] 교육 시간표도 함께 구독
     /* [K83] 단독 화면 머리말에 쓸 과정명 */
     try{
         firebase.database().ref('courses/'+room+'/settings/courseName').once('value').then(function(s){
@@ -5329,7 +5331,54 @@ function _kacMatWatch(room){
         if(window._kacMatOpen) _kacMatRender();
     });
 }
+/* ══ [K104] 교육생 '교육 시간표' ═══════════════════════════════════════
+   · PDF 원본(Cloudflare R2, media/{room}/schedulePdf) 이 더 최신이면 PDF 로 연다.
+   · 아니면(휴대폰 사진 업로드 등) 이미지(media/{room}/scheduleImage) 를 크게 보여준다.
+   · 큰 이미지는 '바뀐 시각'만 지켜보고, 버튼을 눌렀을 때 한 번만 받는다(트래픽 절약). */
+function _kacSchWatch(room){
+    if(!room || window._kacSchRoom === room) return;
+    window._kacSchRoom = room;
+    try{ if(window._kacSchRefs) window._kacSchRefs.forEach(function(r){ r.off(); }); }catch(e){}
+    var rp = firebase.database().ref('media/'+room+'/schedulePdf');
+    var ri = firebase.database().ref('media/'+room+'/scheduleImage/updatedAt');
+    window._kacSchRefs = [rp, ri];
+    rp.on('value', function(s){ window._kacSchPdf = s.val() || null; _kacSchApply(); }, function(){});
+    ri.on('value', function(s){ window._kacSchImgAt = Number(s.val() || 0); _kacSchApply(); }, function(){});
+}
+function _kacSchApply(){
+    var has = !!(window._kacSchPdf && window._kacSchPdf.url) || !!window._kacSchImgAt;
+    ['keduSchBtn','menu-schedule'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display = has ? '' : 'none'; });
+}
+async function openKacSchedule(){
+    var room = window._kacSchRoom;
+    var pdf = window._kacSchPdf, imgAt = window._kacSchImgAt || 0;
+    if(!room || (!(pdf && pdf.url) && !imgAt)) return showKacAlert('아직 등록된 교육 시간표가 없습니다.');
+    if(pdf && pdf.url && (pdf.updatedAt || 0) >= imgAt - 5000){
+        var u = (window.kacMaterials && pdf.key) ? window.kacMaterials.fileUrl({ key: pdf.key }) : pdf.url;
+        u += (u.indexOf('?') >= 0 ? '&' : '?') + 'view=1&v=2';
+        try{ window.open(u, '_blank') || (location.href = u); }catch(e){ location.href = u; }
+        return;
+    }
+    // 이미지로 보기 — 화면 전체, 두 손가락으로 확대 가능
+    var ov = document.getElementById('kacSchOv'); if(ov) ov.remove();
+    ov = document.createElement('div'); ov.id = 'kacSchOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#0f172a;display:flex;flex-direction:column;';
+    ov.innerHTML = '<div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;color:#fff;font-weight:900;font-size:16px;">'
+        + '<span><i class="fa-solid fa-calendar-days" style="color:#60a5fa;margin-right:7px;"></i>교육 시간표</span>'
+        + '<button type="button" onclick="document.getElementById(\'kacSchOv\').remove()" style="width:38px;height:38px;border:none;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:18px;cursor:pointer;">✕</button></div>'
+        + '<div id="kacSchBody" style="flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom;background:#fff;">'
+        + '<div style="padding:40px 0;text-align:center;color:#64748b;font-weight:800;"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중…</div></div>'
+        + '<div style="flex:0 0 auto;padding:8px;text-align:center;color:#94a3b8;font-size:12px;font-weight:700;">두 손가락으로 벌리면 확대됩니다</div>';
+    document.body.appendChild(ov);
+    try{
+        var s = await firebase.database().ref('media/'+room+'/scheduleImage/dataUrl').once('value');
+        var d = s.val();
+        var b = document.getElementById('kacSchBody');
+        if(b) b.innerHTML = d ? '<img src="'+d+'" alt="교육 시간표" style="display:block;width:100%;height:auto;">' : '<div style="padding:40px 0;text-align:center;color:#64748b;font-weight:800;">시간표를 불러오지 못했습니다.</div>';
+    }catch(e){ var b2=document.getElementById('kacSchBody'); if(b2) b2.innerHTML='<div style="padding:40px 0;text-align:center;color:#64748b;font-weight:800;">시간표를 불러오지 못했습니다.</div>'; }
+}
 function _kacMatApplyMenu(){
+    try{ _kacSchApply(); }catch(e){}   // [K104]
     var n = (window._kacMatList||[]).length;
     var el = document.getElementById('menu-materials');
     if(el){
@@ -6814,7 +6863,7 @@ window.kacExpireEndedCourses = async function(){
         }
         var b='courses/'+room+'/';
         ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto','surveyAnswers','activeSurvey','lastSurveyResult','returnCheckAck','zoomMeeting'].forEach(function(k){ updates[b+k]=null; });
-        ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [vJ106] 이전된 미디어 저장소도 함께 정리
+        ['scheduleImage','schedulePdf','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [vJ106] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/professorNames']=null; updates[b+'status/professorMain']=null; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
@@ -8336,6 +8385,31 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       _done();
     });
   }
+  /* [K105] 입교 카드를 화면 높이에 맞게 축소 — 키보드가 올라온 동안(입력 중)은 다시 계산하지 않는다 */
+  window._keFit = function(){
+    var ov=document.getElementById('keduEnroll'); if(!ov || ov.style.display==='none') { document.documentElement.classList.remove('ke-lock'); return; }
+    var card=ov.querySelector('.ke-card'); if(!card) return;
+    var ae=document.activeElement; if(ae && ov.contains(ae) && /INPUT|TEXTAREA/.test(ae.tagName) && ae.type!=='checkbox') return;
+    var vh = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+    card.style.zoom=''; ov.classList.add('ke-fit');
+    var need = card.scrollHeight + 28;
+    var z = Math.min(1, vh / need);
+    if(z < 0.72){ ov.classList.remove('ke-fit'); document.documentElement.classList.remove('ke-lock'); return; }   // 너무 작아지면 축소 대신 스크롤
+    if(z < 1) card.style.zoom = z.toFixed(3);
+    document.documentElement.classList.add('ke-lock');
+  };
+  try{
+    window.addEventListener('resize', function(){ clearTimeout(window._keFitT); window._keFitT=setTimeout(window._keFit, 120); });
+    window.addEventListener('orientationchange', function(){ setTimeout(window._keFit, 300); });
+    document.addEventListener('click', function(e){ if(e.target && e.target.closest && e.target.closest('#keduEnroll .ke-info-btn')) setTimeout(window._keFit, 30); }, true);
+    document.addEventListener('focusout', function(e){ if(e.target && e.target.closest && e.target.closest('#keduEnroll')) setTimeout(window._keFit, 350); }, true);
+    // 입교 화면이 닫히면 본문 스크롤 잠금 해제 (닫는 경로가 여러 곳이라 가볍게 감시)
+    setInterval(function(){
+      if(!document.documentElement.classList.contains('ke-lock')) return;
+      var ov=document.getElementById('keduEnroll');
+      if(!ov || getComputedStyle(ov).display==='none') document.documentElement.classList.remove('ke-lock');
+    }, 700);
+  }catch(e){}
   function showEnroll(menu, editMode){
     var ov=document.getElementById('keduEnroll'); if(!ov) return;
     window._keduEditMode = editMode === true;
@@ -8351,7 +8425,9 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
     if(window._keduEditMode){ if(_consentBox) _consentBox.style.setProperty('display','none','important'); if(agree) agree.checked=true; }
     else { if(_consentBox) _consentBox.style.setProperty('display','flex','important'); }
     ov.style.display='flex';
+    try{ window._keFit && window._keFit(); }catch(e){}   // [K105] 화면에 딱 맞춤
     loadCourses(document.getElementById('keduCourse')).then(function(){
+      try{ window._keFit && window._keFit(); }catch(e){}
       var courseSel=document.getElementById('keduCourse');
       if(window._keduEditMode && courseSel && window._keduOriginalRoom){
         var exists=Array.prototype.some.call(courseSel.options,function(o){ return o.value===window._keduOriginalRoom; });
@@ -9494,6 +9570,8 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         /* [K71] 교육 자료 — 카카오 채널로 들어오면 메인 메뉴를 거치지 않고 이 카드에 바로 떨어지므로,
                  여기에도 교재 버튼을 둔다. 연결된 교재가 있을 때만 보인다(_kacMatApplyMenu). */
         '<button class="kh-att" id="keduMatBtn" style="display:none; background:linear-gradient(135deg,#4f46e5,#6366f1);" onclick="openMaterials()"><i class="fa-solid fa-book-open"></i> 교육 자료 받기 <span id="keduMatCount" style="background:rgba(255,255,255,.25); border-radius:999px; padding:1px 9px; font-size:12px; margin-left:5px;"></span></button>'+
+        /* [K104] 교육 시간표 — 등록돼 있을 때만 보인다 */
+        '<button class="kh-att" id="keduSchBtn" style="display:none; background:linear-gradient(135deg,#0369a1,#0ea5e9);" onclick="openKacSchedule()"><i class="fa-solid fa-calendar-days"></i> 교육 시간표 보기</button>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduGradBtn" style="display:none; background:linear-gradient(135deg,#0f2057,#1a3a8a);" onclick="keduDownloadGradPhoto()"><i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기</button>'+
         /* [K61] 실명 입교자 → 게스트 전환(로그아웃 역할). 기기에 저장된 이름·사번을 지운다. */
@@ -10859,6 +10937,13 @@ html.kac-core-screen #realUserCount::before{
 /* [vJ110] 하단 버튼([출결하기]·[정보 수정])이 주소창/내비게이션 바에 가리지 않도록 하단 여백 대폭 확대(46→110px) */
 #keduHome{ padding:18px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
 #keduEnroll{ padding:22px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
+/* [K105] 입교 화면 — 휴대폰마다 화면 높이에 맞춰 카드 전체를 비율로 축소해 '딱 고정'.
+   (예전엔 하단 여백 110px 때문에 늘 화면보다 길어져 손가락으로 밀면 위아래로 출렁였다)
+   맞춤이 켜지면(.ke-fit) 스크롤·고무줄 튕김을 막고 가운데 정렬한다. 너무 작은 화면은 기존처럼 스크롤 허용. */
+#keduEnroll.ke-fit{ overflow:hidden !important; overscroll-behavior:none; touch-action:manipulation;
+  justify-content:center !important; padding:max(12px, env(safe-area-inset-top)) 14px max(12px, env(safe-area-inset-bottom)) !important; }
+#keduEnroll .ke-card{ transform-origin:top center; }
+html.ke-lock, html.ke-lock body{ overflow:hidden !important; overscroll-behavior:none; }
 #keduOtp{ padding:20px 18px calc(110px + env(safe-area-inset-bottom)) !important; }
 #keduDone{ padding:24px 18px calc(110px + env(safe-area-inset-bottom)) !important; }   /* [vJ108.1] 입교 직후 완료 화면도 스크롤 보장 */
 #keduHome .kh-card, #keduEnroll .ke-card, #keduOtp .ko-card{ flex:none !important; }
