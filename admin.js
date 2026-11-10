@@ -18925,24 +18925,74 @@ ui.matDownloadSelected = function(){
 };
 
 /* [K68] 자료실 전체 사용량 — Cloudflare 무료 한도(10GB) 대비 얼마나 썼는지 */
+/* ══ [K121] 1인당 자료실 용량 할당 ═══════════════════════════════════
+   무료 한도(10GB)를 한 사람이 다 쓰지 않도록 올린 사람별로 한도를 둔다.
+   · 한도 값은 system/coord/materialsQuotaMB (기본 1024MB = 1GB) — 화면에서 바꿀 수 있음
+   · 내 사용량 = 내가 올린 교재 + 워터마크 사본 크기 합 */
+ui._matQuotaMB = 1024;
+(function(){
+    try{
+        firebase.database().ref('system/coord/materialsQuotaMB').on('value', function(s){
+            var v = Number(s.val()); ui._matQuotaMB = (v > 0) ? v : 1024;
+            try{ if(state.currentMode === 'materials') ui._matRenderList(); }catch(e){}
+        });
+    }catch(e){}
+})();
+ui._matQuotaBytes = function(){ return ui._matQuotaMB * 1024 * 1024; };
+ui._matUsedBy = function(name){
+    name = String(name||'').trim();
+    return (ui._matAll||[]).reduce(function(a,m){
+        if(String(m.uploader||'').trim() !== name) return a;
+        return a + (Number(m.size)||0) + (Number(m.wmSize)||0);
+    }, 0);
+};
+ui._matFmtQuota = function(){ return ui._matQuotaMB >= 1024 ? (Math.round(ui._matQuotaMB/1024*10)/10) + 'GB' : ui._matQuotaMB + 'MB'; };
 ui._matUsageHtml = function(){
-    var all = ui._matAll || [];
-    var totalBytes = all.reduce(function(a,m){ return a + (Number(m.size)||0); }, 0);
-    var LIMIT = 10 * 1024 * 1024 * 1024;
-    var pct = Math.min(100, (totalBytes / LIMIT) * 100);
+    var me = ui._matWho();
+    var used = ui._matUsedBy(me), LIMIT = ui._matQuotaBytes();
+    var left = Math.max(0, LIMIT - used);
+    var pct = Math.min(100, (used / LIMIT) * 100);
     var col = pct >= 90 ? '#dc2626' : (pct >= 70 ? '#f59e0b' : '#22c55e');
-    return '<div style="margin-top:18px; padding:13px 15px; background:#f8fafc; border:1px solid #eef2f7; border-radius:12px;">'
-      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-size:12px; font-weight:800; color:#64748b; margin-bottom:7px;">'
-        + '<span>자료실 사용량 (전 과정 공용)</span>'
-        + '<span style="color:#334155;">' + window.kacMaterials.fmtSize(totalBytes) + ' / 10GB · 교재 ' + all.length + '건</span>'
+    // 할당 현황(신규 교수가 늘 때 판단용): 올린 사람 수 × 1인 한도 vs 무료 10GB
+    var people = Array.from(new Set((ui._matAll||[]).map(function(m){ return String(m.uploader||'').trim(); }).filter(Boolean)));
+    var cap = Math.floor((10 * 1024) / ui._matQuotaMB);
+    return '<div style="margin-top:18px; padding:14px 16px; background:#f8fafc; border:1px solid #eef2f7; border-radius:12px;">'
+      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; font-size:13px; font-weight:800; color:#64748b; margin-bottom:8px;">'
+        + '<span><i class="fa-solid fa-hard-drive" style="color:#6366f1;"></i> 내 자료실 용량 <span style="color:#94a3b8; font-weight:700;">('+ui._esc(ui._matWhoLabel({uploader:me}))+')</span></span>'
+        + '<span style="color:#334155;">' + window.kacMaterials.fmtSize(used) + ' / ' + ui._matFmtQuota() + ' · <b style="color:' + col + ';">남은 용량 ' + window.kacMaterials.fmtSize(left) + '</b></span>'
       + '</div>'
-      + '<div style="height:7px; background:#e2e8f0; border-radius:99px; overflow:hidden;">'
+      + '<div style="height:8px; background:#e2e8f0; border-radius:99px; overflow:hidden;">'
         + '<div style="width:' + Math.max(pct, 0.6) + '%; height:100%; background:' + col + ';"></div>'
       + '</div>'
-      + (pct >= 70
-          ? '<div style="margin-top:8px; font-size:11.5px; font-weight:800; color:' + col + '; line-height:1.5;">무료 한도가 얼마 남지 않았습니다. 안 쓰는 교재를 정리해 주세요.</div>'
-          : '')
+      + (pct >= 80 ? '<div style="margin-top:8px; font-size:12px; font-weight:800; color:' + col + '; line-height:1.5;">할당 용량이 얼마 남지 않았습니다. 안 쓰는 교재를 자료실에서 정리해 주세요.</div>' : '')
+      + '<div style="margin-top:9px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; font-size:11.5px; font-weight:700; color:#94a3b8;">'
+        + '<span>1인당 ' + ui._matFmtQuota() + ' 할당 · 현재 ' + people.length + '명 사용 중 · 최대 ' + cap + '명까지 수용</span>'
+        + '<button type="button" onclick="ui.matSetQuota()" style="padding:4px 10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#64748b; font-size:11.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-sliders"></i> 1인 할당량 변경</button>'
+      + '</div>'
       + '</div>';
+};
+/* 1인 할당량 변경 — 관리자 암호(교재 업로드 암호)를 아는 사람만 */
+ui.matSetQuota = async function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
+    if(!(await ui._matEnsureKey())) return;
+    var people = Array.from(new Set((ui._matAll||[]).map(function(m){ return String(m.uploader||'').trim(); }).filter(Boolean)));
+    var opts = [[500,'500MB','최대 20명'],[1024,'1GB','최대 10명'],[2048,'2GB','최대 5명']];
+    var ov = document.createElement('div');
+    ov.style.cssText='position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:20px;';
+    ov.innerHTML = '<div style="background:#fff; border-radius:18px; padding:26px 28px; width:100%; max-width:440px;">'
+      + '<div style="font-size:18px; font-weight:900; color:#0f172a; margin-bottom:6px;"><i class="fa-solid fa-sliders" style="color:#6366f1;"></i> 1인당 자료실 할당량</div>'
+      + '<div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:14px; line-height:1.6;">무료 한도 10GB를 나눠 씁니다. 현재 <b>' + people.length + '명</b>이 사용 중입니다.</div>'
+      + opts.map(function(o){ var on = (ui._matQuotaMB === o[0]);
+          return '<button type="button" class="mqOpt" data-v="'+o[0]+'" style="width:100%; display:flex; justify-content:space-between; align-items:center; padding:13px 15px; margin-bottom:8px; border-radius:12px; border:1.5px solid '+(on?'#2563eb':'#e2e8f0')+'; background:'+(on?'#eff6ff':'#fff')+'; cursor:pointer; font-size:15px; font-weight:900; color:#0f172a;">'+o[1]+' <span style="font-size:12.5px; font-weight:800; color:#64748b;">'+o[2]+(on?' · 현재':'')+'</span></button>'; }).join('')
+      + '<button type="button" id="mqNo" style="width:100%; margin-top:6px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){
+        if(e.target === ov || e.target.id === 'mqNo') return ov.remove();
+        var b = e.target.closest('.mqOpt'); if(!b) return;
+        var v = Number(b.getAttribute('data-v'));
+        firebase.database().ref('system/coord/materialsQuotaMB').set(v).then(function(){ ov.remove(); ui.showAlert('✅ 1인당 할당량을 ' + (v>=1024 ? (v/1024)+'GB' : v+'MB') + '로 바꿨습니다.'); })
+            .catch(function(err){ ui.showAlert('저장 실패: ' + ((err&&err.message)||'')); });
+    });
 };
 
 /* ── 올리기 ─────────────────────────────────────────────── */
@@ -19097,10 +19147,19 @@ ui._matUploadRun = async function(){
             }
             // 'replace' · 'both' 는 아래에서 그대로 업로드 진행
         }
+        /* [K121] 1인 할당량 확인 */
+        var _used = ui._matUsedBy(who) + (act === 'replace' && dupOld ? -(Number(dupOld.size)||0) : 0);
+        if(_used + (Number(f.size)||0) > ui._matQuotaBytes()){
+            fail++;
+            show('<span style="color:#b91c1c;">'+ui._esc(f.name)+' — 내 할당 용량('+ui._matFmtQuota()+')을 넘어 올리지 못했습니다. 남은 용량 '+window.kacMaterials.fmtSize(Math.max(0, ui._matQuotaBytes()-_used))+'</span>', '#fef2f2');
+            await new Promise(function(r){ setTimeout(r, 2200); });
+            continue;
+        }
         show('<i class="fa-solid fa-spinner fa-spin"></i> ('+(i+1)+'/'+files.length+') '+ui._esc(f.name)+' 올리는 중…');
         try{
             var rec = await window.kacMaterials.upload(f, who, ui._matCourseName());
             await window.kacMaterials.link(room, rec.id, who);
+            try{ (ui._matAll = ui._matAll || []).push(rec); }catch(e){}   // [K121] 같은 묶음 안에서도 사용량 누적
             done++;
             /* [K75] '새 것으로 교체'면 올린 뒤 기존 것을 자료실에서 삭제 */
             if(act === 'replace' && dupOld){
@@ -19668,6 +19727,11 @@ ui.matToggleWm = async function(id, on, el){
     if(!m){ if(el) el.checked = !on; return; }
     try{
         if(on && !m.wmKey){
+            var _wu = ui._matUsedBy(String(m.uploader||'').trim());
+            if(_wu + (Number(m.size)||0) > ui._matQuotaBytes()){
+                if(el) el.checked = false;
+                return ui.showAlert('워터마크 사본을 만들 용량이 부족합니다.\n(올린 사람 할당 ' + ui._matFmtQuota() + ' 중 남은 용량 ' + window.kacMaterials.fmtSize(Math.max(0, ui._matQuotaBytes()-_wu)) + ')\n안 쓰는 교재를 정리한 뒤 다시 켜 주세요.');
+            }
             var ok = await ui._matEnsureKey();
             if(!ok){ if(el) el.checked = false; return; }
             ui.showAlert('🔏 워터마크 사본을 만드는 중입니다… (파일 크기에 따라 수십 초)');
