@@ -6931,3 +6931,52 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 
 /* 두 열이 위에서부터 나란히 시작하도록 (오른쪽 칸이 늘어나 세로가 커지는 것 방지) */
 #courseSetupModal .setup-flex-layout{ align-items:flex-start !important; }
+
+/* ══ [K97] 홈 검색 카드 디자인 보강 ══════════════════════════════
+   ① 과정명 클릭 → 과정현황 (호버 시 밑줄·화살표)
+   ② 입교안내 | 교수 알약 — 가운데를 대각선으로 분할
+   ③ 하단 메뉴 아이콘을 색 있는 둥근 타일로 → 밋밋함 개선            */
+.hsr-card.hsr-v2{ border:1px solid #e3eaf4 !important; border-radius:18px !important; }
+.hsr-v2 .hsr2-title-row{ display:flex; align-items:center; gap:10px; min-width:0; }
+.hsr-v2 .hsr2-room{
+  flex:0 0 auto; display:inline-flex; align-items:center; height:24px; padding:0 10px;
+  border-radius:8px; background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff;
+  font-size:12px; font-weight:900; letter-spacing:.3px; box-shadow:0 3px 8px rgba(37,99,235,.28);
+}
+.hsr-v2 .hsr2-title{ font-size:20px !important; }
+.hsr-v2 .hsr2-title-link{ cursor:pointer; display:inline-flex; align-items:center; gap:8px; min-width:0; border-radius:6px; }
+.hsr-v2 .hsr2-title-go{
+  font-size:14px; color:#2563eb; -webkit-text-fill-color:#2563eb;
+  opacity:0; transform:translateX(-6px); transition:opacity .18s, transform .18s;
+}
+.hsr-v2 .hsr2-title-link:hover .hsr2-title-go,
+.hsr-v2 .hsr2-title-link:focus-visible .hsr2-title-go{ opacity:1; transform:translateX(0); }
+.hsr-v2 .hsr2-title-link:hover{ text-decoration:underline; text-decoration-color:rgba(37,99,235,.35); text-underline-offset:5px; text-decoration-thickness:2px; }
+
+/* ② 대각선 분할 알약 */
+.hsr2-pill{ gap:0 !important; background:transparent !important; box-shadow:none !important; overflow:visible !important; filter:drop-shadow(0 5px 12px rgba(37,99,235,.22)); }
+.hsr2-pill .hp-left{
+  border-radius:999px 0 0 999px !important; padding:0 30px 0 20px !important;
+  clip-path:polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%);
+}
+.hsr2-pill .hp-right{
+  border-radius:0 999px 999px 0 !important; padding:0 20px 0 30px !important; margin-left:-12px;
+  clip-path:polygon(16px 0, 100% 0, 100% 100%, 0 100%);
+}
+.hsr2-pill .hp-left:hover,.hsr2-pill .hp-right:hover{ filter:brightness(1.08); }
+
+/* ③ 하단 메뉴 — 색 아이콘 타일 */
+.hsr2-menu{ gap:10px !important; border-top:1px dashed #e2e8f0 !important; padding-top:14px !important; }
+.hsr2-menu .hsr-btn{ color:#475569 !important; font-weight:800 !important; padding:12px 6px 10px !important; border-radius:14px !important; transition:background .15s, transform .15s, box-shadow .15s; }
+.hsr2-menu .hsr-btn:hover{ background:#f8fafc !important; transform:translateY(-2px); box-shadow:0 6px 16px rgba(15,23,42,.08); }
+.hsr2-menu .hsr2-ico{
+  display:inline-flex !important; align-items:center; justify-content:center;
+  width:42px; height:42px; border-radius:13px; font-size:18px !important; opacity:1 !important;
+  transition:transform .15s;
+}
+.hsr2-menu .hsr-btn:hover .hsr2-ico{ transform:scale(1.06); }
+.hsr2-menu .hsr-btn:nth-child(1) .hsr2-ico{ background:#e0f2fe; color:#0284c7; }
+.hsr2-menu .hsr-btn:nth-child(2) .hsr2-ico{ background:#ffe4e6; color:#e11d48; }
+.hsr2-menu .hsr-btn:nth-child(3) .hsr2-ico{ background:#dcfce7; color:#16a34a; }
+.hsr2-menu .hsr-btn:nth-child(4) .hsr2-ico{ background:#ede9fe; color:#7c3aed; }
+.hsr2-menu .hsr-btn.is-open{ background:#eff6ff !important; box-shadow:inset 0 -3px #2563eb !important; transform:none; }
