@@ -7011,3 +7011,10 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 #view-home.home-search-active .home-stat-row{ display:none !important; }
 #view-home.home-search-active #homeSearchWrap{ margin-bottom:10px !important; }
 #view-home.home-search-active #homeWxCard{ display:none !important; }
+/* [K140] 검색 결과가 검색창 상자 안으로 들어오면서 상자 높이가 커져, '가운데(50%)'에 맞춰 둔 돋보기·X 가
+   결과 목록 한가운데로 내려가던 문제 → 입력칸 높이(70px)의 가운데에 고정 */
+#homeSearchWrap .home-search-ico{ top:35px !important; }
+#homeSearchWrap #homeSearchClear,
+#homeSearchWrap.has-text #homeSearchClear,
+#view-home #homeSearchWrap #homeSearchClear{ top:35px !important; }
+#homeSearchResults:empty{ display:none !important; }
