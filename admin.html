@@ -1644,9 +1644,9 @@ body.in-course #moreToggleTab{ display:flex !important; }
 
 
 <!-- [2] 항기원 OTP 자체출결 영역 — [J17] OTP 블록 + 안내자료 이미지 나란히 배치 (반응형: 좁으면 세로) -->
-    <div id="area-internal-qr" class="modern-white-card attendance-otp-card" style="display:none; text-align: center; max-width: 1240px; padding:30px 26px;">
+    <div id="area-internal-qr" class="modern-white-card attendance-otp-card" style="display:none; position:relative; text-align: center; max-width: 1240px; padding:30px 26px;">
       <!-- [K108] 출석 관리 바로가기 — 오른쪽에 항상 보이는 세로 메뉴 (예전엔 0/0 을 눌러야 팝업으로 나왔음) -->
-      <div id="attSideRail" style="position:fixed; right:22px; top:50%; transform:translateY(-50%); z-index:900; display:flex; flex-direction:column; gap:12px;">
+      <div id="attSideRail" style="position:absolute; left:calc(100% + 18px); top:50%; transform:translateY(-50%); z-index:900; display:flex; flex-direction:column; gap:12px;">
         <button type="button" onclick="ui.openMissingAttendanceModal()" title="아직 출결하지 않은 교육생 보기" style="width:96px; padding:14px 6px 12px; border:1px solid #fde68a; border-radius:18px; background:#fff; box-shadow:0 8px 22px rgba(15,23,42,.10); cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:7px; font-family:inherit;">
           <span style="width:44px; height:44px; border-radius:14px; background:#fef3c7; color:#d97706; display:flex; align-items:center; justify-content:center; font-size:19px;"><i class="fa-solid fa-user-clock"></i></span>
           <span style="font-size:12.5px; font-weight:900; color:#92400e; line-height:1.3;">미완료자<br>확인</span>
