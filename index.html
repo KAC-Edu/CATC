@@ -5346,33 +5346,43 @@ function _kacSchWatch(room){
     ri.on('value', function(s){ window._kacSchImgAt = Number(s.val() || 0); _kacSchApply(); }, function(){});
 }
 function _kacSchApply(){
-    var has = !!(window._kacSchPdf && window._kacSchPdf.url) || !!window._kacSchImgAt;
+    var _p = window._kacSchPdf; var has = !!(_p && (_p.url || _p.imgUrl)) || !!window._kacSchImgAt;
     ['keduSchBtn','menu-schedule'].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display = has ? '' : 'none'; });
 }
 async function openKacSchedule(){
     var room = window._kacSchRoom;
     var pdf = window._kacSchPdf, imgAt = window._kacSchImgAt || 0;
-    if(!room || (!(pdf && pdf.url) && !imgAt)) return showKacAlert('아직 등록된 교육 시간표가 없습니다.');
-    if(pdf && pdf.url && (pdf.updatedAt || 0) >= imgAt - 5000){
-        var u = (window.kacMaterials && pdf.key) ? window.kacMaterials.fileUrl({ key: pdf.key }) : pdf.url;
-        u += (u.indexOf('?') >= 0 ? '&' : '?') + 'view=1&v=2';
-        try{ window.open(u, '_blank') || (location.href = u); }catch(e){ location.href = u; }
-        return;
+    if(!room || (!(pdf && (pdf.url || pdf.imgUrl)) && !imgAt)) return showKacAlert('아직 등록된 교육 시간표가 없습니다.');
+    /* [K113] 앱 안에서 바로 본다 — PDF 여러 장은 세로로 이어붙인 이미지라 위로 밀며 넘겨 보면 된다.
+             PDF 원본(Cloudflare)이 있으면 상단 [PDF 원본] 버튼으로 휴대폰 PDF 뷰어로도 열 수 있다. */
+    var pdfUrl = '';
+    if(pdf && pdf.url){
+        pdfUrl = (window.kacMaterials && pdf.key) ? window.kacMaterials.fileUrl({ key: pdf.key }) : pdf.url;
+        pdfUrl += (pdfUrl.indexOf('?') >= 0 ? '&' : '?') + 'view=1&v=2';
     }
+    /* [K114] Cloudflare 이미지가 Firebase 이미지보다 최신(또는 같은 업로드)이면 Cloudflare 에서 받는다 */
+    var r2Img = '';
+    if(pdf && pdf.imgUrl && (pdf.updatedAt || 0) >= imgAt - 60000){
+        r2Img = (window.kacMaterials && pdf.imgKey) ? window.kacMaterials.fileUrl({ key: pdf.imgKey }) : pdf.imgUrl;
+        r2Img += (r2Img.indexOf('?') >= 0 ? '&' : '?') + 'view=1&v=2';
+    }
+    if(!imgAt && !r2Img && pdfUrl){ try{ window.open(pdfUrl, '_blank') || (location.href = pdfUrl); }catch(e){ location.href = pdfUrl; } return; }
     // 이미지로 보기 — 화면 전체, 두 손가락으로 확대 가능
     var ov = document.getElementById('kacSchOv'); if(ov) ov.remove();
     ov = document.createElement('div'); ov.id = 'kacSchOv';
     ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:#0f172a;display:flex;flex-direction:column;';
     ov.innerHTML = '<div style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 14px;color:#fff;font-weight:900;font-size:16px;">'
         + '<span><i class="fa-solid fa-calendar-days" style="color:#60a5fa;margin-right:7px;"></i>교육 시간표</span>'
-        + '<button type="button" onclick="document.getElementById(\'kacSchOv\').remove()" style="width:38px;height:38px;border:none;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:18px;cursor:pointer;">✕</button></div>'
+        + '<span style="display:flex;align-items:center;gap:8px;">'
+        + (pdfUrl ? '<a href="'+pdfUrl+'" target="_blank" rel="noopener" style="padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:800;text-decoration:none;"><i class="fa-solid fa-file-pdf"></i> PDF 원본</a>' : '')
+        + '<button type="button" onclick="document.getElementById(\'kacSchOv\').remove()" style="width:38px;height:38px;border:none;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:18px;cursor:pointer;">✕</button></span></div>'
         + '<div id="kacSchBody" style="flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom;background:#fff;">'
         + '<div style="padding:40px 0;text-align:center;color:#64748b;font-weight:800;"><i class="fa-solid fa-spinner fa-spin"></i> 불러오는 중…</div></div>'
-        + '<div style="flex:0 0 auto;padding:8px;text-align:center;color:#94a3b8;font-size:12px;font-weight:700;">두 손가락으로 벌리면 확대됩니다</div>';
+        + '<div style="flex:0 0 auto;padding:8px;text-align:center;color:#94a3b8;font-size:12px;font-weight:700;">위로 밀면 다음 장 · 두 손가락으로 벌리면 확대</div>';
     document.body.appendChild(ov);
     try{
-        var s = await firebase.database().ref('media/'+room+'/scheduleImage/dataUrl').once('value');
-        var d = s.val();
+        var d = r2Img;
+        if(!d){ var s = await firebase.database().ref('media/'+room+'/scheduleImage/dataUrl').once('value'); d = s.val(); }
         var b = document.getElementById('kacSchBody');
         if(b) b.innerHTML = d ? '<img src="'+d+'" alt="교육 시간표" style="display:block;width:100%;height:auto;">' : '<div style="padding:40px 0;text-align:center;color:#64748b;font-weight:800;">시간표를 불러오지 못했습니다.</div>';
     }catch(e){ var b2=document.getElementById('kacSchBody'); if(b2) b2.innerHTML='<div style="padding:40px 0;text-align:center;color:#64748b;font-weight:800;">시간표를 불러오지 못했습니다.</div>'; }
