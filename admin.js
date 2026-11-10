@@ -9997,25 +9997,26 @@ const scheduleMgr = {
             + '<button type="button" data-a="next" style="position:absolute; right:18px; top:50%; transform:translateY(-50%); width:58px; height:58px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:22px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button>'
             + '<div id="schFsNo" style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); padding:7px 16px; border-radius:999px; background:rgba(0,0,0,.55); color:#fff; font-size:15px; font-weight:900;"></div>'
             + '<button type="button" data-a="close" style="position:fixed; top:16px; right:16px; width:46px; height:46px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:20px; cursor:pointer; z-index:3;">✕</button>'
-            + '<button type="button" data-a="fit" style="position:fixed; top:16px; right:74px; height:46px; padding:0 16px; border:none; border-radius:23px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer; z-index:3;"><i class="fa-solid fa-left-right"></i> <span>가로 꽉 채우기</span></button>';
+            + '<button type="button" data-a="fit" style="position:fixed; top:16px; right:74px; height:46px; padding:0 16px; border:none; border-radius:23px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer; z-index:3;"><i class="fa-solid fa-expand"></i> <span>여백 포함 원본</span></button>';
         document.body.appendChild(ov);
         ov.querySelectorAll('button[data-a="prev"],button[data-a="next"],#schFsNo').forEach(el => { el.style.position = 'fixed'; el.style.zIndex = '3'; });
         const cv = ov.querySelector('#schFsCv'), no = ov.querySelector('#schFsNo');
         /* [K129] 맞춤 방식: 'page'(한 쪽 전체) ↔ 'width'(가로 꽉 채움 · 위아래 스크롤) — 버튼 또는 더블클릭 */
-        let fitMode = 'page';
+        /* [K132] 'fill' = 흰 여백을 잘라내고 가로세로 비율 그대로 화면에 최대한 꽉(기본) / 'page' = 여백 포함 원본 그대로 */
+        let fitMode = noCrop ? 'page' : 'fill';
         const applyFitLayout = () => {
             const fb = ov.querySelector('button[data-a="fit"] span');
-            if (fitMode === 'width') { ov.style.display = 'block'; ov.style.overflowY = 'auto'; ov.style.touchAction = 'pan-y'; cv.style.display = 'block'; cv.style.margin = '12px auto'; cv.style.maxWidth = 'none'; cv.style.maxHeight = 'none'; if (fb) fb.textContent = '한 쪽 전체 보기'; }
-            else { ov.style.display = 'flex'; ov.style.overflowY = 'hidden'; ov.style.touchAction = 'none'; cv.style.margin = ''; cv.style.maxWidth = '100vw'; cv.style.maxHeight = '100vh'; if (fb) fb.textContent = '가로 꽉 채우기'; }
+            ov.style.display = 'flex'; ov.style.overflowY = 'hidden'; ov.style.touchAction = 'none'; cv.style.margin = ''; cv.style.maxWidth = '100vw'; cv.style.maxHeight = '100vh';
+            if (fb) fb.textContent = (fitMode === 'fill') ? '여백 포함 원본' : '화면 꽉 채우기';
         };
         let cur = Math.max(1, Math.min(pdf.numPages, start || 1)), busy = false, pending = 0;
+        applyFitLayout();
         const draw = async (n, dir) => {
             if (busy) { pending = n; return; }
             busy = true;
             try {
-                const W = window.innerWidth - 24, H = (fitMode === 'width') ? 100000 : (window.innerHeight - 24);   // [K127][K129]
-                await ui._pdfDrawTo(pdf, n, cv, W, H, !!noCrop);
-                if (fitMode === 'width') ov.scrollTop = (dir < 0) ? ov.scrollHeight : 0;
+                const W = window.innerWidth, H = window.innerHeight;   // [K132] 화면 전체, 비율 유지
+                await ui._pdfDrawTo(pdf, n, cv, W, H, fitMode === 'page');
                 cv.style.transform = 'translateX(0)'; cv.style.opacity = '1';
                 cur = n; no.textContent = n + ' / ' + pdf.numPages;
             } finally { busy = false; if (pending) { const p = pending; pending = 0; if (p !== cur) draw(p); } }
@@ -10034,7 +10035,7 @@ const scheduleMgr = {
         };
         let rt = null; const onResize = () => { clearTimeout(rt); rt = setTimeout(() => draw(cur), 150); };
         document.addEventListener('keydown', onKey, true); window.addEventListener('resize', onResize);
-        const toggleFit = () => { fitMode = (fitMode === 'page') ? 'width' : 'page'; applyFitLayout(); draw(cur); };
+        const toggleFit = () => { fitMode = (fitMode === 'fill') ? 'page' : 'fill'; applyFitLayout(); draw(cur); };
         ov.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.getAttribute('data-a'); if (a === 'prev') go(-1); else if (a === 'next') go(1); else if (a === 'close') close(); else if (a === 'fit') toggleFit(); });
         ov.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) toggleFit(); });
         // 마우스·손가락 드래그로 넘기기 (왼쪽/위로 밀면 다음, 오른쪽/아래로 밀면 이전)
@@ -10043,22 +10044,17 @@ const scheduleMgr = {
         let sTop = 0;
         ov.addEventListener('pointerdown', () => { sTop = ov.scrollTop; });
         ov.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - sx, dy = e.clientY - sy;
-            if (fitMode === 'width' && Math.abs(dy) > Math.abs(dx)) { ov.scrollTop = sTop - dy; return; }
             if (Math.abs(dx) > Math.abs(dy)) cv.style.transform = 'translateX(' + (dx * 0.6) + 'px)'; });
         ov.addEventListener('pointerup', (e) => {
             if (!dragging) return; dragging = false; ov.style.cursor = 'grab';
             const dx = e.clientX - sx, dy = e.clientY - sy, ax = Math.abs(dx), ay = Math.abs(dy);
             if (Math.max(ax, ay) < 50) { cv.style.transform = 'translateX(0)'; return; }
-            if (ax >= ay) go(dx < 0 ? 1 : -1); else if (fitMode !== 'width') go(dy < 0 ? 1 : -1);
+            if (ax >= ay) go(dx < 0 ? 1 : -1); else go(dy < 0 ? 1 : -1);
         });
         ov.addEventListener('pointercancel', () => { dragging = false; cv.style.transform = 'translateX(0)'; });
         let wl = 0; const wheelH = (e) => {
             if (!document.body.contains(ov)) return;
             e.stopPropagation();
-            if (fitMode === 'width') {   // 가로 맞춤: 쪽 안에서는 스크롤, 끝에 닿으면 다음/이전 쪽
-                const atBottom = ov.scrollTop + ov.clientHeight >= ov.scrollHeight - 2, atTop = ov.scrollTop <= 0;
-                if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) { e.preventDefault(); ov.scrollTop += e.deltaY; return; }
-            }
             e.preventDefault(); const now = Date.now(); if (now - wl < 300) return; wl = now; go(e.deltaY > 0 ? 1 : -1);
         };
         window.addEventListener('wheel', wheelH, { passive: false, capture: true });   // [K128] 휠을 문서 단계에서 받아 확실히 넘김
@@ -19954,9 +19950,19 @@ ui.matPresent = async function(id){
         if(!mode) return;
     }
     var url = window.kacMaterials.fileUrl(m) + '?view=1&v=2';
+    /* [K133] 불러오는 동안 안내 */
+    var ld = document.createElement('div');
+    ld.style.cssText = 'position:fixed; inset:0; z-index:2147483400; background:rgba(11,18,32,.82); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#fff;';
+    ld.innerHTML = '<div style="width:54px; height:54px; border:5px solid rgba(255,255,255,.2); border-top-color:#a78bfa; border-radius:50%; animation:matPrSpin .8s linear infinite;"></div>'
+      + '<div style="font-size:22px; font-weight:900;">발표 자료를 불러오는 중입니다…</div>'
+      + '<div style="font-size:14px; color:#cbd5e1; font-weight:700;">' + ui._esc(m.title || m.fileName || '') + '</div>'
+      + '<style>@keyframes matPrSpin{to{transform:rotate(360deg)}}</style>';
+    document.body.appendChild(ld);
     var pdf;
     try{ pdf = await pdfjsLib.getDocument({ url: url }).promise; }
-    catch(e){ return ui.showAlert('PDF 를 열지 못했습니다.\n' + ((e&&e.message)||'')); }
+    catch(e){ ld.remove(); return ui.showAlert('PDF 를 열지 못했습니다.\n' + ((e&&e.message)||'')); }
+    try{ await pdf.getPage(1); }catch(e){}
+    ld.remove();
     if(mode === 'single') return scheduleMgr._openPdfFs(pdf, 1, true);   // 발표 슬라이드는 여백을 자르지 않는다
     return ui._matPresenter(pdf, m);
 };
@@ -20007,128 +20013,136 @@ ui._pdfDrawTo = async function(pdf, n, canvas, W, H, noCrop){
 };
 
 ui._matPresenter = async function(pdf, m){
-    /* 1) 청중 창 — 다른 모니터에 띄운다(크롬 '창 관리' 권한을 허용하면 자동으로 그 모니터 위치에) */
-    var other = null, screens = [], sd = null;
-    try{
-        if(window.getScreenDetails){
-            sd = await window.getScreenDetails();
-            screens = sd.screens || [];
-            other = screens.filter(function(s){ return s !== sd.currentScreen; })[0] || null;
-        }
-    }catch(e){}
-    var feat = other ? ('left=' + other.availLeft + ',top=' + other.availTop + ',width=' + other.availWidth + ',height=' + other.availHeight)
-                     : 'width=1280,height=720';
-    var aud = window.open('', 'catcAudience', feat + ',menubar=no,toolbar=no,location=no,status=no');
-    if(!aud){ return ui.showAlert('팝업이 차단되었습니다.\n주소창 오른쪽의 팝업 차단 아이콘에서 [항상 허용]을 누른 뒤 다시 시도해 주세요.'); }
-    aud.document.open();
-    aud.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + String(m.title||m.fileName||'발표').replace(/</g,'&lt;') + '</title>'
-      + '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none}#c{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff}'
-      + '#fs{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);color:#fff;font:900 28px sans-serif;cursor:pointer}</style></head>'
-      + '<body><canvas id="c"></canvas><div id="fs">🖥 이 창을 클릭하면 전체화면이 됩니다<br><span style="font-size:16px;font-weight:700;opacity:.8">(발표 화면 — 프로젝터 쪽 모니터)</span></div>'
-      + '<script>document.getElementById("fs").onclick=function(){var d=document.documentElement;(d.requestFullscreen||d.webkitRequestFullscreen).call(d);this.remove();};'
-      + 'document.addEventListener("keydown",function(e){ try{ opener && opener.postMessage({catcSlideKey:e.key},"*"); }catch(_){} });<\/script></body></html>');
-    aud.document.close();
+    /* [K133] 발표자 모드 재구성
+       · 청중 화면: 슬라이드만(마우스 보임 · 클릭하면 다음, 왼쪽 1/4 클릭은 이전)
+       · 발표자 화면: '다음 슬라이드' 미리보기 + 현재 쪽 · 시계 · 경과 시간
+       · [모니터 바꾸기]: 창을 옮기지 않고 두 창의 '역할'을 맞바꾼다(어느 모니터든 즉시 반대로) */
+    var screens = [], sd = null, other = null;
+    try{ if(window.getScreenDetails){ sd = await window.getScreenDetails(); screens = sd.screens || []; other = screens.filter(function(s){ return s !== sd.currentScreen; })[0] || null; } }catch(e){}
+    var feat = other ? ('left=' + other.availLeft + ',top=' + other.availTop + ',width=' + other.availWidth + ',height=' + other.availHeight) : 'width=1280,height=720';
+    var pop = window.open('', 'catcAudience', feat + ',menubar=no,toolbar=no,location=no,status=no');
+    if(!pop){ return ui.showAlert('팝업이 차단되었습니다.\n주소창 오른쪽의 팝업 차단 아이콘에서 [항상 허용]을 누른 뒤 다시 시도해 주세요.'); }
+    var title = String(m.title || m.fileName || '발표');
+    pop.document.open();
+    pop.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + title.replace(/</g,'&lt;') + '</title><style>html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Pretendard","Malgun Gothic",sans-serif}</style></head><body></body></html>');
+    pop.document.close();
 
-    /* 2) 발표자 화면(이 창) */
-    var old = document.getElementById('matPresenterOv'); if(old) old.remove();
-    var ov = document.createElement('div'); ov.id = 'matPresenterOv';
-    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483500; background:#0b1220; color:#fff; display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); grid-template-rows:auto 1fr auto; gap:16px; padding:18px; box-sizing:border-box; user-select:none;';
-    ov.innerHTML = '<div style="grid-column:1/3; display:flex; align-items:center; justify-content:space-between; gap:12px;">'
-        + '<div style="font-size:16px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><i class="fa-solid fa-person-chalkboard" style="color:#a78bfa;"></i> ' + ui._esc(m.title||m.fileName||'') + '</div>'
-        + '<span style="display:flex; gap:8px; flex-shrink:0;">'
-        + '<button data-a="swap" title="슬라이드를 띄울 모니터 바꾸기" style="padding:10px 16px; border:none; border-radius:10px; background:rgba(255,255,255,.12); color:#fff; font-size:14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-right-left"></i> 모니터 바꾸기</button>'
-        + '<button data-a="close" style="padding:10px 18px; border:none; border-radius:10px; background:#dc2626; color:#fff; font-size:14px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-xmark"></i> 발표 종료 (ESC)</button></span></div>'
-      + '<div id="ppCurWrap" style="min-height:0; display:flex; flex-direction:column; gap:8px;"><div style="font-size:13px; font-weight:800; color:#94a3b8;">현재 슬라이드</div>'
-        + '<div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#111827; border-radius:14px; touch-action:none; cursor:grab;" id="ppCurBox"><canvas id="ppCur" style="background:#fff; border-radius:6px;"></canvas></div></div>'
-      + '<div style="min-height:0; display:flex; flex-direction:column; gap:14px;">'
-        + '<div style="font-size:13px; font-weight:800; color:#94a3b8;">다음 슬라이드</div>'
-        + '<div id="ppNextBox" style="height:42%; display:flex; align-items:center; justify-content:center; background:#111827; border-radius:14px;"><canvas id="ppNext" style="background:#fff; border-radius:6px; opacity:.9;"></canvas></div>'
-        + '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#111827; border-radius:14px;">'
-          + '<div id="ppClock" style="font-size:clamp(40px,5vw,78px); font-weight:900; letter-spacing:2px; font-variant-numeric:tabular-nums;"></div>'
-          + '<div style="font-size:15px; color:#94a3b8; font-weight:800;">경과 <span id="ppElapsed" style="color:#fbbf24; font-variant-numeric:tabular-nums;">00:00</span></div>'
-          + '<div id="ppNo" style="font-size:22px; font-weight:900;"></div></div></div>'
-      + '<div style="grid-column:1/3; display:flex; align-items:center; justify-content:center; gap:14px;">'
-        + '<button data-a="prev" style="width:64px; height:52px; border:none; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:20px; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>'
-        + '<div style="font-size:12.5px; color:#94a3b8; font-weight:700;">← → · 휠 · 드래그 · 클리커로 넘김</div>'
-        + '<button data-a="next" style="width:64px; height:52px; border:none; border-radius:12px; background:#4f46e5; color:#fff; font-size:20px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button></div>';
-    document.body.appendChild(ov);
-    var cur = 1, t0 = Date.now(), busy = false, pend = 0;
-    var cCur = ov.querySelector('#ppCur'), cNext = ov.querySelector('#ppNext');
-    var render = async function(n){
+    var main = document.createElement('div'); main.id = 'matPresenterOv';
+    main.style.cssText = 'position:fixed; inset:0; z-index:2147483500; background:#000; user-select:none;';
+    document.body.appendChild(main);
+
+    var cur = 1, swapped = false, t0 = Date.now(), busy = false, pend = 0, closed = false;
+    var N = pdf.numPages;
+    var BTN = 'border:none; border-radius:10px; color:#fff; font-weight:900; cursor:pointer; font-family:inherit;';
+
+    function buildAudience(host, doc){
+        host.style.background = '#000';
+        host.innerHTML = '<div data-role="aud" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; cursor:default;"><canvas style="background:#fff;"></canvas></div>'
+          + (doc !== document ? '<div data-fs style="position:fixed; left:50%; bottom:22px; transform:translateX(-50%); padding:10px 18px; border-radius:999px; background:rgba(255,255,255,.18); color:#fff; font:800 15px sans-serif; cursor:pointer;">🖥 여기를 눌러 전체화면</div>' : '');
+        var box = host.querySelector('[data-role="aud"]');
+        box.addEventListener('click', function(e){ var r = box.getBoundingClientRect(); go((e.clientX - r.left) < r.width * 0.25 ? -1 : 1); });
+        var fs = host.querySelector('[data-fs]');
+        if(fs) fs.addEventListener('click', function(e){ e.stopPropagation(); var d = doc.documentElement; try{ (d.requestFullscreen || d.webkitRequestFullscreen).call(d); }catch(_){} fs.remove(); });
+    }
+    function buildPresenter(host, doc){
+        host.style.background = '#0b1220';
+        host.innerHTML = '<div data-role="pres" style="position:absolute; inset:0; display:grid; grid-template-columns:minmax(0,2fr) minmax(260px,1fr); grid-template-rows:auto 1fr; gap:16px; padding:18px; box-sizing:border-box; color:#fff;">'
+          + '<div style="grid-column:1/3; display:flex; align-items:center; justify-content:space-between; gap:12px;">'
+            + '<div style="font-size:16px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">🎤 ' + title.replace(/</g,'&lt;') + '</div>'
+            + '<div style="display:flex; gap:8px; flex-shrink:0;"><button data-a="swap" style="' + BTN + 'padding:11px 16px; background:rgba(255,255,255,.14); font-size:14px;">⇄ 모니터 바꾸기</button>'
+            + '<button data-a="close" style="' + BTN + 'padding:11px 18px; background:#dc2626; font-size:14px;">✕ 발표 종료 (ESC)</button></div></div>'
+          + '<div style="min-height:0; display:flex; flex-direction:column; gap:10px;">'
+            + '<div style="display:flex; align-items:center; gap:10px;"><span style="padding:6px 14px; border-radius:999px; background:#4f46e5; font-size:15px; font-weight:900;">다음 슬라이드 ▶</span><span data-nextno style="font-size:15px; color:#cbd5e1; font-weight:800;"></span></div>'
+            + '<div data-nextbox style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#111827; border:2px dashed #4f46e5; border-radius:16px;"><canvas style="background:#fff; border-radius:6px;"></canvas><div data-last style="display:none; font-size:24px; font-weight:900; color:#94a3b8;">마지막 슬라이드입니다</div></div></div>'
+          + '<div style="display:flex; flex-direction:column; gap:14px;">'
+            + '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; background:#111827; border-radius:16px; padding:14px;">'
+              + '<div style="font-size:14px; color:#94a3b8; font-weight:800;">현재 시각</div>'
+              + '<div data-clock style="font-size:clamp(40px,5vw,80px); font-weight:900; letter-spacing:2px; font-variant-numeric:tabular-nums;"></div>'
+              + '<div style="font-size:15px; color:#94a3b8; font-weight:800;">경과 <span data-elapsed style="color:#fbbf24; font-variant-numeric:tabular-nums;">00:00</span></div>'
+              + '<div style="margin-top:8px; font-size:15px; color:#94a3b8; font-weight:800;">지금 화면</div><div data-curno style="font-size:30px; font-weight:900;"></div></div>'
+            + '<div style="display:flex; gap:10px;"><button data-a="prev" style="' + BTN + 'flex:1; height:64px; background:rgba(255,255,255,.14); font-size:22px;">◀ 이전</button>'
+            + '<button data-a="next" style="' + BTN + 'flex:1; height:64px; background:#4f46e5; font-size:22px;">다음 ▶</button></div>'
+            + '<div style="font-size:12.5px; color:#94a3b8; font-weight:700; text-align:center;">← → · 휠 · 클리커 · 슬라이드 화면 클릭으로 넘김</div></div></div>';
+        host.querySelector('[data-role="pres"]').addEventListener('click', function(e){
+            var b = e.target.closest('button'); if(!b) return; var a = b.getAttribute('data-a');
+            if(a === 'prev') go(-1); else if(a === 'next') go(1); else if(a === 'close') close(); else if(a === 'swap') swap();
+        });
+    }
+    function views(){
+        var popHost = pop && !pop.closed ? pop.document.body : null;
+        return swapped ? { aud: [main, document], pres: popHost ? [popHost, pop.document] : null }
+                       : { aud: popHost ? [popHost, pop.document] : null, pres: [main, document] };
+    }
+    function build(){
+        var v = views();
+        if(v.aud) buildAudience(v.aud[0], v.aud[1]);
+        if(v.pres) buildPresenter(v.pres[0], v.pres[1]);
+        if(!v.pres) buildPresenter(main, document);    // 청중 창이 닫혔으면 이 창을 발표자 화면으로
+    }
+    async function render(n){
         if(busy){ pend = n; return; } busy = true;
         try{
             cur = n;
-            ov.querySelector('#ppNo').textContent = n + ' / ' + pdf.numPages;
-            var cb = ov.querySelector('#ppCurBox'), nb = ov.querySelector('#ppNextBox');
-            await ui._pdfDrawTo(pdf, n, cCur, cb.clientWidth - 16, cb.clientHeight - 16, true);
-            if(n < pdf.numPages){ cNext.style.display=''; await ui._pdfDrawTo(pdf, n + 1, cNext, nb.clientWidth - 16, nb.clientHeight - 16, true); }
-            else { cNext.style.display='none'; }
-            if(aud && !aud.closed){
-                var ac = aud.document.getElementById('c');
-                if(ac) await ui._pdfDrawTo(pdf, n, ac, aud.innerWidth, aud.innerHeight, true);
+            var v = views();
+            if(v.aud){
+                var ab = v.aud[0].querySelector('[data-role="aud"]'), ac = ab && ab.querySelector('canvas');
+                var win = v.aud[1].defaultView || window;
+                if(ac) await ui._pdfDrawTo(pdf, n, ac, win.innerWidth, win.innerHeight, true);
+            }
+            var ph = (v.pres ? v.pres[0] : main);
+            var nb = ph.querySelector('[data-nextbox]');
+            if(nb){
+                var nc = nb.querySelector('canvas'), last = nb.querySelector('[data-last]');
+                ph.querySelector('[data-curno]').textContent = n + ' / ' + N;
+                if(n < N){ nc.style.display = ''; last.style.display = 'none'; ph.querySelector('[data-nextno]').textContent = (n + 1) + ' / ' + N + ' 쪽';
+                    await ui._pdfDrawTo(pdf, n + 1, nc, nb.clientWidth - 20, nb.clientHeight - 20, true); }
+                else { nc.style.display = 'none'; last.style.display = ''; ph.querySelector('[data-nextno]').textContent = ''; }
             }
         }catch(e){ console.warn('[발표] 그리기 실패', e); }
         finally{ busy = false; if(pend){ var p = pend; pend = 0; if(p !== cur) render(p); } }
-    };
-    var go = function(d){ var n = cur + d; if(n >= 1 && n <= pdf.numPages) render(n); };
-    var tick = setInterval(function(){
-        var d = new Date(), p = function(x){ return String(x).padStart(2,'0'); };
-        ov.querySelector('#ppClock').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
-        var s = Math.floor((Date.now() - t0)/1000);
-        ov.querySelector('#ppElapsed').textContent = (s>=3600 ? Math.floor(s/3600)+':' : '') + p(Math.floor(s%3600/60)) + ':' + p(s%60);
-        if(aud && aud.closed){ /* 청중 창을 닫아도 발표자 화면은 유지 */ }
-    }, 500);
-    var onKey = function(k){
-        if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].indexOf(k) >= 0) go(1);
-        else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].indexOf(k) >= 0) go(-1);
-        else if(k === 'Escape') close();
-    };
-    var keyH = function(e){ if(!document.body.contains(ov)) return; if(['ArrowRight','ArrowDown','PageDown',' ','Enter','ArrowLeft','ArrowUp','PageUp','Backspace','Escape'].indexOf(e.key)>=0){ e.preventDefault(); e.stopPropagation(); onKey(e.key); } };
-    var msgH = function(e){ if(e.data && e.data.catcSlideKey) onKey(e.data.catcSlideKey); };   // 청중 창에서 누른 클리커 키도 받음
-    var resH = function(){ clearTimeout(ui._ppRt); ui._ppRt = setTimeout(function(){ render(cur); }, 200); };
-    function close(fromPop){
-        clearInterval(tick); document.removeEventListener('keydown', keyH, true); window.removeEventListener('message', msgH); window.removeEventListener('resize', resH);
-        window.removeEventListener('wheel', wheelH, { capture:true }); window.removeEventListener('popstate', popH);
-        if(!fromPop){ try{ if(history.state && history.state.catcPresent) history.back(); }catch(e){} }
-        try{ if(aud && !aud.closed) aud.close(); }catch(e){}
-        ov.remove(); if(document.fullscreenElement) document.exitFullscreen().catch(function(){});
     }
-    document.addEventListener('keydown', keyH, true); window.addEventListener('message', msgH); window.addEventListener('resize', resH);
-    try{ aud.addEventListener('resize', resH); }catch(e){}
-    ov.addEventListener('click', function(e){ var b = e.target.closest('button'); if(!b) return; var a = b.getAttribute('data-a'); if(a==='prev') go(-1); else if(a==='next') go(1); else if(a==='close') close(); else if(a==='swap') swap(); });
-    var box = ov.querySelector('#ppCurBox'), sx = 0, sy = 0, dg = false;
-    box.addEventListener('pointerdown', function(e){ dg = true; sx = e.clientX; sy = e.clientY; try{ box.setPointerCapture(e.pointerId); }catch(_){} });
-    box.addEventListener('pointerup', function(e){ if(!dg) return; dg = false; var dx = e.clientX - sx, dy = e.clientY - sy; if(Math.max(Math.abs(dx),Math.abs(dy)) < 50) return; if(Math.abs(dx) >= Math.abs(dy)) go(dx < 0 ? 1 : -1); else go(dy < 0 ? 1 : -1); });
-    /* [K128] 휠 — 다른 화면 스크립트가 휠을 먼저 가로채지 않도록 문서 단계(capture)에서 받는다 */
-    var wl = 0;
-    var wheelH = function(e){ if(!document.body.contains(ov)) return; e.preventDefault(); e.stopPropagation(); var now = Date.now(); if(now - wl < 300) return; wl = now; go(e.deltaY > 0 ? 1 : -1); };
-    window.addEventListener('wheel', wheelH, { passive:false, capture:true });
-    /* [K128] 브라우저 '뒤로가기'를 누르면 플랫폼을 벗어나지 않고 발표만 끝낸다 */
-    try{ history.pushState({ catcPresent: 1 }, ''); }catch(e){}
-    var popH = function(){ if(document.body.contains(ov)) close(true); };
-    window.addEventListener('popstate', popH);
-    /* [K128] 모니터 바꾸기 — 슬라이드 창을 다른 모니터로 옮긴다(옮긴 뒤 그 창을 한 번 클릭하면 전체화면) */
-    var audIdx = other ? screens.indexOf(other) : -1;
-    var swap = async function(){
-        if(!aud || aud.closed) return ui.showAlert('슬라이드 창이 닫혀 있습니다. 발표를 다시 시작해 주세요.');
-        if(!screens.length){
-            try{ if(window.getScreenDetails){ sd = await window.getScreenDetails(); screens = sd.screens || []; } }catch(e){}
-        }
-        if(screens.length < 2) return ui.showAlert('모니터 정보를 읽을 수 없습니다.\n크롬 주소창 왼쪽 아이콘 → 사이트 설정에서 [창 관리]를 허용하거나,\n슬라이드 창을 원하는 모니터로 직접 끌어다 놓아 주세요.');
-        audIdx = (audIdx + 1) % screens.length;
-        var s = screens[audIdx];
-        try{ if(aud.document.fullscreenElement) await aud.document.exitFullscreen(); }catch(e){}
-        try{ aud.moveTo(s.availLeft, s.availTop); aud.resizeTo(s.availWidth, s.availHeight); }catch(e){}
-        try{
-            var fs = aud.document.getElementById('fs');
-            if(!fs){ fs = aud.document.createElement('div'); fs.id = 'fs'; aud.document.body.appendChild(fs);
-                fs.onclick = function(){ var d = aud.document.documentElement; (d.requestFullscreen || d.webkitRequestFullscreen).call(d); fs.remove(); }; }
-            fs.innerHTML = '🖥 이 창을 클릭하면 전체화면이 됩니다';
-        }catch(e){}
-        setTimeout(function(){ render(cur); }, 400);
-        ui.showAlert('슬라이드를 모니터 ' + (audIdx + 1) + '(으)로 옮겼습니다.\n그 화면을 한 번 클릭하면 전체화면이 됩니다.');
+    function go(d){ var n = cur + d; if(n >= 1 && n <= N) render(n); }
+    function swap(){
+        if(!pop || pop.closed) return ui.showAlert('다른 모니터의 창이 닫혀 있습니다. 발표를 다시 시작해 주세요.');
+        swapped = !swapped;
+        try{ if(pop.document.fullscreenElement) pop.document.exitFullscreen(); }catch(e){}
+        build();
+        if(swapped){ try{ (main.requestFullscreen || main.webkitRequestFullscreen).call(main); }catch(e){} }   // 이 화면이 슬라이드가 되면 바로 전체화면
+        else if(document.fullscreenElement){ try{ document.exitFullscreen(); }catch(e){} }
+        setTimeout(function(){ render(cur); }, 250);
+    }
+    var tick = setInterval(function(){
+        var v = views(), ph = v.pres ? v.pres[0] : main;
+        var d = new Date(), p2 = function(x){ return String(x).padStart(2,'0'); };
+        var c = ph.querySelector('[data-clock]'), el = ph.querySelector('[data-elapsed]');
+        if(c) c.textContent = p2(d.getHours()) + ':' + p2(d.getMinutes()) + ':' + p2(d.getSeconds());
+        var s = Math.floor((Date.now() - t0)/1000);
+        if(el) el.textContent = (s>=3600 ? Math.floor(s/3600)+':' : '') + p2(Math.floor(s%3600/60)) + ':' + p2(s%60);
+        if(pop && pop.closed && !closed && pop._wasOpen !== false){ pop._wasOpen = false; if(swapped){ swapped = false; } build(); render(cur); }
+    }, 500);
+    var KEYS_NEXT = ['ArrowRight','ArrowDown','PageDown',' ','Enter'], KEYS_PREV = ['ArrowLeft','ArrowUp','PageUp','Backspace'];
+    var keyH = function(e){
+        if(closed) return;
+        if(KEYS_NEXT.indexOf(e.key) >= 0){ e.preventDefault(); e.stopPropagation(); go(1); }
+        else if(KEYS_PREV.indexOf(e.key) >= 0){ e.preventDefault(); e.stopPropagation(); go(-1); }
+        else if(e.key === 'Escape'){ e.preventDefault(); close(); }
     };
-    setTimeout(function(){ render(1); }, 60);
+    var wl = 0, wheelH = function(e){ if(closed) return; e.preventDefault(); e.stopPropagation(); var now = Date.now(); if(now - wl < 300) return; wl = now; go(e.deltaY > 0 ? 1 : -1); };
+    var resH = function(){ clearTimeout(ui._ppRt); ui._ppRt = setTimeout(function(){ render(cur); }, 200); };
+    document.addEventListener('keydown', keyH, true); window.addEventListener('wheel', wheelH, { passive:false, capture:true }); window.addEventListener('resize', resH);
+    try{ pop.document.addEventListener('keydown', keyH, true); pop.addEventListener('wheel', wheelH, { passive:false, capture:true }); pop.addEventListener('resize', resH); }catch(e){}
+    try{ history.pushState({ catcPresent: 1 }, ''); }catch(e){}
+    var popH = function(){ if(!closed) close(true); };
+    window.addEventListener('popstate', popH);
+    function close(fromPop){
+        if(closed) return; closed = true;
+        clearInterval(tick); document.removeEventListener('keydown', keyH, true); window.removeEventListener('wheel', wheelH, { capture:true }); window.removeEventListener('resize', resH); window.removeEventListener('popstate', popH);
+        if(!fromPop){ try{ if(history.state && history.state.catcPresent) history.back(); }catch(e){} }
+        try{ if(pop && !pop.closed) pop.close(); }catch(e){}
+        main.remove(); if(document.fullscreenElement) document.exitFullscreen().catch(function(){});
+    }
+    build();
+    setTimeout(function(){ render(1); }, 80);
 };
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
