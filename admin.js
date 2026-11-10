@@ -9996,16 +9996,26 @@ const scheduleMgr = {
             + '<button type="button" data-a="prev" style="position:absolute; left:18px; top:50%; transform:translateY(-50%); width:58px; height:58px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:22px; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>'
             + '<button type="button" data-a="next" style="position:absolute; right:18px; top:50%; transform:translateY(-50%); width:58px; height:58px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:22px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button>'
             + '<div id="schFsNo" style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); padding:7px 16px; border-radius:999px; background:rgba(0,0,0,.55); color:#fff; font-size:15px; font-weight:900;"></div>'
-            + '<button type="button" data-a="close" style="position:absolute; top:16px; right:16px; width:46px; height:46px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:20px; cursor:pointer;">✕</button>';
+            + '<button type="button" data-a="close" style="position:fixed; top:16px; right:16px; width:46px; height:46px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:20px; cursor:pointer; z-index:3;">✕</button>'
+            + '<button type="button" data-a="fit" style="position:fixed; top:16px; right:74px; height:46px; padding:0 16px; border:none; border-radius:23px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer; z-index:3;"><i class="fa-solid fa-left-right"></i> <span>가로 꽉 채우기</span></button>';
         document.body.appendChild(ov);
+        ov.querySelectorAll('button[data-a="prev"],button[data-a="next"],#schFsNo').forEach(el => { el.style.position = 'fixed'; el.style.zIndex = '3'; });
         const cv = ov.querySelector('#schFsCv'), no = ov.querySelector('#schFsNo');
+        /* [K129] 맞춤 방식: 'page'(한 쪽 전체) ↔ 'width'(가로 꽉 채움 · 위아래 스크롤) — 버튼 또는 더블클릭 */
+        let fitMode = 'page';
+        const applyFitLayout = () => {
+            const fb = ov.querySelector('button[data-a="fit"] span');
+            if (fitMode === 'width') { ov.style.display = 'block'; ov.style.overflowY = 'auto'; ov.style.touchAction = 'pan-y'; cv.style.display = 'block'; cv.style.margin = '12px auto'; cv.style.maxWidth = 'none'; cv.style.maxHeight = 'none'; if (fb) fb.textContent = '한 쪽 전체 보기'; }
+            else { ov.style.display = 'flex'; ov.style.overflowY = 'hidden'; ov.style.touchAction = 'none'; cv.style.margin = ''; cv.style.maxWidth = '100vw'; cv.style.maxHeight = '100vh'; if (fb) fb.textContent = '가로 꽉 채우기'; }
+        };
         let cur = Math.max(1, Math.min(pdf.numPages, start || 1)), busy = false, pending = 0;
         const draw = async (n, dir) => {
             if (busy) { pending = n; return; }
             busy = true;
             try {
-                const W = window.innerWidth - 24, H = window.innerHeight - 24;   // [K127] 화면 거의 전체 + 여백 잘라내기
+                const W = window.innerWidth - 24, H = (fitMode === 'width') ? 100000 : (window.innerHeight - 24);   // [K127][K129]
                 await ui._pdfDrawTo(pdf, n, cv, W, H, !!noCrop);
+                if (fitMode === 'width') ov.scrollTop = (dir < 0) ? ov.scrollHeight : 0;
                 cv.style.transform = 'translateX(0)'; cv.style.opacity = '1';
                 cur = n; no.textContent = n + ' / ' + pdf.numPages;
             } finally { busy = false; if (pending) { const p = pending; pending = 0; if (p !== cur) draw(p); } }
@@ -10024,19 +10034,33 @@ const scheduleMgr = {
         };
         let rt = null; const onResize = () => { clearTimeout(rt); rt = setTimeout(() => draw(cur), 150); };
         document.addEventListener('keydown', onKey, true); window.addEventListener('resize', onResize);
-        ov.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.getAttribute('data-a'); if (a === 'prev') go(-1); else if (a === 'next') go(1); else if (a === 'close') close(); });
+        const toggleFit = () => { fitMode = (fitMode === 'page') ? 'width' : 'page'; applyFitLayout(); draw(cur); };
+        ov.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.getAttribute('data-a'); if (a === 'prev') go(-1); else if (a === 'next') go(1); else if (a === 'close') close(); else if (a === 'fit') toggleFit(); });
+        ov.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) toggleFit(); });
         // 마우스·손가락 드래그로 넘기기 (왼쪽/위로 밀면 다음, 오른쪽/아래로 밀면 이전)
         let sx = 0, sy = 0, dragging = false;
         ov.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragging = true; sx = e.clientX; sy = e.clientY; ov.style.cursor = 'grabbing'; try { ov.setPointerCapture(e.pointerId); } catch (_) {} });
-        ov.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - sx; if (Math.abs(dx) > Math.abs(e.clientY - sy)) cv.style.transform = 'translateX(' + (dx * 0.6) + 'px)'; });
+        let sTop = 0;
+        ov.addEventListener('pointerdown', () => { sTop = ov.scrollTop; });
+        ov.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - sx, dy = e.clientY - sy;
+            if (fitMode === 'width' && Math.abs(dy) > Math.abs(dx)) { ov.scrollTop = sTop - dy; return; }
+            if (Math.abs(dx) > Math.abs(dy)) cv.style.transform = 'translateX(' + (dx * 0.6) + 'px)'; });
         ov.addEventListener('pointerup', (e) => {
             if (!dragging) return; dragging = false; ov.style.cursor = 'grab';
             const dx = e.clientX - sx, dy = e.clientY - sy, ax = Math.abs(dx), ay = Math.abs(dy);
             if (Math.max(ax, ay) < 50) { cv.style.transform = 'translateX(0)'; return; }
-            if (ax >= ay) go(dx < 0 ? 1 : -1); else go(dy < 0 ? 1 : -1);
+            if (ax >= ay) go(dx < 0 ? 1 : -1); else if (fitMode !== 'width') go(dy < 0 ? 1 : -1);
         });
         ov.addEventListener('pointercancel', () => { dragging = false; cv.style.transform = 'translateX(0)'; });
-        let wl = 0; const wheelH = (e) => { if (!document.body.contains(ov)) return; e.preventDefault(); e.stopPropagation(); const now = Date.now(); if (now - wl < 300) return; wl = now; go(e.deltaY > 0 ? 1 : -1); };
+        let wl = 0; const wheelH = (e) => {
+            if (!document.body.contains(ov)) return;
+            e.stopPropagation();
+            if (fitMode === 'width') {   // 가로 맞춤: 쪽 안에서는 스크롤, 끝에 닿으면 다음/이전 쪽
+                const atBottom = ov.scrollTop + ov.clientHeight >= ov.scrollHeight - 2, atTop = ov.scrollTop <= 0;
+                if ((e.deltaY > 0 && !atBottom) || (e.deltaY < 0 && !atTop)) { e.preventDefault(); ov.scrollTop += e.deltaY; return; }
+            }
+            e.preventDefault(); const now = Date.now(); if (now - wl < 300) return; wl = now; go(e.deltaY > 0 ? 1 : -1);
+        };
         window.addEventListener('wheel', wheelH, { passive: false, capture: true });   // [K128] 휠을 문서 단계에서 받아 확실히 넘김
         document.addEventListener('fullscreenchange', function fsc(){ if (!document.fullscreenElement && document.body.contains(ov)) { /* ESC 로 전체화면만 풀린 경우에도 뷰어 닫기 */ document.removeEventListener('fullscreenchange', fsc); close(); } });
         try { const rf = ov.requestFullscreen || ov.webkitRequestFullscreen; if (rf) await rf.call(ov); } catch (e) {}
@@ -19957,7 +19981,18 @@ ui._pdfDrawTo = async function(pdf, n, canvas, W, H, noCrop){
             for(var y = 0; y < hh; y += step){ for(var x = 0; x < w; x += step){
                 var k = (y * w + x) * 4; if(d[k] < 235 || d[k+1] < 235 || d[k+2] < 235){ if(x < minX) minX = x; if(x > maxX) maxX = x; if(y < minY) minY = y; if(y > maxY) maxY = y; }
             } }
+            /* [K129] 맨 위·아래의 작은 머리말/꼬리말(예: '무단 복제 금지' 문구)은 무시하고 본문 덩어리만 잡는다 */
             if(maxX > minX && maxY > minY){
+                var rows = [];
+                for(var yy = 0; yy < hh; yy += step){ var ink = false; for(var xx = 0; xx < w; xx += step*2){ var q = (yy * w + xx) * 4; if(d[q] < 235 || d[q+1] < 235 || d[q+2] < 235){ ink = true; break; } } rows.push(ink); }
+                var bands = [], st = -1;
+                rows.forEach(function(v, i){ if(v && st < 0) st = i; if(!v && st >= 0){ bands.push([st, i - 1]); st = -1; } });
+                if(st >= 0) bands.push([st, rows.length - 1]);
+                var gapMin = Math.round(rows.length * 0.02), edge = rows.length * 0.10, small = rows.length * 0.04;
+                var isEdgeNoise = function(b, nb){ var hgt = b[1] - b[0] + 1; var nearEdge = (b[1] < edge) || (b[0] > rows.length - edge); var gap = nb ? Math.abs(nb[0] - b[1]) : 999; return nearEdge && hgt < small && gap >= gapMin; };
+                while(bands.length > 1 && isEdgeNoise(bands[bands.length-1], [bands[bands.length-2][1], bands[bands.length-2][1]])) bands.pop();
+                while(bands.length > 1 && isEdgeNoise(bands[0], [bands[1][0], bands[1][0]])) bands.shift();
+                if(bands.length){ minY = bands[0][0] * step; maxY = Math.min(hh - 1, bands[bands.length-1][1] * step + step); }
                 var pad = Math.round(Math.min(w, hh) * 0.015);
                 sx = Math.max(0, minX - pad); sy = Math.max(0, minY - pad);
                 sw = Math.min(w, maxX + pad) - sx; sh = Math.min(hh, maxY + pad) - sy;
