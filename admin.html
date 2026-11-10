@@ -45,7 +45,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=742b0e2c307454d10b66d28b9c62482f&libraries=services&autoload=false"></script>
-    <script src="config.js?v=7421e9d9"></script>
+    <script src="config.js?v=de4de35a"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -54,7 +54,7 @@
     <style id="kacWkndCss">.flatpickr-day.kac-wknd:not(.selected):not(.inRange):not(.startRange):not(.endRange):not(.flatpickr-disabled){background:#eef2f7 !important;}.flatpickr-day.kac-wknd:not(.selected):not(.inRange){color:#64748b;}</style>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ko.js"></script>
-    <link rel="stylesheet" href="admin.css?v=260704M35">
+    <link rel="stylesheet" href="admin.css?v=261110K97">
     <link rel="stylesheet" href="kac-tokens.css?v=20260622">
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=b260620c">
     <script>
@@ -541,7 +541,7 @@
 <header class="header" style="position:relative;">
     <!-- [J92] 현황판 좌측 상단 브랜드 → 누르면 키오스크 화면
          [J96] 단, '강의실 실시간 현황판'에 들어와 있을 때는 들어온 곳으로 돌아가는 뒤로가기가 된다 -->
-    <div id="kacBrandBtn" onclick="kacBrandClick()" title="누르면 키오스크 화면 (5초 뒤 현황판으로 자동 복귀)">KAC Training Platform</div>
+    <div id="kacBrandBtn" onclick="kacBrandClick()" title="누르면 통합 교육 현황판 · 5초 길게 누르면 키오스크 화면">KAC Training Platform</div>
     <!-- [J91] 뒤로가기는 한 단계씩: 소메뉴 → 과정 운영 현황 → 통합 현황판 -->
     <div id="headerCourseInfo" onclick="ui.goBackStep()" title="뒤로" style="display:flex; align-items:center; gap:8px; min-width:0; cursor:pointer;">
         <span id="headerBackBtn" style="align-items:center; justify-content:center; color:#fff; font-size:20px; flex-shrink:0;"><i class="fa-solid fa-reply"></i></span>
@@ -3159,7 +3159,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=260704M35"></script>
+    <script src="admin.js?v=261110K97"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
