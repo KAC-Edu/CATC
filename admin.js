@@ -9966,7 +9966,7 @@ const scheduleMgr = {
                     const base = page.getViewport({ scale: 1 });
                     const boxW = Math.min(block.clientWidth || 900, 1400), boxH = Math.max(320, window.innerHeight - 250);
                     const fit = Math.min(boxW / base.width, boxH / base.height);
-                    const dpr = Math.min(2, window.devicePixelRatio || 1);
+                    const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));   // 최소 2배 해상도
                     const vp = page.getViewport({ scale: fit * dpr });
                     cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
                     cv.style.width = Math.round(vp.width / dpr) + 'px'; cv.style.height = Math.round(vp.height / dpr) + 'px';
@@ -9981,7 +9981,8 @@ const scheduleMgr = {
             const pv = wrap.querySelector('#schPrev'), nx = wrap.querySelector('#schNext');
             if (pv) pv.onclick = () => go(-1);
             if (nx) nx.onclick = () => go(1);
-            cv.onclick = () => this.openPhotoFullscreen();
+            this._schPdf = pdf;
+            cv.onclick = () => this._openPdfFs(pdf, cur);   // [K125] 전체화면도 PDF 원본을 화면 해상도로 다시 그려 선명하게
             if (this._schKey) document.removeEventListener('keydown', this._schKey);
             this._schKey = (e) => {
                 if (state.currentMode !== 'schedule' || !document.body.contains(cv) || document.getElementById('schedulePhotoFs')) return;
@@ -9991,6 +9992,69 @@ const scheduleMgr = {
             document.addEventListener('keydown', this._schKey);
             const hint = block.querySelector('.fa-magnifying-glass-plus'); if (hint && hint.parentElement) hint.parentElement.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i> 클릭하면 전체화면 · ◀ ▶ 또는 키보드 ← → 로 쪽 넘김';
         } catch (e) { console.warn('[시간표 PDF 뷰어] 실패 — 사진으로 표시', e); }
+    },
+    /* [K125] 시간표 PDF 전체화면 — 모니터 해상도로 다시 그려 선명하게.
+       넘기기: 마우스 드래그(좌우·상하)·휠·키보드 ← → ↑ ↓ PageUp/Down·스페이스·화면 좌우 버튼. 닫기: ESC·✕ */
+    _openPdfFs: async function(pdf, start) {
+        const old = document.getElementById('schPdfFs'); if (old) old.remove();
+        const ov = document.createElement('div'); ov.id = 'schPdfFs';
+        ov.style.cssText = 'position:fixed; inset:0; z-index:2147483600; background:#0b1220; display:flex; align-items:center; justify-content:center; user-select:none; touch-action:none; cursor:grab;';
+        ov.innerHTML = '<canvas id="schFsCv" style="max-width:100vw; max-height:100vh; background:#fff; box-shadow:0 10px 40px rgba(0,0,0,.5); transition:transform .18s ease, opacity .18s ease;"></canvas>'
+            + '<button type="button" data-a="prev" style="position:absolute; left:18px; top:50%; transform:translateY(-50%); width:58px; height:58px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:22px; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>'
+            + '<button type="button" data-a="next" style="position:absolute; right:18px; top:50%; transform:translateY(-50%); width:58px; height:58px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:22px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button>'
+            + '<div id="schFsNo" style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); padding:7px 16px; border-radius:999px; background:rgba(0,0,0,.55); color:#fff; font-size:15px; font-weight:900;"></div>'
+            + '<button type="button" data-a="close" style="position:absolute; top:16px; right:16px; width:46px; height:46px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:20px; cursor:pointer;">✕</button>';
+        document.body.appendChild(ov);
+        const cv = ov.querySelector('#schFsCv'), no = ov.querySelector('#schFsNo');
+        let cur = Math.max(1, Math.min(pdf.numPages, start || 1)), busy = false, pending = 0;
+        const draw = async (n, dir) => {
+            if (busy) { pending = n; return; }
+            busy = true;
+            try {
+                const page = await pdf.getPage(n);
+                const base = page.getViewport({ scale: 1 });
+                const W = window.screen && document.fullscreenElement ? window.innerWidth : window.innerWidth, H = window.innerHeight;
+                const fit = Math.min(W / base.width, H / base.height);
+                const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));   // 최소 2배로 그려 글자 선명
+                const vp = page.getViewport({ scale: fit * dpr });
+                const tmp = document.createElement('canvas'); tmp.width = Math.round(vp.width); tmp.height = Math.round(vp.height);
+                await page.render({ canvasContext: tmp.getContext('2d'), viewport: vp }).promise;
+                cv.width = tmp.width; cv.height = tmp.height;
+                cv.getContext('2d').drawImage(tmp, 0, 0);
+                cv.style.width = Math.round(vp.width / dpr) + 'px'; cv.style.height = Math.round(vp.height / dpr) + 'px';
+                cv.style.transform = 'translateX(0)'; cv.style.opacity = '1';
+                cur = n; no.textContent = n + ' / ' + pdf.numPages;
+            } finally { busy = false; if (pending) { const p = pending; pending = 0; if (p !== cur) draw(p); } }
+        };
+        const go = (d) => { const n = cur + d; if (n < 1 || n > pdf.numPages) { cv.style.transform = 'translateX(0)'; return; } cv.style.opacity = '.35'; draw(n, d); };
+        const close = () => {
+            document.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', onResize);
+            ov.remove(); if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+        };
+        const onKey = (e) => {
+            if (!document.body.contains(ov)) return;
+            if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); e.stopPropagation(); go(1); }
+            else if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); go(-1); }
+            else if (e.key === 'Escape') { e.preventDefault(); close(); }
+        };
+        let rt = null; const onResize = () => { clearTimeout(rt); rt = setTimeout(() => draw(cur), 150); };
+        document.addEventListener('keydown', onKey, true); window.addEventListener('resize', onResize);
+        ov.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.getAttribute('data-a'); if (a === 'prev') go(-1); else if (a === 'next') go(1); else if (a === 'close') close(); });
+        // 마우스·손가락 드래그로 넘기기 (왼쪽/위로 밀면 다음, 오른쪽/아래로 밀면 이전)
+        let sx = 0, sy = 0, dragging = false;
+        ov.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragging = true; sx = e.clientX; sy = e.clientY; ov.style.cursor = 'grabbing'; try { ov.setPointerCapture(e.pointerId); } catch (_) {} });
+        ov.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - sx; if (Math.abs(dx) > Math.abs(e.clientY - sy)) cv.style.transform = 'translateX(' + (dx * 0.6) + 'px)'; });
+        ov.addEventListener('pointerup', (e) => {
+            if (!dragging) return; dragging = false; ov.style.cursor = 'grab';
+            const dx = e.clientX - sx, dy = e.clientY - sy, ax = Math.abs(dx), ay = Math.abs(dy);
+            if (Math.max(ax, ay) < 50) { cv.style.transform = 'translateX(0)'; return; }
+            if (ax >= ay) go(dx < 0 ? 1 : -1); else go(dy < 0 ? 1 : -1);
+        });
+        ov.addEventListener('pointercancel', () => { dragging = false; cv.style.transform = 'translateX(0)'; });
+        let wl = 0; ov.addEventListener('wheel', (e) => { e.preventDefault(); const now = Date.now(); if (now - wl < 350) return; wl = now; go(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+        document.addEventListener('fullscreenchange', function fsc(){ if (!document.fullscreenElement && document.body.contains(ov)) { /* ESC 로 전체화면만 풀린 경우에도 뷰어 닫기 */ document.removeEventListener('fullscreenchange', fsc); close(); } });
+        try { const rf = ov.requestFullscreen || ov.webkitRequestFullscreen; if (rf) await rf.call(ov); } catch (e) {}
+        await draw(cur);
     },
     showPhotoQr: function() {
         const block = document.getElementById('schedulePhotoBlock');
