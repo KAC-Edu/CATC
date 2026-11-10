@@ -19955,14 +19955,30 @@ ui.matPresent = async function(id){
     var ld = document.createElement('div');
     ld.style.cssText = 'position:fixed; inset:0; z-index:2147483400; background:rgba(11,18,32,.82); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#fff;';
     ld.innerHTML = '<div style="width:54px; height:54px; border:5px solid rgba(255,255,255,.2); border-top-color:#a78bfa; border-radius:50%; animation:matPrSpin .8s linear infinite;"></div>'
-      + '<div style="font-size:22px; font-weight:900;">발표 자료를 불러오는 중입니다…</div>'
+      + '<div style="font-size:22px; font-weight:900;">발표 자료를 불러오는 중입니다… <span id="matPrPct" style="color:#a78bfa;">0%</span></div>'
+      + '<div style="width:min(420px,80vw); height:10px; background:rgba(255,255,255,.15); border-radius:99px; overflow:hidden;"><div id="matPrBar" style="width:0%; height:100%; background:linear-gradient(90deg,#818cf8,#a78bfa); border-radius:99px; transition:width .2s;"></div></div>'
+      + '<div id="matPrSize" style="font-size:13px; color:#94a3b8; font-weight:700;"></div>'
       + '<div style="font-size:14px; color:#cbd5e1; font-weight:700;">' + ui._esc(m.title || m.fileName || '') + '</div>'
       + '<style>@keyframes matPrSpin{to{transform:rotate(360deg)}}</style>';
     document.body.appendChild(ld);
     var pdf;
-    try{ pdf = await pdfjsLib.getDocument({ url: url }).promise; }
+    /* [K136] 진행률(%) 표시 — 받은 양 / 전체 크기 */
+    var _tot = Number(m.size) || 0;
+    var _setPct = function(loaded, total){
+        total = total || _tot; if(!total) return;
+        var pc = Math.max(0, Math.min(100, Math.round(loaded / total * 100)));
+        var a1 = document.getElementById('matPrPct'), a2 = document.getElementById('matPrBar'), a3 = document.getElementById('matPrSize');
+        if(a1) a1.textContent = pc + '%'; if(a2) a2.style.width = pc + '%';
+        if(a3) a3.textContent = window.kacMaterials.fmtSize(loaded) + ' / ' + window.kacMaterials.fmtSize(total);
+    };
+    try{
+        var task = pdfjsLib.getDocument({ url: url, disableAutoFetch: false, disableStream: false });
+        task.onProgress = function(p){ if(p) _setPct(p.loaded || 0, p.total || 0); };
+        pdf = await task.promise;
+    }
     catch(e){ ld.remove(); return ui.showAlert('PDF 를 열지 못했습니다.\n' + ((e&&e.message)||'')); }
     try{ await pdf.getPage(1); }catch(e){}
+    _setPct(_tot || 1, _tot || 1);
     ld.remove();
     if(mode === 'single') return scheduleMgr._openPdfFs(pdf, 1, true);   // 발표 슬라이드는 여백을 자르지 않는다
     return ui._matPresenter(pdf, m);
