@@ -2873,7 +2873,7 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
 
 
 
-  <script src="config.js?v=7944b988"></script>
+  <script src="config.js?v=110e2c71"></script>
   <script>
   /* [인증 복원] 포털(portal.html) 폐지 후 admin_coord 자체 Firebase 인증.
      연간계획 저장 등은 settings/schedule·expectedStudents 등 'auth != null' 경로를 함께 쓰는데,
@@ -4586,7 +4586,7 @@ async function resetIndividualCourse() {
         updates[`${rPath}/notice`] = null;
         updates[`${rPath}/expectedStudents`] = null;
         updates[`${rPath}/attendanceQR`] = null;
-        ['scheduleImage','gradPhoto','attendanceQR'].forEach(k => { updates[`media/${currentRID}/${k}`] = null; });   // [D66] 이전된 미디어 저장소도 함께 정리
+        ['scheduleImage','schedulePdf','gradPhoto','attendanceQR'].forEach(k => { updates[`media/${currentRID}/${k}`] = null; });   // [D66] 이전된 미디어 저장소도 함께 정리
         
         // 상태 변경 (비어있음으로 전환 및 강제 퇴출 키 발송)
         updates[`${rPath}/status/roomStatus`] = "idle";
@@ -9993,7 +9993,7 @@ window.kacExpireEndedCourses = async function(){
         }
         var b='courses/'+room+'/';
         ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto','surveyAnswers','activeSurvey','lastSurveyResult','returnCheckAck','zoomMeeting'].forEach(function(k){ updates[b+k]=null; });
-        ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [D66] 이전된 미디어 저장소도 함께 정리
+        ['scheduleImage','schedulePdf','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [D66] 이전된 미디어 저장소도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
