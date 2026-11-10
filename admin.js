@@ -9962,15 +9962,8 @@ const scheduleMgr = {
             const draw = async (n) => {
                 if (busy) return; busy = true;
                 try {
-                    const page = await pdf.getPage(n);
-                    const base = page.getViewport({ scale: 1 });
                     const boxW = Math.min(block.clientWidth || 900, 1400), boxH = Math.max(320, window.innerHeight - 250);
-                    const fit = Math.min(boxW / base.width, boxH / base.height);
-                    const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));   // 최소 2배 해상도
-                    const vp = page.getViewport({ scale: fit * dpr });
-                    cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
-                    cv.style.width = Math.round(vp.width / dpr) + 'px'; cv.style.height = Math.round(vp.height / dpr) + 'px';
-                    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+                    await ui._pdfDrawTo(pdf, n, cv, boxW, boxH);   // [K127] 여백 잘라내고 크게
                     cur = n;
                     const no = wrap.querySelector('#schPageNo'); if (no) no.textContent = n + ' / ' + pdf.numPages;
                     this._lastPhotoSrc = cv.toDataURL('image/jpeg', 0.92);   // 전체화면은 지금 쪽
@@ -9995,7 +9988,7 @@ const scheduleMgr = {
     },
     /* [K125] 시간표 PDF 전체화면 — 모니터 해상도로 다시 그려 선명하게.
        넘기기: 마우스 드래그(좌우·상하)·휠·키보드 ← → ↑ ↓ PageUp/Down·스페이스·화면 좌우 버튼. 닫기: ESC·✕ */
-    _openPdfFs: async function(pdf, start) {
+    _openPdfFs: async function(pdf, start, noCrop) {
         const old = document.getElementById('schPdfFs'); if (old) old.remove();
         const ov = document.createElement('div'); ov.id = 'schPdfFs';
         ov.style.cssText = 'position:fixed; inset:0; z-index:2147483600; background:#0b1220; display:flex; align-items:center; justify-content:center; user-select:none; touch-action:none; cursor:grab;';
@@ -10011,17 +10004,8 @@ const scheduleMgr = {
             if (busy) { pending = n; return; }
             busy = true;
             try {
-                const page = await pdf.getPage(n);
-                const base = page.getViewport({ scale: 1 });
-                const W = window.screen && document.fullscreenElement ? window.innerWidth : window.innerWidth, H = window.innerHeight;
-                const fit = Math.min(W / base.width, H / base.height);
-                const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));   // 최소 2배로 그려 글자 선명
-                const vp = page.getViewport({ scale: fit * dpr });
-                const tmp = document.createElement('canvas'); tmp.width = Math.round(vp.width); tmp.height = Math.round(vp.height);
-                await page.render({ canvasContext: tmp.getContext('2d'), viewport: vp }).promise;
-                cv.width = tmp.width; cv.height = tmp.height;
-                cv.getContext('2d').drawImage(tmp, 0, 0);
-                cv.style.width = Math.round(vp.width / dpr) + 'px'; cv.style.height = Math.round(vp.height / dpr) + 'px';
+                const W = window.innerWidth - 24, H = window.innerHeight - 24;   // [K127] 화면 거의 전체 + 여백 잘라내기
+                await ui._pdfDrawTo(pdf, n, cv, W, H, !!noCrop);
                 cv.style.transform = 'translateX(0)'; cv.style.opacity = '1';
                 cur = n; no.textContent = n + ' / ' + pdf.numPages;
             } finally { busy = false; if (pending) { const p = pending; pending = 0; if (p !== cur) draw(p); } }
@@ -10054,6 +10038,7 @@ const scheduleMgr = {
         let wl = 0; ov.addEventListener('wheel', (e) => { e.preventDefault(); const now = Date.now(); if (now - wl < 350) return; wl = now; go(e.deltaY > 0 ? 1 : -1); }, { passive: false });
         document.addEventListener('fullscreenchange', function fsc(){ if (!document.fullscreenElement && document.body.contains(ov)) { /* ESC 로 전체화면만 풀린 경우에도 뷰어 닫기 */ document.removeEventListener('fullscreenchange', fsc); close(); } });
         try { const rf = ov.requestFullscreen || ov.webkitRequestFullscreen; if (rf) await rf.call(ov); } catch (e) {}
+        await new Promise(r => setTimeout(r, 180));   // [K127] 전체화면 크기가 확정된 뒤 그린다(작게 그려지던 원인)
         await draw(cur);
     },
     showPhotoQr: function() {
@@ -18905,6 +18890,8 @@ ui._matRenderList = function(){
           /* [K120] 워터마크 — 켜면 교육생은 CATC 대각선 워터마크가 찍힌 사본을 받는다(PDF 만) */
           + (isPdf ? '<label title="켜면 교육생이 받을 때 CATC 워터마크가 찍힌 PDF 로 받습니다" onclick="event.stopPropagation();" style="flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px; border:1px solid '+((ui._matCourse[id]||{}).wm?'#a5b4fc':'#e2e8f0')+'; background:'+((ui._matCourse[id]||{}).wm?'#eef2ff':'#fff')+'; color:'+((ui._matCourse[id]||{}).wm?'#4338ca':'#64748b')+'; font-size:12.5px; font-weight:800; cursor:pointer; white-space:nowrap;">'
               + '<input type="checkbox" '+((ui._matCourse[id]||{}).wm?'checked':'')+' onchange="ui.matToggleWm(\''+id+'\', this.checked, this)" style="width:15px; height:15px; margin:0; cursor:pointer;"><i class="fa-solid fa-stamp"></i> 워터마크</label>' : '')
+          /* [K126] 발표 — 이 화면에서 바로 전체화면 슬라이드(모니터 2대면 발표자 모드) */
+          + (isPdf ? '<button onclick="ui.matPresent(\''+id+'\')" title="전체화면 슬라이드로 발표" style="flex-shrink:0; padding:7px 13px; border:none; border-radius:9px; background:linear-gradient(135deg,#7c3aed,#4f46e5); color:#fff; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-person-chalkboard"></i> 발표</button>' : '')
           /* [K70] 바로 보기 — 내려받지 않고 새 창에서 연다(PDF 미리보기) */
           + (isPdf ? '<button onclick="ui.matViewOne(\''+id+'\')" title="새 창에서 바로 보기" style="flex-shrink:0; padding:7px 13px; border:1px solid #bbf7d0; border-radius:9px; background:#f0fdf4; color:#15803d; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-regular fa-eye"></i> 보기</button>' : '')
           + '<a href="'+ui._esc(window.kacMaterials.fileUrl(m))+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:7px 13px; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:800; text-decoration:none;">받기</a>'
@@ -19911,6 +19898,167 @@ ui.matToggleWm = async function(id, on, el){
         if(el) el.checked = !on;
         ui.showAlert('워터마크 처리 실패: ' + ((e && e.message) || '') + '\n(암호가 걸린 PDF 는 워터마크를 넣을 수 없습니다)');
     }
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K126] 교재 발표 모드 — 자료실 PDF 를 그대로 전체화면 슬라이드로 강의
+   · 모니터 1대: 전체화면 슬라이드(드래그·휠·키보드·클리커 ← → 로 넘김)
+   · 모니터 2대: 청중 화면(슬라이드) + 발표자 화면(현재/다음 슬라이드 · 현재 시각 · 경과 시간)
+   ══════════════════════════════════════════════════════════════════════════ */
+ui.matPresent = async function(id){
+    var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0]; if(!m) return;
+    if(typeof pdfjsLib === 'undefined') return ui.showAlert('PDF 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+    try{ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; }catch(e){}
+    var dual = !!(window.screen && window.screen.isExtended);
+    var mode = 'single';
+    if(dual){
+        mode = await new Promise(function(res){
+            var ov = document.createElement('div');
+            ov.style.cssText='position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.7); display:flex; align-items:center; justify-content:center; padding:20px;';
+            ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:520px;">'
+              + '<div style="font-size:19px; font-weight:900; color:#0f172a; margin-bottom:6px;"><i class="fa-solid fa-person-chalkboard" style="color:#7c3aed;"></i> 발표 시작</div>'
+              + '<div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:16px;">모니터가 2대 연결되어 있습니다.</div>'
+              + '<button data-v="dual" style="width:100%; text-align:left; padding:15px 16px; margin-bottom:9px; border:1.5px solid #c7d2fe; border-radius:14px; background:#eef2ff; cursor:pointer;"><b style="font-size:16px; color:#3730a3;">🖥🖥 발표자 모드 (2화면)</b><div style="font-size:12.5px; color:#64748b; font-weight:700; margin-top:4px;">프로젝터=슬라이드 · 내 화면=현재/다음 슬라이드 + 시계</div></button>'
+              + '<button data-v="single" style="width:100%; text-align:left; padding:15px 16px; margin-bottom:9px; border:1.5px solid #e2e8f0; border-radius:14px; background:#fff; cursor:pointer;"><b style="font-size:16px; color:#0f172a;">🖥 슬라이드만 (1화면)</b><div style="font-size:12.5px; color:#64748b; font-weight:700; margin-top:4px;">이 화면을 전체화면 슬라이드로</div></button>'
+              + '<button data-v="" style="width:100%; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">취소</button></div>';
+            document.body.appendChild(ov);
+            ov.addEventListener('click', function(e){ var b=e.target.closest('button'); if(e.target===ov){ ov.remove(); res(''); } else if(b){ ov.remove(); res(b.getAttribute('data-v')); } });
+        });
+        if(!mode) return;
+    }
+    var url = window.kacMaterials.fileUrl(m) + '?view=1&v=2';
+    var pdf;
+    try{ pdf = await pdfjsLib.getDocument({ url: url }).promise; }
+    catch(e){ return ui.showAlert('PDF 를 열지 못했습니다.\n' + ((e&&e.message)||'')); }
+    if(mode === 'single') return scheduleMgr._openPdfFs(pdf, 1, true);   // 발표 슬라이드는 여백을 자르지 않는다
+    return ui._matPresenter(pdf, m);
+};
+
+/* 페이지를 지정 크기 캔버스에 선명하게(2배) 그리기 */
+ui._pdfDrawTo = async function(pdf, n, canvas, W, H, noCrop){
+    /* [K127] 흰 여백 자동 잘라내기 — 내용 부분만 화면에 꽉 차게(시간표 같은 세로 문서가 훨씬 크게 보임) */
+    var page = await pdf.getPage(n);
+    var base = page.getViewport({ scale: 1 });
+    var dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 1));
+    var s0 = noCrop ? Math.min((W * dpr) / base.width, (H * dpr) / base.height) : Math.min((W * dpr * 1.4) / base.width, (H * dpr * 1.4) / base.height);   // 여백을 잘라도 선명하도록 넉넉히
+    var vp = page.getViewport({ scale: s0 });
+    var tmp = document.createElement('canvas'); tmp.width = Math.round(vp.width); tmp.height = Math.round(vp.height);
+    var tg = tmp.getContext('2d'); tg.fillStyle = '#fff'; tg.fillRect(0, 0, tmp.width, tmp.height);
+    await page.render({ canvasContext: tg, viewport: vp }).promise;
+    var sx = 0, sy = 0, sw = tmp.width, sh = tmp.height;
+    if(!noCrop){
+        try{
+            var step = Math.max(1, Math.floor(Math.min(tmp.width, tmp.height) / 700));
+            var d = tg.getImageData(0, 0, tmp.width, tmp.height).data, w = tmp.width, hh = tmp.height;
+            var minX = w, minY = hh, maxX = -1, maxY = -1;
+            for(var y = 0; y < hh; y += step){ for(var x = 0; x < w; x += step){
+                var k = (y * w + x) * 4; if(d[k] < 235 || d[k+1] < 235 || d[k+2] < 235){ if(x < minX) minX = x; if(x > maxX) maxX = x; if(y < minY) minY = y; if(y > maxY) maxY = y; }
+            } }
+            if(maxX > minX && maxY > minY){
+                var pad = Math.round(Math.min(w, hh) * 0.015);
+                sx = Math.max(0, minX - pad); sy = Math.max(0, minY - pad);
+                sw = Math.min(w, maxX + pad) - sx; sh = Math.min(hh, maxY + pad) - sy;
+            }
+        }catch(e){}
+    }
+    var fit = Math.min((W * dpr) / sw, (H * dpr) / sh);
+    canvas.width = Math.round(sw * fit); canvas.height = Math.round(sh * fit);
+    var cg = canvas.getContext('2d'); cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = 'high';
+    cg.drawImage(tmp, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    canvas.style.width = Math.round(canvas.width / dpr) + 'px'; canvas.style.height = Math.round(canvas.height / dpr) + 'px';
+};
+
+ui._matPresenter = async function(pdf, m){
+    /* 1) 청중 창 — 다른 모니터에 띄운다(크롬 '창 관리' 권한을 허용하면 자동으로 그 모니터 위치에) */
+    var other = null;
+    try{
+        if(window.getScreenDetails){
+            var sd = await window.getScreenDetails();
+            other = (sd.screens || []).filter(function(s){ return s !== sd.currentScreen; })[0] || null;
+        }
+    }catch(e){}
+    var feat = other ? ('left=' + other.availLeft + ',top=' + other.availTop + ',width=' + other.availWidth + ',height=' + other.availHeight)
+                     : 'width=1280,height=720';
+    var aud = window.open('', 'catcAudience', feat + ',menubar=no,toolbar=no,location=no,status=no');
+    if(!aud){ return ui.showAlert('팝업이 차단되었습니다.\n주소창 오른쪽의 팝업 차단 아이콘에서 [항상 허용]을 누른 뒤 다시 시도해 주세요.'); }
+    aud.document.open();
+    aud.document.write('<!doctype html><html><head><meta charset="utf-8"><title>' + String(m.title||m.fileName||'발표').replace(/</g,'&lt;') + '</title>'
+      + '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;cursor:none}#c{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff}'
+      + '#fs{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);color:#fff;font:900 28px sans-serif;cursor:pointer}</style></head>'
+      + '<body><canvas id="c"></canvas><div id="fs">🖥 이 창을 클릭하면 전체화면이 됩니다<br><span style="font-size:16px;font-weight:700;opacity:.8">(발표 화면 — 프로젝터 쪽 모니터)</span></div>'
+      + '<script>document.getElementById("fs").onclick=function(){var d=document.documentElement;(d.requestFullscreen||d.webkitRequestFullscreen).call(d);this.remove();};'
+      + 'document.addEventListener("keydown",function(e){ try{ opener && opener.postMessage({catcSlideKey:e.key},"*"); }catch(_){} });<\/script></body></html>');
+    aud.document.close();
+
+    /* 2) 발표자 화면(이 창) */
+    var old = document.getElementById('matPresenterOv'); if(old) old.remove();
+    var ov = document.createElement('div'); ov.id = 'matPresenterOv';
+    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483500; background:#0b1220; color:#fff; display:grid; grid-template-columns:minmax(0,1.6fr) minmax(0,1fr); grid-template-rows:auto 1fr auto; gap:16px; padding:18px; box-sizing:border-box; user-select:none;';
+    ov.innerHTML = '<div style="grid-column:1/3; display:flex; align-items:center; justify-content:space-between; gap:12px;">'
+        + '<div style="font-size:16px; font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"><i class="fa-solid fa-person-chalkboard" style="color:#a78bfa;"></i> ' + ui._esc(m.title||m.fileName||'') + '</div>'
+        + '<button data-a="close" style="flex-shrink:0; padding:9px 16px; border:none; border-radius:10px; background:rgba(255,255,255,.12); color:#fff; font-weight:800; cursor:pointer;">✕ 발표 종료</button></div>'
+      + '<div id="ppCurWrap" style="min-height:0; display:flex; flex-direction:column; gap:8px;"><div style="font-size:13px; font-weight:800; color:#94a3b8;">현재 슬라이드</div>'
+        + '<div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#111827; border-radius:14px; touch-action:none; cursor:grab;" id="ppCurBox"><canvas id="ppCur" style="background:#fff; border-radius:6px;"></canvas></div></div>'
+      + '<div style="min-height:0; display:flex; flex-direction:column; gap:14px;">'
+        + '<div style="font-size:13px; font-weight:800; color:#94a3b8;">다음 슬라이드</div>'
+        + '<div id="ppNextBox" style="height:42%; display:flex; align-items:center; justify-content:center; background:#111827; border-radius:14px;"><canvas id="ppNext" style="background:#fff; border-radius:6px; opacity:.9;"></canvas></div>'
+        + '<div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#111827; border-radius:14px;">'
+          + '<div id="ppClock" style="font-size:clamp(40px,5vw,78px); font-weight:900; letter-spacing:2px; font-variant-numeric:tabular-nums;"></div>'
+          + '<div style="font-size:15px; color:#94a3b8; font-weight:800;">경과 <span id="ppElapsed" style="color:#fbbf24; font-variant-numeric:tabular-nums;">00:00</span></div>'
+          + '<div id="ppNo" style="font-size:22px; font-weight:900;"></div></div></div>'
+      + '<div style="grid-column:1/3; display:flex; align-items:center; justify-content:center; gap:14px;">'
+        + '<button data-a="prev" style="width:64px; height:52px; border:none; border-radius:12px; background:rgba(255,255,255,.12); color:#fff; font-size:20px; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>'
+        + '<div style="font-size:12.5px; color:#94a3b8; font-weight:700;">← → · 휠 · 드래그 · 클리커로 넘김</div>'
+        + '<button data-a="next" style="width:64px; height:52px; border:none; border-radius:12px; background:#4f46e5; color:#fff; font-size:20px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button></div>';
+    document.body.appendChild(ov);
+    var cur = 1, t0 = Date.now(), busy = false, pend = 0;
+    var cCur = ov.querySelector('#ppCur'), cNext = ov.querySelector('#ppNext');
+    var render = async function(n){
+        if(busy){ pend = n; return; } busy = true;
+        try{
+            cur = n;
+            ov.querySelector('#ppNo').textContent = n + ' / ' + pdf.numPages;
+            var cb = ov.querySelector('#ppCurBox'), nb = ov.querySelector('#ppNextBox');
+            await ui._pdfDrawTo(pdf, n, cCur, cb.clientWidth - 16, cb.clientHeight - 16, true);
+            if(n < pdf.numPages){ cNext.style.display=''; await ui._pdfDrawTo(pdf, n + 1, cNext, nb.clientWidth - 16, nb.clientHeight - 16, true); }
+            else { cNext.style.display='none'; }
+            if(aud && !aud.closed){
+                var ac = aud.document.getElementById('c');
+                if(ac) await ui._pdfDrawTo(pdf, n, ac, aud.innerWidth, aud.innerHeight, true);
+            }
+        }catch(e){ console.warn('[발표] 그리기 실패', e); }
+        finally{ busy = false; if(pend){ var p = pend; pend = 0; if(p !== cur) render(p); } }
+    };
+    var go = function(d){ var n = cur + d; if(n >= 1 && n <= pdf.numPages) render(n); };
+    var tick = setInterval(function(){
+        var d = new Date(), p = function(x){ return String(x).padStart(2,'0'); };
+        ov.querySelector('#ppClock').textContent = p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+        var s = Math.floor((Date.now() - t0)/1000);
+        ov.querySelector('#ppElapsed').textContent = (s>=3600 ? Math.floor(s/3600)+':' : '') + p(Math.floor(s%3600/60)) + ':' + p(s%60);
+        if(aud && aud.closed){ /* 청중 창을 닫아도 발표자 화면은 유지 */ }
+    }, 500);
+    var onKey = function(k){
+        if(['ArrowRight','ArrowDown','PageDown',' ','Enter'].indexOf(k) >= 0) go(1);
+        else if(['ArrowLeft','ArrowUp','PageUp','Backspace'].indexOf(k) >= 0) go(-1);
+        else if(k === 'Escape') close();
+    };
+    var keyH = function(e){ if(!document.body.contains(ov)) return; if(['ArrowRight','ArrowDown','PageDown',' ','Enter','ArrowLeft','ArrowUp','PageUp','Backspace','Escape'].indexOf(e.key)>=0){ e.preventDefault(); e.stopPropagation(); onKey(e.key); } };
+    var msgH = function(e){ if(e.data && e.data.catcSlideKey) onKey(e.data.catcSlideKey); };   // 청중 창에서 누른 클리커 키도 받음
+    var resH = function(){ clearTimeout(ui._ppRt); ui._ppRt = setTimeout(function(){ render(cur); }, 200); };
+    function close(){
+        clearInterval(tick); document.removeEventListener('keydown', keyH, true); window.removeEventListener('message', msgH); window.removeEventListener('resize', resH);
+        try{ if(aud && !aud.closed) aud.close(); }catch(e){}
+        ov.remove(); if(document.fullscreenElement) document.exitFullscreen().catch(function(){});
+    }
+    document.addEventListener('keydown', keyH, true); window.addEventListener('message', msgH); window.addEventListener('resize', resH);
+    try{ aud.addEventListener('resize', resH); }catch(e){}
+    ov.addEventListener('click', function(e){ var b = e.target.closest('button'); if(!b) return; var a = b.getAttribute('data-a'); if(a==='prev') go(-1); else if(a==='next') go(1); else if(a==='close') close(); });
+    var box = ov.querySelector('#ppCurBox'), sx = 0, sy = 0, dg = false;
+    box.addEventListener('pointerdown', function(e){ dg = true; sx = e.clientX; sy = e.clientY; try{ box.setPointerCapture(e.pointerId); }catch(_){} });
+    box.addEventListener('pointerup', function(e){ if(!dg) return; dg = false; var dx = e.clientX - sx, dy = e.clientY - sy; if(Math.max(Math.abs(dx),Math.abs(dy)) < 50) return; if(Math.abs(dx) >= Math.abs(dy)) go(dx < 0 ? 1 : -1); else go(dy < 0 ? 1 : -1); });
+    var wl = 0; box.addEventListener('wheel', function(e){ e.preventDefault(); var now = Date.now(); if(now - wl < 350) return; wl = now; go(e.deltaY > 0 ? 1 : -1); }, { passive:false });
+    setTimeout(function(){ render(1); }, 60);
 };
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
