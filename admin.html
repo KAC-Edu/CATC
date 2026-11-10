@@ -2874,7 +2874,7 @@ setTimeout(function(){ try{ if(window._homeStatsReady) return; var b=document.ge
 
                     <div class="acc-item">
                         <button type="button" class="acc-head" onclick="setupAcc(this)">
-                            <span><i class="fa-solid fa-mobile-screen-button" style="color:#15803d;"></i> 교육생 앱 메뉴 활성화</span>
+                            <span><i class="fa-solid fa-mobile-screen-button" style="color:#15803d;"></i> 교육생 앱 메뉴 활성화 <span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#ffedd5;color:#c2410c;font-size:11px;font-weight:900;">📌 이 과정만</span></span>
                             <i class="fa-solid fa-chevron-down acc-arrow"></i>
                         </button>
                         <div class="acc-body">
@@ -3209,7 +3209,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=261110K144"></script>
+    <script src="admin.js?v=261110K145"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
@@ -3393,7 +3393,7 @@ var opsCfg = (function(){
         +'<input type="checkbox" data-k="'+k+'" '+(on?'checked':'')+' style="width:17px;height:17px;accent-color:#2563eb;">'+c.n+'</label>';
     }).join('');
     ov.innerHTML='<div style="background:#fff;border-radius:20px;padding:24px;max-width:400px;width:100%;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
-      +'<h3 style="margin:0 0 4px;font-size:17px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;margin-right:7px;"></i>오늘의 운영 — 표시 메뉴 선택</h3>'
+      +'<h3 style="margin:0 0 4px;font-size:17px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;margin-right:7px;"></i>오늘의 운영 — 표시 메뉴 선택<span style="display:inline-block;margin-left:7px;padding:2px 9px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle;">🌐 전체 공통</span></h3>'
       +'<p style="margin:0 0 14px;font-size:12.5px;font-weight:700;color:#64748b;line-height:1.6;">체크한 메뉴만 카드에 표시됩니다. 순서는 카드에서 행을 <b>5초 길게 누른 뒤 드래그</b>로 바꿀 수 있습니다.<br>설정은 <b>모든 과정의 과정현황에 공통</b> 적용됩니다.</p>'
       +'<div style="display:flex;flex-direction:column;gap:8px;">'+items+'</div>'
       +'<div style="display:flex;gap:9px;margin-top:16px;">'
