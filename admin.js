@@ -18967,7 +18967,23 @@ ui._matAskDuplicate = function(file, old){
     });
 };
 
+/* [K103] 올리는 중에 또 끌어다 놓으면 — 예전엔 두 번째 묶음이 따로 돌면서 진행 표시를 덮어써
+   첫 묶음이 사라진 것처럼 보였다. → 진행 중이면 대기열 뒤에 '추가'하고, 한 줄로 이어서 올린다. */
+ui._matQueue = ui._matQueue || [];
 ui._matUploadFiles = async function(files){
+    files = Array.prototype.slice.call(files || []);
+    if(!files.length) return;
+    if(ui._matBusy){
+        ui._matQueue.push.apply(ui._matQueue, files);
+        try{ ui.showToast ? ui.showToast('📎 '+files.length+'개 파일을 올리기 대기열에 추가했습니다') : null; }catch(e){}
+        return;
+    }
+    ui._matBusy = true;
+    ui._matQueue = files.slice();
+    try{ await ui._matUploadRun(); } finally { ui._matBusy = false; ui._matQueue = []; }
+};
+ui._matUploadRun = async function(){
+    var files = ui._matQueue;          // 같은 배열 — 진행 중 추가되면 length 가 늘어난다
     var room = state.room, who = ui._matWho();
     var pb = document.getElementById('matProgress');
     var done = 0, fail = 0;
