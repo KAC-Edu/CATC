@@ -193,7 +193,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="config.js?v=110e2c71"></script>
+    <script src="config.js?v=07d1b8ec"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
@@ -7763,7 +7763,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
     },
     _planned:function(courseName, room){
       var cn=String(courseName||'').trim(), best=null;
-      for(var k in this._rosters){ var dv=this._rosters[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===cn){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
+      for(var k in this._rosters){ var dv=this._rosters[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&!(window.kacRosterStale&&window.kacRosterStale(dv))&&String(dv.courseName||'').trim()===cn){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
       if(best) return best.list.length;
       var r=(typeof coursesCache!=='undefined'&&coursesCache)?coursesCache[room]:null;
       if(r&&r.students){ return Object.values(r.students).filter(function(x){return x&&x.name&&String(x.name).trim()&&x.name!=='undefined';}).length; }
