@@ -1036,7 +1036,7 @@ try{
 </div>
 
 <!-- [즉석 설문] 교육생 응답 팝업 -->
-<div id="instantSurveyOverlay" class="menu-overlay" style="display:none; z-index:9600; align-items:center; justify-content:center; padding:20px;">
+<div id="instantSurveyOverlay" class="menu-overlay" style="display:none; z-index:30000; align-items:center; justify-content:center; padding:20px;">
     <div class="menu-box" style="width:100%; max-width:380px; padding:0; border-radius:20px; overflow:hidden;">
         <div style="background:linear-gradient(135deg,#0ea5e9,#38bdf8); padding:16px 20px; display:flex; align-items:center; gap:9px;">
             <i class="fa-solid fa-square-poll-vertical" style="color:#fff; font-size:17px;"></i>
@@ -3248,6 +3248,8 @@ function handleSurveyUpdate() {
     // 메뉴의 설문 버튼 노출 토글
     const menuBtn = document.getElementById('menu-survey-instant');
     if (menuBtn) menuBtn.style.display = (sv && sv.status === 'active') ? 'block' : 'none';
+    // [K131] 퀴즈 대기 화면·입교완료 화면에도 설문 버튼
+    ['kqwSurveyBtn','keduSurveyBtn'].forEach(function(id){ const b = document.getElementById(id); if (b) b.style.display = (sv && sv.status === 'active') ? '' : 'none'; });
 
     if (!sv || sv.status !== 'active') {
         if (overlay) overlay.style.display = 'none';
@@ -9586,6 +9588,7 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
         '<button class="kh-att" id="keduMatBtn" style="display:none; background:linear-gradient(135deg,#4f46e5,#6366f1);" onclick="openMaterials()"><i class="fa-solid fa-book-open"></i> 교육 자료 받기 <span id="keduMatCount" style="background:rgba(255,255,255,.25); border-radius:999px; padding:1px 9px; font-size:12px; margin-left:5px;"></span></button>'+
         /* [K104] 교육 시간표 — 등록돼 있을 때만 보인다 */
         '<button class="kh-att" id="keduSchBtn" style="display:none; background:linear-gradient(135deg,#0369a1,#0ea5e9);" onclick="openKacSchedule()"><i class="fa-solid fa-calendar-days"></i> 교육 시간표 보기</button>'+
+        '<button class="kh-att" id="keduSurveyBtn" style="display:none; background:linear-gradient(135deg,#0284c7,#0ea5e9);" onclick="openInstantSurvey()"><i class="fa-solid fa-square-poll-vertical"></i> 진행 중인 설문 참여하기</button>'+
         '<button class="kh-edit" onclick="keduEditInfo()"><i class="fa-solid fa-pen-to-square"></i> 정보 수정하기</button>'+
         '<button class="kh-att" id="keduGradBtn" style="display:none; background:linear-gradient(135deg,#0f2057,#1a3a8a);" onclick="keduDownloadGradPhoto()"><i class="fa-solid fa-camera-retro"></i> 수료 기념사진 받기</button>'+
         /* [K61] 실명 입교자 → 게스트 전환(로그아웃 역할). 기기에 저장된 이름·사번을 지운다. */
@@ -9954,8 +9957,11 @@ html.kac-core-screen .input-dock{ flex:0 0 auto !important; }
       '<h2>퀴즈 준비 중</h2>'+
       '<p>강사가 문제를 공개하면<br>이 화면에서 자동으로 시작됩니다.</p>'+
       '<div class="kqw-progress" aria-hidden="true"></div>'+
+      /* [K131] 진행 중인 즉석 설문이 있으면 퀴즈 대기 화면에서 바로 참여 */
+      '<button type="button" id="kqwSurveyBtn" onclick="openInstantSurvey()" style="display:none; margin-top:18px; width:100%; padding:14px; border:none; border-radius:14px; background:linear-gradient(135deg,#0284c7,#0ea5e9); color:#fff; font-size:16px; font-weight:900; cursor:pointer; box-shadow:0 8px 20px rgba(14,165,233,.3);"><i class="fa-solid fa-square-poll-vertical"></i> 진행 중인 설문 참여하기</button>'+
       '</div>';
     document.body.appendChild(wait);
+    try{ var _sv=(typeof activeSurveyData!=='undefined')?activeSurveyData:null; var _b=document.getElementById('kqwSurveyBtn'); if(_b) _b.style.display=(_sv&&_sv.status==='active')?'':'none'; }catch(e){}   // [K131]
     return wait;
   }
 
