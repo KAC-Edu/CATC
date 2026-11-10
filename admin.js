@@ -127,6 +127,7 @@ const kacMedia = {
             updates[this.path(room, k)] = null;
             updates[this.legacy(room, k)] = null;
         });
+        updates[this.path(room, 'schedulePdf')] = null;   // [K104] 교육생용 시간표 PDF 주소 (media 경로만 — R2 파일은 수명주기 규칙으로 자동 삭제)
         return updates;
     }
 };
@@ -10001,7 +10002,23 @@ const scheduleMgr = {
             await kacMedia.write(room, 'scheduleImage', { dataUrl: dataUrl, updatedAt: updatedAt });
             try { await this._idbSet(room, { updatedAt: updatedAt, dataUrl: dataUrl }); } catch (e) {}
             if (state.room === room) this._renderPhoto({ dataUrl: dataUrl, updatedAt: updatedAt });
-            ui.showAlert('✅ 교육 시간표를 등록했습니다.\n교육생 화면에도 바로 반영됩니다.');
+            /* [K104] PDF 원본은 Cloudflare(R2) schedule/ 폴더에 임시 보관 → 교육생 '교육 시간표' 메뉴에서 PDF로 열람.
+               (이미지는 지금처럼 Firebase — 강사·운영부·지원부 화면용, 휴대폰 업로드와 공용) */
+            let pdfMsg = '';
+            if (isPdf && window.kacMaterials && window.kacMaterials.uploadRaw) {
+                try {
+                    const okKey = await ui._matEnsureKey();
+                    if (okKey) {
+                        const prevSnap = await firebase.database().ref('media/' + room + '/schedulePdf').once('value');
+                        const prev = prevSnap.val();
+                        const up = await window.kacMaterials.uploadRaw(file, 'schedule');
+                        await firebase.database().ref('media/' + room + '/schedulePdf').set({ key: up.key, url: up.url, name: up.name, size: up.size, updatedAt: Date.now() });
+                        if (prev && prev.key && prev.key !== up.key) window.kacMaterials.removeKey(prev.key);
+                        pdfMsg = '\n(PDF 원본도 교육생용으로 올렸습니다)';
+                    }
+                } catch (e) { console.warn('[시간표 PDF] R2 업로드 실패 — 교육생은 이미지로 봅니다', e); }
+            }
+            ui.showAlert('✅ 교육 시간표를 등록했습니다.\n교육생 화면의 [교육 시간표]에도 바로 반영됩니다.' + pdfMsg);
         } catch (e) {
             console.warn('[시간표 업로드] 실패', e);
             ui.showAlert('등록에 실패했습니다.\n' + ((e && e.message) ? e.message : '파일을 다시 확인해 주세요.'));
@@ -10070,6 +10087,11 @@ const scheduleMgr = {
         if (!room) return;
         if (!confirm('등록된 시간표를 삭제할까요?')) return;
         // [J16] media 주경로 + 레거시 양쪽 모두 삭제
+        // [K104] 교육생용 PDF(R2)도 함께 정리
+        firebase.database().ref('media/' + room + '/schedulePdf').once('value').then(s => {
+            const p = s.val(); if (p && p.key && window.kacMaterials) window.kacMaterials.removeKey(p.key);
+            return firebase.database().ref('media/' + room + '/schedulePdf').remove();
+        }).catch(() => {});
         firebase.database().ref(kacMedia.path(room, 'scheduleImage')).remove()
             .then(() => { kacMedia.remove(room, 'scheduleImage'); this._idbDelete(room); ui.showAlert('🗑️ 시간표 사진을 삭제했습니다.'); })
             .catch(err => ui.showAlert('삭제 실패: ' + (err && err.message ? err.message : '')));
