@@ -45,7 +45,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=742b0e2c307454d10b66d28b9c62482f&libraries=services&autoload=false"></script>
-    <script src="config.js?v=07d1b8ec"></script>
+    <script src="config.js?v=8182db8c"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -1274,6 +1274,8 @@ body.in-course #moreToggleTab{ display:flex !important; }
 #matLibList > button:hover .fa-folder{ color:#2563eb !important; }
 #matLibList > button:hover .fa-chevron-right{ color:#2563eb !important; transform:translateX(3px); transition:transform .15s; }
 #matLibList label:hover{ border-color:#bfdbfe !important; background:#f8fbff !important; box-shadow:0 6px 16px rgba(37,99,235,.10); border-radius:14px !important; }
+#matLibList .mat-who-btn:hover{ border-color:#6366f1 !important; background:#eef2ff !important; color:#3730a3 !important; }
+#matLibList .mat-who-btn:hover .fa-pen{ color:#6366f1 !important; }
 #matLibList label:has(.matLibChk:checked){ border-color:#2563eb !important; background:#eff6ff !important; box-shadow:0 0 0 3px rgba(37,99,235,.15); border-radius:14px !important; }
 </style>
 <div id="matLibModal" style="display:none; position:fixed; inset:0; z-index:16000; background:rgba(15,23,42,.5); align-items:center; justify-content:center; padding:20px;" onclick="if(event.target===this) ui.matCloseLibrary()">
