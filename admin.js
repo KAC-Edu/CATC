@@ -7237,7 +7237,12 @@ resetShuttleRequests: function() {
                 computeAndRender(snap.val() || {});
             }, err => {
                 console.warn('[loadHomeStats] 실시간 구독 실패, 1회 조회로 대체:', err && err.message);
-                firebase.database().ref('courses').once('value', s => computeAndRender(s.val() || {}));
+                firebase.database().ref('courses').once('value', s => computeAndRender(s.val() || {}), err2 => {
+                    // [K99] 읽기 자체가 막힌 경우(권한·App Check) — 무한 로딩 대신 원인과 새로고침 버튼 표시
+                    try{ var _b=document.getElementById('homeSyncBadge'), _i=_b&&_b.querySelector('.hsb-inner');
+                        if(_i) _i.innerHTML='<span style="font-size:20px;">⚠️</span> 데이터를 읽지 못했습니다 <small style="font-size:13px;color:#64748b;">('+String((err2&&err2.code)||(err&&err.code)||'error')+')</small> <button type="button" onclick="location.reload()" style="margin-left:6px;border:none;border-radius:999px;padding:10px 20px;background:#2563eb;color:#fff;font-size:18px;font-weight:800;cursor:pointer;">새로고침</button>';
+                    }catch(e){}
+                });
             });
         } else if (window._homeStatsData) {
             // 이미 구독 중이면 보유 데이터로 즉시 재렌더 (화면 재진입 시 빈 값 깜빡임 방지)
