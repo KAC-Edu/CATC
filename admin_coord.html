@@ -2873,7 +2873,7 @@ body.pc-mode .hdr-stat .hb-value small{ font-size:clamp(9px,.62vw,11px) !importa
 
 
 
-  <script src="config.js?v=110e2c71"></script>
+  <script src="config.js?v=07d1b8ec"></script>
   <script>
   /* [인증 복원] 포털(portal.html) 폐지 후 admin_coord 자체 Firebase 인증.
      연간계획 저장 등은 settings/schedule·expectedStudents 등 'auth != null' 경로를 함께 쓰는데,
@@ -8567,7 +8567,7 @@ function _coordRefreshRosterExtAndTotals(){
       firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
     ]).then(function(res){
       var ext={};
-      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
+      res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; if(window.kacRosterStale&&window.kacRosterStale(it)) return;   /* [K106] 지난 기수 명단 제외 */ var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
       window._coordRosterExt=ext;
       _coordSyncTotalStudentsFromOverview();
     }).catch(function(){}).finally(function(){ _coordRosterExtSyncBusy=false; });
@@ -8609,7 +8609,7 @@ function openCourseOverview(){
   Promise.all([
     firebase.database().ref('system/dorm/rosters').once('value').catch(function(){return null;}),
     firebase.database().ref('system/coord/rosters').once('value').catch(function(){return null;})
-  ]).then(function(res){ var ext={}; res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=_nm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({ list:it.list, period:(it.period||''), room:(it.room||''), weekKey:(it.weekKey||'') }); }); }); window._coordRosterExt=ext; _covRerender(); }).catch(function(){});
+  ]).then(function(res){ var ext={}; res.forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; if(window.kacRosterStale&&window.kacRosterStale(it)) return;   /* [K106] 지난 기수 명단 제외 */ var nm=_nm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({ list:it.list, period:(it.period||''), room:(it.room||''), weekKey:(it.weekKey||'') }); }); }); window._coordRosterExt=ext; _covRerender(); }).catch(function(){});
 }
 
 /* 2) 전체 교육생: 과정별 명단 (검색 가능) */
@@ -10541,7 +10541,7 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
       firebase.database().ref('system/dorm/locks').once('value').catch(function(){return null;})
     ]).then(function(res){
       var ext={};
-      [res[0],res[1]].forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
+      [res[0],res[1]].forEach(function(snap){ if(!snap) return; var v=snap.val()||{}; Object.keys(v).forEach(function(kk){ var it=v[kk]; if(!it||!Array.isArray(it.list)) return; if(window.kacRosterStale&&window.kacRosterStale(it)) return;   /* [K106] 지난 기수 명단 제외 */ var nm=norm(it.courseName); if(!nm) return; (ext[nm]=ext[nm]||[]).push({list:it.list,period:(it.period||''),room:(it.room||''),weekKey:(it.weekKey||'')}); }); });
       // [C21] 지난 주차(스테일) 배정 제외 — 전체 주차 병합 시 예전 테스트/과거 배정이 이번 주에 딸려오던 문제(예: 2주 전 장두석 청렴관106호). 이번 주 월요일 이후 주차만 매칭에 사용
       var dmap={}; var _allw=(res[2]&&res[2].val())||{};
       var _nw=new Date(); var _todayStr=_nw.getFullYear()+'-'+String(_nw.getMonth()+1).padStart(2,'0')+'-'+String(_nw.getDate()).padStart(2,'0');
