@@ -13674,7 +13674,7 @@ document.addEventListener('DOMContentLoaded', () => bgmPlayer.init());
 
 const CLASSROOM_DETAIL_GROUPS_SHARED = window.CLASSROOM_DETAIL_GROUPS_SHARED || [
     { label: '비대면', items: ['온라인(Zoom)'] },
-    { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실 (전산실)','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
+    { label: '하늘관', items: ['하늘관 1층 대강당','하늘관 1층 소회의실','하늘관 2층 A강의실','하늘관 2층 B강의실 (전산실)','하늘관 2층 C강의실','하늘관 2층 D강의실','하늘관 2층 E강의실 (드론)','하늘관 2층 F강의실','하늘관 2층 G강의실','하늘관 3층 회의실'] },
     { label: '국제동', items: ['국제동 1층 세미나홀','국제동 1층 A강의실','국제동 1층 B강의실','국제동 2층 ILS 실습실','국제동 2층 VCCS/RADIO/ATIS 실습실','국제동 2층 VOR/DME/TACAN 실습실','국제동 2층 종합실습실'] },
     { label: '관제교육동', items: ['관제교육동 1층','관제교육동 2층'] },
     { label: '서울', items: ['항공보안교육센터','항공훈련센터'] }
@@ -16062,11 +16062,12 @@ ui.openFieldEdit = async function(field){
       Object.keys(all).forEach(function(r){ if(r!==state.room && all[r].status && all[r].status.roomStatus==='active'){ var loc=all[r].settings&&all[r].settings.roomDetailName; if(loc) occ.push(loc); } });
       Array.from(selEl.options).forEach(function(opt){ if(opt.value && occ.indexOf(opt.value)>=0){ opt.text=opt.text+' (이미 사용 중)'; opt.disabled=true; opt.style.color='#cbd5e1'; } });
     }catch(e){}
-    var cur=get('dashRoomDetail'); if(cur && cur!=='-' && cur!=='장소 미설정') selEl.value=cur;
+    var cur=get('dashRoomDetail'); if(cur==='하늘관 2층 E강의실') cur='하늘관 2층 E강의실 (드론)';   // [K102] 예전 이름으로 저장된 경우
+    if(cur && cur!=='-' && cur!=='장소 미설정') selEl.value=cur;
     /* [K101] 기본 드롭다운(위로 솟구치는 긴 목록) 대신, 팝업 안에 건물별로 묶은 선택 목록을 바로 펼친다.
        값은 숨긴 select(#fe-val)에 그대로 넣으므로 저장 로직은 변경 없음. */
     try{
-      if(box) box.style.width='620px';
+      if(box) box.style.width='660px';
       selEl.style.display='none';
       var pick=document.createElement('div'); pick.id='fePick';
       pick.style.cssText='max-height:min(56vh,460px);overflow-y:auto;padding:4px 2px 2px;margin:-4px -2px 0;';
@@ -16078,12 +16079,12 @@ ui.openFieldEdit = async function(field){
       });
       groups.forEach(function(g){
         if(!g.opts.length) return;
-        if(g.label) html+='<div style="display:flex;align-items:center;gap:8px;margin:12px 2px 7px;font-size:12.5px;font-weight:900;color:#64748b;letter-spacing:.3px;"><span style="width:4px;height:14px;border-radius:2px;background:#2563eb;"></span>'+esc(g.label)+'</div>';
-        html+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;">';
+        if(g.label) html+='<div style="display:flex;align-items:center;gap:8px;margin:14px 2px 8px;font-size:14px;font-weight:900;color:#475569;letter-spacing:.3px;"><span style="width:4px;height:14px;border-radius:2px;background:#2563eb;"></span>'+esc(g.label)+'</div>';
+        html+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;">';
         g.opts.forEach(function(o){
           var dis=o.disabled, isDirect=o.value==='direct';
           html+='<button type="button" class="fe-pick-item" data-i="'+o.index+'" data-v="'+esc(o.value)+'"'+(dis?' disabled':'')
-            +' style="text-align:left;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:11px;background:'+(dis?'#f8fafc':'#fff')+';color:'+(dis?'#cbd5e1':'#1e293b')+';font-size:13.5px;font-weight:700;cursor:'+(dis?'not-allowed':'pointer')+';font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .12s;'+(isDirect?'grid-column:1/-1;border-style:dashed;':'')+'"'
+            +' style="text-align:left;padding:13px 15px;border:1.5px solid #e2e8f0;border-radius:12px;background:'+(dis?'#f8fafc':'#fff')+';color:'+(dis?'#cbd5e1':'#1e293b')+';font-size:15.5px;font-weight:700;cursor:'+(dis?'not-allowed':'pointer')+';font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .12s;'+(isDirect?'grid-column:1/-1;border-style:dashed;':'')+'"'
             +' title="'+esc(o.text)+'">'+esc(o.text.replace(/^[\s ]+/,''))+'</button>';
         });
         html+='</div>';
