@@ -789,12 +789,24 @@ window.kacMaterials = (function () {
     if (tag === 'I' && el.parentElement && isX(el.parentElement)) return false;  // 버튼 안 아이콘은 버튼에만
     var clickable = tag === 'BUTTON' || tag === 'A' || el.onclick || el.getAttribute('onclick') || /close|닫기/i.test(String(el.getAttribute('class') || '') + ' ' + (el.getAttribute('aria-label') || '') + ' ' + (el.title || ''));
     if (!clickable) return false;
+    if (el.childElementCount > 1) return false;
+    if (el.childElementCount === 1 && !/^(I|SVG|SPAN)$/i.test(el.firstElementChild.tagName)) return false;  // 안에 상자(div) 있으면 버튼 아님
     var r = el.getBoundingClientRect();
-    if (r.width && (r.width > 64 || r.height > 64)) return false;               // 작은 버튼만
+    // [K100] 숨겨진 상태(크기 0)에서는 판정하지 않는다 — 내용이 나중에 채워지는 팝업 전체가 'X 버튼'으로 잘못 잡혀
+    //        팝업이 빨갛게 90° 돌아가던 문제. 보이는 상태에서 작을 때만 인정(hover 때 다시 판정).
+    if (!r.width || !r.height || r.width > 64 || r.height > 64) return false;
     return true;
   }
   function tag(el) {
-    if (!isX(el)) { if (el && el.nodeType === 1) el.__kacXChk = true; return; }
+    if (!isX(el)) {
+      if (el && el.nodeType === 1) {
+        var _t = (el.textContent || '').replace(/\s+/g, '');
+        var _cand = X_TXT.test(_t) || (!_t && el.childElementCount === 1);
+        if (!_cand) { el.__kacXChk = true; return; }                            // X 모양이 아니면 다시 볼 필요 없음
+        var _r = el.getBoundingClientRect(); if (_r.width && _r.height) el.__kacXChk = true;   // X 후보인데 숨김 상태면 다음에 다시 판정
+      }
+      return;
+    }
     el.__kacXChk = true;
     el.classList.add('kac-xh');
     try {
@@ -817,7 +829,12 @@ window.kacMaterials = (function () {
     document.addEventListener('mouseover', function (e) {
       var t = e.target, n = 0;
       while (t && t.nodeType === 1 && n < 3) {                                  // 아이콘에 올려도 감싼 버튼까지 확인
-        if (t.classList.contains('kac-xh')) break;
+        if (t.classList.contains('kac-xh')) {                                   // 이미 붙은 것도 지금 상태로 재검증
+          t.__kacXChk = false;
+          if (!isX(t)) { t.classList.remove('kac-xh', 'kac-xh-rot'); t.__kacXChk = true; }
+          else t.__kacXChk = true;
+          break;
+        }
         t.__kacXChk = false; tag(t);
         if (t.classList.contains('kac-xh')) break;
         t = t.parentElement; n++;
