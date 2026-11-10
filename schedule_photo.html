@@ -156,6 +156,27 @@
         reader.readAsDataURL(file);
     }
 
+    /* [K116] 관리자 암호 입력 (교재 자료실과 같은 암호, 이 창을 닫으면 지워짐) */
+    function askKey() {
+        if (window.kacMaterials && window.kacMaterials.getKey()) return Promise.resolve(true);
+        return new Promise(resolve => {
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.7);display:flex;align-items:center;justify-content:center;padding:20px;';
+            ov.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px 22px;width:100%;max-width:360px;">'
+              + '<div style="font-size:17px;font-weight:900;color:#0f172a;margin-bottom:6px;">🔒 업로드용 관리자 암호</div>'
+              + '<div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:14px;line-height:1.6;">교재 올릴 때와 같은 암호입니다.<br>이 창을 닫으면 지워집니다.</div>'
+              + '<input id="spKey" type="password" autocomplete="current-password" placeholder="암호 입력" style="width:100%;box-sizing:border-box;padding:13px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:16px;">'
+              + '<div style="display:flex;gap:8px;margin-top:14px;"><button id="spNo" style="flex:1;padding:12px;border:none;border-radius:11px;background:#f1f5f9;font-weight:800;">취소</button>'
+              + '<button id="spOk" style="flex:1;padding:12px;border:none;border-radius:11px;background:#2563eb;color:#fff;font-weight:900;">확인</button></div></div>';
+            document.body.appendChild(ov);
+            const inp = ov.querySelector('#spKey'); setTimeout(() => inp.focus(), 50);
+            const done = v => { ov.remove(); resolve(v); };
+            ov.querySelector('#spNo').onclick = () => done(false);
+            ov.querySelector('#spOk').onclick = () => { const k = inp.value.trim(); if (!k) return; window.kacMaterials.setKey(k); done(true); };
+            inp.addEventListener('keydown', e => { if (e.key === 'Enter') ov.querySelector('#spOk').click(); });
+        });
+    }
+
     pickBtn.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', () => {
@@ -166,12 +187,31 @@
         setStatus('<span class="spin"></span> 사진을 처리하는 중…', 'muted');
         compress(file, (dataUrl, w, h) => {
             if (!dataUrl) { setStatus('사진을 읽지 못했습니다. 다른 사진으로 시도해 주세요.', 'err'); pickBtn.disabled = false; fileInput.value = ''; return; }
-            db.ref('courses/' + room + '/settings/period').once('value').then(ps => {
-                const cp = (ps.val() || '').trim();   // 업로드 시점의 현재 과정 기간을 함께 저장 → 차주 과정 전환 시 자동 리셋 판단용
-                return imgRef.set({ dataUrl: dataUrl, updatedAt: firebase.database.ServerValue.TIMESTAMP, w: w, h: h, coursePeriod: cp })
-                    .then(() => legacyRef.remove().catch(() => {}));   // [V2] 레거시 잔여분 정리
+            /* [K116] 사진 파일은 Cloudflare(R2)에만 저장 — Firebase 에는 주소만. 관리자 암호(교재와 동일) 필요 */
+            askKey().then(ok => {
+                if (!ok) throw new Error('관리자 암호를 입력해야 올릴 수 있습니다.');
+                setStatus('<span class="spin"></span> Cloudflare 에 올리는 중…', 'muted');
+                return Promise.all([
+                    db.ref('courses/' + room + '/settings/period').once('value'),
+                    db.ref('media/' + room + '/schedulePdf').once('value'),
+                    fetch(dataUrl).then(r => r.blob())
+                ]);
+            }).then(([ps, pv, blob]) => {
+                const cp = (ps.val() || '').trim();   // 업로드 시점의 현재 과정 기간 → 차주 과정 전환 시 자동 리셋 판단용
+                const prev = pv.val() || {};
+                return window.kacMaterials.uploadRaw(new File([blob], '교육시간표.jpg', { type: 'image/jpeg' }), 'schedule').then(up => {
+                    const view = window.kacMaterials.fileUrl({ key: up.key }) + '?view=1&v=2';
+                    const now = Date.now();
+                    return Promise.all([
+                        imgRef.set({ dataUrl: view, r2Key: up.key, updatedAt: now, w: w, h: h, coursePeriod: cp }),
+                        db.ref('media/' + room + '/schedulePdf').set({ key: null, url: null, name: '교육시간표(휴대폰).jpg', size: blob.size, imgKey: up.key, imgUrl: up.url, updatedAt: now })
+                    ]).then(() => {
+                        legacyRef.remove().catch(() => {});
+                        [prev.key, prev.imgKey].forEach(k => { if (k && k !== up.key) window.kacMaterials.removeKey(k); });
+                    });
+                });
             })
-                .then(() => { setStatus('✅ 업로드 완료! 강사 화면에 바로 표시됩니다.', 'ok'); })
+                .then(() => { setStatus('✅ 업로드 완료! 강사·교육생 화면에 바로 표시됩니다.', 'ok'); })
                 .catch(err => { console.error(err); setStatus('업로드 실패: ' + (err && err.message ? err.message : '권한/용량을 확인해 주세요.'), 'err'); })
                 .finally(() => { pickBtn.disabled = false; fileInput.value = ''; });
         });
@@ -181,6 +221,8 @@
         if (!confirm('등록된 시간표 사진을 삭제할까요?')) return;
         delBtn.disabled = true;
         setStatus('<span class="spin"></span> 삭제 중…', 'muted');
+        // [K116] Cloudflare 파일도 정리(암호가 이 창에 있을 때) — 없으면 R2 자동삭제 규칙이 정리
+        db.ref('media/' + room + '/schedulePdf').once('value').then(s => { const p = s.val(); if (p && window.kacMaterials) { if (p.key) window.kacMaterials.removeKey(p.key); if (p.imgKey) window.kacMaterials.removeKey(p.imgKey); } return db.ref('media/' + room + '/schedulePdf').remove(); }).catch(() => {});
         Promise.all([imgRef.remove(), legacyRef.remove().catch(() => {})])
             .then(() => setStatus('🗑️ 삭제되었습니다.', 'ok'))
             .catch(err => setStatus('삭제 실패: ' + (err && err.message ? err.message : ''), 'err'))
