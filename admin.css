@@ -6980,3 +6980,34 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 .hsr2-menu .hsr-btn:nth-child(3) .hsr2-ico{ background:#dcfce7; color:#16a34a; }
 .hsr2-menu .hsr-btn:nth-child(4) .hsr2-ico{ background:#ede9fe; color:#7c3aed; }
 .hsr2-menu .hsr-btn.is-open{ background:#eff6ff !important; box-shadow:inset 0 -3px #2563eb !important; transform:none; }
+
+/* ══ [K139] 홈 검색 결과 — 안쪽 스크롤바 제거(페이지 전체가 아래로 쭉 흐르게) + 카드 디자인 정돈 ══ */
+#homeSearchResults{ position:static !important; max-height:none !important; overflow:visible !important; margin-top:18px !important; padding:0 0 40px !important; }
+#homeSearchResults::-webkit-scrollbar{ display:none; }
+.hsr-card.hsr-v2{
+  background:#fff !important; border:1px solid #e6ebf3 !important; border-radius:20px !important;
+  box-shadow:0 6px 22px rgba(15,23,42,.06) !important; padding:22px 26px 18px !important;
+}
+.hsr-card.hsr-v2:hover{ background:#fff !important; box-shadow:0 12px 30px rgba(15,23,42,.10) !important; border-color:#d6e0ee !important; }
+.hsr-v2 .hsr2-room{ background:#eef2ff !important; color:#3730a3 !important; box-shadow:none !important; border:1px solid #c7d2fe; height:26px; }
+.hsr-v2 .hsr2-title{ background:none !important; -webkit-text-fill-color:#0f172a !important; color:#0f172a !important; font-size:21px !important; letter-spacing:-.4px; }
+.hsr-v2 .hsr2-meta{ margin-top:2px; }
+/* 하단 메뉴: 아이콘+글자를 가로로 놓은 깔끔한 버튼 4개 */
+.hsr2-menu{ grid-template-columns:repeat(4,minmax(0,1fr)) !important; gap:10px !important; margin-top:18px !important; padding-top:16px !important; border-top:1px solid #eef2f7 !important; }
+.hsr2-menu .hsr-btn{
+  flex-direction:row !important; justify-content:flex-start !important; align-items:center !important; gap:10px !important;
+  padding:11px 14px !important; border:1px solid #edf1f7 !important; border-radius:14px !important; background:#f8fafc !important;
+  font-size:14px !important; font-weight:800 !important; color:#334155 !important; transform:none !important; box-shadow:none !important;
+}
+.hsr2-menu .hsr-btn:hover{ background:#fff !important; border-color:#c7d2fe !important; box-shadow:0 6px 16px rgba(37,99,235,.10) !important; transform:translateY(-1px) !important; }
+.hsr2-menu .hsr-btn.is-open{ background:#eff6ff !important; border-color:#93c5fd !important; color:#1d4ed8 !important; box-shadow:none !important; }
+.hsr2-menu .hsr2-ico{ width:36px !important; height:36px !important; border-radius:11px !important; font-size:16px !important; flex:none; }
+.hsr2-menu .hsr2-hint{ margin-left:auto; font-size:10px !important; opacity:.45 !important; }
+.hsr-v2 .hsr-detail{ border-radius:16px !important; border-color:#dbe5f3 !important; box-shadow:none !important; }
+@media (max-width:900px){ .hsr2-menu{ grid-template-columns:repeat(2,minmax(0,1fr)) !important; } }
+/* [K139] 검색 중에는 아래 사진·통계를 아예 접어서(빈 공간 없이) 검색 결과만 아래로 이어지게 */
+#view-home.home-search-active .dashboard-campus-banner,
+#view-home.home-search-active .home-help-note,
+#view-home.home-search-active .home-stat-row{ display:none !important; }
+#view-home.home-search-active #homeSearchWrap{ margin-bottom:10px !important; }
+#view-home.home-search-active #homeWxCard{ display:none !important; }
