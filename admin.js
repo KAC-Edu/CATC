@@ -9928,13 +9928,18 @@ const scheduleMgr = {
             const _img = block.querySelector('img');
             let _ph = null;
             if (_img) {
-                _img.style.visibility = 'hidden';
-                _ph = document.createElement('div');
-                _ph.style.cssText = 'position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#64748b; font-weight:800; font-size:15px;';
-                _ph.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="margin-right:8px;"></i> 시간표를 불러오는 중…';
-                const _wrap = _img.parentElement; if (_wrap) { _wrap.style.position = 'relative'; _wrap.insertBefore(_ph, _img); }
+                _img.style.display = 'none';
+                _ph = document.createElement('div');   // [K142] 그림 자리를 차지하는 넉넉한 로딩 칸(겹침·답답함 없게)
+                _ph.style.cssText = 'width:100%; min-height:min(60vh,520px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; background:#f8fafc; border:1px dashed #e2e8f0; border-radius:14px; color:#64748b;';
+                _ph.innerHTML = '<div style="width:42px; height:42px; border:4px solid #e2e8f0; border-top-color:#2563eb; border-radius:50%; animation:schSpin .8s linear infinite;"></div>'
+                    + '<div style="font-size:16px; font-weight:800; letter-spacing:.2px;">시간표를 불러오는 중입니다…</div>'
+                    + '<div style="font-size:13px; color:#94a3b8; font-weight:700;">잠시만 기다려 주세요</div>'
+                    + '<style>@keyframes schSpin{to{transform:rotate(360deg)}}</style>';
+                _img.parentElement && _img.parentElement.insertBefore(_ph, _img);
             }
-            const _reveal = () => { try { if (_ph) _ph.remove(); if (_img && document.body.contains(_img)) _img.style.visibility = ''; } catch (e) {} };
+            const _hint = block.querySelector('.fa-magnifying-glass-plus'); const _hintBox = _hint ? _hint.parentElement : null;
+            if (_hintBox) _hintBox.style.visibility = 'hidden';
+            const _reveal = () => { try { if (_ph) _ph.remove(); if (_img && document.body.contains(_img)) _img.style.display = ''; if (_hintBox) _hintBox.style.visibility = ''; } catch (e) {} };
             const _guard = setTimeout(_reveal, 8000);   // PDF 가 너무 늦으면 일단 그림이라도
             this._tryPdfPager(block, Number(data.updatedAt || 0)).then((ok) => { clearTimeout(_guard); _reveal(); }).catch(() => { clearTimeout(_guard); _reveal(); });
         } else {
@@ -18051,13 +18056,63 @@ ui.confirmRouletteLeader = function(){
     }
     bindDrag(host);
     restorePos(host);
-    renderNotes(picked);   // [K122] 과정현황 오른쪽 포스트잇 바로가기
+    renderNotes(noteSelected());   // [K141] 포스트잇은 리모컨과 따로 — 필요한 것만, 모든 과정 공통
   }
 
   /* [K122] 과정현황 화면 오른쪽 바깥에 '포스트잇' 바로가기 — 육각 리모컨에 고른 6개 메뉴를 그대로 보여준다.
      (OTP출결 등을 리모컨·사이드바를 열지 않고 한 번에 누르기 위함) */
+  /* [K141] 포스트잇 선택 — 개수 제한 없음(1개 이상), 모든 과정 공통(이 PC 에 저장) */
+  var NOTE_KEY = 'kac_dash_notes_v1';
+  /* [K143→K144] 서버 저장(system/coord/dashNotes/_common) — 모든 교수님·모든 PC 공통 포스트잇. 서버값이 없으면 이 PC 값 */
+  var _noteSrv = {}, _noteRef = null, _noteWho = '';
+  function noteWho(){ return '_common'; }   // [K144] 교수님 개인별이 아니라 플랫폼 전체 공통 하나로 관리
+  function noteKey(n){ return String(n || '').replace(/[.#$\[\]\/]/g, '_') || '_'; }
+  function noteWatch(){
+    var w = noteWho(); if(!w || w === _noteWho) return;
+    _noteWho = w;
+    try{ if(_noteRef) _noteRef.off(); }catch(e){}
+    try{
+      _noteRef = firebase.database().ref('system/coord/dashNotes/' + noteKey(w));
+      _noteRef.on('value', function(s){ var v = s.val(); _noteSrv[w] = Array.isArray(v) ? v : null; try{ if(document.getElementById('dashQuickNotes')) renderNotes(noteSelected()); }catch(e){} });
+    }catch(e){}
+  }
+  function noteSelected(){
+    try{
+      var w = noteWho(), sv = _noteSrv[w];
+      if(Array.isArray(sv)){ var s2 = sv.filter(function(k){ return choices.some(function(c){ return c.mode === k; }); }); if(s2.length) return s2; }
+    }catch(e){}
+    try{
+      var v = JSON.parse(localStorage.getItem(NOTE_KEY) || 'null');
+      if(Array.isArray(v)){ v = v.filter(function(k){ return choices.some(function(c){ return c.mode === k; }); }); if(v.length) return v; }
+    }catch(e){}
+    return ['attendance','qa','quiz','schedule','materials'];
+  }
+  function openNoteSettings(){
+    var old = document.getElementById('dashNoteSettings'); if(old) old.remove();
+    var cur = noteSelected();
+    var ov = document.createElement('div'); ov.id = 'dashNoteSettings'; ov.className = 'hex-settings-overlay';
+    ov.innerHTML = '<div class="hex-settings-card"><div class="hex-settings-head"><div><b>바로가기 포스트잇 설정 <span style="display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px; background:#dcfce7; color:#15803d; font-size:11.5px; font-weight:900; vertical-align:middle;">🌐 전체 공통</span></b><small>필요한 메뉴만 골라 주세요(개수 제한 없음). 모든 교수님·모든 PC·모든 과정에 똑같이 적용됩니다.</small></div><button type="button" data-close>&times;</button></div>'
+      + '<div class="hex-settings-list">' + choices.map(function(item){
+          return '<label><input type="checkbox" value="'+esc(item.mode)+'" '+(cur.indexOf(item.mode)>=0?'checked':'')+'><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></label>';
+        }).join('') + '</div><div class="hex-settings-foot"><span data-cnt></span><button type="button" data-save>적용</button></div></div>';
+    document.body.appendChild(ov);
+    var sync = function(){ var n = ov.querySelectorAll('input:checked').length; ov.querySelector('[data-cnt]').textContent = n + '개 선택'; ov.querySelector('[data-save]').disabled = (n < 1); };
+    ov.querySelectorAll('input').forEach(function(i){ i.addEventListener('change', sync); });
+    ov.querySelector('[data-close]').onclick = function(){ ov.remove(); };
+    ov.onclick = function(e){ if(e.target === ov) ov.remove(); };
+    ov.querySelector('[data-save]').onclick = function(){
+      var vals = Array.from(ov.querySelectorAll('input:checked')).map(function(i){ return i.value; });
+      if(!vals.length) return;
+      try{ localStorage.setItem(NOTE_KEY, JSON.stringify(vals)); }catch(e){}
+      var w = noteWho();
+      if(w){ _noteSrv[w] = vals; try{ firebase.database().ref('system/coord/dashNotes/' + noteKey(w)).set(vals); }catch(e){} }
+      ov.remove(); renderNotes(vals);
+    };
+    sync();
+  }
   var NOTE_COLORS = [['#fef9c3','#ca8a04'],['#dcfce7','#16a34a'],['#dbeafe','#2563eb'],['#fce7f3','#db2777'],['#ede9fe','#7c3aed'],['#ffedd5','#ea580c']];
   function renderNotes(picked){
+    try{ noteWatch(); }catch(e){}
     try{
       var view = document.getElementById('view-dashboard'); if(!view) return;
       if(!document.getElementById('dashNotesCss')){
@@ -18078,14 +18133,14 @@ ui.confirmRouletteLeader = function(){
       var host2 = view.querySelector('.dash-hero-container') || view;   // [K122] 가운데 카드 바로 오른쪽에 붙인다
       if(!box){ box = document.createElement('div'); box.id = 'dashQuickNotes'; }
       if(box.parentNode !== host2) host2.appendChild(box);
-      box.innerHTML = '<div class="dqn-head"><span>바로가기</span><button type="button" title="메뉴 고르기(육각 리모컨과 같이 바뀜)" data-dqn-gear><i class="fa-solid fa-gear"></i></button></div>'
+      box.innerHTML = '<div class="dqn-head"><span>바로가기 <span title="전체 공통 — 모든 교수님·모든 PC·모든 과정" style="padding:1px 6px; border-radius:999px; background:#dcfce7; color:#15803d; font-size:10px; font-weight:900;">공통</span></span><button type="button" title="바로가기 고르기(모든 과정 공통)" data-dqn-gear><i class="fa-solid fa-gear"></i></button></div>'
         + picked.map(function(mode, i){
             var it = choices.filter(function(c){ return c.mode === mode; })[0]; if(!it) return '';
             var c = NOTE_COLORS[i % NOTE_COLORS.length];
             return '<button type="button" class="dqn" data-mode="'+esc(it.mode)+'" style="background:'+c[0]+';"><i class="fa-solid '+esc(it.icon)+'" style="color:'+c[1]+';"></i><span>'+esc(it.label)+'</span></button>';
           }).join('');
       box.onclick = function(e){
-        if(e.target.closest('[data-dqn-gear]')) return openSettings();
+        if(e.target.closest('[data-dqn-gear]')) return openNoteSettings();
         var b = e.target.closest('.dqn'); if(!b) return;
         var m = b.getAttribute('data-mode');
         try{ if(typeof ui !== 'undefined' && ui.setMode) ui.setMode(m); }catch(err){}
@@ -18101,7 +18156,7 @@ ui.confirmRouletteLeader = function(){
     overlay.id = 'hexRemoteSettings';
     overlay.className = 'hex-settings-overlay';
     overlay.innerHTML =
-      '<div class="hex-settings-card"><div class="hex-settings-head"><div><b>육각 리모컨 메뉴 설정</b><small>자주 쓰는 메뉴를 정확히 6개 선택하세요.</small></div><button type="button" data-close>&times;</button></div>'+
+      '<div class="hex-settings-card"><div class="hex-settings-head"><div><b>육각 리모컨 메뉴 설정 <span style="display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px; background:#ffedd5; color:#c2410c; font-size:11.5px; font-weight:900; vertical-align:middle;">📌 이 과정만</span></b><small>육각형 칸이 6개라 정확히 6개를 고릅니다. 이 과정에만 적용됩니다.</small></div><button type="button" data-close>&times;</button></div>'+
       '<div class="hex-settings-list">'+choices.map(function(item){
         return '<label><input type="checkbox" value="'+esc(item.mode)+'" '+(picked.indexOf(item.mode)>=0?'checked':'')+'><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></label>';
       }).join('')+'</div><div class="hex-settings-foot"><span id="hexSelectedCount">6 / 6</span><button type="button" data-save>적용</button></div></div>';
