@@ -9891,6 +9891,7 @@ const scheduleMgr = {
     _mirrorPhoneToR2: async function(room, dataUrl, ts) {
         try {
             if (!window.kacMaterials || !window.kacMaterials.uploadRaw || !dataUrl || !ts) return;
+            if (/^https?:/i.test(dataUrl)) return;   // [K116] 이미 Cloudflare 주소면 복사할 필요 없음
             if (this._mirrorBusy === room + ts || this._localUploadTs === ts) return;
             const cur = (await firebase.database().ref('media/' + room + '/schedulePdf').once('value')).val() || {};
             if (cur.imgKey && Number(cur.updatedAt || 0) >= ts - 60000) return;     // 이미 R2 에 같은(또는 더 새) 시간표가 있음
@@ -10010,37 +10011,31 @@ const scheduleMgr = {
         try {
             const dataUrl = isPdf ? await this._pdfToDataUrl(file) : await this._imgToDataUrl(file);
             if (!dataUrl) throw new Error('변환 결과가 비어 있습니다.');
+            /* [K116] 시간표 파일은 Cloudflare(R2)에만 둔다. Firebase 에는 '주소'만 기록(수십 바이트).
+               · 변환 이미지(JPG, 여러 장은 세로로 이어붙임) → 강사·교육생 화면 공용
+               · PDF 원본(PDF 일 때만) → 교육생 [PDF 원본] 버튼
+               관리자 암호는 교재 올릴 때와 같은 것(이 창에서 한 번). 암호를 넣지 않으면 등록하지 않는다. */
+            if (!window.kacMaterials || !window.kacMaterials.uploadRaw) throw new Error('Cloudflare 연결 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
+            const okKey = await ui._matEnsureKey();
+            if (!okKey) { ui.showAlert('관리자 암호를 입력해야 시간표를 올릴 수 있습니다.'); this.loadPhoto(); return; }
+            if (block) block.innerHTML = '<div style="padding:40px 0; text-align:center; color:#475569; font-weight:800;"><i class="fa-solid fa-spinner fa-spin"></i> Cloudflare 에 올리는 중입니다…</div>';
+            const prev = (await firebase.database().ref('media/' + room + '/schedulePdf').once('value')).val() || {};
+            const blob = await (await fetch(dataUrl)).blob();
+            const base = String(file.name || '교육시간표').replace(/\.[^.]+$/, '');
+            const upImg = await window.kacMaterials.uploadRaw(new File([blob], base + '.jpg', { type: 'image/jpeg' }), 'schedule');
+            const upPdf = isPdf ? await window.kacMaterials.uploadRaw(file, 'schedule') : null;
+            const imgView = window.kacMaterials.fileUrl({ key: upImg.key }) + '?view=1&v=2';
             const updatedAt = Date.now();
-            this._localUploadTs = updatedAt;   // [K115] PC 업로드는 아래에서 직접 R2 에 올리므로 휴대폰 복사 로직이 건너뛰게
-            await kacMedia.write(room, 'scheduleImage', { dataUrl: dataUrl, updatedAt: updatedAt });
-            try { await this._idbSet(room, { updatedAt: updatedAt, dataUrl: dataUrl }); } catch (e) {}
-            if (state.room === room) this._renderPhoto({ dataUrl: dataUrl, updatedAt: updatedAt });
-            /* [K114] 시간표는 Cloudflare(R2) schedule/ 폴더에도 올린다 — 교육생은 R2 에서 받아 본다(Firebase 트래픽 0).
-               · 변환된 이미지(여러 장은 세로로 이어붙인 JPG) → 교육생 앱 안 보기용
-               · PDF 원본(PDF 일 때만) → [PDF 원본] 버튼용
-               Firebase 이미지는 강사·운영부·지원부 화면용으로 그대로 둔다(휴대폰 업로드와 공용). */
-            let pdfMsg = '';
-            if (window.kacMaterials && window.kacMaterials.uploadRaw) {
-                try {
-                    const okKey = await ui._matEnsureKey();
-                    if (okKey) {
-                        const prevSnap = await firebase.database().ref('media/' + room + '/schedulePdf').once('value');
-                        const prev = prevSnap.val() || {};
-                        const blob = await (await fetch(dataUrl)).blob();
-                        const base = String(file.name || '교육시간표').replace(/\.[^.]+$/, '');
-                        const imgFile = new File([blob], base + '.jpg', { type: 'image/jpeg' });
-                        const upImg = await window.kacMaterials.uploadRaw(imgFile, 'schedule');
-                        const upPdf = isPdf ? await window.kacMaterials.uploadRaw(file, 'schedule') : null;
-                        await firebase.database().ref('media/' + room + '/schedulePdf').set({
-                            key: upPdf ? upPdf.key : null, url: upPdf ? upPdf.url : null, name: file.name || '', size: file.size || 0,
-                            imgKey: upImg.key, imgUrl: upImg.url, updatedAt: Date.now()
-                        });
-                        [prev.key, prev.imgKey].forEach(k => { if (k && k !== upImg.key && (!upPdf || k !== upPdf.key)) window.kacMaterials.removeKey(k); });
-                        pdfMsg = '\n(교육생용 파일을 Cloudflare 에도 올렸습니다)';
-                    }
-                } catch (e) { console.warn('[시간표] R2 업로드 실패 — 교육생은 Firebase 이미지로 봅니다', e); }
-            }
-            ui.showAlert('✅ 교육 시간표를 등록했습니다.\n교육생 화면의 [교육 시간표]에도 바로 반영됩니다.' + pdfMsg);
+            this._localUploadTs = updatedAt;
+            await kacMedia.write(room, 'scheduleImage', { dataUrl: imgView, r2Key: upImg.key, updatedAt: updatedAt });   // dataUrl 칸에 R2 주소(이미지 태그가 그대로 읽음)
+            await firebase.database().ref('media/' + room + '/schedulePdf').set({
+                key: upPdf ? upPdf.key : null, url: upPdf ? upPdf.url : null, name: file.name || '', size: file.size || 0,
+                imgKey: upImg.key, imgUrl: upImg.url, updatedAt: updatedAt
+            });
+            [prev.key, prev.imgKey].forEach(k => { if (k && k !== upImg.key && (!upPdf || k !== upPdf.key)) window.kacMaterials.removeKey(k); });
+            try { await this._idbSet(room, { updatedAt: updatedAt, dataUrl: imgView }); } catch (e) {}
+            if (state.room === room) this._renderPhoto({ dataUrl: imgView, updatedAt: updatedAt });
+            ui.showAlert('✅ 교육 시간표를 등록했습니다. (Cloudflare 저장)\n교육생 화면의 [교육 시간표]에도 바로 반영됩니다.');
         } catch (e) {
             console.warn('[시간표 업로드] 실패', e);
             ui.showAlert('등록에 실패했습니다.\n' + ((e && e.message) ? e.message : '파일을 다시 확인해 주세요.'));
