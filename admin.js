@@ -3157,7 +3157,7 @@ loadDashboardStats: function() {
             const _ds = await firebase.database().ref('system/dorm/rosters').once('value');
             const _all = _ds.val() || {};
             let _best = null;
-            for (const k in _all) { const dv = _all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName || '').trim() === _cn) { if (!_best || (dv.updatedAt || 0) > (_best.updatedAt || 0)) _best = dv; } }
+            for (const k in _all) { const dv = _all[k]; if (dv && Array.isArray(dv.list) && dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(dv))&& String(dv.courseName || '').trim() === _cn) { if (!_best || (dv.updatedAt || 0) > (_best.updatedAt || 0)) _best = dv; } }
             const _rn = _best ? _best.list.map(x => x && x.name).filter(Boolean).map(n => String(n).trim()) : [];
             const _aSnap = await firebase.database().ref('courses/' + room + '/students').once('value');
             if (state.room !== room) return;
@@ -6045,7 +6045,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
             const ds = await firebase.database().ref('system/dorm/rosters').once('value');
             const all = ds.val() || {};
             let best = null;
-            for (const k in all) { const dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName||'').trim() === cn) { if (!best || (dv.updatedAt||0) > (best.updatedAt||0)) best = dv; } }
+            for (const k in all) { const dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(dv))&& String(dv.courseName||'').trim() === cn) { if (!best || (dv.updatedAt||0) > (best.updatedAt||0)) best = dv; } }
             if (best) best.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
         } catch (e) { /* 무시 */ }
         return names;
@@ -6075,7 +6075,7 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                 const ds = await firebase.database().ref('system/dorm/rosters').once('value');
                 const all = ds.val() || {};
                 let best = null;
-                for (const k in all) { const dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName||'').trim() === cn) { if (!best || (dv.updatedAt||0) > (best.updatedAt||0)) best = dv; } }
+                for (const k in all) { const dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(dv))&& String(dv.courseName||'').trim() === cn) { if (!best || (dv.updatedAt||0) > (best.updatedAt||0)) best = dv; } }
                 if (best) best.list.forEach(s => { if (s && s.name) names.push(String(s.name).trim()); });
             } catch (e) { /* 무시 */ }
             return names;
@@ -7173,7 +7173,7 @@ resetShuttleRequests: function() {
                 let _rosterNames = [];
                 try {
                     const _cn2 = String(settings.courseName||'').trim(); let _best2=null;
-                    for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn2){ if(!_best2||(_dv.updatedAt||0)>(_best2.updatedAt||0)) _best2=_dv; } }
+                    for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(_dv))&& String(_dv.courseName||'').trim()===_cn2){ if(!_best2||(_dv.updatedAt||0)>(_best2.updatedAt||0)) _best2=_dv; } }
                     if(_best2) _best2.list.forEach(x=>{ if(x&&x.name) _rosterNames.push(x.name); });
                 } catch(e){}
                 const _es2 = Array.isArray(r.expectedStudents) ? r.expectedStudents : (r.expectedStudents ? Object.values(r.expectedStudents) : []);
@@ -7192,7 +7192,7 @@ resetShuttleRequests: function() {
                 // 예정(지원부 업로드) 인원 — 현재 과정 주차의 지원부 명단
                 try {
                     const _cn = String(settings.courseName||'').trim(); let _best=null;
-                    for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
+                    for (const _k in dorm){ const _dv=dorm[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(_dv))&& String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
                     if(_best) plannedTotal += _best.list.length;
                 } catch(e){}
                 Object.keys(_allActs).forEach(_dt=>{
@@ -7894,7 +7894,7 @@ resetShuttleRequests: function() {
             if(prof.toLowerCase().indexOf(ql)<0) return;   // 담임교수만 검색
             var stuNames=[]; try{ Object.keys(students).forEach(function(k){ var s=students[k]; if(kacIsRealStudent(s,k)) stuNames.push(String(s.name).trim()); }); }catch(e){}
             var planned=0, rosterNames=[], rosterList=[];
-            try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ rosterList=best.list.slice(); planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
+            try{ var best=null; for(var k in dorm){ var dv=dorm[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&!(window.kacRosterStale&&window.kacRosterStale(dv))&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } } if(best){ rosterList=best.list.slice(); planned=best.list.length; best.list.forEach(function(s){ if(s&&s.name) rosterNames.push(String(s.name).trim()); }); } }catch(e){}
             var cnt=new Set(stuNames).size;
             var assigned=0; try{ rosterNames.forEach(function(n){ if(assignedSet[nn(n)]) assigned++; }); }catch(e){}
             var outing=0; try{ var acts=r.admin_actions||{}; Object.keys(acts).forEach(function(dt){ var day=acts[dt]||{}; Object.keys(day).forEach(function(id){ var a=day[id]; if(a&&(a.type==='outing'||a.type==='overnight'||a.type==='group_outing')&&!(a.returned===true||a.returnReportTime)) outing++; }); }); }catch(e){}
@@ -8030,7 +8030,7 @@ resetShuttleRequests: function() {
                 const _period=(r.settings||{}).period||'';
                 const _start=_period.indexOf('~')>=0?_period.split('~')[0].trim():'';
                 let list=[];
-                try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length && String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
+                try{ const _cn=String(course).trim(); let _best=null; for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv && Array.isArray(_dv.list) && _dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(_dv))&& String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } } if(_best) list=_best.list; }catch(e){}
                 // 소속 분포 집계 (예정 명단 소속 기준)
                 list.forEach(function(pp){ var reg=ui._deptToRegion((pp&&pp.dept)||''); if(reg){ _agg[reg]=(_agg[reg]||0)+1; _aggTotal++; } else { _aggUnknown++; } });
                 const _arrivedSet=new Set(Object.keys(r.students||{}).filter(k=>kacIsRealStudent((r.students||{})[k],k)).map(k=>String((r.students||{})[k].name).trim()));
@@ -12923,7 +12923,7 @@ const kiosk = {
             const s=r.settings||{}, st=r.status||{};
             // 교육생수 = 예정 인원 (지원부 명단/dorm rosters에서 과정명 매칭)
             let planned=0; const _cn=String(s.courseName||'').trim(); let _best=null;
-            for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv&&Array.isArray(_dv.list)&&_dv.list.length&&String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
+            for(const _k in dormAll){ const _dv=dormAll[_k]; if(_dv&&Array.isArray(_dv.list)&&_dv.list.length&&!(window.kacRosterStale&&window.kacRosterStale(_dv))&&String(_dv.courseName||'').trim()===_cn){ if(!_best||(_dv.updatedAt||0)>(_best.updatedAt||0)) _best=_dv; } }
             if(_best) planned=_best.list.length;
             try{ var _place=String(s.roomDetailName||'').trim();
                 var _nm=[]; if(_best&&_best.list) _best.list.forEach(function(pp){ if(pp&&pp.name) _nm.push(String(pp.name).trim()); });
@@ -16629,7 +16629,7 @@ ui.openStudentMap = async function(){
     course=String(cs.val()||'').trim();
     var ds=await firebase.database().ref('system/dorm/rosters').once('value');
     var all=ds.val()||{}; var best=null;
-    for(var k in all){ var dv=all[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
+    for(var k in all){ var dv=all[k]; if(dv&&Array.isArray(dv.list)&&dv.list.length&&!(window.kacRosterStale&&window.kacRosterStale(dv))&&String(dv.courseName||'').trim()===course){ if(!best||(dv.updatedAt||0)>(best.updatedAt||0)) best=dv; } }
     if(best) list=best.list;
   }catch(e){}
   var counts={}, unknown=0, total=0;
