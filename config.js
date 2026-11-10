@@ -23,6 +23,11 @@ if (!firebase.apps.length) {
 //    (head에서 즉시 실행하면 appendChild 대상이 null → TypeError로 App Check가 반쯤 깨지고 DB 연결이 멈춘다.)
 function _kacActivateAppCheck() {
     if (window._kacAppCheckDone) return;            // 중복 활성화 방지(옵저버+안전망 이중 호출 대비)
+    /* [K100] body 가 생기기 전(head)에는 절대 활성화하지 않는다.
+       K87 에서 head 즉시 호출을 넣었더니, 크롬에서 reCAPTCHA 배지를 붙일 body 가 없어 활성화가 '반쯤' 실패
+       → 이후 호출은 전부 'already-activated' 오류, 토큰은 안 나와 DB 가 영영 응답 없음(현황판 무한 로딩).
+       body 가 생기는 순간 아래 옵저버가 바로 활성화하므로(본문 스크립트 실행 전) 토큰 타이밍도 충분하다. */
+    if (!document.body) return;
     try {
         if (firebase.appCheck) {
             firebase.appCheck().activate('6LcAu2ItAAAAAAqwjmZ0DbxUkPwrn5ExWqCOTEtf', true);
