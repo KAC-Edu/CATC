@@ -1815,7 +1815,10 @@ body.in-course #moreToggleTab{ display:flex !important; }
     </div>
 
     <!-- [홈 로딩] Firebase 실시간 데이터 도착 전까지 표시 → 검색 빈결과 방지 안내 -->
-    <div id="homeSyncBadge"><div class="hsb-inner"><span class="hsb-spin"></span> 실시간 데이터 불러오는 중…</div></div>
+    <div id="homeSyncBadge"><div class="hsb-inner"><span class="hsb-spin"></span> 실시간 데이터 불러오는 중…</div></div><script>/* [K99] 실시간 데이터가 15초 넘게 안 오면 무한 대기 대신 새로고침 버튼 */
+setTimeout(function(){ try{ if(window._homeStatsReady) return; var b=document.getElementById('homeSyncBadge'); if(!b||b.classList.contains('done')) return;
+ var i=b.querySelector('.hsb-inner'); if(i) i.innerHTML='<span style="font-size:20px;">⚠️</span> 연결이 지연되고 있어요 <button type="button" onclick="location.reload()" style="margin-left:6px;border:none;border-radius:999px;padding:10px 20px;background:#2563eb;color:#fff;font-size:18px;font-weight:800;cursor:pointer;">새로고침</button>';
+}catch(e){} }, 15000);</script>
 
     <!-- catc.png: 원본 전체 비율 노출 -->
     <div class="dashboard-campus-banner dashboard-campus-image" style="max-width:1100px; width:100%; margin-bottom:20px;">
