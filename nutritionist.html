@@ -612,6 +612,20 @@
         .rl-row.drop-after { box-shadow: inset 0 -3px 0 0 #2563eb; }
         .rl-row.drop-blocked { box-shadow: inset 0 0 0 2px #fca5a5; }
         .rl-row.rl-editing { display:flex; flex-wrap:wrap; gap:8px; background:#eff6ff; }
+        /* [K109] 직원 명단 — 소속 바 디자인 개선 (연파랑 바탕에 흰 글씨라 안 보이던 문제) */
+        .rl-group { border:1px solid #e2e8f0 !important; border-radius:14px !important; overflow:hidden; background:#fff; box-shadow:0 2px 8px rgba(15,23,42,.04); }
+        .rl-gbar { background:#fff !important; border:none !important; border-left:5px solid #3b82f6 !important; border-radius:0 !important; box-shadow:none !important; padding:14px 18px !important; transition:background .15s; }
+        .rl-gbar:hover { background:#f8fafc !important; }
+        .rl-group.open .rl-gbar { background:#eff6ff !important; border-radius:0 !important; border-bottom:1px solid #dbeafe !important; }
+        .rl-gbar-l { gap:12px !important; }
+        .rl-gchev { color:#94a3b8 !important; font-size:12px !important; width:12px; }
+        .rl-group.open .rl-gchev { color:#2563eb !important; }
+        .rl-gicon { width:32px; height:32px; border-radius:10px; background:#dbeafe; color:#2563eb; display:inline-flex; align-items:center; justify-content:center; font-size:14px; flex:none; }
+        .rl-gbar .rl-gname { color:#0f172a !important; font-size:16.5px !important; font-weight:900 !important; letter-spacing:-.2px; }
+        .rl-gbar .rl-gcount { background:#eff6ff !important; color:#1d4ed8 !important; border:1px solid #bfdbfe; padding:4px 13px !important; font-size:13px !important; font-weight:900 !important; }
+        .rl-group.open .rl-gbar .rl-gcount { background:#2563eb !important; color:#fff !important; border-color:#2563eb; }
+        .rl-colhead span { color:#64748b !important; }
+        .rl-row { color:#0f172a; }
         .rl-ein { height:38px; padding:0 11px; border:1.5px solid #2563eb; border-radius:8px; font-weight:700; background:#fff; font-size:14px; }
         .rl-ein-dept { min-width:130px; }
         .rl-editing .rl-ein:not(.rl-ein-dept) { flex:1; min-width:90px; }
@@ -914,6 +928,10 @@
             </button>
             <button class="upload-btn" onclick="aiExtractMenu()" style="background:#7c3aed; color:#fff; margin-bottom:6px;">
                 <i class="fa-solid fa-wand-magic-sparkles"></i> 식단표 파일 분석으로 자동 입력
+            </button>
+            <!-- [K110] 식당 플랫폼(공개 페이지)을 이 화면 안에서 그대로 열어 보기 — 그 페이지를 방문하는 것과 같음 -->
+            <button class="upload-btn" onclick="openCafeteriaView()" style="background:#0f766e; color:#fff; margin-bottom:6px;">
+                <i class="fa-solid fa-utensils"></i> 식당 플랫폼 식단 보기
             </button>
             <input type="file" id="menuAiInput" accept="image/*,application/pdf,.pdf,.hwp,.hwpx" style="display:none;">
             <div style="font-size:11.5px; color:var(--muted); font-weight:700; margin:0 2px 8px;">PDF·한글(HWP/HWPX)은 AI 없이 바로 판독합니다. 사진(이미지)·스캔형 PDF만 AI(Gemini)를 사용합니다. 요일별 아침·점심·저녁 메뉴만 추출되고 인원수·원산지·안내문은 제외됩니다. <a href="#" onclick="_setGeminiKey();return false;" style="color:#7c3aed; font-weight:800;">AI 키 설정</a></div>
@@ -2737,7 +2755,7 @@ function renderRoster(){
         const _deptOpen = _openDepts.has(d) || !!q || !!_rosterDeptFilter;   // 검색·필터 시 자동 펼침
         sectionsHtml += `<div class="rl-group ${_deptOpen?'open':''}">
             <button type="button" class="rl-gbar" data-dept="${escH(d)}" onclick="toggleDept(this)">
-                <span class="rl-gbar-l"><i class="fa-solid fa-chevron-right rl-gchev"></i> <span class="rl-gname" style="color:#fff;">${escH(d)}</span></span>
+                <span class="rl-gbar-l"><i class="fa-solid fa-chevron-right rl-gchev"></i> <span class="rl-gicon"><i class="fa-solid fa-building"></i></span><span class="rl-gname">${escH(d)}</span></span>
                 <span class="rl-gcount">${members.length}명</span>
             </button>
             <div class="rl-gbody">
@@ -3637,6 +3655,23 @@ document.addEventListener('DOMContentLoaded', function(){ setTimeout(function(){
 })();
 </script>
 
+<script>
+/* [K110] 식당 플랫폼 공개 페이지를 화면 안 창(iframe)으로 열기 — 데이터를 따로 가져오거나 저장하지 않는다 */
+function openCafeteriaView(){
+    var URL_CAF='https://catc-cafeteria.github.io/catc-cafeteria/';
+    var ov=document.getElementById('cafViewOv'); if(ov) ov.remove();
+    ov=document.createElement('div'); ov.id='cafViewOv';
+    ov.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:18px;';
+    ov.innerHTML='<div style="width:min(1100px,100%);height:min(92vh,900px);background:#fff;border-radius:18px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(15,23,42,.35);">'
+      +'<div style="flex:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-bottom:1px solid #e2e8f0;">'
+      +'<b style="font-size:16px;color:#0f172a;"><i class="fa-solid fa-utensils" style="color:#0f766e;margin-right:6px;"></i>식당 플랫폼</b>'
+      +'<span style="display:flex;gap:8px;"><a href="'+URL_CAF+'" target="_blank" rel="noopener" style="padding:8px 12px;border-radius:10px;background:#f1f5f9;color:#334155;font-weight:800;font-size:13px;text-decoration:none;"><i class="fa-solid fa-up-right-from-square"></i> 새 창으로</a>'
+      +'<button type="button" onclick="document.getElementById(\'cafViewOv\').remove()" style="width:36px;height:36px;border:none;border-radius:50%;background:#f1f5f9;font-size:16px;cursor:pointer;">✕</button></span></div>'
+      +'<iframe src="'+URL_CAF+'" title="식당 플랫폼" style="flex:1;border:0;width:100%;" referrerpolicy="no-referrer"></iframe></div>';
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+    document.body.appendChild(ov);
+}
+</script>
 </body>
 </html>
 <!-- @build 20260614-004000 (영양사 vBBB: 화면 자동 맞춤(auto-fit) 추가 — 입장 시 가로폭이 뷰어보다 넓으면 자동 축소(수동 Ctrl-− 불필요). 강사·교육운영부·지원부·포털에도 동일 적용. 직전 vAAA: 주말 미운영 표기) -->
