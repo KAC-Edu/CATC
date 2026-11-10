@@ -723,6 +723,30 @@ window.kacMaterials = (function () {
     });
   }
 
+  /* [K104] 자료실 목록에 남기지 않는 '임시 파일' 올리기 (교육 시간표 PDF 등)
+     folder: 'schedule' → R2 의 schedule/ 폴더에 저장 (Cloudflare 수명주기 규칙으로 자동 삭제) */
+  function uploadRaw(file, folder) {
+    var key = getKey();
+    if (!key) return Promise.reject(new Error('NO_KEY'));
+    return fetch(API + '/upload?name=' + encodeURIComponent(file.name) + (folder ? '&folder=' + encodeURIComponent(folder) : ''), {
+      method: 'POST',
+      headers: { 'X-Upload-Key': key, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    })
+    .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); })
+    .then(function (j) {
+      if (!j.ok) { if (j._status === 401) clearKey(); throw new Error(j.error || '업로드에 실패했습니다.'); }
+      return { key: j.key, url: j.url, name: j.name, size: Number(j.size || file.size || 0) };
+    });
+  }
+  /* 키로 R2 파일 지우기 (암호 있을 때만, 실패해도 조용히) */
+  function removeKey(k) {
+    var key = getKey();
+    if (!key || !k) return Promise.resolve(false);
+    return fetch(fileUrl({ key: k }), { method: 'DELETE', headers: { 'X-Upload-Key': key } })
+      .then(function (r) { return r.ok; }).catch(function () { return false; });
+  }
+
   /* 자료실 전체 목록 (최신순) */
   function listAll() {
     return firebase.database().ref('system/materials').once('value').then(function (s) {
@@ -751,7 +775,7 @@ window.kacMaterials = (function () {
   }
 
   return { API: API, getKey: getKey, setKey: setKey, clearKey: clearKey,
-           fmtSize: fmtSize, fileUrl: fileUrl, ping: ping, upload: upload, listAll: listAll,
+           fmtSize: fmtSize, fileUrl: fileUrl, ping: ping, upload: upload, uploadRaw: uploadRaw, removeKey: removeKey, listAll: listAll,
            link: link, unlink: unlink, destroy: destroy };
 })();
 
