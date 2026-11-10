@@ -193,7 +193,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <script src="config.js?v=7944b988"></script>
+    <script src="config.js?v=110e2c71"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
@@ -7323,7 +7323,7 @@ window.kacExpireEndedCourses = async function(){
         }
         var b='courses/'+room+'/';
         ['students','internal_attendance','questions','admin_actions','shuttle','dinner_skips','tablet_loans','connections','quizAnswers','expectedStudents','coordRoster','activeQuiz','quizFinalResults','attendanceQR','scheduleImage','coordNoticeHistory','gradPhoto','surveyAnswers','activeSurvey','lastSurveyResult','returnCheckAck','zoomMeeting'].forEach(function(k){ updates[b+k]=null; });
-        ['scheduleImage','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [2026-07-07] 이전된 미디어 저장소(media/{room})도 함께 정리
+        ['scheduleImage','schedulePdf','gradPhoto','attendanceQR'].forEach(function(k){ updates['media/'+room+'/'+k]=null; });   // [2026-07-07] 이전된 미디어 저장소(media/{room})도 함께 정리
         updates[b+'boardNotice']=''; updates[b+'notice']=''; updates[b+'coordNotice']='';
         updates[b+'settings/courseName']=''; updates[b+'settings/period']=null; updates[b+'settings/coordinatorName']=null; updates[b+'settings/password']=null;
         updates[b+'status/professorName']=''; updates[b+'status/professorNames']=null; updates[b+'status/professorMain']=null; updates[b+'status/roomStatus']='idle'; updates[b+'status/ownerSessionId']=null; updates[b+'status/resetKey']='rk_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
