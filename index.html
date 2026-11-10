@@ -7876,7 +7876,9 @@ body.kac-quiz-active .quiz-overlay,
       +'<button id="kacEnrollGateGo" style="width:100%;border:none;border-radius:14px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;font-size:16px;font-weight:900;padding:15px;cursor:pointer;box-shadow:0 8px 20px rgba(37,99,235,.35);">📝 입교등록 하러 가기</button>'
       /* [K61] 질문·퀴즈는 게스트도 가능 — 이 게이트에서 바로 게스트 입장을 고를 수 있게 한다.
          (카카오 메뉴로 들어오면 이 카드가 전체화면을 덮어 입교화면의 게스트 버튼이 가려지기 때문) */
-      +((label==='질문하기'||label==='퀴즈 풀기')
+      /* [K95] 게이트의 게스트 버튼 제거 — 차량·외출외박과 동일하게 '입교등록 하러 가기'만.
+               게스트 입장은 입교 화면(과정 선택 후) 하단 버튼으로만 가능 */
+      +((false)
         ? '<div style="margin-top:12px;padding-top:14px;border-top:1px solid #e2e8f0;">'
           +'<button id="kacEnrollGateGuest" style="width:100%;border:1.5px solid #99f6e4;border-radius:14px;background:#f0fdfa;color:#0f766e;font-size:15px;font-weight:900;padding:14px;cursor:pointer;">'
           +'<i class="fa-solid fa-user-secret" style="margin-right:7px;"></i>게스트로 입장 <span style="font-size:11px;background:#ccfbf1;border-radius:999px;padding:3px 8px;margin-left:4px;">이름 없이</span></button>'
