@@ -5105,7 +5105,7 @@ setMode: function(mode) {
                     setTimeout(() => document.getElementById('instantSurveyPanel')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
                 }
             }
-            if (mode === 'attendance') ui.loadAttendanceView();
+            if (mode === 'attendance') { ui.loadAttendanceView(); try { ui.toggleAttendanceMode('internal'); } catch(e){} }   // [K123] 출결 메뉴는 OTP 자체출결 화면으로 바로
             if (mode === 'schedule' && typeof scheduleMgr !== 'undefined') scheduleMgr.load();
             if (mode === 'guide') { setTimeout(() => guideMgr.refresh(), 100); }
             if (mode === 'exam-timer') { setTimeout(() => examTimer.init(), 50); }
@@ -9923,6 +9923,7 @@ const scheduleMgr = {
                         <button onclick="scheduleMgr.deletePhoto()" style="background:#fef2f2; color:#dc2626; border:none; border-radius:10px; padding:9px 14px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-trash"></i> 삭제</button>
                     </div>
                 </div>`;
+            this._tryPdfPager(block, Number(data.updatedAt || 0));   // [K124] PDF 원본이 있으면 한 쪽씩 넘겨 보는 뷰어로
         } else {
             block.innerHTML = `
                 <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:18px 0;">
@@ -9934,6 +9935,62 @@ const scheduleMgr = {
                     <div style="font-size:12.5px; color:#94a3b8; font-weight:700;">PDF는 이미지로 변환해 등록되므로 교육생 화면에서도 그대로 보입니다.</div>
                 </div>`;
         }
+    },
+    /* [K124] 시간표 PDF 뷰어 — 여러 장을 한 장에 이어붙인 이미지 대신, PDF 원본을 '한 쪽씩' 크게 보여준다.
+       ◀ ▶ 버튼·키보드 좌우 화살표로 넘김. (PDF 원본이 없는 사진 시간표는 기존처럼 사진 그대로) */
+    _tryPdfPager: async function(block, ts) {
+        try {
+            const room = state.room; if (!room || typeof pdfjsLib === 'undefined') return;
+            const rec = (await firebase.database().ref('media/' + room + '/schedulePdf').once('value')).val();
+            if (!rec || !rec.key || (ts && Math.abs(Number(rec.updatedAt || 0) - ts) > 120000)) return;   // 같은 업로드의 PDF 일 때만
+            if (state.room !== room) return;
+            try { pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; } catch (e) {}
+            const url = window.kacMaterials.fileUrl({ key: rec.key }) + '?view=1&v=2';
+            const pdf = await pdfjsLib.getDocument({ url: url }).promise;
+            const img = block.querySelector('img'); if (!img) return;
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;';
+            wrap.innerHTML = '<div style="position:relative; width:100%; display:flex; justify-content:center;">'
+                + '<canvas id="schPdfCanvas" title="클릭하면 전체화면" style="max-width:100%; max-height:calc(100vh - 250px); border-radius:12px; box-shadow:0 8px 24px rgba(15,23,42,.12); background:#fff; cursor:zoom-in;"></canvas></div>'
+                + (pdf.numPages > 1 ? '<div style="display:flex; align-items:center; gap:14px;">'
+                    + '<button type="button" id="schPrev" style="width:44px; height:44px; border:none; border-radius:50%; background:#eef2ff; color:#1e3a8a; font-size:16px; cursor:pointer;"><i class="fa-solid fa-chevron-left"></i></button>'
+                    + '<span id="schPageNo" style="min-width:80px; text-align:center; font-size:16px; font-weight:900; color:#0f172a;"></span>'
+                    + '<button type="button" id="schNext" style="width:44px; height:44px; border:none; border-radius:50%; background:#eef2ff; color:#1e3a8a; font-size:16px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button></div>' : '');
+            img.replaceWith(wrap);
+            const cv = wrap.querySelector('#schPdfCanvas');
+            let cur = 1, busy = false;
+            const draw = async (n) => {
+                if (busy) return; busy = true;
+                try {
+                    const page = await pdf.getPage(n);
+                    const base = page.getViewport({ scale: 1 });
+                    const boxW = Math.min(block.clientWidth || 900, 1400), boxH = Math.max(320, window.innerHeight - 250);
+                    const fit = Math.min(boxW / base.width, boxH / base.height);
+                    const dpr = Math.min(2, window.devicePixelRatio || 1);
+                    const vp = page.getViewport({ scale: fit * dpr });
+                    cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+                    cv.style.width = Math.round(vp.width / dpr) + 'px'; cv.style.height = Math.round(vp.height / dpr) + 'px';
+                    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+                    cur = n;
+                    const no = wrap.querySelector('#schPageNo'); if (no) no.textContent = n + ' / ' + pdf.numPages;
+                    this._lastPhotoSrc = cv.toDataURL('image/jpeg', 0.92);   // 전체화면은 지금 쪽
+                } finally { busy = false; }
+            };
+            await draw(1);
+            const go = (d) => { const n = cur + d; if (n >= 1 && n <= pdf.numPages) draw(n); };
+            const pv = wrap.querySelector('#schPrev'), nx = wrap.querySelector('#schNext');
+            if (pv) pv.onclick = () => go(-1);
+            if (nx) nx.onclick = () => go(1);
+            cv.onclick = () => this.openPhotoFullscreen();
+            if (this._schKey) document.removeEventListener('keydown', this._schKey);
+            this._schKey = (e) => {
+                if (state.currentMode !== 'schedule' || !document.body.contains(cv) || document.getElementById('schedulePhotoFs')) return;
+                if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); go(1); }
+                if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); go(-1); }
+            };
+            document.addEventListener('keydown', this._schKey);
+            const hint = block.querySelector('.fa-magnifying-glass-plus'); if (hint && hint.parentElement) hint.parentElement.innerHTML = '<i class="fa-solid fa-magnifying-glass-plus"></i> 클릭하면 전체화면 · ◀ ▶ 또는 키보드 ← → 로 쪽 넘김';
+        } catch (e) { console.warn('[시간표 PDF 뷰어] 실패 — 사진으로 표시', e); }
     },
     showPhotoQr: function() {
         const block = document.getElementById('schedulePhotoBlock');
