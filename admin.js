@@ -9866,18 +9866,9 @@ const scheduleMgr = {
             const ts = snap.val();
             // 사진 없음(미업로드/삭제/과정 종료) → 이 PC 캐시도 정리 후 '내용 없음'
             if (!ts) { await this._idbDelete(room); if (state.room === room) this._renderPhoto(null); return; }
-            // [30분 자동 만료] 업로드 30분 경과 시 Firebase에서 자동 삭제 (저장 부담 경감)
-            if (Date.now() - Number(ts) > 1800000) {
-                kacMedia.remove(room, 'scheduleImage');
-                await this._idbDelete(room);
-                if (state.room === room) this._renderPhoto(null);
-                return;
-            }
-            // 페이지가 열려 있는 동안 30분 시점에 삭제되도록 예약
-            if (scheduleMgr._expireTimer) clearTimeout(scheduleMgr._expireTimer);
-            scheduleMgr._expireTimer = setTimeout(function () {
-                kacMedia.remove(room, 'scheduleImage');
-            }, (1800000 - (Date.now() - Number(ts))) + 2000);
+            /* [K112] '업로드 30분 뒤 자동 삭제' 폐지 — 교육생도 [교육 시간표]로 보게 되면서 과정 기간 내내 유지해야 함.
+               (삭제는 과정 종료 다음 날 자동 정리 / 과정 초기화 / 직접 삭제 때만. 이미지 한 장이라 저장 부담 미미) */
+            if (scheduleMgr._expireTimer) { clearTimeout(scheduleMgr._expireTimer); scheduleMgr._expireTimer = null; }
             // 1) 이 PC 캐시가 최신이면 → Firebase에서 이미지 다시 받지 않고 캐시로 표시
             const cached = await this._idbGet(room);
             if (cached && cached.updatedAt === ts && cached.dataUrl) {
@@ -9890,8 +9881,30 @@ const scheduleMgr = {
                 if (!dataUrl) { if (state.room === room) this._renderPhoto(null); return; }
                 await this._idbSet(room, { updatedAt: ts, dataUrl });
                 if (state.room === room) this._renderPhoto({ dataUrl, updatedAt: ts });
+                this._mirrorPhoneToR2(room, dataUrl, Number(ts));   // [K115] 휴대폰 사진도 Cloudflare 로
             } catch (e) { console.warn('[시간표 사진] 다운로드 실패', e); }
         });
+    },
+    /* [K115] 휴대폰(QR)으로 올린 시간표 사진도 Cloudflare(R2)에 복사 — 교육생은 R2 에서 받아 본다.
+       휴대폰 화면에서는 관리자 암호를 받을 수 없으므로, 강사 PC 가 사진을 받는 순간 대신 올린다.
+       (이 창에서 관리자 암호를 이미 입력해 둔 경우만 — 없으면 묻고, 취소하면 교육생은 Firebase 이미지로 본다) */
+    _mirrorPhoneToR2: async function(room, dataUrl, ts) {
+        try {
+            if (!window.kacMaterials || !window.kacMaterials.uploadRaw || !dataUrl || !ts) return;
+            if (this._mirrorBusy === room + ts || this._localUploadTs === ts) return;
+            const cur = (await firebase.database().ref('media/' + room + '/schedulePdf').once('value')).val() || {};
+            if (cur.imgKey && Number(cur.updatedAt || 0) >= ts - 60000) return;     // 이미 R2 에 같은(또는 더 새) 시간표가 있음
+            if (Date.now() - ts > 6 * 3600 * 1000) return;                           // 오래된 사진은 건드리지 않음
+            if (!window.kacMaterials.getKey()) {
+                const ok = await ui._matEnsureKey();                                 // 새 사진이 왔을 때 한 번 묻는다
+                if (!ok) return;
+            }
+            this._mirrorBusy = room + ts;
+            const blob = await (await fetch(dataUrl)).blob();
+            const up = await window.kacMaterials.uploadRaw(new File([blob], '교육시간표.jpg', { type: 'image/jpeg' }), 'schedule');
+            await firebase.database().ref('media/' + room + '/schedulePdf').set({ key: null, url: null, name: '교육시간표(휴대폰).jpg', size: blob.size, imgKey: up.key, imgUrl: up.url, updatedAt: Date.now() });
+            [cur.key, cur.imgKey].forEach(k => { if (k && k !== up.key) window.kacMaterials.removeKey(k); });
+        } catch (e) { console.warn('[시간표] 휴대폰 사진 R2 복사 실패 — 교육생은 Firebase 이미지로 봅니다', e); }
     },
     _renderPhoto: function(data) {
         const block = document.getElementById('schedulePhotoBlock');
@@ -9998,24 +10011,34 @@ const scheduleMgr = {
             const dataUrl = isPdf ? await this._pdfToDataUrl(file) : await this._imgToDataUrl(file);
             if (!dataUrl) throw new Error('변환 결과가 비어 있습니다.');
             const updatedAt = Date.now();
+            this._localUploadTs = updatedAt;   // [K115] PC 업로드는 아래에서 직접 R2 에 올리므로 휴대폰 복사 로직이 건너뛰게
             await kacMedia.write(room, 'scheduleImage', { dataUrl: dataUrl, updatedAt: updatedAt });
             try { await this._idbSet(room, { updatedAt: updatedAt, dataUrl: dataUrl }); } catch (e) {}
             if (state.room === room) this._renderPhoto({ dataUrl: dataUrl, updatedAt: updatedAt });
-            /* [K104] PDF 원본은 Cloudflare(R2) schedule/ 폴더에 임시 보관 → 교육생 '교육 시간표' 메뉴에서 PDF로 열람.
-               (이미지는 지금처럼 Firebase — 강사·운영부·지원부 화면용, 휴대폰 업로드와 공용) */
+            /* [K114] 시간표는 Cloudflare(R2) schedule/ 폴더에도 올린다 — 교육생은 R2 에서 받아 본다(Firebase 트래픽 0).
+               · 변환된 이미지(여러 장은 세로로 이어붙인 JPG) → 교육생 앱 안 보기용
+               · PDF 원본(PDF 일 때만) → [PDF 원본] 버튼용
+               Firebase 이미지는 강사·운영부·지원부 화면용으로 그대로 둔다(휴대폰 업로드와 공용). */
             let pdfMsg = '';
-            if (isPdf && window.kacMaterials && window.kacMaterials.uploadRaw) {
+            if (window.kacMaterials && window.kacMaterials.uploadRaw) {
                 try {
                     const okKey = await ui._matEnsureKey();
                     if (okKey) {
                         const prevSnap = await firebase.database().ref('media/' + room + '/schedulePdf').once('value');
-                        const prev = prevSnap.val();
-                        const up = await window.kacMaterials.uploadRaw(file, 'schedule');
-                        await firebase.database().ref('media/' + room + '/schedulePdf').set({ key: up.key, url: up.url, name: up.name, size: up.size, updatedAt: Date.now() });
-                        if (prev && prev.key && prev.key !== up.key) window.kacMaterials.removeKey(prev.key);
-                        pdfMsg = '\n(PDF 원본도 교육생용으로 올렸습니다)';
+                        const prev = prevSnap.val() || {};
+                        const blob = await (await fetch(dataUrl)).blob();
+                        const base = String(file.name || '교육시간표').replace(/\.[^.]+$/, '');
+                        const imgFile = new File([blob], base + '.jpg', { type: 'image/jpeg' });
+                        const upImg = await window.kacMaterials.uploadRaw(imgFile, 'schedule');
+                        const upPdf = isPdf ? await window.kacMaterials.uploadRaw(file, 'schedule') : null;
+                        await firebase.database().ref('media/' + room + '/schedulePdf').set({
+                            key: upPdf ? upPdf.key : null, url: upPdf ? upPdf.url : null, name: file.name || '', size: file.size || 0,
+                            imgKey: upImg.key, imgUrl: upImg.url, updatedAt: Date.now()
+                        });
+                        [prev.key, prev.imgKey].forEach(k => { if (k && k !== upImg.key && (!upPdf || k !== upPdf.key)) window.kacMaterials.removeKey(k); });
+                        pdfMsg = '\n(교육생용 파일을 Cloudflare 에도 올렸습니다)';
                     }
-                } catch (e) { console.warn('[시간표 PDF] R2 업로드 실패 — 교육생은 이미지로 봅니다', e); }
+                } catch (e) { console.warn('[시간표] R2 업로드 실패 — 교육생은 Firebase 이미지로 봅니다', e); }
             }
             ui.showAlert('✅ 교육 시간표를 등록했습니다.\n교육생 화면의 [교육 시간표]에도 바로 반영됩니다.' + pdfMsg);
         } catch (e) {
@@ -10088,7 +10111,7 @@ const scheduleMgr = {
         // [J16] media 주경로 + 레거시 양쪽 모두 삭제
         // [K104] 교육생용 PDF(R2)도 함께 정리
         firebase.database().ref('media/' + room + '/schedulePdf').once('value').then(s => {
-            const p = s.val(); if (p && p.key && window.kacMaterials) window.kacMaterials.removeKey(p.key);
+            const p = s.val(); if (p && window.kacMaterials) { if (p.key) window.kacMaterials.removeKey(p.key); if (p.imgKey) window.kacMaterials.removeKey(p.imgKey); }
             return firebase.database().ref('media/' + room + '/schedulePdf').remove();
         }).catch(() => {});
         firebase.database().ref(kacMedia.path(room, 'scheduleImage')).remove()
@@ -10656,11 +10679,7 @@ init: function() {
         try {
             // [J16] media 우선 + 레거시 폴백(발견 시 자동 이전)
             const ts = Number(await kacMedia.read(room, 'scheduleImage', 'updatedAt') || 0);
-            if (ts && (Date.now() - ts > 1800000)) {        // 30분 경과 → 삭제
-                kacMedia.remove(room, 'scheduleImage');
-            } else {
-                slot.scheduleTs = ts;
-            }
+            slot.scheduleTs = ts;   // [K112] 30분 자동 삭제 폐지
         } catch (e) {}
         // 센터 전체 공지(system/globalNotice) — 내용이 있으면 PDF 23p 뒤 안내 페이지로 노출
         slot.centerNotice = '';
