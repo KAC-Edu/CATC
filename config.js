@@ -76,11 +76,30 @@ window.kacEnsureDormCache = function () {
         });
     } catch (e) { window._kacDormSubscribed = false; }
 };
+/* [K106] 지난 과정의 명단은 매칭에서 제외 — 같은 과정명이 몇 달 뒤 다시 열리면, 새 명단이 올라오기 전까지
+   예전 기수 명단(예: 3개월 전 13명)이 그대로 끌려와 '미입교'로 보이던 문제.
+   명단의 교육기간(period) 종료일(없으면 weekKey+6일)이 오늘보다 3일 넘게 지났으면 '지난 명단'으로 본다. */
+window.kacRosterStale = function (dv) {
+    try {
+        if (!dv) return true;
+        var end = '';
+        var pd = String(dv.period || '');
+        if (pd.indexOf('~') >= 0) end = pd.split('~').pop().trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+            var wk = String(dv.weekKey || '');
+            if (/^\d{4}-\d{2}-\d{2}$/.test(wk)) { var d = new Date(wk + 'T00:00:00'); d.setDate(d.getDate() + 6); end = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+        }
+        if (!end) return false;                       // 기간 정보가 없으면 예전처럼 사용
+        var lim = new Date(Date.now() - 3 * 86400000);
+        var ls = lim.getFullYear() + '-' + String(lim.getMonth() + 1).padStart(2, '0') + '-' + String(lim.getDate()).padStart(2, '0');
+        return end < ls;
+    } catch (e) { return false; }
+};
 window.kacDormNamesForCourse = function (courseName) {
     var out = []; var cn = String(courseName || '').trim(); var all = window._kacDormRostersAll;
     if (!cn || !all) return out;
     var best = null;
-    for (var k in all) { var dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length && String(dv.courseName || '').trim() === cn) { if (!best || (dv.updatedAt || 0) > (best.updatedAt || 0)) best = dv; } }
+    for (var k in all) { var dv = all[k]; if (dv && Array.isArray(dv.list) && dv.list.length &&!(window.kacRosterStale&&window.kacRosterStale(dv))&& String(dv.courseName || '').trim() === cn) { if (!best || (dv.updatedAt || 0) > (best.updatedAt || 0)) best = dv; } }
     if (best) best.list.forEach(function (x) { if (x && x.name) out.push(String(x.name).trim()); });
     return out;
 };
@@ -866,4 +885,45 @@ window.kacMaterials = (function () {
     }, true);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+})();
+
+/* =====================================================================
+   [K107] 지난 기수 '명단' 자동 파기 — 전 플랫폼 공통, 브라우저별 하루 1회
+   ─ 과정 종료 정리(kacExpireEndedCourses)는 '방 이름(주차__방)' 형식의 명단만 지웠고, 그마저 방이 먼저
+     비워지면 실행되지 않아, 지원부·운영부 명단(이름·소속 등 개인정보)이 몇 달씩 남아 있었다.
+   ─ 이제 교육기간 종료일이 3일 넘게 지난 명단은 형식과 무관하게 지운다.
+     (출결·외출외박 기록은 과정 종료 시 별도 보관(course_archive)되므로 영향 없음)
+   대상: system/dorm/rosters, system/coord/rosters, system/dorm/deleted(30일 지난 기록)
+   ===================================================================== */
+(function () {
+    function run() {
+        try {
+            if (typeof firebase === 'undefined' || !firebase.database || !window.kacRosterStale) return;
+            var d = new Date(), today = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            try { if (localStorage.getItem('kac_roster_purge') === today) return; } catch (e) {}
+            var db = firebase.database(), upd = {};
+            Promise.all([
+                db.ref('system/dorm/rosters').once('value').catch(function () { return null; }),
+                db.ref('system/coord/rosters').once('value').catch(function () { return null; }),
+                db.ref('system/dorm/deleted').once('value').catch(function () { return null; })
+            ]).then(function (res) {
+                ['system/dorm/rosters', 'system/coord/rosters'].forEach(function (p, i) {
+                    var v = (res[i] && res[i].val()) || {};
+                    Object.keys(v).forEach(function (k) { if (window.kacRosterStale(v[k])) upd[p + '/' + k] = null; });
+                });
+                var lim = new Date(Date.now() - 30 * 86400000);
+                var ls = lim.getFullYear() + '-' + String(lim.getMonth() + 1).padStart(2, '0') + '-' + String(lim.getDate()).padStart(2, '0');
+                var dl = (res[2] && res[2].val()) || {};
+                Object.keys(dl).forEach(function (k) { if (/^\d{4}-\d{2}-\d{2}$/.test(k) && k < ls) upd['system/dorm/deleted/' + k] = null; });
+                if (!Object.keys(upd).length) { try { localStorage.setItem('kac_roster_purge', today); } catch (e) {} return; }
+                return db.ref().update(upd).then(function () {
+                    try { localStorage.setItem('kac_roster_purge', today); } catch (e) {}
+                    try { console.log('[K107] 지난 명단 파기', Object.keys(upd).length + '건'); } catch (e) {}
+                });
+            }).catch(function () { /* 권한·통신 문제면 다음 접속 때 다시 */ });
+        } catch (e) {}
+    }
+    // 화면이 다 뜨고 한참 뒤(15초)에 조용히 — 첫 화면 로딩을 방해하지 않게
+    if (document.readyState === 'complete') setTimeout(run, 15000);
+    else window.addEventListener('load', function () { setTimeout(run, 15000); });
 })();
