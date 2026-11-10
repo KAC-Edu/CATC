@@ -17085,7 +17085,8 @@ ui.openGuidePageSettings = function(){
   var ov=document.createElement('div'); ov.id='guidePageSettingsModal';
   ov.style.cssText='position:fixed;inset:0;background:rgba(15,23,42,.5);z-index:21000;display:flex;align-items:center;justify-content:center;';
   ov.innerHTML='<div style="background:#fff;border-radius:18px;padding:26px 28px;width:480px;max-width:92vw;box-shadow:0 24px 70px rgba(0,0,0,.3);" onclick="event.stopPropagation()">'
-    +'<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 삽입 페이지 위치 설정</h3>'
+    +'<h3 style="margin:0 0 6px;font-size:19px;font-weight:900;color:#0f172a;"><i class="fa-solid fa-gear" style="color:#2563eb;"></i> 삽입 페이지 위치 설정'+(guideMgr._isOnline&&guideMgr._isOnline()?'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle;">🌐 비대면 과정 전체 공통</span>':'<span style="display:inline-block;margin-left:7px;padding:2px 9px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle;">🌐 대면 과정 전체 공통</span>')+'</h3>'
+    +'<div style="margin:-2px 0 10px;font-size:12px;color:#64748b;font-weight:700;"><span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#ffedd5;color:#c2410c;font-size:11px;font-weight:900;vertical-align:middle;">📌 이 과정만</span> 표시가 붙은 항목만 이 과정에만 저장됩니다.</div>'
     +'<p style="margin:0 0 16px;font-size:12.5px;color:#64748b;font-weight:600;line-height:1.5;">삽입 위치는 <b>프로필</b> 기준 1곳만 정하면 됩니다. 오픈톡방 QR·채널 안내는 <b>프로필 바로 뒤</b>에 이어서 나오며, 체크 해제 시 표시되지 않습니다.'+(total?(' 현재 PDF 총 <b>'+total+'</b>페이지.'):'')+' <b>'+((typeof guideMgr!=="undefined"&&guideMgr._isOnline&&guideMgr._isOnline())?'비대면(온라인)':'대면')+' 입교안내 전 과정에 공통</b>으로 적용됩니다. (등록 조건이 맞을 때만 표시)</p>'
     +rowHtml
     +'<hr style="border:none;border-top:1px solid #eef2f7;margin:8px 0 12px;">'
@@ -17127,7 +17128,7 @@ ui.openGuidePageSettings = function(){
           +'<input type="radio" name="gppBasis" id="gpb-manual" value="manual" style="width:17px;height:17px;accent-color:#2563eb;cursor:pointer;"'+(((typeof guideMgr!=="undefined"&&guideMgr._slot&&guideMgr._slot().countBasis)==='manual')?' checked':'')+'>'
           +'직접 입력'
           +'<input type="number" min="0" max="999" id="gpb-manualnum" value="'+((typeof guideMgr!=="undefined"&&guideMgr._slot&&Number(guideMgr._slot().countManual))||0)+'" onfocus="var r=document.getElementById(\'gpb-manual\'); if(r) r.checked=true;" style="width:70px;padding:6px 8px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:13.5px;font-weight:800;text-align:center;">'
-          +'<span style="color:#94a3b8;font-weight:600;font-size:12px;">명 (수기 지정)</span></label>'
+          +'<span style="color:#94a3b8;font-weight:600;font-size:12px;">명 (수기 지정)</span><span style="display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:#ffedd5;color:#c2410c;font-size:11px;font-weight:900;vertical-align:middle;">📌 이 과정만</span></label>'
       +'</div></div>'
     /* [J28] '교육 장소 · 강의실(한 곳만 선택→✓)' 수동 선택 행 제거 — 운영부 강의실 지정 시 자동 표시(roomDetailName)와 중복 */
     +'<div id="gpp-msg" style="font-size:12px;color:#ef4444;font-weight:700;min-height:16px;margin:4px 0;"></div>'
