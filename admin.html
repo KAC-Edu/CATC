@@ -2954,6 +2954,10 @@ function setupAcc(btn){
 
 
 
+<style>
+/* [K123] 과정현황 버튼 — 내용이 길어도 화면 아래쪽에 항상 보이게(스크롤해도 따라옴), 짧으면 카드 바로 아래 */
+#floatingHomeBtn.floating-home-btn{ position:sticky !important; bottom:22px !important; z-index:850; margin:10px 0 40px !important; }
+</style>
 <!-- [추가] 콘텐츠 하단 홈 버튼 (U턴 화살표 + 과정현황) -->
     <div id="floatingHomeBtn" class="floating-home-btn" onclick="ui.goHomeSmart()" title="과정 현황으로" aria-label="과정 현황">
         <svg class="fh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
