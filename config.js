@@ -789,6 +789,7 @@ window.kacMaterials = (function () {
   function destroy(mat) {
     var key = getKey();
     if (!key) return Promise.reject(new Error('NO_KEY'));
+    if (mat && mat.wmKey) removeKey(mat.wmKey);   // [K120] 워터마크본도 함께 삭제
     return fetch(fileUrl(mat), { method: 'DELETE', headers: { 'X-Upload-Key': key } })
       .then(function () { return firebase.database().ref('system/materials/' + mat.id).remove(); });
   }
