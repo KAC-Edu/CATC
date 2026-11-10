@@ -18588,30 +18588,45 @@ ui._matWhoLabel = function(m){
 ui.matEditUploader = function(id){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0]; if(!m) return;
+    var profs = [], coords = [];
+    try{ profs = (profMgr.list||[]).map(function(p){ return String(p.name||'').trim(); }).filter(Boolean); }catch(e){}
+    try{ coords = (coordMgr.list||[]).map(function(c){ return String(c.name||'').trim(); }).filter(Boolean); }catch(e){}
+    profs = Array.from(new Set(profs)).sort(function(a,b){ return a.localeCompare(b,'ko'); });
+    coords = Array.from(new Set(coords)).sort(function(a,b){ return a.localeCompare(b,'ko'); });
+    var curN = String(m.uploader||'').trim(), curR = m.uploaderRole || '교수';
+    var chip = function(n, r){
+        var on = (n===curN && r===curR);
+        return '<button type="button" class="matWhoPick" data-n="'+ui._esc(n)+'" data-r="'+r+'" style="padding:9px 14px; border-radius:999px; border:1.5px solid '+(on?'#2563eb':'#e2e8f0')+'; background:'+(on?'#2563eb':'#fff')+'; color:'+(on?'#fff':'#334155')+'; font-size:14px; font-weight:800; cursor:pointer;">'+ui._esc(n)+' <span style="font-size:12px; opacity:.75;">'+r+'</span></button>';
+    };
+    var sec = function(title, arr, r){
+        if(!arr.length) return '';
+        return '<div style="font-size:13px; font-weight:900; color:#64748b; margin:14px 0 8px;">'+title+'</div><div style="display:flex; flex-wrap:wrap; gap:7px;">'+arr.map(function(n){ return chip(n, r); }).join('')+'</div>';
+    };
     var ov = document.createElement('div');
     ov.style.cssText='position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:20px;';
-    var roles = ['교수','과정운영자','강사','기타'];
-    var curR = m.uploaderRole || '교수';
-    ov.innerHTML = '<div style="background:#fff; border-radius:18px; padding:26px 28px; width:100%; max-width:420px;">'
-      + '<div style="font-size:18px; font-weight:900; color:#0f172a; margin-bottom:6px;"><i class="fa-solid fa-user-pen" style="color:#6366f1;"></i> 올린 사람 변경</div>'
-      + '<div style="font-size:13px; color:#64748b; font-weight:700; margin-bottom:16px; line-height:1.5;">'+ui._esc(m.title||m.fileName)+'</div>'
-      + '<label style="display:block; font-size:13px; font-weight:800; color:#475569; margin-bottom:6px;">이름</label>'
-      + '<input id="matUpName" value="'+ui._esc(String(m.uploader||'').trim())+'" style="width:100%; box-sizing:border-box; padding:12px 13px; border:1.5px solid #cbd5e1; border-radius:11px; font-size:15px; font-weight:700;">'
-      + '<label style="display:block; font-size:13px; font-weight:800; color:#475569; margin:12px 0 6px;">직함</label>'
-      + '<select id="matUpRole" style="width:100%; padding:12px 13px; border:1.5px solid #cbd5e1; border-radius:11px; font-size:15px; font-weight:700;">'
-        + roles.map(function(r){ return '<option'+(r===curR?' selected':'')+'>'+r+'</option>'; }).join('') + '</select>'
-      + '<div style="display:flex; gap:8px; margin-top:18px;"><button id="matUpNo" style="flex:1; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">취소</button>'
-      + '<button id="matUpOk" style="flex:1; padding:12px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-weight:900; cursor:pointer;">저장</button></div></div>';
+    ov.innerHTML = '<div style="background:#fff; border-radius:18px; padding:26px 28px; width:100%; max-width:560px; max-height:88vh; overflow:auto;">'
+      + '<div style="font-size:19px; font-weight:900; color:#0f172a; margin-bottom:4px;"><i class="fa-solid fa-user-pen" style="color:#6366f1;"></i> 올린 사람 바꾸기</div>'
+      + '<div style="font-size:13px; color:#64748b; font-weight:700; line-height:1.5;">'+ui._esc(m.title||m.fileName)+'</div>'
+      + sec('교수', profs, '교수') + sec('과정운영자', coords, '과정운영자')
+      + '<div style="font-size:13px; font-weight:900; color:#64748b; margin:16px 0 8px;">직접 입력</div>'
+      + '<div style="display:flex; gap:7px;"><input id="matUpName" placeholder="이름" style="flex:1; min-width:0; padding:11px 13px; border:1.5px solid #cbd5e1; border-radius:11px; font-size:15px; font-weight:700;">'
+      + '<select id="matUpRole" style="padding:11px 10px; border:1.5px solid #cbd5e1; border-radius:11px; font-size:14px; font-weight:700;"><option>교수</option><option>과정운영자</option><option>강사</option><option>기타</option></select>'
+      + '<button type="button" id="matUpOk" style="padding:11px 16px; border:none; border-radius:11px; background:#2563eb; color:#fff; font-weight:900; cursor:pointer;">저장</button></div>'
+      + '<button type="button" id="matUpNo" style="width:100%; margin-top:16px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; cursor:pointer;">닫기</button></div>';
     document.body.appendChild(ov);
-    ov.querySelector('#matUpNo').onclick = function(){ ov.remove(); };
-    ov.querySelector('#matUpOk').onclick = function(){
-        var nm = String(ov.querySelector('#matUpName').value||'').trim(), rl = ov.querySelector('#matUpRole').value;
+    var save = function(nm, rl){
         if(!nm) return;
         firebase.database().ref('system/materials/'+id).update({ uploader: nm, uploaderRole: rl }).then(function(){
             m.uploader = nm; m.uploaderRole = rl; ov.remove();
             try{ ui.matRenderLibrary(); }catch(e){} try{ ui._matRenderList && ui._matRenderList(); }catch(e){}
         }).catch(function(e){ ui.showAlert('저장 실패: '+((e&&e.message)||'')); });
     };
+    ov.addEventListener('click', function(e){
+        if(e.target === ov) return ov.remove();
+        var b = e.target.closest('.matWhoPick'); if(b) save(b.getAttribute('data-n'), b.getAttribute('data-r'));
+    });
+    ov.querySelector('#matUpNo').onclick = function(){ ov.remove(); };
+    ov.querySelector('#matUpOk').onclick = function(){ save(String(ov.querySelector('#matUpName').value||'').trim(), ov.querySelector('#matUpRole').value); };
 };
 
 /* 업로드 암호 확보 — 없으면 1회 묻는다.
@@ -18726,6 +18741,9 @@ ui._matRenderList = function(){
             + '<div style="font-size:14.5px; font-weight:800; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
             + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+'</div>'
           + '</div>'
+          /* [K120] 워터마크 — 켜면 교육생은 CATC 대각선 워터마크가 찍힌 사본을 받는다(PDF 만) */
+          + (isPdf ? '<label title="켜면 교육생이 받을 때 CATC 워터마크가 찍힌 PDF 로 받습니다" onclick="event.stopPropagation();" style="flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:999px; border:1px solid '+((ui._matCourse[id]||{}).wm?'#a5b4fc':'#e2e8f0')+'; background:'+((ui._matCourse[id]||{}).wm?'#eef2ff':'#fff')+'; color:'+((ui._matCourse[id]||{}).wm?'#4338ca':'#64748b')+'; font-size:12.5px; font-weight:800; cursor:pointer; white-space:nowrap;">'
+              + '<input type="checkbox" '+((ui._matCourse[id]||{}).wm?'checked':'')+' onchange="ui.matToggleWm(\''+id+'\', this.checked, this)" style="width:15px; height:15px; margin:0; cursor:pointer;"><i class="fa-solid fa-stamp"></i> 워터마크</label>' : '')
           /* [K70] 바로 보기 — 내려받지 않고 새 창에서 연다(PDF 미리보기) */
           + (isPdf ? '<button onclick="ui.matViewOne(\''+id+'\')" title="새 창에서 바로 보기" style="flex-shrink:0; padding:7px 13px; border:1px solid #bbf7d0; border-radius:9px; background:#f0fdf4; color:#15803d; font-size:12.5px; font-weight:800; cursor:pointer;"><i class="fa-regular fa-eye"></i> 보기</button>' : '')
           + '<a href="'+ui._esc(window.kacMaterials.fileUrl(m))+'" target="_blank" rel="noopener" style="flex-shrink:0; padding:7px 13px; border-radius:9px; background:#eff6ff; color:#1d4ed8; font-size:12.5px; font-weight:800; text-decoration:none;">받기</a>'
@@ -19233,12 +19251,11 @@ ui._matLibRow = function(m, indent){
       + '<div style="flex:1; min-width:0;">'
         + '<div style="font-size:15.5px; font-weight:800; color:'+(already?'#94a3b8':'#0f172a')+'; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
         + '<div style="font-size:12.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ds+' · '+window.kacMaterials.fmtSize(m.size)
-          + ' · <span style="color:#475569;">'+ui._esc(ui._matWhoLabel(m))+'</span>'
           + (m.course && ui._matLibFilter!=='course' ? ' · '+ui._esc(m.course) : '')
           + (already?' · <span style="color:#16a34a;">이미 연결됨</span>':'')+'</div>'
       + '</div>'
       /* [K118] 올린 사람 변경 (과정운영자가 올린 자료 등) */
-      + '<button type="button" onclick="event.preventDefault(); event.stopPropagation(); ui.matEditUploader(\''+m.id+'\')" title="올린 사람 변경" style="flex-shrink:0; padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; color:#64748b; font-size:12px; font-weight:800; cursor:pointer;"><i class="fa-solid fa-user-pen"></i> 올린 사람</button>'
+      + '<button type="button" class="mat-who-btn" onclick="event.preventDefault(); event.stopPropagation(); ui.matEditUploader(\''+m.id+'\')" title="눌러서 올린 사람 바꾸기" style="flex-shrink:0; display:inline-flex; align-items:center; gap:6px; padding:7px 12px; border:1px solid #e2e8f0; border-radius:999px; background:#f8fafc; color:#334155; font-size:13px; font-weight:800; cursor:pointer; white-space:nowrap;"><i class="fa-solid fa-user" style="color:#6366f1; font-size:11px;"></i>'+ui._esc(ui._matWhoLabel(m))+'<i class="fa-solid fa-pen" style="color:#94a3b8; font-size:10px;"></i></button>'
       + '</label>';
 };
 
@@ -19389,7 +19406,8 @@ ui.matListUrl = function(){
 ui.matCopyOne = function(id){
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
     if(!m) return;
-    ui._matCopy(window.kacMaterials.fileUrl(m), '📋 "' + (m.title||m.fileName) + '" 다운로드 주소를 복사했습니다.\n\n카카오톡 등에 붙여넣으면 바로 받을 수 있습니다.');
+    var _wmOn = !!((ui._matCourse||{})[id]||{}).wm && m.wmKey;   // [K120]
+    ui._matCopy(window.kacMaterials.fileUrl(_wmOn ? { key: m.wmKey } : m), '📋 "' + (m.title||m.fileName) + '" 다운로드 주소를 복사했습니다.\n\n카카오톡 등에 붙여넣으면 바로 받을 수 있습니다.');
 };
 
 /* ── 교육생 공유 (QR + 주소 복사) ───────────────────────── */
@@ -19602,6 +19620,71 @@ ui._shReqCopy = function(){
     } else {
         try{ ta.select(); document.execCommand('copy'); }catch(e){}
         done();
+    }
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K120] 교재 워터마크 — 체크하면 교육생은 'CATC' 대각선 워터마크가 찍힌 PDF 사본을 받는다.
+   · 사본은 강사 PC 에서 한 번 만들어 Cloudflare 에 올려 두고(system/materials/{id}/wmKey) 다른 과정에서도 재사용
+   · 켜고 끄는 건 과정별(courses/{room}/materials/{id}/wm) — 원본은 그대로 보존
+   ══════════════════════════════════════════════════════════════════════════ */
+ui._loadPdfLib = function(){
+    if(window.PDFLib) return Promise.resolve(window.PDFLib);
+    if(ui._pdfLibP) return ui._pdfLibP;
+    ui._pdfLibP = new Promise(function(res, rej){
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+        s.onload = function(){ window.PDFLib ? res(window.PDFLib) : rej(new Error('PDF 모듈 로드 실패')); };
+        s.onerror = function(){ ui._pdfLibP = null; rej(new Error('PDF 모듈을 불러오지 못했습니다.')); };
+        document.head.appendChild(s);
+    });
+    return ui._pdfLibP;
+};
+ui._matMakeWatermark = async function(buf){
+    var L = await ui._loadPdfLib();
+    var doc = await L.PDFDocument.load(buf, { ignoreEncryption: true });
+    var font = await doc.embedFont(L.StandardFonts.HelveticaBold);
+    var TEXT = 'CATC';
+    doc.getPages().forEach(function(pg){
+        var sz = pg.getSize(), w = sz.width, h = sz.height;
+        var ang = Math.atan2(h, w);                                   // 왼쪽 아래 → 오른쪽 위 대각선
+        var diag = Math.sqrt(w*w + h*h);
+        var size = (diag * 0.62) / font.widthOfTextAtSize(TEXT, 1);   // 대각선 길이의 62% 를 차지
+        var tw = font.widthOfTextAtSize(TEXT, size), th = size * 0.72;
+        var x = w/2 - (tw/2)*Math.cos(ang) + (th/2)*Math.sin(ang);
+        var y = h/2 - (tw/2)*Math.sin(ang) - (th/2)*Math.cos(ang);
+        pg.drawText(TEXT, { x: x, y: y, size: size, font: font, color: L.rgb(0.42, 0.47, 0.58), opacity: 0.12, rotate: L.degrees(ang * 180 / Math.PI) });
+        // 아래 오른쪽 작은 표기(인쇄해도 출처가 남도록)
+        var s2 = Math.max(7, Math.min(w, h) * 0.018), t2 = 'KAC CATC - Korea Airports Corporation Civil Aviation Training Center';
+        pg.drawText(t2, { x: w - font.widthOfTextAtSize(t2, s2) - s2*1.2, y: s2*1.1, size: s2, font: font, color: L.rgb(0.42, 0.47, 0.58), opacity: 0.35 });
+    });
+    return await doc.save();
+};
+ui.matToggleWm = async function(id, on, el){
+    if(state.isObserver){ if(el) el.checked = !on; return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.'); }
+    var room = state.room; if(!room) return;
+    var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
+    if(!m){ if(el) el.checked = !on; return; }
+    try{
+        if(on && !m.wmKey){
+            var ok = await ui._matEnsureKey();
+            if(!ok){ if(el) el.checked = false; return; }
+            ui.showAlert('🔏 워터마크 사본을 만드는 중입니다… (파일 크기에 따라 수십 초)');
+            var buf = await (await fetch(window.kacMaterials.fileUrl(m) + '?v=2')).arrayBuffer();
+            var out = await ui._matMakeWatermark(buf);
+            var base = String(m.fileName || m.title || 'material').replace(/\.pdf$/i, '');
+            var f = new File([out], base + '_CATC.pdf', { type: 'application/pdf' });
+            var up = await window.kacMaterials.uploadRaw(f);
+            await firebase.database().ref('system/materials/' + id).update({ wmKey: up.key, wmSize: up.size || f.size });
+            m.wmKey = up.key; m.wmSize = up.size || f.size;
+            try{ var cm = document.getElementById('customAlertModal'); if(cm) cm.style.display = 'none'; }catch(e){}
+        }
+        await firebase.database().ref('courses/' + room + '/materials/' + id + '/wm').set(!!on);
+        ui.showAlert(on ? '✅ 워터마크를 켰습니다.\n교육생은 CATC 워터마크가 찍힌 PDF 로 받습니다.' : '워터마크를 껐습니다. 교육생은 원본을 받습니다.');
+    }catch(e){
+        if(el) el.checked = !on;
+        ui.showAlert('워터마크 처리 실패: ' + ((e && e.message) || '') + '\n(암호가 걸린 PDF 는 워터마크를 넣을 수 없습니다)');
     }
 };
 
