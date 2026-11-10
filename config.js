@@ -1,5 +1,5 @@
 // config.js
-// UPDATED: 2026-11-05 — [K64] 입력 중 창이 닫히는 문제 방지(전 플랫폼 공통 가드) 추가
+// UPDATED: 2026-11-10 — [K96] 닫기(X) hover 효과 통일 / 2026-11-05 — [K64] 입력 중 창이 닫히는 문제 방지(전 플랫폼 공통 가드) 추가
 
 const firebaseConfig = {
   apiKey: "AIzaSyDo3BPMV8qayQ3MdKBglYNtsvii0ZtCHHs",
@@ -748,4 +748,76 @@ window.kacMaterials = (function () {
   return { API: API, getKey: getKey, setKey: setKey, clearKey: clearKey,
            fmtSize: fmtSize, fileUrl: fileUrl, ping: ping, upload: upload, listAll: listAll,
            link: link, unlink: unlink, destroy: destroy };
+})();
+
+/* =====================================================================
+   [K96] 닫기(X) 버튼 hover 효과 통일 — 전 플랫폼 공통
+   마우스를 대면 빨간 원 + 90° 회전(기존 .x-close 와 동일 느낌).
+   대상: 글자가 ×/✕/✖/X 이거나 xmark 아이콘 하나뿐인 '작은' 버튼만.
+   ('닫기' 같은 글자 버튼, 위치용 transform 이 걸린 버튼은 회전 없이 색만)
+   ===================================================================== */
+(function () {
+  if (typeof document === 'undefined' || window.__kacXHover) return;
+  window.__kacXHover = true;
+  var css =
+    '.kac-xh{transition:transform .3s cubic-bezier(.22,1,.36,1),background-color .2s,color .2s,box-shadow .2s !important;cursor:pointer;}' +
+    '.kac-xh:hover{background:#ef4444 !important;color:#fff !important;border-color:#ef4444 !important;border-radius:999px !important;box-shadow:0 6px 16px rgba(239,68,68,.35) !important;}' +
+    '.kac-xh:hover i,.kac-xh:hover svg{color:#fff !important;fill:currentColor;}' +
+    '.kac-xh.kac-xh-rot:hover{transform:rotate(90deg) !important;}';
+  function addCss() {
+    if (document.getElementById('kacXHoverCss')) return;
+    var st = document.createElement('style'); st.id = 'kacXHoverCss'; st.textContent = css;
+    (document.head || document.documentElement).appendChild(st);
+  }
+  var X_TXT = /^[×✕✖✗]$/;   // 영문 X 는 표의 'X' 표시와 헷갈려 제외
+  function isX(el) {
+    if (!el || el.nodeType !== 1 || el.__kacXChk) return false;
+    var tag = el.tagName;
+    if (tag !== 'BUTTON' && tag !== 'SPAN' && tag !== 'DIV' && tag !== 'A' && tag !== 'I') return false;
+    var txt = (el.textContent || '').replace(/\s+/g, '');
+    var iconOnly = false;
+    if (!txt) {
+      var ic = el.querySelector('i,svg');
+      iconOnly = !!ic && el.children.length === 1 && /fa-(xmark|times|close|x)\b|fa-circle-xmark/.test(ic.getAttribute('class') || '');
+    }
+    if (!(X_TXT.test(txt) || iconOnly)) return false;
+    if (tag === 'I' && el.parentElement && isX(el.parentElement)) return false;  // 버튼 안 아이콘은 버튼에만
+    var clickable = tag === 'BUTTON' || tag === 'A' || el.onclick || el.getAttribute('onclick') || /close|닫기/i.test(String(el.getAttribute('class') || '') + ' ' + (el.getAttribute('aria-label') || '') + ' ' + (el.title || ''));
+    if (!clickable) return false;
+    var r = el.getBoundingClientRect();
+    if (r.width && (r.width > 64 || r.height > 64)) return false;               // 작은 버튼만
+    return true;
+  }
+  function tag(el) {
+    if (!isX(el)) { if (el && el.nodeType === 1) el.__kacXChk = true; return; }
+    el.__kacXChk = true;
+    el.classList.add('kac-xh');
+    try {
+      var tf = getComputedStyle(el).transform;
+      if (!tf || tf === 'none') el.classList.add('kac-xh-rot');                // 위치용 transform 있으면 회전 생략
+    } catch (e) {}
+  }
+  function scan(root) {
+    try {
+      var list = (root || document).querySelectorAll('button,span,div[onclick],a,i[onclick]');
+      for (var i = 0; i < list.length; i++) { var el = list[i]; if (!el.__kacXChk && el.childElementCount <= 1) tag(el); }
+    } catch (e) {}
+  }
+  var pend = false;
+  function later() { if (pend) return; pend = true; setTimeout(function () { pend = false; scan(); }, 250); }
+  function boot() {
+    addCss(); scan();
+    try { new MutationObserver(later).observe(document.body, { childList: true, subtree: true }); } catch (e) {}
+    // 처음엔 숨겨진 모달(크기 0)이 열리면 다시 판정되도록 — hover 순간 한 번 더 확인
+    document.addEventListener('mouseover', function (e) {
+      var t = e.target, n = 0;
+      while (t && t.nodeType === 1 && n < 3) {                                  // 아이콘에 올려도 감싼 버튼까지 확인
+        if (t.classList.contains('kac-xh')) break;
+        t.__kacXChk = false; tag(t);
+        if (t.classList.contains('kac-xh')) break;
+        t = t.parentElement; n++;
+      }
+    }, true);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
