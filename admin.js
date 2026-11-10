@@ -7917,7 +7917,9 @@ resetShuttleRequests: function() {
             return '<div class="hsr-card hsr-v2" data-room="'+e(x.room)+'">'
                 +'<div class="hsr2-head">'
                 +'<div class="hsr2-info">'
-                +'<div class="hsr2-title">'+e(x.course)+'</div>'
+                /* [K97] 과정명 클릭 → 과정현황(대시보드)으로 이동 */
+                +'<div class="hsr2-title-row"><span class="hsr2-room">Room '+e(x.room)+'</span>'
+                +'<div class="hsr2-title hsr2-title-link" role="button" tabindex="0" onclick="event.stopPropagation();ui.enterCourseMode(\''+e(x.room)+'\',\'dashboard\')" title="과정현황으로 이동">'+e(x.course)+'<i class="fa-solid fa-arrow-right hsr2-title-go"></i></div></div>'
                 +'<div class="hsr2-meta">'
                 +(x.period?'<span>'+e(x.period)+'</span><span class="hsr2-dot">·</span>':'')
                 +'<button class="hsr2-venue'+(/온라인|zoom/i.test(x.venue||'')?' hsr2-venue-zoom':'')+'" onclick="ui.hsrVenueMenu(\''+e(x.room)+'\',event)" title="클릭하여 강의장소 선택 (연간계획 등 전 화면 공통 적용)"><i class="fa-solid '+(/온라인|zoom/i.test(x.venue||'')?'fa-video':'fa-location-dot')+'"></i><span id="hsrVenue'+e(x.room)+'">'+(x.venue?e(x.venue):'장소 미정')+'</span><i class="fa-solid fa-chevron-down hsr2-venue-cv"></i></button>'
@@ -18378,7 +18380,7 @@ ui.applyShuttleFilter = function () {
                 b.classList.add('is-back');
             } else {
                 b.innerHTML = 'KAC Training Platform';
-                b.title = '누르면 키오스크 화면 (5초 뒤 현황판으로 자동 복귀)';
+                b.title = '누르면 통합 교육 현황판 · 5초 길게 누르면 키오스크 화면';
                 b.classList.remove('is-back');
             }
         }
@@ -18393,8 +18395,34 @@ ui.applyShuttleFilter = function () {
                 else { ui.goHomePortal(); }
                 return;
             }
-            try { kiosk.openTemp(); } catch (e) {}
+            /* [K98] 짧게 누르면 통합 교육 현황판, 5초 길게 누르면 키오스크 */
+            if (window._kacBrandLongFired) { window._kacBrandLongFired = false; return; }
+            try { ui.goHomePortal(); } catch (e) {}
         };
+        (function () {
+            var b = document.getElementById('kacBrandBtn');
+            if (!b || b._kacLong) return; b._kacLong = true;
+            try {
+                var st = document.createElement('style');
+                st.textContent = '#kacBrandBtn{position:relative;}#kacBrandBtn .kac-brand-bar{position:absolute;left:0;bottom:-4px;height:3px;width:0;border-radius:3px;background:linear-gradient(90deg,#60a5fa,#fbbf24);pointer-events:none;}#kacBrandBtn.kac-pressing .kac-brand-bar{width:100%;transition:width 5s linear;}';
+                document.head.appendChild(st);
+            } catch (e) {}
+            var t = null;
+            function bar() { var x = b.querySelector('.kac-brand-bar'); if (!x) { x = document.createElement('span'); x.className = 'kac-brand-bar'; b.appendChild(x); } return x; }
+            function cancel() { if (t) { clearTimeout(t); t = null; } b.classList.remove('kac-pressing'); }
+            b.addEventListener('pointerdown', function (e) {
+                if (_onWaiting() || (e.button !== undefined && e.button !== 0)) return;
+                window._kacBrandLongFired = false;
+                bar(); void b.offsetWidth; b.classList.add('kac-pressing');
+                t = setTimeout(function () {
+                    t = null; b.classList.remove('kac-pressing');
+                    window._kacBrandLongFired = true;
+                    try { kiosk.openTemp(); } catch (er) {}
+                }, 5000);
+            });
+            ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { b.addEventListener(ev, cancel); });
+            b.addEventListener('contextmenu', function (e) { if (t) e.preventDefault(); });
+        })();
 
         // setMode 를 감싸서 '현황판에 어디서 들어왔는지'를 기억한다
         var _origSetMode = ui.setMode;
