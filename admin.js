@@ -9999,6 +9999,7 @@ const scheduleMgr = {
             + '<button type="button" data-a="close" style="position:fixed; top:16px; right:16px; width:46px; height:46px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:20px; cursor:pointer; z-index:3;">✕</button>'
             + '<button type="button" data-a="fit" style="position:fixed; top:16px; right:74px; height:46px; padding:0 16px; border:none; border-radius:23px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer; z-index:3;"><i class="fa-solid fa-expand"></i> <span>여백 포함 원본</span></button>';
         document.body.appendChild(ov);
+        ui._undoPageZoom(ov);   // [K134]
         ov.querySelectorAll('button[data-a="prev"],button[data-a="next"],#schFsNo').forEach(el => { el.style.position = 'fixed'; el.style.zIndex = '3'; });
         const cv = ov.querySelector('#schFsCv'), no = ov.querySelector('#schFsNo');
         /* [K129] 맞춤 방식: 'page'(한 쪽 전체) ↔ 'width'(가로 꽉 채움 · 위아래 스크롤) — 버튼 또는 더블클릭 */
@@ -10260,7 +10261,7 @@ const scheduleMgr = {
         img.onclick = (e) => e.stopPropagation();   // 이미지 클릭은 닫기 방지(배경 클릭만 닫힘)
         ov.appendChild(img);
         ov.appendChild(close);
-        document.body.appendChild(ov);
+        document.body.appendChild(ov); try { ui._undoPageZoom(ov); } catch (e) {}   // [K134] 사진 전체화면도 진짜 꽉
         document.addEventListener('keydown', onKey);
         // [J34] 클릭 제스처가 살아있는 지금 즉시 모니터 전체화면 진입
         try { const rf = ov.requestFullscreen || ov.webkitRequestFullscreen || ov.msRequestFullscreen; if (rf) { const p = rf.call(ov); if (p && p.catch) p.catch(function(){}); } } catch(e){}
@@ -20030,6 +20031,7 @@ ui._matPresenter = async function(pdf, m){
     var main = document.createElement('div'); main.id = 'matPresenterOv';
     main.style.cssText = 'position:fixed; inset:0; z-index:2147483500; background:#000; user-select:none;';
     document.body.appendChild(main);
+    ui._undoPageZoom(main);   // [K134]
 
     var cur = 1, swapped = false, t0 = Date.now(), busy = false, pend = 0, closed = false;
     var N = pdf.numPages;
@@ -20038,11 +20040,11 @@ ui._matPresenter = async function(pdf, m){
     function buildAudience(host, doc){
         host.style.background = '#000';
         host.innerHTML = '<div data-role="aud" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; cursor:default;"><canvas style="background:#fff;"></canvas></div>'
-          + (doc !== document ? '<div data-fs style="position:fixed; left:50%; bottom:22px; transform:translateX(-50%); padding:10px 18px; border-radius:999px; background:rgba(255,255,255,.18); color:#fff; font:800 15px sans-serif; cursor:pointer;">🖥 여기를 눌러 전체화면</div>' : '');
+          + (!doc.fullscreenElement ? '<div data-fs style="position:fixed; left:50%; bottom:22px; transform:translateX(-50%); padding:10px 18px; border-radius:999px; background:rgba(255,255,255,.18); color:#fff; font:800 15px sans-serif; cursor:pointer; z-index:5;">🖥 여기를 눌러 전체화면</div>' : '');   // [K135] 이 창이 슬라이드가 됐는데 전체화면이 아니면 버튼 표시
         var box = host.querySelector('[data-role="aud"]');
         box.addEventListener('click', function(e){ var r = box.getBoundingClientRect(); go((e.clientX - r.left) < r.width * 0.25 ? -1 : 1); });
         var fs = host.querySelector('[data-fs]');
-        if(fs) fs.addEventListener('click', function(e){ e.stopPropagation(); var d = doc.documentElement; try{ (d.requestFullscreen || d.webkitRequestFullscreen).call(d); }catch(_){} fs.remove(); });
+        if(fs) fs.addEventListener('click', function(e){ e.stopPropagation(); var d = (doc === document) ? main : doc.documentElement; try{ (d.requestFullscreen || d.webkitRequestFullscreen).call(d); }catch(_){} fs.remove(); setTimeout(function(){ render(cur); }, 300); });
     }
     function buildPresenter(host, doc){
         host.style.background = '#0b1220';
@@ -20106,9 +20108,9 @@ ui._matPresenter = async function(pdf, m){
         if(!pop || pop.closed) return ui.showAlert('다른 모니터의 창이 닫혀 있습니다. 발표를 다시 시작해 주세요.');
         swapped = !swapped;
         try{ if(pop.document.fullscreenElement) pop.document.exitFullscreen(); }catch(e){}
-        build();
-        if(swapped){ try{ (main.requestFullscreen || main.webkitRequestFullscreen).call(main); }catch(e){} }   // 이 화면이 슬라이드가 되면 바로 전체화면
+        if(swapped){ try{ var _rf = (main.requestFullscreen || main.webkitRequestFullscreen).call(main); if(_rf && _rf.catch) _rf.catch(function(){}); }catch(e){} }   // 이 화면이 슬라이드가 되면 바로 전체화면(안 되면 '여기를 눌러 전체화면' 버튼)
         else if(document.fullscreenElement){ try{ document.exitFullscreen(); }catch(e){} }
+        build();
         setTimeout(function(){ render(cur); }, 250);
     }
     var tick = setInterval(function(){
@@ -20129,6 +20131,8 @@ ui._matPresenter = async function(pdf, m){
     };
     var wl = 0, wheelH = function(e){ if(closed) return; e.preventDefault(); e.stopPropagation(); var now = Date.now(); if(now - wl < 300) return; wl = now; go(e.deltaY > 0 ? 1 : -1); };
     var resH = function(){ clearTimeout(ui._ppRt); ui._ppRt = setTimeout(function(){ render(cur); }, 200); };
+    var fsH = function(){ if(document.fullscreenElement){ var pl = main.querySelector('[data-fs]'); if(pl) pl.remove(); } setTimeout(function(){ render(cur); }, 200); };
+    document.addEventListener('fullscreenchange', fsH);
     document.addEventListener('keydown', keyH, true); window.addEventListener('wheel', wheelH, { passive:false, capture:true }); window.addEventListener('resize', resH);
     try{ pop.document.addEventListener('keydown', keyH, true); pop.addEventListener('wheel', wheelH, { passive:false, capture:true }); pop.addEventListener('resize', resH); }catch(e){}
     try{ history.pushState({ catcPresent: 1 }, ''); }catch(e){}
@@ -20137,6 +20141,7 @@ ui._matPresenter = async function(pdf, m){
     function close(fromPop){
         if(closed) return; closed = true;
         clearInterval(tick); document.removeEventListener('keydown', keyH, true); window.removeEventListener('wheel', wheelH, { capture:true }); window.removeEventListener('resize', resH); window.removeEventListener('popstate', popH);
+        document.removeEventListener('fullscreenchange', fsH);
         if(!fromPop){ try{ if(history.state && history.state.catcPresent) history.back(); }catch(e){} }
         try{ if(pop && !pop.closed) pop.close(); }catch(e){}
         main.remove(); if(document.fullscreenElement) document.exitFullscreen().catch(function(){});
@@ -20145,4 +20150,10 @@ ui._matPresenter = async function(pdf, m){
     setTimeout(function(){ render(1); }, 80);
 };
 
+
+/* [K134] 강사 플랫폼은 창 폭에 맞춰 화면 전체를 축소(html zoom)한다. 전체화면 뷰어는 그 축소를 되돌려야
+   모니터를 진짜로 꽉 채운다(예: 축소 0.75 면 뷰어가 화면의 75% 크기로만 보이던 원인). */
+ui._undoPageZoom = function(el){
+    try{ var z = parseFloat(document.documentElement.style.zoom || getComputedStyle(document.documentElement).zoom) || 1; if(el && Math.abs(z - 1) > 0.005) el.style.zoom = String(1 / z); }catch(e){}
+};
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
