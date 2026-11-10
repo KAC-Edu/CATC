@@ -16063,6 +16063,51 @@ ui.openFieldEdit = async function(field){
       Array.from(selEl.options).forEach(function(opt){ if(opt.value && occ.indexOf(opt.value)>=0){ opt.text=opt.text+' (이미 사용 중)'; opt.disabled=true; opt.style.color='#cbd5e1'; } });
     }catch(e){}
     var cur=get('dashRoomDetail'); if(cur && cur!=='-' && cur!=='장소 미설정') selEl.value=cur;
+    /* [K101] 기본 드롭다운(위로 솟구치는 긴 목록) 대신, 팝업 안에 건물별로 묶은 선택 목록을 바로 펼친다.
+       값은 숨긴 select(#fe-val)에 그대로 넣으므로 저장 로직은 변경 없음. */
+    try{
+      if(box) box.style.width='620px';
+      selEl.style.display='none';
+      var pick=document.createElement('div'); pick.id='fePick';
+      pick.style.cssText='max-height:min(56vh,460px);overflow-y:auto;padding:4px 2px 2px;margin:-4px -2px 0;';
+      var esc=function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
+      var html='', groups=[];
+      Array.from(selEl.children).forEach(function(n){
+        if(n.tagName==='OPTGROUP') groups.push({label:n.label, opts:Array.from(n.children)});
+        else if(n.value) { if(!groups.length || groups[groups.length-1].label!=='') groups.push({label:'', opts:[]}); groups[groups.length-1].opts.push(n); }
+      });
+      groups.forEach(function(g){
+        if(!g.opts.length) return;
+        if(g.label) html+='<div style="display:flex;align-items:center;gap:8px;margin:12px 2px 7px;font-size:12.5px;font-weight:900;color:#64748b;letter-spacing:.3px;"><span style="width:4px;height:14px;border-radius:2px;background:#2563eb;"></span>'+esc(g.label)+'</div>';
+        html+='<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;">';
+        g.opts.forEach(function(o){
+          var dis=o.disabled, isDirect=o.value==='direct';
+          html+='<button type="button" class="fe-pick-item" data-i="'+o.index+'" data-v="'+esc(o.value)+'"'+(dis?' disabled':'')
+            +' style="text-align:left;padding:11px 13px;border:1.5px solid #e2e8f0;border-radius:11px;background:'+(dis?'#f8fafc':'#fff')+';color:'+(dis?'#cbd5e1':'#1e293b')+';font-size:13.5px;font-weight:700;cursor:'+(dis?'not-allowed':'pointer')+';font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:all .12s;'+(isDirect?'grid-column:1/-1;border-style:dashed;':'')+'"'
+            +' title="'+esc(o.text)+'">'+esc(o.text.replace(/^[\s ]+/,''))+'</button>';
+        });
+        html+='</div>';
+      });
+      pick.innerHTML=html;
+      selEl.parentNode.insertBefore(pick, selEl);
+      var paint=function(){
+        pick.querySelectorAll('.fe-pick-item').forEach(function(b){
+          if(b.disabled) return;
+          var on=+b.getAttribute('data-i')===selEl.selectedIndex;
+          b.style.background=on?'#2563eb':'#fff'; b.style.color=on?'#fff':'#1e293b'; b.style.borderColor=on?'#2563eb':'#e2e8f0';
+          b.style.boxShadow=on?'0 6px 14px rgba(37,99,235,.28)':'none';
+        });
+      };
+      pick.addEventListener('click', function(ev){
+        var b=ev.target.closest('.fe-pick-item'); if(!b || b.disabled) return;
+        selEl.selectedIndex=+b.getAttribute('data-i'); try{ selEl.onchange && selEl.onchange.call(selEl); }catch(e){}
+        paint(); if(selEl.value==='direct'){ try{ dirEl.focus(); }catch(e){} }
+      });
+      pick.addEventListener('mouseover', function(ev){ var b=ev.target.closest('.fe-pick-item'); if(b && !b.disabled && +b.getAttribute('data-i')!==selEl.selectedIndex){ b.style.borderColor='#93c5fd'; b.style.background='#eff6ff'; } });
+      pick.addEventListener('mouseout', function(ev){ var b=ev.target.closest('.fe-pick-item'); if(b && !b.disabled) paint(); });
+      paint();
+      setTimeout(function(){ try{ var on=pick.querySelector('.fe-pick-item[data-i="'+selEl.selectedIndex+'"]'); if(on && selEl.value) on.scrollIntoView({block:'center'}); }catch(e){} }, 30);
+    }catch(e){ try{ selEl.style.display=''; }catch(_){} }
     modal.style.display='flex'; return;
   }
 
