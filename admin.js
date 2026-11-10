@@ -6148,9 +6148,14 @@ cancelIndividualShuttle: function(waveId, locId, token, name) {
                                 </div>
                             </td>
                             <td>
-                                <span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span>
-                                ${arrivalBadge}
-                                ${(isArrived && !isExpected) ? `<label title="이 사람은 예정 명단에 없습니다. 체크하면 명단(총원)에 합산되고, 두면 구경꾼으로 제외됩니다." style="display:inline-flex;align-items:center;gap:4px;margin-left:8px;padding:2px 8px;border-radius:999px;background:${isIncluded?'#dcfce7':'#f1f5f9'};border:1px solid ${isIncluded?'#86efac':'#e2e8f0'};font-size:11px;font-weight:800;color:${isIncluded?'#166534':'#64748b'};cursor:pointer;vertical-align:middle;"><input type="checkbox" ${isIncluded?'checked':''} onclick="event.stopPropagation(); dataMgr.toggleRosterInclude('${encodeURIComponent(name)}', this.checked)" style="cursor:pointer;margin:0;">명단 포함</label>` : ''}
+                                <!-- [K111] 상태 칸 정리: 위=입교 상태, 아래=명단 포함 스위치(간격 확보) -->
+                                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                                  <div style="display:inline-flex; align-items:center; gap:6px;">
+                                    <span class="status-badge ${isArrived ? 'status-arrived' : 'status-wait'}">${isArrived ? '입교 완료' : '미입교'}</span>
+                                    ${arrivalBadge}
+                                  </div>
+                                  ${(isArrived && !isExpected) ? `<label title="이 사람은 예정 명단에 없습니다. 켜면 명단(총원)에 합산되고, 끄면 구경꾼으로 제외됩니다." style="position:relative;display:inline-flex;align-items:center;gap:7px;padding:4px 10px 4px 5px;border-radius:999px;background:${isIncluded?'#ecfdf5':'#f8fafc'};border:1px solid ${isIncluded?'#86efac':'#e2e8f0'};font-size:11.5px;font-weight:800;color:${isIncluded?'#15803d':'#64748b'};cursor:pointer;user-select:none;"><input type="checkbox" ${isIncluded?'checked':''} onclick="event.stopPropagation(); dataMgr.toggleRosterInclude('${encodeURIComponent(name)}', this.checked)" style="position:absolute;opacity:0;width:0;height:0;"><span style="position:relative;width:28px;height:16px;border-radius:999px;background:${isIncluded?'#22c55e':'#cbd5e1'};flex:none;transition:background .15s;"><span style="position:absolute;top:2px;left:${isIncluded?'14px':'2px'};width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s;"></span></span>${isIncluded?'명단 포함':'명단 미포함'}</label>` : ''}
+                                </div>
                             </td>
                             <td style="color:#94a3b8; font-size:13px;">${isArrived ? (isOnline ? '접속 중' : '오프라인') : '-'}</td>
                             <td>
