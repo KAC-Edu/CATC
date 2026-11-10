@@ -3753,13 +3753,7 @@ loadAttendanceView: function() {
             // [J23] OTP 출결 진입 '즉시' 전체화면 — 메뉴를 누른 클릭 제스처가 살아있을 때 호출해야
             //  브라우저가 진짜 모니터 전체화면(Fullscreen API)을 허용함. (5초 지연 시 제스처 만료로 창모드가 됨)
             if (this._otpAutoFsTimer) { clearTimeout(this._otpAutoFsTimer); this._otpAutoFsTimer = null; }
-            setTimeout(() => {
-                try {
-                    const areaInt = document.getElementById('area-internal-qr');
-                    const stillHere = state.currentMode === 'attendance' && areaInt && areaInt.style.display !== 'none';
-                    if (stillHere && !document.getElementById('otpFsOverlay')) ui.openOtpFullscreen();
-                } catch(e){}
-            }, 120);
+            /* [K108] 자동 전체화면 폐지 — 일반 화면으로 들어가고, [전체화면] 버튼을 눌렀을 때만 모니터 전체화면 */
         }
         // [J22] 공식 QR로 전환 시 자동 전체화면 예약 취소 + 열려 있으면 닫기
         if (mode === 'official') {
