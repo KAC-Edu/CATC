@@ -1588,7 +1588,7 @@ try{
 
 
 
-    <script src="config.js?v=07d1b8ec"></script>
+    <script src="config.js?v=8182db8c"></script>
     <script>
         let serverTimeOffset = 0; // 추가
 let confirmCallback = null;
@@ -5323,7 +5323,11 @@ function _kacMatWatch(room){
             var all = await firebase.database().ref('system/materials').once('value');
             var v = all.val() || {};
             window._kacMatList = ids.map(function(id){
-                return v[id] ? Object.assign({ id:id }, v[id]) : null;
+                if(!v[id]) return null;
+                var o = Object.assign({ id:id }, v[id]);
+                /* [K120] 강사가 '워터마크'를 켠 교재는 CATC 워터마크본으로 내려받게 한다 */
+                if(linked[id] && linked[id].wm && v[id].wmKey){ o.key = v[id].wmKey; o.url = ''; if(v[id].wmSize) o.size = v[id].wmSize; o._wm = true; }
+                return o;
             }).filter(Boolean).sort(function(a,b){ return (a.uploadedAt||0)-(b.uploadedAt||0); });
         }catch(e){ window._kacMatList=[]; }
         window._kacMatLoaded = true;          // [K85] 서버 응답을 받았다는 표시
