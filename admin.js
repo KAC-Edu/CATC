@@ -17909,6 +17909,46 @@ ui.confirmRouletteLeader = function(){
     }
     bindDrag(host);
     restorePos(host);
+    renderNotes(picked);   // [K122] 과정현황 오른쪽 포스트잇 바로가기
+  }
+
+  /* [K122] 과정현황 화면 오른쪽 바깥에 '포스트잇' 바로가기 — 육각 리모컨에 고른 6개 메뉴를 그대로 보여준다.
+     (OTP출결 등을 리모컨·사이드바를 열지 않고 한 번에 누르기 위함) */
+  var NOTE_COLORS = [['#fef9c3','#ca8a04'],['#dcfce7','#16a34a'],['#dbeafe','#2563eb'],['#fce7f3','#db2777'],['#ede9fe','#7c3aed'],['#ffedd5','#ea580c']];
+  function renderNotes(picked){
+    try{
+      var view = document.getElementById('view-dashboard'); if(!view) return;
+      if(!document.getElementById('dashNotesCss')){
+        var st = document.createElement('style'); st.id = 'dashNotesCss';
+        st.textContent = '.dash-hero-container{position:relative;} #dashQuickNotes{position:absolute; left:calc(100% + 18px); top:24px; z-index:880; display:flex; flex-direction:column; gap:12px; width:118px;}'
+          + '#dashQuickNotes .dqn-head{display:flex; align-items:center; justify-content:space-between; font-size:11.5px; font-weight:900; color:#64748b; padding:0 2px;}'
+          + '#dashQuickNotes .dqn-head button{border:none; background:none; color:#94a3b8; cursor:pointer; font-size:13px; padding:2px;}'
+          + '#dashQuickNotes .dqn-head button:hover{color:#2563eb;}'
+          + '#dashQuickNotes .dqn{position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; padding:14px 8px 12px; border:none; border-radius:4px 4px 14px 4px; cursor:pointer; font-family:inherit; box-shadow:0 6px 14px rgba(15,23,42,.12), 0 1px 0 rgba(15,23,42,.05); transition:transform .15s, box-shadow .15s;}'
+          + '#dashQuickNotes .dqn::before{content:""; position:absolute; top:-6px; left:50%; transform:translateX(-50%) rotate(-2deg); width:42px; height:12px; background:rgba(255,255,255,.65); border-radius:2px; box-shadow:0 1px 2px rgba(15,23,42,.10);}'
+          + '#dashQuickNotes .dqn:nth-child(odd){transform:rotate(-1.6deg);} #dashQuickNotes .dqn:nth-child(even){transform:rotate(1.4deg);}'
+          + '#dashQuickNotes .dqn:hover{transform:rotate(0) translateX(-4px) scale(1.04); box-shadow:0 12px 24px rgba(15,23,42,.18);}'
+          + '#dashQuickNotes .dqn i{font-size:21px;} #dashQuickNotes .dqn span{font-size:13px; font-weight:900; color:#1e293b; line-height:1.25; text-align:center; word-break:keep-all;}'
+          + '@media (max-width:1380px){ #dashQuickNotes{width:96px;} #dashQuickNotes .dqn span{font-size:12px;} }';
+        document.head.appendChild(st);
+      }
+      var box = document.getElementById('dashQuickNotes');
+      var host2 = view.querySelector('.dash-hero-container') || view;   // [K122] 가운데 카드 바로 오른쪽에 붙인다
+      if(!box){ box = document.createElement('div'); box.id = 'dashQuickNotes'; }
+      if(box.parentNode !== host2) host2.appendChild(box);
+      box.innerHTML = '<div class="dqn-head"><span>바로가기</span><button type="button" title="메뉴 고르기(육각 리모컨과 같이 바뀜)" data-dqn-gear><i class="fa-solid fa-gear"></i></button></div>'
+        + picked.map(function(mode, i){
+            var it = choices.filter(function(c){ return c.mode === mode; })[0]; if(!it) return '';
+            var c = NOTE_COLORS[i % NOTE_COLORS.length];
+            return '<button type="button" class="dqn" data-mode="'+esc(it.mode)+'" style="background:'+c[0]+';"><i class="fa-solid '+esc(it.icon)+'" style="color:'+c[1]+';"></i><span>'+esc(it.label)+'</span></button>';
+          }).join('');
+      box.onclick = function(e){
+        if(e.target.closest('[data-dqn-gear]')) return openSettings();
+        var b = e.target.closest('.dqn'); if(!b) return;
+        var m = b.getAttribute('data-mode');
+        try{ if(typeof ui !== 'undefined' && ui.setMode) ui.setMode(m); }catch(err){}
+      };
+    }catch(e){}
   }
 
   function openSettings(){
