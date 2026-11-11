@@ -20284,7 +20284,7 @@ ui.matExtLink = async function(){
     document.body.appendChild(o);
     o.addEventListener('click', async function(e){
         if(e.target===o || e.target.id==='lno') return o.remove();
-        var cp = e.target.closest('[data-lcopy]'); if(cp) return ui._matCopy(cp.getAttribute('data-lcopy'), '📋 외부 강사 업로드 링크를 복사했습니다.');
+        var cp = e.target.closest('[data-lcopy]'); if(cp){ o.remove(); return ui._showLinkCopy(cp.getAttribute('data-lcopy'), ''); }
         var sp = e.target.closest('[data-lstop]'); if(sp){ if(!confirm('이 링크를 중지할까요? 중지하면 외부 강사가 더 올릴 수 없습니다.')) return; await firebase.database().ref('system/coord/uploadLinks/'+sp.getAttribute('data-lstop')+'/revoked').set(true); o.remove(); ui.matExtLink(); return; }
         if(e.target.closest('#lmk')){
             var exp = Number((o.querySelector('input[name=lexp]:checked')||{}).value || 0); if(!exp) return;
@@ -20292,12 +20292,37 @@ ui.matExtLink = async function(){
             var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
             var p64 = ui._b64u(JSON.stringify({ r: room, c: cname, e: exp, n: n }));
             var sig = await ui._hmacHex(window.kacMaterials.getKey(), p64);
-            var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?t=' + p64 + '~' + sig;
-            await firebase.database().ref('system/coord/uploadLinks/'+n).set({ room: room, course: cname, exp: exp, createdAt: Date.now(), by: ui._matWhoLabel({ uploader: ui._matWho() }), url: url, revoked: false });
+            /* [K155] 짧은 주소 — 서명 토큰은 서버(uploadLinks/{n}/tok)에 두고 링크에는 번호만 */
+            var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?k=' + n;
+            await firebase.database().ref('system/coord/uploadLinks/'+n).set({ room: room, course: cname, exp: exp, createdAt: Date.now(), by: ui._matWhoLabel({ uploader: ui._matWho() }), url: url, tok: p64 + '~' + sig, revoked: false });
             o.remove();
-            ui._matCopy(url, '✅ 외부 강사 업로드 링크를 만들었습니다 (' + fmt(exp) + '까지).\n메일이나 문자로 강사님께 보내 주세요.\n\n' + url);
+            ui._showLinkCopy(url, fmt(exp));
         }
     });
 };
 
+
+/* [K155] 링크 보여주기 + [복사] 버튼 — 암호 입력 등으로 시간이 지나면 브라우저가 자동 복사를 막으므로 버튼을 눌러 복사 */
+ui._showLinkCopy = function(url, until){
+    var o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    o.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:520px">'
+      + '<div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-circle-check" style="color:#16a34a"></i> 외부 강사 업로드 링크' + (until ? ' <span style="font-size:13px;color:#64748b;font-weight:800">(' + until + '까지)</span>' : '') + '</div>'
+      + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 12px">아래 [링크 복사]를 누른 뒤 메일·문자에 붙여넣어 강사님께 보내 주세요. 강사님은 암호 없이 성함만 적고 올리면 됩니다.</div>'
+      + '<input id="lnkTxt" readonly value="' + ui._esc(url) + '" style="width:100%;box-sizing:border-box;padding:12px 13px;border:1.5px solid #cbd5e1;border-radius:11px;font-size:14px;font-weight:700;color:#1e3a8a;background:#f8fafc">'
+      + '<div style="display:flex;gap:8px;margin-top:12px"><button id="lnkCp" style="flex:2;padding:13px;border:none;border-radius:12px;background:#2563eb;color:#fff;font-size:15px;font-weight:900;cursor:pointer"><i class="fa-solid fa-copy"></i> 링크 복사</button>'
+      + '<a href="' + ui._esc(url) + '" target="_blank" rel="noopener" style="flex:1;display:flex;align-items:center;justify-content:center;padding:13px;border:1px solid #cbd5e1;border-radius:12px;color:#334155;font-weight:800;text-decoration:none">열어 보기</a>'
+      + '<button id="lnkNo" style="flex:1;padding:13px;border:none;border-radius:12px;background:#f1f5f9;color:#475569;font-weight:800;cursor:pointer">닫기</button></div>'
+      + '<div id="lnkMsg" style="margin-top:10px;font-size:13px;font-weight:800;color:#16a34a;min-height:18px"></div></div>';
+    document.body.appendChild(o);
+    var t = o.querySelector('#lnkTxt'); setTimeout(function(){ try{ t.focus(); t.select(); }catch(e){} }, 50);
+    o.querySelector('#lnkNo').onclick = function(){ o.remove(); };
+    o.onclick = function(e){ if(e.target === o) o.remove(); };
+    o.querySelector('#lnkCp').onclick = function(){
+        var ok = function(){ o.querySelector('#lnkMsg').textContent = '✅ 복사했습니다. 메일·문자에 붙여넣기(Ctrl+V) 하세요.'; };
+        t.select();
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(ok).catch(function(){ try{ document.execCommand('copy'); ok(); }catch(e){} }); }
+        else { try{ document.execCommand('copy'); ok(); }catch(e){} }
+    };
+};
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
