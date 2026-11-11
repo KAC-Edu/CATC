@@ -11,15 +11,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         *{ box-sizing:border-box; }
-        body{ margin:0; min-height:100vh; font-family:'Pretendard','Malgun Gothic',sans-serif; background:linear-gradient(160deg,#eef2ff,#e0f2fe); color:#0f172a; display:flex; align-items:flex-start; justify-content:center; padding:40px 18px; }
-        .card{ width:100%; max-width:640px; background:#fff; border-radius:22px; box-shadow:0 20px 50px rgba(15,23,42,.12); padding:30px 28px; }
+        body{ margin:0; min-height:100vh; font-family:'Pretendard','Malgun Gothic',sans-serif; background:linear-gradient(160deg,#eef2ff,#e0f2fe); color:#0f172a; display:flex; align-items:flex-start; justify-content:center; padding:48px 18px; }
+        .card{ width:100%; max-width:520px; background:#fff; border-radius:24px; box-shadow:0 20px 50px rgba(15,23,42,.12); padding:32px 30px 30px; }
         h1{ margin:0 0 6px; font-size:23px; font-weight:900; }
-        .sub{ color:#64748b; font-size:14px; font-weight:700; line-height:1.6; }
-        .pill{ display:inline-block; padding:4px 11px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:13px; font-weight:900; }
-        label.l{ display:block; margin:20px 2px 7px; font-size:14px; font-weight:800; color:#334155; }
-        input[type=text]{ width:100%; padding:13px 14px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:16px; font-weight:700; }
-        .drop{ margin-top:18px; border:2px dashed #a5b4fc; border-radius:18px; background:#f8faff; padding:40px 18px; text-align:center; cursor:pointer; transition:background .15s; }
-        .drop.on{ background:#eef2ff; }
+        .top{ font-size:14px; font-weight:800; color:#6366f1; }
+        .course{ margin-top:6px; font-size:26px; font-weight:900; letter-spacing:-.5px; line-height:1.3; }
+        .until{ margin-top:4px; font-size:13px; font-weight:700; color:#94a3b8; }
+        .step{ display:flex; align-items:center; gap:8px; margin:26px 2px 10px; font-size:16px; font-weight:900; color:#1e293b; }
+        .step .no{ width:24px; height:24px; border-radius:50%; background:#4f46e5; color:#fff; font-size:13px; display:inline-flex; align-items:center; justify-content:center; }
+        input[type=text]{ width:100%; padding:15px 16px; border:2px solid #e2e8f0; border-radius:14px; font-size:18px; font-weight:800; outline:none; transition:border-color .15s, box-shadow .15s; }
+        input[type=text]:focus{ border-color:#6366f1; box-shadow:0 0 0 4px rgba(99,102,241,.15); }
+        input[type=text].need{ border-color:#ef4444; box-shadow:0 0 0 4px rgba(239,68,68,.15); }
+        .drop{ border:2px dashed #a5b4fc; border-radius:18px; background:#f8faff; padding:34px 18px; text-align:center; cursor:pointer; transition:background .15s, opacity .15s, border-color .15s; }
+        .drop > i{ font-size:38px; color:#6366f1; }
+        .drop .dt{ font-size:18px; font-weight:900; margin-top:10px; }
+        .drop:hover, .drop.on{ background:#eef2ff; border-color:#6366f1; }
+        .drop.off{ opacity:.45; }
         .btn{ display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border:none; border-radius:12px; background:#4f46e5; color:#fff; font-size:15px; font-weight:900; cursor:pointer; }
         .row{ display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid #e2e8f0; border-radius:12px; margin-top:8px; font-size:14px; font-weight:700; }
         .muted{ color:#94a3b8; font-size:12.5px; font-weight:700; }
@@ -67,28 +74,29 @@
   }).catch(function(){ render(); });
   }
 
+  /* [K160] 화면 단순화 — ① 성함 ② 파일 두 단계만. 한 과정에 링크 1개를 여러 강사가 함께 쓰므로 '내 파일'은 성함으로 구분 */
   function render(){
     var saved = ''; try{ saved = localStorage.getItem('kac_ext_name') || ''; }catch(e){}
-    app.innerHTML = '<h1><i class="fa-solid fa-cloud-arrow-up" style="color:#4f46e5;"></i> 교재 업로드</h1>'
-      + '<div class="sub">한국공항공사 항공기술훈련원 · 외부 강사님 교재 제출용</div>'
-      + '<div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;"><span class="pill">' + esc(info.c || ('Room ' + info.r)) + '</span><span class="muted">업로드 가능 기간: ' + fmt(info.e) + '까지</span></div>'
-      + '<label class="l">강사님 성함 <span style="color:#dc2626;">*</span></label><input type="text" id="nm" placeholder="예) 홍길동" value="' + esc(saved) + '">'
-      + '<div class="drop" id="dz"><div style="font-size:40px; color:#6366f1;"><i class="fa-solid fa-file-arrow-up"></i></div>'
-      + '<div style="font-size:16px; font-weight:900; margin-top:8px;">여기로 파일을 끌어다 놓거나 눌러서 고르세요</div>'
-      + '<div class="muted" style="margin-top:6px;">PDF · PPT · 한글 · 워드 · 엑셀 · 이미지 · ZIP · 한 파일 100MB까지 · 여러 개 가능</div></div>'
+    app.innerHTML = '<div class="top"><i class="fa-solid fa-cloud-arrow-up"></i> 교재 제출</div>'
+      + '<div class="course">' + esc(info.c || ('Room ' + info.r)) + '</div>'
+      + '<div class="until">' + fmt(info.e) + '까지</div>'
+      + '<div class="step"><span class="no">1</span> 성함</div>'
+      + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
+      + '<div class="step"><span class="no">2</span> 파일</div>'
+      + '<div class="drop" id="dz"><i class="fa-solid fa-file-arrow-up"></i><div class="dt">눌러서 파일 선택</div><div class="muted">또는 여기로 끌어다 놓기</div></div>'
       + '<input type="file" id="fi" multiple style="display:none;">'
       + '<div id="list"></div>'
-      /* [K153] 이 링크로 이미 올린 파일 — 다시 올리면 '바꾸기'인지 바로 알 수 있게 */
-      + '<div style="margin-top:22px; font-size:14px; font-weight:900; color:#334155;"><i class="fa-solid fa-folder-open" style="color:#4f46e5;"></i> 이 링크로 올린 교재 <span id="mineCnt" class="muted"></span></div>'
-      + '<div id="mine"><div class="muted" style="margin-top:8px;">불러오는 중…</div></div>'
-      + '<div class="muted" style="margin-top:18px; line-height:1.7;">올리신 교재는 담당자와 해당 과정 교육생에게만 제공됩니다. 잘못 올리신 경우 담당자에게 알려 주세요.</div>';
-    var dz = document.getElementById('dz'), fi = document.getElementById('fi');
-    dz.onclick = function(){ fi.click(); };
+      + '<div id="mineWrap" style="display:none;"><div class="step" style="margin-top:26px;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> 제출한 파일 <span id="mineCnt" class="muted"></span></div><div id="mine"></div></div>';
+    var dz = document.getElementById('dz'), fi = document.getElementById('fi'), nmI = document.getElementById('nm');
+    var sync = function(){ dz.classList.toggle('off', !nmI.value.trim()); drawMine(); };
+    nmI.addEventListener('input', sync);
+    dz.onclick = function(){ if(!nmI.value.trim()){ nmI.focus(); nmI.classList.add('need'); setTimeout(function(){ nmI.classList.remove('need'); }, 1200); return; } fi.click(); };
     fi.onchange = function(){ go(fi.files); fi.value=''; };
     ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('on'); }); });
     ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('on'); }); });
     dz.addEventListener('drop', function(e){ go(e.dataTransfer && e.dataTransfer.files); });
-    loadMine();
+    sync(); loadMine();
+    if(!saved) nmI.focus();
   }
 
   var mine = [];   // [{id, ...rec}]
@@ -98,15 +106,19 @@
       drawMine();
     }).catch(function(){ mine = []; drawMine(); });
   }
+  function myName(){ return String((document.getElementById('nm')||{}).value || '').trim(); }
+  function myFiles(){ var n = myName().replace(/\s+/g,''); if(!n) return []; return mine.filter(function(m){ return String(m.uploader||'').replace(/\s+/g,'') === n; }); }
   function drawMine(){
-    var box = document.getElementById('mine'), cnt = document.getElementById('mineCnt'); if(!box) return;
-    if(cnt) cnt.textContent = mine.length ? ('· ' + mine.length + '건') : '';
-    if(!mine.length){ box.innerHTML = '<div class="muted" style="margin-top:8px;">아직 올린 교재가 없습니다.</div>'; return; }
-    box.innerHTML = mine.map(function(m){
+    var box = document.getElementById('mine'), cnt = document.getElementById('mineCnt'), wrap = document.getElementById('mineWrap'); if(!box) return;
+    var my = myFiles();
+    if(wrap) wrap.style.display = my.length ? '' : 'none';
+    if(cnt) cnt.textContent = my.length ? (my.length + '건') : '';
+    if(!my.length){ box.innerHTML = ''; return; }
+    box.innerHTML = my.map(function(m){
       var d = new Date(m.replacedAt || m.uploadedAt || 0), p = function(n){ return String(n).padStart(2,'0'); };
       var ds = d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
       return '<div class="row"><i class="fa-solid fa-file-lines" style="color:#4f46e5;"></i><span style="flex:1; min-width:0;"><span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(m.fileName || m.title) + '</span>'
-        + '<span class="muted">' + fmtSize(m.size) + ' · ' + (m.replacedAt ? '<b style="color:#ea580c;">새 파일로 바꿈</b> ' : '올림 ') + ds + '</span></span>'
+        + '<span class="muted">' + fmtSize(m.size) + ' · ' + (m.replacedAt ? '<b style="color:#ea580c;">바꿈</b> ' : '') + ds + '</span></span>'
         + '<button type="button" data-del="' + esc(m.id) + '" style="flex-shrink:0; padding:6px 11px; border:none; border-radius:9px; background:#fef2f2; color:#dc2626; font-size:12.5px; font-weight:800; cursor:pointer;">삭제</button></div>';
     }).join('');
     box.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ delMine(b.getAttribute('data-del')); }; });
@@ -123,7 +135,7 @@
   }
   function sameFile(name){
     var base = function(s){ return String(s||'').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|#%&+]/g,'_').replace(/\s+/g,' ').trim().toLowerCase(); };
-    var b = base(name); return mine.filter(function(m){ return base(m.fileName || m.title) === b; })[0] || null;
+    var b = base(name); return myFiles().filter(function(m){ return base(m.fileName || m.title) === b; })[0] || null;
   }
   function askReplace(f, old){
     return new Promise(function(res){
@@ -142,8 +154,8 @@
 
   async function go(files){
     files = Array.prototype.slice.call(files || []); if(!files.length) return;
-    var nm = String((document.getElementById('nm')||{}).value || '').trim();
-    if(!nm){ alert('강사님 성함을 먼저 입력해 주세요.'); document.getElementById('nm').focus(); return; }
+    var nm = myName();
+    if(!nm){ var ni = document.getElementById('nm'); ni.focus(); ni.classList.add('need'); setTimeout(function(){ ni.classList.remove('need'); }, 1200); return; }
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var list = document.getElementById('list');
     for(var i=0;i<files.length;i++){
