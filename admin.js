@@ -8082,7 +8082,7 @@ resetShuttleRequests: function() {
             const _distGrid = _sorted.length ? _sorted.map(n=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 11px;background:#f8fafc;border:1px solid #eef2f7;border-radius:8px;"><span style="font-weight:700;color:#334155;font-size:13.5px;">${esc(n)}</span><span style="font-weight:900;color:#10b981;font-size:14px;">${_agg[n]}명</span></div>`).join('') : '<div style="grid-column:1/-1;padding:14px;color:#94a3b8;text-align:center;font-size:13px;">예정 명단 소속 정보가 없습니다.</div>';
             const _unknownNote = _aggUnknown ? `<div style="font-size:12px;color:#94a3b8;">· 소속 구분 불가 ${_aggUnknown}명은 지도에서 제외</div>` : '';
             const _mapPanel = `<div style="display:flex;flex-direction:column;gap:10px;">`
-                + `<div id="homeStatMapKakao" style="width:100%;height:clamp(360px,58vh,700px);border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
+                + `<div id="homeStatMapKakao" style="width:100%;height:clamp(260px,calc(92vh - 330px),640px);border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#eaf2fb;"></div>`
                 + `<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 16px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;"><span style="font-weight:900;color:#166534;font-size:clamp(16px,1.8vw,22px);">합계</span><span style="font-weight:900;color:#16a34a;font-size:clamp(16px,1.8vw,22px);">${_aggTotal+_aggUnknown}명</span></div>`
                 + _unknownNote
                 + `</div>`;
@@ -8092,7 +8092,9 @@ resetShuttleRequests: function() {
                 + `<div style="flex:1.4 1 330px;min-width:0;padding-top:calc(clamp(17px,1.9vw,23px) * 1.25 + 12px);">${_listHtml}</div>`
                 + `<div style="flex:1 1 340px;min-width:0;"><div style="font-size:clamp(17px,1.9vw,23px);font-weight:900;color:#0f172a;margin-bottom:12px;">📊 전체 교육생 소속 분포</div>${_mapPanel}</div>`
                 + `</div>`
-                + `<div class="screen-hint" style="margin-top:18px;">`
+                /* [K147] '보는 방법'은 접어 두고 ⓘ 를 누를 때만 펼친다(팝업이 한 화면에 들어가도록) */
+                + `<button type="button" onclick="var d=this.nextElementSibling; d.style.display=(d.style.display==='none')?'flex':'none';" style="margin-top:12px; border:none; background:none; color:#94a3b8; font-size:13px; font-weight:800; cursor:pointer; padding:4px 2px;"><i class="fa-solid fa-circle-info"></i> 보는 방법</button>`
+                + `<div class="screen-hint" style="margin-top:6px; display:none;">`
                 +   `<i class="fa-solid fa-circle-info"></i>`
                 +   `<div class="hint-body">`
                 +     `<span class="hint-title">보는 방법</span>`
