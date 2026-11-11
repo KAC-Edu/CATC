@@ -27,13 +27,34 @@ function _kacActivateAppCheck() {
        K87 에서 head 즉시 호출을 넣었더니, 크롬에서 reCAPTCHA 배지를 붙일 body 가 없어 활성화가 '반쯤' 실패
        → 이후 호출은 전부 'already-activated' 오류, 토큰은 안 나와 DB 가 영영 응답 없음(현황판 무한 로딩).
        body 가 생기는 순간 아래 옵저버가 바로 활성화하므로(본문 스크립트 실행 전) 토큰 타이밍도 충분하다. */
-    if (!document.body) return;
+    /* [K149] 그런데 body 를 기다리면, 그 전에 만들어진 DB 연결은 App Check 토큰 없이 붙어
+       'Missing appcheck token' 으로 가끔 영영 응답이 없다(현황판 '연결이 지연되고 있어요').
+       → head 에서도 '즉시' 활성화하되, reCAPTCHA 가 배지를 붙일 자리를 임시 상자로 대신 주고
+         body 가 생기면 그 상자를 body 로 옮긴다. (시험: head 에서 DB 요청 1.4초 만에 정상 응답 · 배지 정상) */
+    if (!firebase.appCheck) return;
+    var holder = null, shim = false;
+    if (!document.body) {
+        try {
+            holder = document.createElement('div'); holder.id = 'kac-appcheck-holder';
+            Object.defineProperty(document, 'body', { configurable: true, get: function () { return holder; } });
+            shim = true;
+        } catch (e) { return; }   // 임시 상자를 못 만들면 예전처럼 body 를 기다린다
+    }
     try {
-        if (firebase.appCheck) {
-            firebase.appCheck().activate('6LcAu2ItAAAAAAqwjmZ0DbxUkPwrn5ExWqCOTEtf', true);
-            window._kacAppCheckDone = true;
-        }
+        firebase.appCheck().activate('6LcAu2ItAAAAAAqwjmZ0DbxUkPwrn5ExWqCOTEtf', true);
+        window._kacAppCheckDone = true;
     } catch (e) { try { console.warn('[App Check] 활성화 실패', e); } catch (_) {} }
+    finally {
+        if (shim) {
+            try { delete document.body; } catch (e) {}
+            var move = function () { try { if (document.body && holder && !holder.parentNode) document.body.appendChild(holder); } catch (e) {} };
+            if (document.body) move();
+            else {
+                try { var mo = new MutationObserver(function () { if (document.body) { mo.disconnect(); move(); } }); mo.observe(document.documentElement, { childList: true }); } catch (e) {}
+                document.addEventListener('DOMContentLoaded', move);
+            }
+        }
+    }
 }
 //  ★★ 타이밍 중요: DOMContentLoaded는 '너무 늦다' — 그 전에 각 페이지 초기 스크립트가 DB 요청을
 //    토큰 없이 먼저 내보내 '오래된 클라이언트'로 집계되고, 강화(Enforce) 시 그 초기 요청이 막힌다.
