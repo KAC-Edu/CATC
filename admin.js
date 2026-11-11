@@ -20271,7 +20271,8 @@ ui.matExtLink = async function(){
     opts.push([now + 60*day, '60일']); opts.push([now + 90*day, '90일']); opts.push([now + 120*day, '120일']);
     var fmt = function(ms){ var d=new Date(ms); return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(); };
     var links = {}; try{ links = (await firebase.database().ref('system/coord/uploadLinks').orderByChild('room').equalTo(room).once('value')).val() || {}; }catch(e){}
-    var exist = Object.keys(links).map(function(k){ var v=links[k]||{}; var dead = v.revoked || Number(v.exp) < now;
+    /* [K159] 중지·만료된 링크는 목록에서 숨기고 사용 중인 것만 보인다 */
+    var exist = Object.keys(links).filter(function(k){ var v=links[k]||{}; return !v.revoked && Number(v.exp) >= now; }).map(function(k){ var v=links[k]||{}; var dead = v.revoked || Number(v.exp) < now;
         return '<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;margin-top:6px;font-size:13px;font-weight:700;'+(dead?'opacity:.55':'')+'"><span style="flex:1">'+fmt(Number(v.createdAt)||now)+' 생성 · '+fmt(Number(v.exp))+'까지 '+(v.revoked?'<b style="color:#dc2626">중지됨</b>':(Number(v.exp)<now?'<b style="color:#94a3b8">만료</b>':'<b style="color:#16a34a">사용 중</b>'))+'</span>'
           + (v.url && !dead ? '<button data-lcopy="'+ui._esc(v.url)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;cursor:pointer">복사</button>' : '')
           + (!dead ? '<button data-lstop="'+ui._esc(k)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#fef2f2;color:#dc2626;font-weight:800;cursor:pointer">중지</button>' : '') + '</div>'; }).join('');
