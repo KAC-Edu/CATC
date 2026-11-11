@@ -20256,6 +20256,10 @@ ui._hmacHex = async function(key, msg){
     var mac = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
     return Array.prototype.map.call(mac, function(b){ return b.toString(16).padStart(2,'0'); }).join('');
 };
+/* [K158] 암호 확인 — 없는 파일을 '지우기' 요청해 본다(맞으면 200, 틀리면 401). 실제로 지워지는 것은 없다 */
+ui._matKeyValid = async function(){
+    try{ var r = await fetch(window.kacMaterials.API + '/f/materials/__keycheck__', { method:'DELETE', headers:{ 'X-Upload-Key': window.kacMaterials.getKey() } }); return r.ok; }catch(e){ return false; }
+};
 ui.matExtLink = async function(){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 만들 수 없습니다.');
     var room = state.room; if(!room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
@@ -20289,6 +20293,8 @@ ui.matExtLink = async function(){
         if(e.target.closest('#lmk')){
             var exp = Number((o.querySelector('input[name=lexp]:checked')||{}).value || 0); if(!exp) return;
             if(!(await ui._matEnsureKey())) return;
+            /* [K158] 암호가 맞는지 서버에서 먼저 확인 — 틀린 암호로 서명하면 강사 화면에서 '링크가 만료/올바르지 않음' 이 뜬다 */
+            if(!(await ui._matKeyValid())){ window.kacMaterials.clearKey(); ui.showAlert('교재 자료실 암호가 맞지 않습니다.<br>다시 눌러 정확한 암호를 입력해 주세요.'); return; }
             var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
             var p64 = ui._b64u(JSON.stringify({ r: room, c: cname, e: exp, n: n }));
             var sig = await ui._hmacHex(window.kacMaterials.getKey(), p64);
