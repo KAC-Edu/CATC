@@ -18973,7 +18973,7 @@ ui._matRenderList = function(){
         var ds = m.uploadedAt ? (d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())) : '-';
         var mine = (m.uploader === me);
         var isPdf = /\.pdf$/i.test(m.fileName||'');
-        return '<div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #eef2f7; border-radius:12px; margin-bottom:9px; background:#fff;">'
+        return '<div class="mat-row" style="display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #eef2f7; border-radius:12px; margin-bottom:9px; background:#fff;">'
           /* [K70] 일괄 다운로드용 선택 */
           + '<input type="checkbox" class="matRowChk" value="'+id+'" onchange="ui._matSyncBulk()" style="width:17px; height:17px; flex-shrink:0; cursor:pointer;">'
           + '<i class="fa-solid fa-file-pdf" style="font-size:22px; color:#dc2626; flex-shrink:0;"></i>'
@@ -19010,7 +19010,7 @@ ui._matRenderList = function(){
         + 'style="padding:8px 15px; border:none; border-radius:9px; background:#e2e8f0; color:#94a3b8; font-size:12.5px; font-weight:800; cursor:not-allowed;">'
         + '<i class="fa-solid fa-trash"></i> 선택 빼기</button>'
       + '</div>';
-    box.innerHTML = bar + rows + ui._matUsageHtml();
+    box.innerHTML = bar + '<div class="mat-rows">' + rows + '</div>' + ui._matUsageHtml();   // [K148] 교재 목록을 연회색 판 위에 카드로
     ui._matSyncBulk();
 };
 
