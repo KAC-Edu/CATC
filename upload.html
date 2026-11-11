@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교재 업로드 — 항공기술훈련원</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-check.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="config.js?v=cea6ba7f"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{ box-sizing:border-box; }
+        body{ margin:0; min-height:100vh; font-family:'Pretendard','Malgun Gothic',sans-serif; background:linear-gradient(160deg,#eef2ff,#e0f2fe); color:#0f172a; display:flex; align-items:flex-start; justify-content:center; padding:40px 18px; }
+        .card{ width:100%; max-width:640px; background:#fff; border-radius:22px; box-shadow:0 20px 50px rgba(15,23,42,.12); padding:30px 28px; }
+        h1{ margin:0 0 6px; font-size:23px; font-weight:900; }
+        .sub{ color:#64748b; font-size:14px; font-weight:700; line-height:1.6; }
+        .pill{ display:inline-block; padding:4px 11px; border-radius:999px; background:#eef2ff; color:#3730a3; font-size:13px; font-weight:900; }
+        label.l{ display:block; margin:20px 2px 7px; font-size:14px; font-weight:800; color:#334155; }
+        input[type=text]{ width:100%; padding:13px 14px; border:1.5px solid #cbd5e1; border-radius:12px; font-size:16px; font-weight:700; }
+        .drop{ margin-top:18px; border:2px dashed #a5b4fc; border-radius:18px; background:#f8faff; padding:40px 18px; text-align:center; cursor:pointer; transition:background .15s; }
+        .drop.on{ background:#eef2ff; }
+        .btn{ display:inline-flex; align-items:center; gap:8px; padding:12px 22px; border:none; border-radius:12px; background:#4f46e5; color:#fff; font-size:15px; font-weight:900; cursor:pointer; }
+        .row{ display:flex; align-items:center; gap:10px; padding:11px 13px; border:1px solid #e2e8f0; border-radius:12px; margin-top:8px; font-size:14px; font-weight:700; }
+        .muted{ color:#94a3b8; font-size:12.5px; font-weight:700; }
+        .err{ background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:14px; padding:18px; font-weight:800; line-height:1.6; }
+    </style>
+</head>
+<body>
+<div class="card" id="app">
+    <div class="sub">불러오는 중…</div>
+</div>
+<script>
+/* [K152] 외부 강사 교재 업로드 페이지 — 교육운영부가 만든 '기간 한정 링크'로만 열린다.
+   · 이 페이지에서 할 수 있는 것: 지정된 과정에 교재 '올리기'만 (보기·삭제 불가)
+   · 링크의 서명·기간은 Cloudflare 가 확인하고, 운영부가 링크를 '중지'하면 여기서도 막는다 */
+(function(){
+  var app = document.getElementById('app');
+  var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  var API = (window.KAC_MATERIALS_API || 'https://catcmaterials.jds0616.workers.dev');
+  var tok = new URLSearchParams(location.search).get('t') || '';
+  var info = null;
+  try{ var p = tok.split('~')[0].replace(/-/g,'+').replace(/_/g,'/'); while(p.length % 4) p += '='; info = JSON.parse(decodeURIComponent(escape(atob(p)))); }catch(e){}
+  function fail(msg){ app.innerHTML = '<h1>교재 업로드</h1><div class="err" style="margin-top:14px;">' + msg + '</div><div class="muted" style="margin-top:12px;">문의: 항공기술훈련원 교육운영부</div>'; }
+  if(!info || !info.r || !info.e) return fail('링크가 올바르지 않습니다.<br>받으신 주소 전체를 다시 확인해 주세요.');
+  if(Date.now() > Number(info.e)) return fail('업로드 기간이 끝난 링크입니다.<br>담당자에게 새 링크를 요청해 주세요.');
+  var fmt = function(ms){ var d = new Date(Number(ms)); return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+'.'; };
+  var fmtSize = function(b){ b=Number(b)||0; return b>=1048576 ? (b/1048576).toFixed(1)+'MB' : Math.max(1,Math.round(b/1024))+'KB'; };
+
+  firebase.database().ref('system/coord/uploadLinks/' + String(info.n||'x')).once('value').then(function(s){
+    var v = s.val();
+    if(v && v.revoked) return fail('담당자가 이 업로드 링크를 중지했습니다.<br>필요하시면 새 링크를 요청해 주세요.');
+    render();
+  }).catch(function(){ render(); });
+
+  function render(){
+    var saved = ''; try{ saved = localStorage.getItem('kac_ext_name') || ''; }catch(e){}
+    app.innerHTML = '<h1><i class="fa-solid fa-cloud-arrow-up" style="color:#4f46e5;"></i> 교재 업로드</h1>'
+      + '<div class="sub">한국공항공사 항공기술훈련원 · 외부 강사님 교재 제출용</div>'
+      + '<div style="margin-top:16px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;"><span class="pill">' + esc(info.c || ('Room ' + info.r)) + '</span><span class="muted">업로드 가능 기간: ' + fmt(info.e) + '까지</span></div>'
+      + '<label class="l">강사님 성함 <span style="color:#dc2626;">*</span></label><input type="text" id="nm" placeholder="예) 홍길동" value="' + esc(saved) + '">'
+      + '<div class="drop" id="dz"><div style="font-size:40px; color:#6366f1;"><i class="fa-solid fa-file-arrow-up"></i></div>'
+      + '<div style="font-size:16px; font-weight:900; margin-top:8px;">여기로 파일을 끌어다 놓거나 눌러서 고르세요</div>'
+      + '<div class="muted" style="margin-top:6px;">PDF · PPT · 한글 · 워드 · 엑셀 · 이미지 · ZIP · 한 파일 100MB까지 · 여러 개 가능</div></div>'
+      + '<input type="file" id="fi" multiple style="display:none;">'
+      + '<div id="list"></div>'
+      + '<div class="muted" style="margin-top:18px; line-height:1.7;">올리신 교재는 담당자와 해당 과정 교육생에게만 제공됩니다. 잘못 올리신 경우 담당자에게 알려 주세요.</div>';
+    var dz = document.getElementById('dz'), fi = document.getElementById('fi');
+    dz.onclick = function(){ fi.click(); };
+    fi.onchange = function(){ go(fi.files); fi.value=''; };
+    ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('on'); }); });
+    ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('on'); }); });
+    dz.addEventListener('drop', function(e){ go(e.dataTransfer && e.dataTransfer.files); });
+  }
+
+  async function go(files){
+    files = Array.prototype.slice.call(files || []); if(!files.length) return;
+    var nm = String((document.getElementById('nm')||{}).value || '').trim();
+    if(!nm){ alert('강사님 성함을 먼저 입력해 주세요.'); document.getElementById('nm').focus(); return; }
+    try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
+    var list = document.getElementById('list');
+    for(var i=0;i<files.length;i++){
+      var f = files[i];
+      var row = document.createElement('div'); row.className = 'row';
+      row.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color:#4f46e5;"></i><span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</span><span class="muted">' + fmtSize(f.size) + '</span>';
+      list.appendChild(row);
+      try{
+        if(f.size > 100*1024*1024) throw new Error('100MB를 넘는 파일은 올릴 수 없습니다.');
+        var r = await fetch(API + '/upload?name=' + encodeURIComponent(f.name), { method:'POST', headers:{ 'X-Upload-Token': tok, 'Content-Type': f.type || 'application/octet-stream' }, body: f });
+        var j = await r.json().catch(function(){ return {}; });
+        if(!r.ok || !j.ok) throw new Error(j.error || ('업로드 실패 (' + r.status + ')'));
+        var ref = firebase.database().ref('system/materials').push();
+        await ref.set({ title: String(f.name).replace(/\.[^.]+$/, ''), fileName: j.name, size: Number(j.size || f.size || 0), url: j.url, key: j.key,
+                        uploader: nm, uploaderRole: '외부강사', course: String(info.c || ''), uploadedAt: Date.now(), viaLink: String(info.n || '') });
+        await firebase.database().ref('courses/' + info.r + '/materials/' + ref.key).set({ linkedAt: Date.now(), linkedBy: nm + ' (외부강사)' });
+        row.firstChild.className = 'fa-solid fa-circle-check'; row.firstChild.style.color = '#16a34a';
+        row.lastChild.textContent = '완료';
+      }catch(e){
+        row.firstChild.className = 'fa-solid fa-circle-xmark'; row.firstChild.style.color = '#dc2626';
+        row.lastChild.textContent = (e && e.message) || '실패'; row.lastChild.style.color = '#dc2626';
+      }
+    }
+  }
+})();
+</script>
+</body>
+</html>
