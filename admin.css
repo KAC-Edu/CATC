@@ -7018,3 +7018,6 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 #homeSearchWrap.has-text #homeSearchClear,
 #view-home #homeSearchWrap #homeSearchClear{ top:35px !important; }
 #homeSearchResults:empty{ display:none !important; }
+/* [K147] 홈 통계 팝업 — 옆 스크롤바 숨김(내용은 한 화면에 맞춤, 넘치면 휠로만 스크롤) */
+#homeStatModal > div{ scrollbar-width:none !important; }
+#homeStatModal > div::-webkit-scrollbar{ display:none !important; }
