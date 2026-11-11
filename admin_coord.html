@@ -11650,9 +11650,11 @@ window.holidayMgr = holidayMgr;
     ov.innerHTML='<div id="cmatBox"><div class="hd">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
         +'<div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-book-open" style="color:#6366f1"></i> 교재 자료실 <span style="font-size:12px;font-weight:900;color:#15803d;background:#dcfce7;padding:2px 9px;border-radius:999px;vertical-align:middle">강사 플랫폼과 공유</span></div>'
-        +'<div style="display:flex;gap:8px;align-items:center"><select id="cmatRoom" style="padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;font-weight:800;max-width:360px">'
-          + rs.map(function(x){ return '<option value="'+esc(x.r)+'"'+(x.r===st.room?' selected':'')+'>Room '+esc(x.r)+' · '+esc(x.name)+'</option>'; }).join('')
-        +'</select><button type="button" data-x style="width:38px;height:38px;border:none;border-radius:50%;background:#f1f5f9;font-size:17px;cursor:pointer">✕</button></div></div>'
+        +'<button type="button" data-x style="width:38px;height:38px;border:none;border-radius:50%;background:#f1f5f9;font-size:17px;cursor:pointer">✕</button></div>'
+      /* [K151] 진행 중인 과정을 버튼으로 — 누르면 그 과정 교재가 바로 보인다 */
+      +'<div id="cmatRooms" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">'
+        + rs.map(function(x){ return '<button type="button" data-room="'+esc(x.r)+'" style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:1.5px solid #e2e8f0;background:#fff;cursor:pointer;font-family:inherit;text-align:left"><span style="font-size:11.5px;font-weight:900;color:#fff;background:#2563eb;padding:3px 8px;border-radius:7px">Room '+esc(x.r)+'</span><span style="font-size:14px;font-weight:900;color:#0f172a">'+esc(x.name)+'</span><span data-cnt="'+esc(x.r)+'" style="font-size:12px;font-weight:900;color:#6366f1"></span></button>'; }).join('')
+      +'</div>'
       +'<div class="tabs"><button data-tab="course">📚 이 과정 교재</button><button data-tab="lib">🗂 자료실에서 가져오기</button><button data-tab="up">⬆ 새로 올리기</button><button data-act="share" style="margin-left:auto">🔗 교육생 주소 복사</button></div>'
       +'<input id="cmatQ" type="search" placeholder="교재명 · 과정명 · 올린 사람 검색" style="display:none;margin-top:10px;width:100%;box-sizing:border-box;padding:10px 13px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px">'
       +'</div><div class="bd" id="cmatBody"></div><div class="ft" id="cmatFt"></div></div>';
@@ -11663,7 +11665,9 @@ window.holidayMgr = holidayMgr;
       if(e.target.closest('[data-act="share"]')) return share();
       var a=e.target.closest('[data-do]'); if(a){ act(a.getAttribute('data-do'), a.getAttribute('data-id')); }
     });
-    ov.querySelector('#cmatRoom').onchange=function(){ st.room=this.value; watch(); };
+    ov.querySelector('#cmatRooms').addEventListener('click', function(e){ var b=e.target.closest('[data-room]'); if(!b) return; st.room=b.getAttribute('data-room'); st.tab='course'; watch(); });
+    // 과정마다 교재 몇 건인지 버튼에 표시
+    rs.forEach(function(x){ firebase.database().ref('courses/'+x.r+'/materials').once('value').then(function(s){ var n=Object.keys(s.val()||{}).length; var el=ov.querySelector('[data-cnt="'+x.r+'"]'); if(el) el.textContent = n ? (n+'건') : ''; }); });
     ov.querySelector('#cmatQ').oninput=function(){ st.q=this.value.trim().toLowerCase(); render(); };
     st.tab='course'; watch();
     M.listAll().then(function(a){ st.all=a; render(); });
@@ -11678,6 +11682,7 @@ window.holidayMgr = holidayMgr;
   function render(){
     var body=document.getElementById('cmatBody'), ft=document.getElementById('cmatFt'), q=document.getElementById('cmatQ'); if(!body) return;
     document.querySelectorAll('#cmatBox .tabs [data-tab]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-tab')===st.tab); });
+    document.querySelectorAll('#cmatRooms [data-room]').forEach(function(b){ var on=b.getAttribute('data-room')===st.room; b.style.borderColor=on?'#4f46e5':'#e2e8f0'; b.style.background=on?'#eef2ff':'#fff'; b.style.boxShadow=on?'0 0 0 3px rgba(79,70,229,.15)':'none'; });
     q.style.display = (st.tab==='lib') ? '' : 'none';
     var idx=byId();
     if(st.tab==='course'){
@@ -11685,10 +11690,12 @@ window.holidayMgr = holidayMgr;
       body.innerHTML = ids.length ? ids.map(function(id){ var m=idx[id]; if(!m) return '';
           return '<div class="row"><i class="fa-solid fa-file-pdf" style="font-size:22px;color:#dc2626"></i><div style="flex:1;min-width:0"><div class="t">'+esc(m.title||m.fileName)+'</div><div class="s">'+esc(label(m))+' · '+M.fmtSize(m.size)+(st.linked[id]&&st.linked[id].wm?' · 🔏 워터마크':'')+'</div></div>'
             +'<a class="b" style="background:#f0fdf4;color:#15803d" target="_blank" rel="noopener" href="'+esc(M.fileUrl(m)+'?view=1&v=2')+'">보기</a>'
+            +'<button class="b" style="background:#eff6ff;color:#1d4ed8" data-do="dl" data-id="'+id+'"><i class="fa-solid fa-download"></i> 받기</button>'
             +'<button class="b" style="background:#eef2ff;color:#4338ca" data-do="copy" data-id="'+id+'">주소</button>'
             +'<button class="b" style="background:#fef2f2;color:#dc2626" data-do="unlink" data-id="'+id+'">이 과정에서 빼기</button></div>'; }).join('')
         : '<div style="text-align:center;padding:40px;color:#94a3b8;font-weight:800">이 과정에 연결된 교재가 없습니다.<br><span style="font-size:13px">[자료실에서 가져오기] 또는 [새로 올리기]를 눌러 주세요.</span></div>';
-      ft.innerHTML = '<span style="font-size:12.5px;color:#64748b;font-weight:700;margin-right:auto">교육생은 입교완료 화면·메뉴의 [교육 자료 받기]에서 봅니다.</span>';
+      ft.innerHTML = '<span style="font-size:12.5px;color:#64748b;font-weight:700;margin-right:auto">교육생은 입교완료 화면·메뉴의 [교육 자료 받기]에서 봅니다.</span>'
+        + (ids.length ? '<button class="b" style="background:#1d4ed8;color:#fff;padding:11px 18px;font-size:14px" data-do="dlall"><i class="fa-solid fa-download"></i> 이 과정 교재 전체 받기 ('+ids.length+'건)</button>' : '');
     } else if(st.tab==='lib'){
       var src = st.all.filter(function(m){ return !st.q || ((m.title||'')+' '+(m.fileName||'')+' '+(m.course||'')+' '+label(m)).toLowerCase().indexOf(st.q)>=0; });
       var g={}; src.forEach(function(m){ var c=String(m.course||'').trim()||'분류 없음'; (g[c]=g[c]||[]).push(m); });
@@ -11749,6 +11756,10 @@ window.holidayMgr = holidayMgr;
   }
   async function act(what, id){
     var idx=byId();
+    if(what==='dl'){ var md=idx[id]; if(md) dl(M.fileUrl(md)); return; }   // 원본(워터마크 없음)
+    if(what==='dlall'){ var all=Object.keys(st.linked).map(function(k){ return idx[k]; }).filter(Boolean);
+      if(!all.length) return; if(!confirm(all.length+'개 교재를 내려받습니다.\n(브라우저가 "여러 파일 다운로드"를 물으면 [허용]을 눌러 주세요)')) return;
+      all.forEach(function(m, i){ setTimeout(function(){ dl(M.fileUrl(m)); }, i*900); }); return; }
     if(what==='pick'){ var inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.onchange=function(){ upload(inp.files); }; inp.click(); return; }
     if(what==='copy'){ var m=idx[id]; if(!m) return; var u=M.fileUrl(st.linked[id]&&st.linked[id].wm&&m.wmKey?{key:m.wmKey}:m); copy(u, '교재 주소를 복사했습니다.'); return; }
     if(what==='unlink'){ var m2=idx[id]; if(!confirm('"'+((m2&&(m2.title||m2.fileName))||'')+'" 을(를) 이 과정에서 뺄까요?\n(자료실에는 남아 있어 다시 연결할 수 있습니다)')) return; await M.unlink(st.room, id); return; }
@@ -11760,6 +11771,7 @@ window.holidayMgr = holidayMgr;
       st.tab='course'; render(); alert('✅ '+chk.length+'건을 이 과정에 연결했습니다.');
     }
   }
+  function dl(url){ var f=document.createElement('iframe'); f.style.display='none'; f.src=url; document.body.appendChild(f); setTimeout(function(){ try{ f.remove(); }catch(e){} }, 60000); }
   function share(){
     var u = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'index.html?room=' + encodeURIComponent(st.room) + '&menu=materials';
     copy(u, '교육생용 교재 주소를 복사했습니다.\n카카오톡에 붙여넣으면 교육생이 바로 교재 목록을 봅니다.');
