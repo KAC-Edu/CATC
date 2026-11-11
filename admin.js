@@ -20243,4 +20243,61 @@ ui._matPresenter = async function(pdf, m){
 ui._undoPageZoom = function(el){
     try{ var z = parseFloat(document.documentElement.style.zoom || getComputedStyle(document.documentElement).zoom) || 1; if(el && Math.abs(z - 1) > 0.005) el.style.zoom = String(1 / z); }catch(e){}
 };
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K154] 외부 강사 업로드 링크 — 강사 플랫폼(교재 자료실)에서 바로 만든다
+   · 관리자 암호로 서명한 기간 한정 링크 → upload.html (그 과정에 '올리기만' 가능, 암호는 링크에 없음)
+   · 링크 목록·중지는 system/coord/uploadLinks (교육운영부 화면과 공용)
+   ══════════════════════════════════════════════════════════════════════════ */
+ui._b64u = function(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); };
+ui._hmacHex = async function(key, msg){
+    var enc = new TextEncoder();
+    var k = await crypto.subtle.importKey('raw', enc.encode(key), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+    var mac = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    return Array.prototype.map.call(mac, function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+};
+ui.matExtLink = async function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 만들 수 없습니다.');
+    var room = state.room; if(!room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
+    var cname = ui._matCourseName() || ('Room ' + room);
+    var ce = 0;
+    try{ var pd = String((await firebase.database().ref('courses/'+room+'/settings/period').once('value')).val() || ''); var e = pd.indexOf('~')>=0 ? pd.split('~').pop().trim() : ''; if(/^\d{4}-\d{2}-\d{2}$/.test(e)) ce = new Date(e+'T23:59:59').getTime(); }catch(err){}
+    var day = 86400000, now = Date.now(), opts = [];
+    if(ce > now) opts.push([ce + 7*day, '과정 종료 1주 뒤까지']);
+    opts.push([now + 60*day, '60일']); opts.push([now + 90*day, '90일']); opts.push([now + 120*day, '120일']);
+    var fmt = function(ms){ var d=new Date(ms); return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(); };
+    var links = {}; try{ links = (await firebase.database().ref('system/coord/uploadLinks').orderByChild('room').equalTo(room).once('value')).val() || {}; }catch(e){}
+    var exist = Object.keys(links).map(function(k){ var v=links[k]||{}; var dead = v.revoked || Number(v.exp) < now;
+        return '<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;margin-top:6px;font-size:13px;font-weight:700;'+(dead?'opacity:.55':'')+'"><span style="flex:1">'+fmt(Number(v.createdAt)||now)+' 생성 · '+fmt(Number(v.exp))+'까지 '+(v.revoked?'<b style="color:#dc2626">중지됨</b>':(Number(v.exp)<now?'<b style="color:#94a3b8">만료</b>':'<b style="color:#16a34a">사용 중</b>'))+'</span>'
+          + (v.url && !dead ? '<button data-lcopy="'+ui._esc(v.url)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;cursor:pointer">복사</button>' : '')
+          + (!dead ? '<button data-lstop="'+ui._esc(k)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#fef2f2;color:#dc2626;font-weight:800;cursor:pointer">중지</button>' : '') + '</div>'; }).join('');
+    var o = document.createElement('div');
+    o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    o.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:540px;max-height:88vh;overflow:auto">'
+      + '<div style="font-size:19px;font-weight:900;color:#0f172a"><i class="fa-solid fa-link" style="color:#ea580c"></i> 외부 강사 업로드 링크</div>'
+      + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 14px;line-height:1.6"><b>' + ui._esc(cname) + '</b> 과정에만 교재를 <b>올릴 수만</b> 있는 링크입니다(보기·삭제 불가). 강사님이 올린 교재는 이 과정에 <b>"외부강사"</b>로 바로 들어옵니다. 같은 파일을 다시 올리면 강사님 화면에서 <b>바꾸기</b>를 물어봅니다.</div>'
+      + '<div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:8px">사용 기간</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px">' + opts.map(function(x,i){ return '<label style="display:flex;align-items:center;gap:6px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:800"><input type="radio" name="lexp" value="'+x[0]+'"'+(i===0?' checked':'')+'>'+x[1]+' <span style="color:#94a3b8;font-weight:700">('+fmt(x[0])+')</span></label>'; }).join('') + '</div>'
+      + '<button id="lmk" style="margin-top:16px;width:100%;padding:13px;border:none;border-radius:12px;background:#ea580c;color:#fff;font-size:15px;font-weight:900;cursor:pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> 링크 만들고 복사</button>'
+      + (exist ? '<div style="font-size:13px;font-weight:900;color:#334155;margin-top:18px">이 과정에 만든 링크</div>' + exist : '')
+      + '<button id="lno" style="margin-top:16px;width:100%;padding:11px;border:none;border-radius:11px;background:#f1f5f9;color:#475569;font-weight:800;cursor:pointer">닫기</button></div>';
+    document.body.appendChild(o);
+    o.addEventListener('click', async function(e){
+        if(e.target===o || e.target.id==='lno') return o.remove();
+        var cp = e.target.closest('[data-lcopy]'); if(cp) return ui._matCopy(cp.getAttribute('data-lcopy'), '📋 외부 강사 업로드 링크를 복사했습니다.');
+        var sp = e.target.closest('[data-lstop]'); if(sp){ if(!confirm('이 링크를 중지할까요? 중지하면 외부 강사가 더 올릴 수 없습니다.')) return; await firebase.database().ref('system/coord/uploadLinks/'+sp.getAttribute('data-lstop')+'/revoked').set(true); o.remove(); ui.matExtLink(); return; }
+        if(e.target.closest('#lmk')){
+            var exp = Number((o.querySelector('input[name=lexp]:checked')||{}).value || 0); if(!exp) return;
+            if(!(await ui._matEnsureKey())) return;
+            var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+            var p64 = ui._b64u(JSON.stringify({ r: room, c: cname, e: exp, n: n }));
+            var sig = await ui._hmacHex(window.kacMaterials.getKey(), p64);
+            var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?t=' + p64 + '~' + sig;
+            await firebase.database().ref('system/coord/uploadLinks/'+n).set({ room: room, course: cname, exp: exp, createdAt: Date.now(), by: ui._matWhoLabel({ uploader: ui._matWho() }), url: url, revoked: false });
+            o.remove();
+            ui._matCopy(url, '✅ 외부 강사 업로드 링크를 만들었습니다 (' + fmt(exp) + '까지).\n메일이나 문자로 강사님께 보내 주세요.\n\n' + url);
+        }
+    });
+};
+
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
