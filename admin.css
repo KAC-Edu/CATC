@@ -7021,3 +7021,11 @@ body:not(.zoom-room-online) #dashZoomBoardBtn{ display:none !important; }
 /* [K147] 홈 통계 팝업 — 옆 스크롤바 숨김(내용은 한 화면에 맞춤, 넘치면 휠로만 스크롤) */
 #homeStatModal > div{ scrollbar-width:none !important; }
 #homeStatModal > div::-webkit-scrollbar{ display:none !important; }
+/* [K148] 교재 자료실 목록 — 흰 바탕에 흰 줄이라 구분이 안 되던 문제: 연회색 판 위에 흰 카드 + 왼쪽 색 띠 + 그림자 */
+#matList .mat-rows{ background:#f1f5f9; border:1px solid #e2e8f0; border-radius:16px; padding:10px; display:flex; flex-direction:column; gap:9px; }
+#matList .mat-row{ margin-bottom:0 !important; background:#fff !important; border:1px solid #dfe6ef !important; border-left:5px solid #6366f1 !important; border-radius:13px !important; box-shadow:0 2px 8px rgba(15,23,42,.06); transition:box-shadow .15s, transform .15s, border-color .15s; }
+#matList .mat-row:nth-child(4n+2){ border-left-color:#0ea5e9 !important; }
+#matList .mat-row:nth-child(4n+3){ border-left-color:#10b981 !important; }
+#matList .mat-row:nth-child(4n+4){ border-left-color:#f59e0b !important; }
+#matList .mat-row:hover{ box-shadow:0 8px 20px rgba(15,23,42,.10); transform:translateY(-1px); border-color:#c7d2fe !important; }
+#matList .mat-row:has(.matRowChk:checked){ background:#eef2ff !important; border-color:#a5b4fc !important; }
