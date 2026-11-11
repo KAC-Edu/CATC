@@ -11695,6 +11695,7 @@ window.holidayMgr = holidayMgr;
             +'<button class="b" style="background:#fef2f2;color:#dc2626" data-do="unlink" data-id="'+id+'">이 과정에서 빼기</button></div>'; }).join('')
         : '<div style="text-align:center;padding:40px;color:#94a3b8;font-weight:800">이 과정에 연결된 교재가 없습니다.<br><span style="font-size:13px">[자료실에서 가져오기] 또는 [새로 올리기]를 눌러 주세요.</span></div>';
       ft.innerHTML = '<span style="font-size:12.5px;color:#64748b;font-weight:700;margin-right:auto">교육생은 입교완료 화면·메뉴의 [교육 자료 받기]에서 봅니다.</span>'
+        + '<button class="b" style="background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;padding:10px 16px;font-size:13.5px" data-do="extlink"><i class="fa-solid fa-link"></i> 외부 강사 업로드 링크</button>'
         + (ids.length ? '<button class="b" style="background:#1d4ed8;color:#fff;padding:11px 18px;font-size:14px" data-do="dlall"><i class="fa-solid fa-download"></i> 이 과정 교재 전체 받기 ('+ids.length+'건)</button>' : '');
     } else if(st.tab==='lib'){
       var src = st.all.filter(function(m){ return !st.q || ((m.title||'')+' '+(m.fileName||'')+' '+(m.course||'')+' '+label(m)).toLowerCase().indexOf(st.q)>=0; });
@@ -11760,6 +11761,7 @@ window.holidayMgr = holidayMgr;
     if(what==='dlall'){ var all=Object.keys(st.linked).map(function(k){ return idx[k]; }).filter(Boolean);
       if(!all.length) return; if(!confirm(all.length+'개 교재를 내려받습니다.\n(브라우저가 "여러 파일 다운로드"를 물으면 [허용]을 눌러 주세요)')) return;
       all.forEach(function(m, i){ setTimeout(function(){ dl(M.fileUrl(m)); }, i*900); }); return; }
+    if(what==='extlink'){ return extLink(); }
     if(what==='pick'){ var inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.onchange=function(){ upload(inp.files); }; inp.click(); return; }
     if(what==='copy'){ var m=idx[id]; if(!m) return; var u=M.fileUrl(st.linked[id]&&st.linked[id].wm&&m.wmKey?{key:m.wmKey}:m); copy(u, '교재 주소를 복사했습니다.'); return; }
     if(what==='unlink'){ var m2=idx[id]; if(!confirm('"'+((m2&&(m2.title||m2.fileName))||'')+'" 을(를) 이 과정에서 뺄까요?\n(자료실에는 남아 있어 다시 연결할 수 있습니다)')) return; await M.unlink(st.room, id); return; }
@@ -11770,6 +11772,55 @@ window.holidayMgr = holidayMgr;
       for(var i=0;i<chk.length;i++) await M.link(st.room, chk[i], me);
       st.tab='course'; render(); alert('✅ '+chk.length+'건을 이 과정에 연결했습니다.');
     }
+  }
+  /* [K152] 외부 강사 업로드 링크 — 관리자 암호로 서명한 기간 한정 링크(올리기만 가능). 기간은 과정 셋업(약 2달 전)을 고려해 길게 */
+  function b64u(s){ return btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
+  async function hmacHex(key, msg){
+    var enc = new TextEncoder();
+    var k = await crypto.subtle.importKey('raw', enc.encode(key), { name:'HMAC', hash:'SHA-256' }, false, ['sign']);
+    var mac = new Uint8Array(await crypto.subtle.sign('HMAC', k, enc.encode(msg)));
+    return Array.prototype.map.call(mac, function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+  }
+  function courseEnd(){ try{ var pd=String(globalAllData[st.room].settings.period||''); var e=pd.indexOf('~')>=0?pd.split('~').pop().trim():''; if(/^\d{4}-\d{2}-\d{2}$/.test(e)) return new Date(e+'T23:59:59').getTime(); }catch(err){} return 0; }
+  async function extLink(){
+    var cname=''; try{ cname=String(globalAllData[st.room].settings.courseName||'').trim(); }catch(e){}
+    var ce = courseEnd(), day = 86400000, now = Date.now();
+    var opts = [];
+    if(ce > now) opts.push(['end', ce + 7*day, '과정 종료 1주 뒤까지']);
+    opts.push(['60', now + 60*day, '60일']); opts.push(['90', now + 90*day, '90일']); opts.push(['120', now + 120*day, '120일']);
+    var fmt = function(ms){ var d=new Date(ms); return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(); };
+    var links = {}; try{ links = (await firebase.database().ref('system/coord/uploadLinks').orderByChild('room').equalTo(st.room).once('value')).val() || {}; }catch(e){}
+    var o=document.createElement('div'); o.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    var exist = Object.keys(links).map(function(k){ var v=links[k]||{}; var dead = v.revoked || Number(v.exp) < now;
+        return '<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;margin-top:6px;font-size:13px;font-weight:700;'+(dead?'opacity:.55':'')+'"><span style="flex:1">'+fmt(Number(v.createdAt)||now)+' 생성 · '+fmt(Number(v.exp))+'까지 '+(v.revoked?'<b style="color:#dc2626">중지됨</b>':(Number(v.exp)<now?'<b style="color:#94a3b8">만료</b>':'<b style="color:#16a34a">사용 중</b>'))+'</span>'
+          + (v.url && !dead ? '<button data-lcopy="'+esc(v.url)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;cursor:pointer">복사</button>' : '')
+          + (!dead ? '<button data-lstop="'+esc(k)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#fef2f2;color:#dc2626;font-weight:800;cursor:pointer">중지</button>' : '') + '</div>'; }).join('');
+    o.innerHTML='<div style="background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:520px;max-height:88vh;overflow:auto">'
+      +'<div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-link" style="color:#ea580c"></i> 외부 강사 업로드 링크</div>'
+      +'<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 14px;line-height:1.6"><b>'+esc(cname)+'</b> 과정에만 교재를 <b>올릴 수만</b> 있는 링크입니다(보기·삭제 불가). 기간이 지나거나 [중지]하면 더는 쓸 수 없습니다.</div>'
+      +'<div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:8px">사용 기간</div>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:8px">'+opts.map(function(x,i){ return '<label style="display:flex;align-items:center;gap:6px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:800"><input type="radio" name="lexp" value="'+x[1]+'"'+(i===0?' checked':'')+'>'+x[2]+' <span style="color:#94a3b8;font-weight:700">('+fmt(x[1])+')</span></label>'; }).join('')+'</div>'
+      +'<button id="lmk" style="margin-top:16px;width:100%;padding:13px;border:none;border-radius:12px;background:#ea580c;color:#fff;font-size:15px;font-weight:900;cursor:pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> 링크 만들고 복사</button>'
+      +(exist ? '<div style="font-size:13px;font-weight:900;color:#334155;margin-top:18px">이 과정에 만든 링크</div>'+exist : '')
+      +'<button id="lno" style="margin-top:16px;width:100%;padding:11px;border:none;border-radius:11px;background:#f1f5f9;color:#475569;font-weight:800;cursor:pointer">닫기</button></div>';
+    document.body.appendChild(o);
+    o.addEventListener('click', async function(e){
+      if(e.target===o || e.target.id==='lno') return o.remove();
+      var cp=e.target.closest('[data-lcopy]'); if(cp) return copy(cp.getAttribute('data-lcopy'), '외부 강사 업로드 링크를 복사했습니다.');
+      var sp=e.target.closest('[data-lstop]'); if(sp){ if(!confirm('이 링크를 중지할까요? 중지하면 외부 강사가 더 올릴 수 없습니다.')) return; await firebase.database().ref('system/coord/uploadLinks/'+sp.getAttribute('data-lstop')+'/revoked').set(true); o.remove(); extLink(); return; }
+      if(e.target.closest('#lmk')){
+        var exp = Number((o.querySelector('input[name=lexp]:checked')||{}).value || 0); if(!exp) return;
+        if(!(await ensureKey())) return;
+        var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+        var p64 = b64u(JSON.stringify({ r: st.room, c: cname, e: exp, n: n }));
+        var sig = await hmacHex(M.getKey(), p64);
+        var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?t=' + p64 + '~' + sig;
+        var me=''; try{ me=localStorage.getItem('kac_coord_me')||''; }catch(err){}
+        await firebase.database().ref('system/coord/uploadLinks/'+n).set({ room: st.room, course: cname, exp: exp, createdAt: Date.now(), by: me, url: url, revoked: false });
+        o.remove();
+        copy(url, '✅ 외부 강사 업로드 링크를 만들었습니다 ('+fmt(exp)+'까지).\n메일이나 문자로 강사님께 보내 주세요.\n강사님이 올린 교재는 이 과정에 "외부강사"로 바로 들어옵니다.');
+      }
+    });
   }
   function dl(url){ var f=document.createElement('iframe'); f.style.display='none'; f.src=url; document.body.appendChild(f); setTimeout(function(){ try{ f.remove(); }catch(e){} }, 60000); }
   function share(){
