@@ -11813,6 +11813,9 @@ window.holidayMgr = holidayMgr;
         if(!(await ensureKey())) return;
         var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
         var p64 = b64u(JSON.stringify({ r: st.room, c: cname, e: exp, n: n }));
+        /* [K158] 암호가 맞는지 서버에서 먼저 확인(없는 파일 지우기 요청 → 맞으면 200) */
+        var kok = false; try{ kok = (await fetch(M.API + '/f/materials/__keycheck__', { method:'DELETE', headers:{ 'X-Upload-Key': M.getKey() } })).ok; }catch(err){}
+        if(!kok){ M.clearKey(); alert('교재 자료실 암호가 맞지 않습니다. 다시 눌러 정확한 암호를 입력해 주세요.'); return; }
         var sig = await hmacHex(M.getKey(), p64);
         var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?k=' + n;   // [K155] 짧은 주소
         var me=''; try{ me=localStorage.getItem('kac_coord_me')||''; }catch(err){}
