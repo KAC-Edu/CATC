@@ -20270,42 +20270,68 @@ ui.matExtLink = async function(){
     if(ce > now) opts.push([ce + 7*day, '과정 종료 1주 뒤까지']);
     opts.push([now + 60*day, '60일']); opts.push([now + 90*day, '90일']); opts.push([now + 120*day, '120일']);
     var fmt = function(ms){ var d=new Date(ms); return d.getFullYear()+'.'+(d.getMonth()+1)+'.'+d.getDate(); };
+    /* [K160] 한 과정에 링크는 1개 — 그 링크를 여러 강사님께 함께 보낸다(강사 화면은 성함으로 각자 파일 구분) */
     var links = {}; try{ links = (await firebase.database().ref('system/coord/uploadLinks').orderByChild('room').equalTo(room).once('value')).val() || {}; }catch(e){}
-    /* [K159] 중지·만료된 링크는 목록에서 숨기고 사용 중인 것만 보인다 */
-    var exist = Object.keys(links).filter(function(k){ var v=links[k]||{}; return !v.revoked && Number(v.exp) >= now; }).map(function(k){ var v=links[k]||{}; var dead = v.revoked || Number(v.exp) < now;
-        return '<div style="display:flex;align-items:center;gap:8px;padding:9px 11px;border:1px solid #e2e8f0;border-radius:10px;margin-top:6px;font-size:13px;font-weight:700;'+(dead?'opacity:.55':'')+'"><span style="flex:1">'+fmt(Number(v.createdAt)||now)+' 생성 · '+fmt(Number(v.exp))+'까지 '+(v.revoked?'<b style="color:#dc2626">중지됨</b>':(Number(v.exp)<now?'<b style="color:#94a3b8">만료</b>':'<b style="color:#16a34a">사용 중</b>'))+'</span>'
-          + (v.url && !dead ? '<button data-lcopy="'+ui._esc(v.url)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#eef2ff;color:#4338ca;font-weight:800;cursor:pointer">복사</button>' : '')
-          + (!dead ? '<button data-lstop="'+ui._esc(k)+'" style="padding:5px 10px;border:none;border-radius:8px;background:#fef2f2;color:#dc2626;font-weight:800;cursor:pointer">중지</button>' : '') + '</div>'; }).join('');
+    var alive = Object.keys(links).map(function(k){ return Object.assign({ id:k }, links[k]); })
+        .filter(function(v){ return !v.revoked && Number(v.exp) >= now && v.url; })
+        .sort(function(a,b){ return (Number(b.createdAt)||0) - (Number(a.createdAt)||0); });
+    var cur = alive[0] || null;
+    alive.slice(1).forEach(function(v){ firebase.database().ref('system/coord/uploadLinks/'+v.id+'/revoked').set(true).catch(function(){}); });   // 예전에 여러 개 만든 것은 정리
+    var btnS = 'border:none;border-radius:12px;font-weight:900;cursor:pointer;';
     var o = document.createElement('div');
     o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
-    o.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:540px;max-height:88vh;overflow:auto">'
+    o.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:500px">'
       + '<div style="font-size:19px;font-weight:900;color:#0f172a"><i class="fa-solid fa-link" style="color:#ea580c"></i> 외부 강사 업로드 링크</div>'
-      + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 14px;line-height:1.6"><b>' + ui._esc(cname) + '</b> 과정에만 교재를 <b>올릴 수만</b> 있는 링크입니다(보기·삭제 불가). 강사님이 올린 교재는 이 과정에 <b>"외부강사"</b>로 바로 들어옵니다. 같은 파일을 다시 올리면 강사님 화면에서 <b>바꾸기</b>를 물어봅니다.</div>'
-      + '<div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:8px">사용 기간</div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:8px">' + opts.map(function(x,i){ return '<label style="display:flex;align-items:center;gap:6px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:800"><input type="radio" name="lexp" value="'+x[0]+'"'+(i===0?' checked':'')+'>'+x[1]+' <span style="color:#94a3b8;font-weight:700">('+fmt(x[0])+')</span></label>'; }).join('') + '</div>'
-      + '<button id="lmk" style="margin-top:16px;width:100%;padding:13px;border:none;border-radius:12px;background:#ea580c;color:#fff;font-size:15px;font-weight:900;cursor:pointer"><i class="fa-solid fa-wand-magic-sparkles"></i> 링크 만들고 복사</button>'
-      + (exist ? '<div style="font-size:13px;font-weight:900;color:#334155;margin-top:18px">이 과정에 만든 링크</div>' + exist : '')
-      + '<button id="lno" style="margin-top:16px;width:100%;padding:11px;border:none;border-radius:11px;background:#f1f5f9;color:#475569;font-weight:800;cursor:pointer">닫기</button></div>';
+      + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 16px;line-height:1.6"><b>' + ui._esc(cname) + '</b> · 이 링크 하나를 강사님들께 함께 보내 주세요.</div>'
+      + (cur
+        ? '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:800;color:#334155">' + ui._esc(cur.url) + '</span><span style="flex-shrink:0;font-size:12.5px;font-weight:800;color:#16a34a">' + fmt(Number(cur.exp)) + '까지</span></div>'
+          + '<button id="lcp" style="margin-top:14px;width:100%;padding:14px;background:#2563eb;color:#fff;font-size:15.5px;' + btnS + '"><i class="fa-solid fa-copy"></i> 링크 복사</button>'
+          + '<div style="display:flex;gap:8px;margin-top:8px"><button id="lstop" style="flex:1;padding:11px;background:#fef2f2;color:#dc2626;font-size:13.5px;' + btnS + '">링크 중지</button><button id="lno" style="flex:1;padding:11px;background:#f1f5f9;color:#475569;font-size:13.5px;' + btnS + '">닫기</button></div>'
+        : '<div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:8px">사용 기간</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:8px">' + opts.map(function(x,i){ return '<label style="display:flex;align-items:center;gap:6px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:800"><input type="radio" name="lexp" value="'+x[0]+'"'+(i===0?' checked':'')+'>'+x[1]+' <span style="color:#94a3b8;font-weight:700">('+fmt(x[0])+')</span></label>'; }).join('') + '</div>'
+          + '<button id="lmk" style="margin-top:16px;width:100%;padding:14px;background:#ea580c;color:#fff;font-size:15.5px;' + btnS + '"><i class="fa-solid fa-wand-magic-sparkles"></i> 링크 만들고 복사</button>'
+          + '<button id="lno" style="margin-top:8px;width:100%;padding:11px;background:#f1f5f9;color:#475569;font-size:13.5px;' + btnS + '">닫기</button>')
+      + '</div>';
     document.body.appendChild(o);
     o.addEventListener('click', async function(e){
-        if(e.target===o || e.target.id==='lno') return o.remove();
-        var cp = e.target.closest('[data-lcopy]'); if(cp){ o.remove(); return ui._showLinkCopy(cp.getAttribute('data-lcopy'), ''); }
-        var sp = e.target.closest('[data-lstop]'); if(sp){ if(!confirm('이 링크를 중지할까요? 중지하면 외부 강사가 더 올릴 수 없습니다.')) return; await firebase.database().ref('system/coord/uploadLinks/'+sp.getAttribute('data-lstop')+'/revoked').set(true); o.remove(); ui.matExtLink(); return; }
+        if(e.target===o || e.target.closest('#lno')) return o.remove();
+        if(e.target.closest('#lcp')){ o.remove(); ui._copyLinkNow(cur.url, fmt(Number(cur.exp))); return; }
+        if(e.target.closest('#lstop')){ if(!confirm('이 링크를 중지할까요? 중지하면 강사님들이 더 올릴 수 없습니다.')) return; await firebase.database().ref('system/coord/uploadLinks/'+cur.id+'/revoked').set(true); o.remove(); ui.matExtLink(); return; }
         if(e.target.closest('#lmk')){
             var exp = Number((o.querySelector('input[name=lexp]:checked')||{}).value || 0); if(!exp) return;
-            if(!(await ui._matEnsureKey())) return;
-            /* [K158] 암호가 맞는지 서버에서 먼저 확인 — 틀린 암호로 서명하면 강사 화면에서 '링크가 만료/올바르지 않음' 이 뜬다 */
-            if(!(await ui._matKeyValid())){ window.kacMaterials.clearKey(); ui.showAlert('교재 자료실 암호가 맞지 않습니다.<br>다시 눌러 정확한 암호를 입력해 주세요.'); return; }
+            /* 주소는 번호만으로 정해지므로 '누른 순간' 바로 복사해 둔다(나중에 복사하면 브라우저가 막는다) */
             var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+            var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?k=' + n;
+            var copied = ui._clipNow(url);
+            o.remove();
+            if(!(await ui._matEnsureKey())) return;
+            /* [K158] 암호가 맞는지 서버에서 먼저 확인 */
+            if(!(await ui._matKeyValid())){ window.kacMaterials.clearKey(); ui.showAlert('교재 자료실 암호가 맞지 않습니다.<br>다시 눌러 정확한 암호를 입력해 주세요.'); return; }
             var p64 = ui._b64u(JSON.stringify({ r: room, c: cname, e: exp, n: n }));
             var sig = await ui._hmacHex(window.kacMaterials.getKey(), p64);
-            /* [K155] 짧은 주소 — 서명 토큰은 서버(uploadLinks/{n}/tok)에 두고 링크에는 번호만 */
-            var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?k=' + n;
             await firebase.database().ref('system/coord/uploadLinks/'+n).set({ room: room, course: cname, exp: exp, createdAt: Date.now(), by: ui._matWhoLabel({ uploader: ui._matWho() }), url: url, tok: p64 + '~' + sig, revoked: false });
-            o.remove();
-            ui._showLinkCopy(url, fmt(exp));
+            if(await copied) ui._linkToast('링크를 만들어 복사했습니다 · ' + fmt(exp) + '까지');
+            else ui._showLinkCopy(url, fmt(exp));
         }
     });
+};
+/* [K160] 클릭한 순간 바로 클립보드에 쓴다 — Promise<boolean> */
+ui._clipNow = function(text){
+    try{ if(navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(function(){ return true; }, function(){ return ui._clipOld(text); }); }catch(e){}
+    return Promise.resolve(ui._clipOld(text));
+};
+ui._clipOld = function(text){
+    try{ var t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;left:-9999px;top:0'; document.body.appendChild(t); t.select(); var ok = document.execCommand('copy'); t.remove(); return !!ok; }catch(e){ return false; }
+};
+ui._copyLinkNow = function(url, until){
+    ui._clipNow(url).then(function(ok){ if(ok) ui._linkToast('링크를 복사했습니다' + (until ? ' · ' + until + '까지' : '')); else ui._showLinkCopy(url, until); });
+};
+ui._linkToast = function(msg){
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;left:50%;bottom:48px;transform:translateX(-50%);z-index:2147483600;background:#0f172a;color:#fff;padding:13px 22px;border-radius:999px;font-size:14.5px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:opacity .3s';
+    t.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4ade80;margin-right:8px"></i>' + ui._esc(msg) + ' — 메일·문자에 붙여넣기(Ctrl+V) 하세요';
+    document.body.appendChild(t);
+    setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 350); }, 3200);
 };
 
 
