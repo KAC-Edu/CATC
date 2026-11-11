@@ -64,6 +64,9 @@
       + '<div class="muted" style="margin-top:6px;">PDF · PPT · 한글 · 워드 · 엑셀 · 이미지 · ZIP · 한 파일 100MB까지 · 여러 개 가능</div></div>'
       + '<input type="file" id="fi" multiple style="display:none;">'
       + '<div id="list"></div>'
+      /* [K153] 이 링크로 이미 올린 파일 — 다시 올리면 '바꾸기'인지 바로 알 수 있게 */
+      + '<div style="margin-top:22px; font-size:14px; font-weight:900; color:#334155;"><i class="fa-solid fa-folder-open" style="color:#4f46e5;"></i> 이 링크로 올린 교재 <span id="mineCnt" class="muted"></span></div>'
+      + '<div id="mine"><div class="muted" style="margin-top:8px;">불러오는 중…</div></div>'
       + '<div class="muted" style="margin-top:18px; line-height:1.7;">올리신 교재는 담당자와 해당 과정 교육생에게만 제공됩니다. 잘못 올리신 경우 담당자에게 알려 주세요.</div>';
     var dz = document.getElementById('dz'), fi = document.getElementById('fi');
     dz.onclick = function(){ fi.click(); };
@@ -71,6 +74,56 @@
     ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('on'); }); });
     ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('on'); }); });
     dz.addEventListener('drop', function(e){ go(e.dataTransfer && e.dataTransfer.files); });
+    loadMine();
+  }
+
+  var mine = [];   // [{id, ...rec}]
+  function loadMine(){
+    return firebase.database().ref('system/materials').orderByChild('viaLink').equalTo(String(info.n || '_')).once('value').then(function(s){
+      var v = s.val() || {}; mine = Object.keys(v).map(function(k){ return Object.assign({ id:k }, v[k]); }).sort(function(a,b){ return (b.uploadedAt||0)-(a.uploadedAt||0); });
+      drawMine();
+    }).catch(function(){ mine = []; drawMine(); });
+  }
+  function drawMine(){
+    var box = document.getElementById('mine'), cnt = document.getElementById('mineCnt'); if(!box) return;
+    if(cnt) cnt.textContent = mine.length ? ('· ' + mine.length + '건') : '';
+    if(!mine.length){ box.innerHTML = '<div class="muted" style="margin-top:8px;">아직 올린 교재가 없습니다.</div>'; return; }
+    box.innerHTML = mine.map(function(m){
+      var d = new Date(m.replacedAt || m.uploadedAt || 0), p = function(n){ return String(n).padStart(2,'0'); };
+      var ds = d.getFullYear()+'.'+p(d.getMonth()+1)+'.'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+      return '<div class="row"><i class="fa-solid fa-file-lines" style="color:#4f46e5;"></i><span style="flex:1; min-width:0;"><span style="display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(m.fileName || m.title) + '</span>'
+        + '<span class="muted">' + fmtSize(m.size) + ' · ' + (m.replacedAt ? '<b style="color:#ea580c;">새 파일로 바꿈</b> ' : '올림 ') + ds + '</span></span>'
+        + '<button type="button" data-del="' + esc(m.id) + '" style="flex-shrink:0; padding:6px 11px; border:none; border-radius:9px; background:#fef2f2; color:#dc2626; font-size:12.5px; font-weight:800; cursor:pointer;">삭제</button></div>';
+    }).join('');
+    box.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ delMine(b.getAttribute('data-del')); }; });
+  }
+  function fileUrlOf(k){ return API + '/f/' + String(k).split('/').map(encodeURIComponent).join('/'); }
+  async function rmR2(k){ try{ if(k) await fetch(fileUrlOf(k), { method:'DELETE', headers:{ 'X-Upload-Token': tok } }); }catch(e){} }
+  async function delMine(id){
+    var m = mine.filter(function(x){ return x.id === id; })[0]; if(!m) return;
+    if(!confirm('"' + (m.fileName || m.title) + '" 을(를) 삭제할까요?\n교육생 화면에서도 사라집니다.')) return;
+    await rmR2(m.key);
+    await firebase.database().ref('courses/' + info.r + '/materials/' + id).remove().catch(function(){});
+    await firebase.database().ref('system/materials/' + id).remove().catch(function(){});
+    loadMine();
+  }
+  function sameFile(name){
+    var base = function(s){ return String(s||'').replace(/\.[^.]+$/,'').replace(/[\\/:*?"<>|#%&+]/g,'_').replace(/\s+/g,' ').trim().toLowerCase(); };
+    var b = base(name); return mine.filter(function(m){ return base(m.fileName || m.title) === b; })[0] || null;
+  }
+  function askReplace(f, old){
+    return new Promise(function(res){
+      var o = document.createElement('div'); o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+      o.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px;width:100%;max-width:420px">'
+        + '<div style="font-size:17px;font-weight:900;margin-bottom:8px">같은 이름의 교재가 이미 있습니다</div>'
+        + '<div style="font-size:14px;color:#475569;font-weight:700;line-height:1.7">이미 올린 파일: <b>' + esc(old.fileName || old.title) + '</b> (' + fmtSize(old.size) + ')<br>새로 올리는 파일: <b>' + esc(f.name) + '</b> (' + fmtSize(f.size) + ')</div>'
+        + '<div style="display:flex;flex-direction:column;gap:8px;margin-top:16px">'
+        + '<button data-v="replace" class="btn" style="justify-content:center">🔄 새 파일로 바꾸기 (예전 파일은 지움)</button>'
+        + '<button data-v="both" style="padding:12px;border:1px solid #cbd5e1;border-radius:12px;background:#fff;font-weight:800;cursor:pointer">둘 다 남기기 (따로 올리기)</button>'
+        + '<button data-v="" style="padding:11px;border:none;border-radius:12px;background:#f1f5f9;color:#475569;font-weight:800;cursor:pointer">이 파일은 건너뛰기</button></div></div>';
+      document.body.appendChild(o);
+      o.addEventListener('click', function(e){ var b = e.target.closest('[data-v]'); if(!b) return; o.remove(); res(b.getAttribute('data-v')); });
+    });
   }
 
   async function go(files){
@@ -84,17 +137,27 @@
       var row = document.createElement('div'); row.className = 'row';
       row.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color:#4f46e5;"></i><span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</span><span class="muted">' + fmtSize(f.size) + '</span>';
       list.appendChild(row);
+      var old = sameFile(f.name), mode = 'new';
+      if(old){ mode = await askReplace(f, old); if(!mode){ row.firstChild.className = 'fa-solid fa-forward'; row.firstChild.style.color = '#94a3b8'; row.lastChild.textContent = '건너뜀'; continue; } }
       try{
         if(f.size > 100*1024*1024) throw new Error('100MB를 넘는 파일은 올릴 수 없습니다.');
         var r = await fetch(API + '/upload?name=' + encodeURIComponent(f.name), { method:'POST', headers:{ 'X-Upload-Token': tok, 'Content-Type': f.type || 'application/octet-stream' }, body: f });
         var j = await r.json().catch(function(){ return {}; });
         if(!r.ok || !j.ok) throw new Error(j.error || ('업로드 실패 (' + r.status + ')'));
-        var ref = firebase.database().ref('system/materials').push();
-        await ref.set({ title: String(f.name).replace(/\.[^.]+$/, ''), fileName: j.name, size: Number(j.size || f.size || 0), url: j.url, key: j.key,
-                        uploader: nm, uploaderRole: '외부강사', course: String(info.c || ''), uploadedAt: Date.now(), viaLink: String(info.n || '') });
-        await firebase.database().ref('courses/' + info.r + '/materials/' + ref.key).set({ linkedAt: Date.now(), linkedBy: nm + ' (외부강사)' });
+        if(mode === 'replace' && old){
+          // 같은 교재 자리를 그대로 두고 파일만 바꾼다 → 과정 연결·교육생 목록이 그대로 새 파일을 가리킨다
+          await firebase.database().ref('system/materials/' + old.id).update({ fileName: j.name, size: Number(j.size || f.size || 0), url: j.url, key: j.key, wmKey: null, wmSize: null, replacedAt: Date.now(), uploader: nm });
+          await rmR2(old.key); if(old.wmKey) await rmR2(old.wmKey);
+          row.lastChild.textContent = '새 파일로 바꿈';
+        } else {
+          var ref = firebase.database().ref('system/materials').push();
+          await ref.set({ title: String(f.name).replace(/\.[^.]+$/, ''), fileName: j.name, size: Number(j.size || f.size || 0), url: j.url, key: j.key,
+                          uploader: nm, uploaderRole: '외부강사', course: String(info.c || ''), uploadedAt: Date.now(), viaLink: String(info.n || '') });
+          await firebase.database().ref('courses/' + info.r + '/materials/' + ref.key).set({ linkedAt: Date.now(), linkedBy: nm + ' (외부강사)' });
+          row.lastChild.textContent = '완료';
+        }
         row.firstChild.className = 'fa-solid fa-circle-check'; row.firstChild.style.color = '#16a34a';
-        row.lastChild.textContent = '완료';
+        await loadMine();
       }catch(e){
         row.firstChild.className = 'fa-solid fa-circle-xmark'; row.firstChild.style.color = '#dc2626';
         row.lastChild.textContent = (e && e.message) || '실패'; row.lastChild.style.color = '#dc2626';
