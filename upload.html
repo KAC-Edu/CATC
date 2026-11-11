@@ -43,6 +43,9 @@
   var info = null;
   function parseTok(){ info = null; try{ var p = tok.split('~')[0].replace(/-/g,'+').replace(/_/g,'/'); while(p.length % 4) p += '='; info = JSON.parse(decodeURIComponent(escape(atob(p)))); }catch(e){} }
   function fail(msg){ app.innerHTML = '<h1>교재 업로드</h1><div class="err" style="margin-top:14px;">' + msg + '</div><div class="muted" style="margin-top:12px;">문의: 항공기술훈련원 교육운영부</div>'; }
+  /* [K156/K157] 날짜·크기 표기 함수 — 아래 '짧은 주소' 분기가 먼저 return 하므로 반드시 그 위에서 정의 */
+  var fmt = function(ms){ var d = new Date(Number(ms)); return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+'.'; };
+  var fmtSize = function(b){ b=Number(b)||0; return b>=1048576 ? (b/1048576).toFixed(1)+'MB' : Math.max(1,Math.round(b/1024))+'KB'; };
   /* [K155] 짧은 주소(?k=번호) — 서명 토큰을 서버에서 받아온다 */
   var k = qs.get('k');
   if(k && !tok){
@@ -52,9 +55,6 @@
     return;
   }
   start();
-  /* [K156] 날짜·크기 표기 함수는 바깥(공용)에 둔다 — start() 안에 있으면 render() 에서 못 써서 '불러오는 중'에 멈췄음 */
-  var fmt = function(ms){ var d = new Date(Number(ms)); return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+'.'; };
-  var fmtSize = function(b){ b=Number(b)||0; return b>=1048576 ? (b/1048576).toFixed(1)+'MB' : Math.max(1,Math.round(b/1024))+'KB'; };
   function start(){
   parseTok();
   if(!info || !info.r || !info.e) return fail('링크가 올바르지 않습니다.<br>받으신 주소 전체를 다시 확인해 주세요.');
