@@ -10427,6 +10427,7 @@ const scheduleMgr = {
         if (badge) badge.innerText = `Room #${state.room || '-'}`;
         // 사진 전용 페이지: 헤더(과정명·기간)만 표시하고 사진 블록을 불러온다.
         this.loadPhoto();
+        try { ui._preSurveyCount(); } catch (e) {}   // [K161] 강사 사전조사 응답 수 배지
         if (!state.room) {
             if (title) title.innerText = '교육 시간표';
             if (meta) meta.innerText = '먼저 강의실을 선택하세요.';
@@ -20282,7 +20283,7 @@ ui.matExtLink = async function(){
     o.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
     o.innerHTML = '<div style="background:#fff;border-radius:18px;padding:24px 26px;width:100%;max-width:500px">'
       + '<div style="font-size:19px;font-weight:900;color:#0f172a"><i class="fa-solid fa-link" style="color:#ea580c"></i> 외부 강사 업로드 링크</div>'
-      + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 16px;line-height:1.6"><b>' + ui._esc(cname) + '</b> · 이 링크 하나를 강사님들께 함께 보내 주세요.</div>'
+      + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 16px;line-height:1.6"><b>' + ui._esc(cname) + '</b> · 이 링크 하나를 강사님들께 함께 보내 주세요.<br>강사님은 <b>강의 가능 일정</b>과 <b>교재</b>를 한 화면에서 제출합니다.</div>'
       + (cur
         ? '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:800;color:#334155">' + ui._esc(cur.url) + '</span><span style="flex-shrink:0;font-size:12.5px;font-weight:800;color:#16a34a">' + fmt(Number(cur.exp)) + '까지</span></div>'
           + '<button id="lcp" style="margin-top:14px;width:100%;padding:14px;background:#2563eb;color:#fff;font-size:15.5px;' + btnS + '"><i class="fa-solid fa-copy"></i> 링크 복사</button>'
@@ -20332,6 +20333,113 @@ ui._linkToast = function(msg){
     t.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4ade80;margin-right:8px"></i>' + ui._esc(msg) + ' — 메일·문자에 붙여넣기(Ctrl+V) 하세요';
     document.body.appendChild(t);
     setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 350); }, 3200);
+};
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K161] 강사 사전조사(강의 가능 일정) — 구글폼 대체
+   · 외부 강사 업로드 링크(upload.html)에 함께 들어 있다: 강사님은 성함 → 일정(날짜×오전/오후, 1안·2안) → 교재
+   · 저장: system/coord/preSurvey/{방} = { course, range{s,e}, note, blocks{날짜_am|pm: 사유}, resp{성함: {...}} }
+   · 이 화면: 교육 시간표 → [강사 사전조사] — 결과를 시간표 모양으로 보고, 견학·내 강의 등은 칸을 막는다
+   ══════════════════════════════════════════════════════════════════════════ */
+ui._preSurveyCount = function(){
+    var el = document.getElementById('psvCnt'), room = state.room; if(!el || !room) return;
+    firebase.database().ref('system/coord/preSurvey/' + room + '/resp').once('value').then(function(s){
+        var n = s.numChildren ? s.numChildren() : 0;
+        el.textContent = n; el.style.display = n ? '' : 'none';
+    }).catch(function(){});
+};
+ui.preSurveyOpen = async function(){
+    var room = state.room; if(!room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
+    var esc = ui._esc, ref = firebase.database().ref('system/coord/preSurvey/' + room);
+    var cname = ui._matCourseName() || ('Room ' + room);
+    var pd = ''; try{ pd = String((await firebase.database().ref('courses/'+room+'/settings/period').once('value')).val() || ''); }catch(e){}
+    var hol = {}; try{ hol = (await firebase.database().ref('system/holidays').once('value')).val() || {}; }catch(e){}
+    var ps = pd.split('~').map(function(x){ return x.trim(); });
+    var WD = ['일','월','화','수','목','금','토'];
+    var ymd = function(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+    var daysOf = function(s, e){ var out=[]; if(!/^\d{4}-\d{2}-\d{2}$/.test(s)||!/^\d{4}-\d{2}-\d{2}$/.test(e)) return out; var d=new Date(s+'T00:00:00'), end=new Date(e+'T00:00:00'); for(var i=0; d<=end && i<62; i++){ var w=d.getDay(); if(w!==0&&w!==6) out.push({ d: ymd(d), w: w, hol: hol[ymd(d)]||'' }); d.setDate(d.getDate()+1); } return out; };
+    var who = function(r){ return esc(r.name||'') + ' ' + esc(r.title||'강사'); };
+    var tm = function(ms){ var d=new Date(Number(ms)), p=function(n){ return String(n).padStart(2,'0'); }; return (d.getMonth()+1)+'.'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); };
+    var slotTxt = function(map){ return Object.keys(map||{}).sort().map(function(k){ var d=k.slice(0,10); return Number(d.slice(5,7))+'.'+Number(d.slice(8,10))+'('+WD[new Date(d+'T00:00:00').getDay()]+') '+(k.slice(-2)==='am'?'오전':'오후'); }).join(', '); };
+    var touch = function(){ return ref.child('course').set(cname); };
+
+    var o = document.createElement('div'); o.id = 'psvOv';
+    o.style.cssText = 'position:fixed;inset:0;z-index:2147482000;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:28px 18px;overflow:auto';
+    o.innerHTML = '<div id="psvBox" style="background:#fff;border-radius:20px;padding:24px 28px 26px;width:100%;max-width:1000px;box-shadow:0 30px 70px rgba(0,0,0,.3)"><div style="padding:60px;text-align:center;color:#94a3b8;font-weight:800">불러오는 중…</div></div>'
+      + '<style>#psvOv table{border-collapse:separate;border-spacing:5px;width:100%;table-layout:fixed}#psvOv .pc{border:1.5px solid #e2e8f0;border-radius:12px;min-height:58px;padding:6px;vertical-align:top;cursor:pointer;transition:border-color .12s,background .12s}#psvOv .pc:hover{border-color:#fdba74;background:#fffbf5}#psvOv .pb{border-radius:12px;padding:6px;vertical-align:middle;text-align:center;background:repeating-linear-gradient(135deg,#f1f5f9 0 8px,#e2e8f0 8px 16px);color:#475569;font-weight:900;font-size:13px;cursor:pointer}#psvOv .ch{display:inline-block;margin:2px;padding:3px 9px;border-radius:8px;font-size:13px;font-weight:800;white-space:nowrap}#psvOv .c1{background:#eef2ff;color:#3730a3}#psvOv .c2{background:#f0f9ff;color:#0369a1}#psvOv .rt td,#psvOv .rt th{padding:9px 10px;border-bottom:1px solid #eef2f7;font-size:13.5px;text-align:left;vertical-align:top}#psvOv .rt th{color:#64748b;font-weight:900;font-size:12.5px;background:#f8fafc}#psvOv input[type=date]{padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:9px;font:inherit;font-weight:800}</style>';
+    document.body.appendChild(o);
+    var box = o.querySelector('#psvBox');
+    var close = function(){ try{ ref.off('value', cb); }catch(e){} o.remove(); ui._preSurveyCount(); };
+    o.addEventListener('mousedown', function(e){ if(e.target === o) close(); });
+    var V = {};
+    var cb = function(s){ V = s.val() || {}; draw(); };
+    ref.on('value', cb);
+    function draw(){
+        var rg = V.range || {}, s = rg.s || ps[0] || '', e = rg.e || ps[1] || '';
+        var days = daysOf(s, e), blocks = V.blocks || {}, resp = V.resp || {};
+        var keys = Object.keys(resp).sort(function(a,b){ return (resp[a].at||0)-(resp[b].at||0); });
+        var stale = V.course && V.course !== cname;
+        var h = '<div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-user-clock" style="color:#ea580c"></i> 강사 사전조사</div>'
+          + '<div style="font-size:13.5px;color:#64748b;font-weight:700;margin-top:4px">' + esc(cname) + ' · 응답 <b style="color:#ea580c">' + keys.length + '</b>명</div></div>'
+          + '<button id="psvLink" style="padding:10px 16px;border:none;border-radius:11px;background:#ea580c;color:#fff;font-weight:900;cursor:pointer"><i class="fa-solid fa-link"></i> 강사님께 보낼 링크</button>'
+          + '<button id="psvX" title="닫기" style="width:40px;height:40px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:17px;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></div>';
+        if(stale) h += '<div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13.5px;font-weight:800;color:#92400e;display:flex;align-items:center;gap:10px"><span style="flex:1">이전 과정(<b>' + esc(V.course) + '</b>)의 조사 결과입니다.</span><button id="psvReset" style="padding:7px 13px;border:none;border-radius:9px;background:#f59e0b;color:#fff;font-weight:900;cursor:pointer">비우고 새로 시작</button></div>';
+        h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px;font-size:13.5px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"><span style="font-size:12.5px;color:#94a3b8;font-weight:700">(주말 제외)</span></div>'
+          + '<textarea id="psvNote" rows="2" placeholder="강사님 화면에 보일 안내 (선택) 예) 10.22 현장 견학 · 교보재 제출 10/16까지" style="width:100%;box-sizing:border-box;margin-top:10px;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:11px;font:inherit;font-size:13.5px;font-weight:700;resize:vertical">' + esc(V.note || '') + '</textarea>';
+        if(!days.length){
+            h += '<div style="margin-top:18px;padding:40px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:14px">조사 기간을 정해 주세요.</div>';
+        } else {
+            h += '<div style="margin-top:16px;font-size:12.5px;color:#94a3b8;font-weight:800"><i class="fa-solid fa-hand-pointer"></i> 빈 칸을 누르면 <b style="color:#475569">강사 배정 막기</b>(견학·내 강의 등) · 막힌 칸을 누르면 풀기 &nbsp; <span class="ch c1" style="font-size:11.5px">1안</span><span class="ch c2" style="font-size:11.5px">2안</span></div>'
+              + '<table style="margin-top:6px"><thead><tr><th style="width:84px"></th><th style="font-size:13px;color:#64748b">오전</th><th style="font-size:13px;color:#64748b">오후</th></tr></thead><tbody>';
+            days.forEach(function(d){
+                h += '<tr><th style="text-align:left;font-size:14.5px;font-weight:900;color:#1e293b;white-space:nowrap">' + Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10)) + ' <small style="color:#94a3b8">(' + WD[d.w] + ')</small></th>';
+                ['am','pm'].forEach(function(t){
+                    var k = d.d + '_' + t;
+                    if(d.hol){ h += '<td class="pb" style="cursor:default">' + esc(d.hol) + '</td>'; return; }
+                    if(blocks[k]){ h += '<td class="pb" data-ub="' + k + '" title="누르면 풀기"><i class="fa-solid fa-ban" style="margin-right:5px"></i>' + esc(blocks[k]) + '</td>'; return; }
+                    var c = keys.filter(function(x){ var r = resp[x]||{}; return r.avail !== '불가능' && ((r.p1||{})[k] || (r.p2||{})[k]); })
+                        .sort(function(a,b){ return ((resp[a].p1||{})[k]?0:1) - ((resp[b].p1||{})[k]?0:1); })
+                        .map(function(x){ var r = resp[x]; return '<span class="ch ' + ((r.p1||{})[k]?'c1':'c2') + '">' + who(r) + '</span>'; }).join('');
+                    h += '<td class="pc" data-b="' + k + '">' + c + '</td>';
+                });
+                h += '</tr>';
+            });
+            h += '</tbody></table>';
+        }
+        /* [K162] 숙박·픽업 요약 — 생활관·기사님 배차 준비용 */
+        var stays = keys.filter(function(x){ return resp[x].stay; }), pks = keys.filter(function(x){ return resp[x].pickup; })
+            .sort(function(a,b){ return String((resp[a].pkDate||'')+(resp[a].pkTime||'')).localeCompare(String((resp[b].pkDate||'')+(resp[b].pkTime||''))); });
+        if(stays.length || pks.length){
+            h += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px">'
+              + '<div style="flex:1;min-width:260px;border:1px solid #dbeafe;background:#f8fbff;border-radius:14px;padding:13px 15px"><div style="font-size:14px;font-weight:900;color:#1e40af"><i class="fa-solid fa-bed"></i> 전날 숙박 ' + stays.length + '명</div><div style="margin-top:6px;font-size:13.5px;font-weight:800;color:#334155;line-height:1.8">' + (stays.map(function(x){ return who(resp[x]); }).join(', ') || '-') + '</div></div>'
+              + '<div style="flex:1.4;min-width:300px;border:1px solid #fde68a;background:#fffdf5;border-radius:14px;padding:13px 15px"><div style="font-size:14px;font-weight:900;color:#92400e"><i class="fa-solid fa-van-shuttle"></i> 픽업 ' + pks.length + '건 <span style="font-size:12px;color:#b45309;font-weight:700">· 운행 08~11시 / 13~17시(가급적 16시 전)</span></div><div style="margin-top:6px;font-size:13.5px;font-weight:800;color:#334155;line-height:1.9">'
+              + (pks.map(function(x){ var r = resp[x], late = String(r.pkTime||'') > '16:00' || /^1[12]:[3-5]/.test(String(r.pkTime||'')); return (r.pkDate ? Number(r.pkDate.slice(5,7)) + '.' + Number(r.pkDate.slice(8,10)) + ' ' : '') + '<b' + (late ? ' style="color:#dc2626" title="권장 시간 밖"' : '') + '>' + esc(r.pkTime||'') + '</b> ' + esc(r.pkPlace||'') + ' — ' + who(r) + (r.pkMemo ? ' <span style="color:#94a3b8">(' + esc(r.pkMemo) + ')</span>' : ''); }).join('<br>') || '-') + '</div></div></div>';
+        }
+        h += '<div style="margin-top:22px;font-size:15px;font-weight:900;color:#0f172a">응답 내역</div>';
+        if(!keys.length) h += '<div style="margin-top:8px;padding:22px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:12px">아직 응답이 없습니다. [강사님께 보낼 링크]를 복사해 보내 주세요.</div>';
+        else {
+            h += '<div style="overflow:auto;margin-top:8px;border:1px solid #eef2f7;border-radius:12px"><table class="rt" style="border-spacing:0;table-layout:auto"><thead><tr><th>강사</th><th>출강</th><th>1안</th><th>2안</th><th>숙박</th><th>픽업</th><th>전달 사항</th><th>제출</th><th></th></tr></thead><tbody>';
+            keys.forEach(function(x){ var r = resp[x] || {};
+                var av = r.avail === '가능' ? '<b style="color:#16a34a">가능</b>' : (r.avail === '불가능' ? '<b style="color:#dc2626">불가능</b>' : '<b style="color:#d97706">' + esc(r.avail||'-') + '</b>');
+                h += '<tr><td style="font-weight:900;white-space:nowrap">' + who(r) + '</td><td>' + av + '</td><td>' + esc(slotTxt(r.p1)||'-') + '</td><td>' + esc(slotTxt(r.p2)||'-') + '</td><td>' + (r.stay?'<b style="color:#2563eb">신청</b>':'-') + '</td><td style="white-space:nowrap">' + (r.pickup ? '<b style="color:#2563eb">' + esc(r.pkPlace||'신청') + '</b>' + (r.pkDate ? '<br><span style="color:#475569;font-weight:800">' + Number(r.pkDate.slice(5,7)) + '.' + Number(r.pkDate.slice(8,10)) + ' ' + esc(r.pkTime||'') + ' 도착</span>' : '') + (r.pkMemo ? '<br><span style="color:#94a3b8;font-weight:700">' + esc(r.pkMemo) + '</span>' : '') : '-') + '</td><td style="max-width:240px;white-space:pre-wrap">' + esc(r.msg||'') + '</td><td style="white-space:nowrap;color:#94a3b8;font-weight:700">' + (r.at?tm(r.at):'') + '</td><td><button data-rd="' + esc(x) + '" title="응답 삭제" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px"><i class="fa-solid fa-trash"></i></button></td></tr>';
+            });
+            h += '</tbody></table></div>';
+        }
+        box.innerHTML = h;
+        box.querySelector('#psvX').onclick = close;
+        box.querySelector('#psvLink').onclick = function(){ ui.matExtLink(); };
+        var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; ref.set({ course: cname }); };
+        var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); ref.child('range').set({ s: a, e: b }); };
+        box.querySelector('#psvS').onchange = setR; box.querySelector('#psvE').onchange = setR;
+        var nt = box.querySelector('#psvNote'); nt.onchange = function(){ touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null); };
+        box.querySelectorAll('[data-b]').forEach(function(td){ td.onclick = function(){
+            var k = td.getAttribute('data-b'), n = td.querySelectorAll('.ch').length;
+            var lab = prompt((n ? '이 칸에 신청한 강사님이 ' + n + '명 있습니다. 그래도 막을까요?\n\n' : '') + '이 시간을 강사 배정에서 막습니다. 사유를 적어 주세요.', '담당자 일정');
+            if(lab === null) return; touch(); ref.child('blocks/' + k).set(String(lab).trim().slice(0,20) || '배정 불가'); }; });
+        box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; ref.child('blocks/' + td.getAttribute('data-ub')).remove(); }; });
+        box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; ref.child('resp/' + x).remove(); }; });
+    }
 };
 
 
