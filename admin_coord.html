@@ -11588,6 +11588,191 @@ var holidayMgr = {
 window.holidayMgr = holidayMgr;
 </script>
 
+<script>
+/* ══════════════════════════════════════════════════════════════════════════
+   [K150] 교육운영부 — 교재 자료실 공유 (강사 플랫폼과 같은 자료실을 함께 씀)
+   · 이 과정 교재 보기/빼기, 자료실에서 가져오기(과정별), 새로 올리기(과정운영자로 기록), 교육생 주소 복사
+   · 파일은 Cloudflare(R2), 목록은 system/materials · 과정 연결은 courses/{room}/materials (강사 플랫폼과 동일)
+   ══════════════════════════════════════════════════════════════════════════ */
+(function(){
+  if (window.__coordMat) return; window.__coordMat = true;
+  var esc = function(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+  var M = window.kacMaterials;
+  var st = { room:'', tab:'course', all:[], linked:{}, ref:null, q:'' };
+  function rooms(){
+    var d = (typeof globalAllData !== 'undefined' && globalAllData) ? globalAllData : {};
+    return Object.keys(d).filter(function(r){ var x=d[r]||{}; return (x.status||{}).roomStatus==='active' && String((x.settings||{}).courseName||'').trim(); })
+      .sort().map(function(r){ return { r:r, name:String(d[r].settings.courseName).trim(), coord:String(d[r].settings.coordinatorName||'') }; });
+  }
+  function who(){
+    var n = ''; try{ n = localStorage.getItem('kac_coord_me') || ''; }catch(e){}
+    if(!n){
+      var rr = rooms().filter(function(x){ return x.r===st.room; })[0];
+      n = (rr && rr.coord) || '';
+      n = prompt('교재를 올리는 분의 이름을 입력해 주세요. (과정운영자로 기록됩니다)', n) || '';
+      n = n.trim(); if(n){ try{ localStorage.setItem('kac_coord_me', n); }catch(e){} }
+    }
+    return n;
+  }
+  function label(m){ var n=String(m.uploader||'미상').trim(); var r=m.uploaderRole||'교수'; return /(교수|운영자|담당|강사|부장|과장|차장|대리|주임)$/.test(n)?n:(n+' '+r); }
+  function css(){
+    if(document.getElementById('cmatCss')) return;
+    var s=document.createElement('style'); s.id='cmatCss';
+    s.textContent='#cmatFab{position:fixed;right:22px;bottom:24px;z-index:1200;display:flex;align-items:center;gap:8px;padding:13px 18px;border:none;border-radius:999px;background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;font-weight:900;font-size:14.5px;box-shadow:0 10px 26px rgba(79,70,229,.35);cursor:pointer;font-family:inherit}'
+      +'#cmatFab:hover{transform:translateY(-2px)}'
+      +'#cmatOv{position:fixed;inset:0;z-index:16000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px}'
+      +'#cmatBox{background:#fff;border-radius:20px;width:100%;max-width:1000px;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(15,23,42,.35);overflow:hidden;font-family:inherit}'
+      +'#cmatBox .hd{padding:20px 24px 12px;border-bottom:1px solid #eef2f7}'
+      +'#cmatBox .tabs{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}'
+      +'#cmatBox .tabs button{padding:9px 16px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;color:#475569;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}'
+      +'#cmatBox .tabs button.on{background:#4f46e5;border-color:#4f46e5;color:#fff}'
+      +'#cmatBox .bd{flex:1;overflow:auto;padding:14px 18px;background:#f1f5f9}'
+      +'#cmatBox .row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #dfe6ef;border-left:5px solid #6366f1;border-radius:13px;padding:12px 14px;margin-bottom:8px}'
+      +'#cmatBox .row .t{font-size:15px;font-weight:800;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'
+      +'#cmatBox .row .s{font-size:12.5px;color:#94a3b8;font-weight:700;margin-top:3px}'
+      +'#cmatBox .b{flex-shrink:0;padding:7px 12px;border:none;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:inherit;text-decoration:none}'
+      +'#cmatBox .grp{display:flex;align-items:center;gap:8px;margin:14px 2px 8px;font-size:14px;font-weight:900;color:#334155}'
+      +'#cmatBox .ft{padding:12px 18px;border-top:1px solid #eef2f7;display:flex;gap:10px;justify-content:flex-end;align-items:center;flex-wrap:wrap}';
+    document.head.appendChild(s);
+  }
+  function fab(){
+    css();
+    if(document.getElementById('cmatFab')) return;
+    var b=document.createElement('button'); b.id='cmatFab'; b.type='button';
+    b.innerHTML='<i class="fa-solid fa-book-open"></i> 교재 자료실';
+    b.onclick=open; document.body.appendChild(b);
+  }
+  function open(){
+    if(!M) return alert('교재 모듈(config.js)을 불러오지 못했습니다. 새로고침해 주세요.');
+    var rs = rooms(); if(!rs.length) return alert('진행 중인 과정이 없습니다.');
+    st.room = (typeof currentRID!=='undefined' && currentRID && rs.some(function(x){return x.r===currentRID;})) ? currentRID : rs[0].r;
+    var ov=document.createElement('div'); ov.id='cmatOv';
+    ov.innerHTML='<div id="cmatBox"><div class="hd">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+        +'<div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-book-open" style="color:#6366f1"></i> 교재 자료실 <span style="font-size:12px;font-weight:900;color:#15803d;background:#dcfce7;padding:2px 9px;border-radius:999px;vertical-align:middle">강사 플랫폼과 공유</span></div>'
+        +'<div style="display:flex;gap:8px;align-items:center"><select id="cmatRoom" style="padding:9px 12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:14px;font-weight:800;max-width:360px">'
+          + rs.map(function(x){ return '<option value="'+esc(x.r)+'"'+(x.r===st.room?' selected':'')+'>Room '+esc(x.r)+' · '+esc(x.name)+'</option>'; }).join('')
+        +'</select><button type="button" data-x style="width:38px;height:38px;border:none;border-radius:50%;background:#f1f5f9;font-size:17px;cursor:pointer">✕</button></div></div>'
+      +'<div class="tabs"><button data-tab="course">📚 이 과정 교재</button><button data-tab="lib">🗂 자료실에서 가져오기</button><button data-tab="up">⬆ 새로 올리기</button><button data-act="share" style="margin-left:auto">🔗 교육생 주소 복사</button></div>'
+      +'<input id="cmatQ" type="search" placeholder="교재명 · 과정명 · 올린 사람 검색" style="display:none;margin-top:10px;width:100%;box-sizing:border-box;padding:10px 13px;border:1px solid #e2e8f0;border-radius:10px;font-size:14px">'
+      +'</div><div class="bd" id="cmatBody"></div><div class="ft" id="cmatFt"></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function(e){
+      if(e.target===ov || e.target.closest('[data-x]')) return close();
+      var t=e.target.closest('[data-tab]'); if(t){ st.tab=t.getAttribute('data-tab'); render(); return; }
+      if(e.target.closest('[data-act="share"]')) return share();
+      var a=e.target.closest('[data-do]'); if(a){ act(a.getAttribute('data-do'), a.getAttribute('data-id')); }
+    });
+    ov.querySelector('#cmatRoom').onchange=function(){ st.room=this.value; watch(); };
+    ov.querySelector('#cmatQ').oninput=function(){ st.q=this.value.trim().toLowerCase(); render(); };
+    st.tab='course'; watch();
+    M.listAll().then(function(a){ st.all=a; render(); });
+  }
+  function close(){ try{ if(st.ref) st.ref.off(); }catch(e){} var o=document.getElementById('cmatOv'); if(o) o.remove(); }
+  function watch(){
+    try{ if(st.ref) st.ref.off(); }catch(e){}
+    st.ref = firebase.database().ref('courses/'+st.room+'/materials');
+    st.ref.on('value', function(s){ st.linked = s.val() || {}; render(); });
+  }
+  function byId(){ var o={}; st.all.forEach(function(m){ o[m.id]=m; }); return o; }
+  function render(){
+    var body=document.getElementById('cmatBody'), ft=document.getElementById('cmatFt'), q=document.getElementById('cmatQ'); if(!body) return;
+    document.querySelectorAll('#cmatBox .tabs [data-tab]').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-tab')===st.tab); });
+    q.style.display = (st.tab==='lib') ? '' : 'none';
+    var idx=byId();
+    if(st.tab==='course'){
+      var ids=Object.keys(st.linked);
+      body.innerHTML = ids.length ? ids.map(function(id){ var m=idx[id]; if(!m) return '';
+          return '<div class="row"><i class="fa-solid fa-file-pdf" style="font-size:22px;color:#dc2626"></i><div style="flex:1;min-width:0"><div class="t">'+esc(m.title||m.fileName)+'</div><div class="s">'+esc(label(m))+' · '+M.fmtSize(m.size)+(st.linked[id]&&st.linked[id].wm?' · 🔏 워터마크':'')+'</div></div>'
+            +'<a class="b" style="background:#f0fdf4;color:#15803d" target="_blank" rel="noopener" href="'+esc(M.fileUrl(m)+'?view=1&v=2')+'">보기</a>'
+            +'<button class="b" style="background:#eef2ff;color:#4338ca" data-do="copy" data-id="'+id+'">주소</button>'
+            +'<button class="b" style="background:#fef2f2;color:#dc2626" data-do="unlink" data-id="'+id+'">이 과정에서 빼기</button></div>'; }).join('')
+        : '<div style="text-align:center;padding:40px;color:#94a3b8;font-weight:800">이 과정에 연결된 교재가 없습니다.<br><span style="font-size:13px">[자료실에서 가져오기] 또는 [새로 올리기]를 눌러 주세요.</span></div>';
+      ft.innerHTML = '<span style="font-size:12.5px;color:#64748b;font-weight:700;margin-right:auto">교육생은 입교완료 화면·메뉴의 [교육 자료 받기]에서 봅니다.</span>';
+    } else if(st.tab==='lib'){
+      var src = st.all.filter(function(m){ return !st.q || ((m.title||'')+' '+(m.fileName||'')+' '+(m.course||'')+' '+label(m)).toLowerCase().indexOf(st.q)>=0; });
+      var g={}; src.forEach(function(m){ var c=String(m.course||'').trim()||'분류 없음'; (g[c]=g[c]||[]).push(m); });
+      var cs=Object.keys(g).sort(function(a,b){ if(a==='분류 없음') return 1; if(b==='분류 없음') return -1; return a.localeCompare(b,'ko'); });
+      body.innerHTML = cs.length ? cs.map(function(c){ return '<div class="grp"><span style="width:4px;height:15px;border-radius:2px;background:#4f46e5"></span>'+esc(c)+' <span style="color:#94a3b8;font-size:12px">'+g[c].length+'건</span></div>'
+          + g[c].map(function(m){ var on=!!st.linked[m.id];
+              return '<label class="row" style="cursor:pointer;'+(on?'opacity:.6':'')+'"><input type="checkbox" class="cmatChk" value="'+m.id+'" style="width:17px;height:17px" '+(on?'disabled':'')+'><i class="fa-solid fa-file-pdf" style="font-size:20px;color:#dc2626"></i><div style="flex:1;min-width:0"><div class="t">'+esc(m.title||m.fileName)+'</div><div class="s">'+esc(label(m))+' · '+M.fmtSize(m.size)+(on?' · <span style="color:#16a34a">이미 연결됨</span>':'')+'</div></div></label>'; }).join(''); }).join('')
+        : '<div style="text-align:center;padding:40px;color:#94a3b8;font-weight:800">자료가 없습니다.</div>';
+      ft.innerHTML = '<button class="b" style="background:#4f46e5;color:#fff;padding:11px 20px;font-size:14px" data-do="link">선택한 교재를 이 과정에 연결</button>';
+    } else {
+      body.innerHTML = '<div id="cmatDrop" style="border:2px dashed #a5b4fc;border-radius:16px;background:#fff;padding:46px 20px;text-align:center;color:#475569">'
+        +'<div style="font-size:38px;color:#6366f1"><i class="fa-solid fa-cloud-arrow-up"></i></div>'
+        +'<div style="font-size:16px;font-weight:900;margin-top:8px">여기로 파일을 끌어다 놓거나 아래 버튼으로 고르세요</div>'
+        +'<div style="font-size:12.5px;color:#94a3b8;font-weight:700;margin-top:6px">PDF·PPT·한글·엑셀·이미지·ZIP · 1개당 100MB까지 · 올리면 이 과정에 바로 연결되고 <b>과정운영자</b>로 기록됩니다</div>'
+        +'<button class="b" style="margin-top:14px;background:#4f46e5;color:#fff;padding:11px 20px;font-size:14px" data-do="pick">파일 고르기</button>'
+        +'<div id="cmatProg" style="margin-top:14px;font-size:13.5px;font-weight:800;color:#4338ca"></div></div>';
+      ft.innerHTML = '<span style="font-size:12.5px;color:#64748b;font-weight:700;margin-right:auto">업로드에는 관리자 암호(교재 업로드 암호)가 필요합니다.</span>';
+      var dz=document.getElementById('cmatDrop');
+      ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev,function(e){ e.preventDefault(); dz.style.background='#eef2ff'; }); });
+      ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev,function(e){ e.preventDefault(); dz.style.background='#fff'; }); });
+      dz.addEventListener('drop', function(e){ upload(e.dataTransfer && e.dataTransfer.files); });
+    }
+  }
+  function ensureKey(){
+    if(M.getKey()) return Promise.resolve(true);
+    return new Promise(function(res){
+      var o=document.createElement('div'); o.style.cssText='position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.7);display:flex;align-items:center;justify-content:center;padding:20px';
+      o.innerHTML='<div style="background:#fff;border-radius:18px;padding:24px;width:100%;max-width:380px"><div style="font-size:17px;font-weight:900;margin-bottom:6px">🔒 업로드용 관리자 암호</div><div style="font-size:12.5px;color:#64748b;font-weight:700;margin-bottom:12px">교재 올릴 때와 같은 암호입니다. 이 창을 닫으면 지워집니다.</div><input type="password" id="cmatK" style="width:100%;box-sizing:border-box;padding:12px;border:1.5px solid #cbd5e1;border-radius:10px;font-size:15px"><div style="display:flex;gap:8px;margin-top:12px"><button id="cmatKn" style="flex:1;padding:11px;border:none;border-radius:10px;background:#f1f5f9;font-weight:800">취소</button><button id="cmatKy" style="flex:1;padding:11px;border:none;border-radius:10px;background:#4f46e5;color:#fff;font-weight:900">확인</button></div></div>';
+      document.body.appendChild(o); var i=o.querySelector('#cmatK'); setTimeout(function(){ i.focus(); },50);
+      var done=function(v){ o.remove(); res(v); };
+      o.querySelector('#cmatKn').onclick=function(){ done(false); };
+      o.querySelector('#cmatKy').onclick=function(){ var k=i.value.trim(); if(!k) return; M.setKey(k); done(true); };
+      i.onkeydown=function(e){ if(e.key==='Enter') o.querySelector('#cmatKy').click(); };
+    });
+  }
+  async function upload(files){
+    files = Array.prototype.slice.call(files||[]); if(!files.length) return;
+    var me = who(); if(!me) return;
+    if(!(await ensureKey())) return;
+    var quota = 1024; try{ var qv=(await firebase.database().ref('system/coord/materialsQuotaMB').once('value')).val(); if(Number(qv)>0) quota=Number(qv); }catch(e){}
+    var used = st.all.filter(function(m){ return String(m.uploader||'').trim()===me; }).reduce(function(a,m){ return a+(Number(m.size)||0)+(Number(m.wmSize)||0); },0);
+    var cname = ''; try{ cname = String(globalAllData[st.room].settings.courseName||'').trim(); }catch(e){}
+    var pg=document.getElementById('cmatProg'), ok=0, fail=0;
+    for(var i=0;i<files.length;i++){
+      var f=files[i];
+      if(used + f.size > quota*1024*1024){ fail++; if(pg) pg.innerHTML='<span style="color:#b91c1c">'+esc(f.name)+' — 할당 용량('+quota+'MB) 초과로 건너뜀</span>'; continue; }
+      if(pg) pg.textContent='('+(i+1)+'/'+files.length+') '+f.name+' 올리는 중…';
+      try{
+        var rec = await M.upload(f, me, cname);
+        await firebase.database().ref('system/materials/'+rec.id+'/uploaderRole').set('과정운영자');
+        rec.uploaderRole='과정운영자';
+        await M.link(st.room, rec.id, me);
+        st.all.unshift(rec); used += f.size; ok++;
+      }catch(e){ fail++; if(pg) pg.innerHTML='<span style="color:#b91c1c">'+esc(f.name)+' 실패 — '+esc((e&&e.message)||'')+'</span>'; if(e && /암호/.test(e.message||'')) break; }
+    }
+    if(pg) pg.innerHTML += '<div style="margin-top:6px;color:#15803d">✅ 올림 '+ok+'건'+(fail?(' · 실패/건너뜀 '+fail+'건'):'')+'</div>';
+    if(ok){ st.tab='course'; setTimeout(render, 900); }
+  }
+  async function act(what, id){
+    var idx=byId();
+    if(what==='pick'){ var inp=document.createElement('input'); inp.type='file'; inp.multiple=true; inp.onchange=function(){ upload(inp.files); }; inp.click(); return; }
+    if(what==='copy'){ var m=idx[id]; if(!m) return; var u=M.fileUrl(st.linked[id]&&st.linked[id].wm&&m.wmKey?{key:m.wmKey}:m); copy(u, '교재 주소를 복사했습니다.'); return; }
+    if(what==='unlink'){ var m2=idx[id]; if(!confirm('"'+((m2&&(m2.title||m2.fileName))||'')+'" 을(를) 이 과정에서 뺄까요?\n(자료실에는 남아 있어 다시 연결할 수 있습니다)')) return; await M.unlink(st.room, id); return; }
+    if(what==='link'){
+      var chk=Array.prototype.slice.call(document.querySelectorAll('.cmatChk:checked')).map(function(c){ return c.value; });
+      if(!chk.length) return alert('연결할 교재를 선택해 주세요.');
+      var me=''; try{ me=localStorage.getItem('kac_coord_me')||'과정운영자'; }catch(e){ me='과정운영자'; }
+      for(var i=0;i<chk.length;i++) await M.link(st.room, chk[i], me);
+      st.tab='course'; render(); alert('✅ '+chk.length+'건을 이 과정에 연결했습니다.');
+    }
+  }
+  function share(){
+    var u = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'index.html?room=' + encodeURIComponent(st.room) + '&menu=materials';
+    copy(u, '교육생용 교재 주소를 복사했습니다.\n카카오톡에 붙여넣으면 교육생이 바로 교재 목록을 봅니다.');
+  }
+  function copy(text, msg){
+    var done=function(){ alert(msg+'\n\n'+text); };
+    if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(function(){ fb(); }); else fb();
+    function fb(){ var t=document.createElement('textarea'); t.value=text; t.style.cssText='position:fixed;left:-9999px'; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); }catch(e){} t.remove(); done(); }
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', fab); else fab();
+})();
+</script>
+
 </body>
 </html>
 <!-- @build 20260622 (교육운영부 vH26) -->
