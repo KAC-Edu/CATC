@@ -20398,7 +20398,10 @@ ui.preSurveyOpen = async function(){
     var box = o.querySelector('#psvBox');
     var V = {};
     /* [K168] 이 과정에 외부강사가 링크로 올린 교재 — 성함으로 응답과 짝지어 교재 칸에 아이콘으로 */
-    var MATS = [];
+    var MATS = [], TELS = {};
+    var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + room);
+    var telCb = function(s){ TELS = s.val() || {}; if(document.body.contains(o)) draw(); };
+    telRef.on('value', telCb);
     var normN = function(s){ return String(s||'').replace(/\s*(강사|교수|부장|차장|과장|대리|주임|연구원|박사|소장|팀장|원장|사원|위원)$/,'').replace(/\s+/g,''); };
     var matCell = function(r){
         var n = normN(r.name), list = MATS.filter(function(m){ return normN(m.uploader) === n; });
@@ -20416,7 +20419,7 @@ ui.preSurveyOpen = async function(){
     })();
     var cb = function(s){ var a = document.activeElement; V = s.val() || {}; if(a && a.id === 'psvNote' && box.contains(a)) return; draw(); };
     ref.on('value', cb);
-    ui._psvOff = function(){ try{ ref.off('value', cb); }catch(e){} ui._psvOff = null; };
+    ui._psvOff = function(){ try{ ref.off('value', cb); telRef.off('value', telCb); }catch(e){} ui._psvOff = null; };
     /* [K164] 하루 일정 막기 편집 — 종일/오전/오후/시간 지정 + 사유 고르기 */
     function dayEditor(d, t, days){
         var WDs = WD[new Date(d + 'T00:00:00').getDay()];
@@ -20506,11 +20509,13 @@ ui.preSurveyOpen = async function(){
         var p1of = function(r){ return Object.keys(r.p1||{})[0] || Object.keys(r.p2||{})[0] || ''; };
         var slotShort = function(k){ if(!k) return '일정 미정'; var d = k.slice(0,10); return Number(d.slice(5,7)) + '.' + Number(d.slice(8,10)) + '(' + WD[new Date(d+'T00:00:00').getDay()] + ') ' + (k.slice(-2)==='am'?'오전':'오후'); };
         var pks = keys.filter(function(x){ return resp[x].pickup; }).sort(function(a,b){ return p1of(resp[a]).localeCompare(p1of(resp[b])); });
-        V._kakao = pks.length ? ('[항기원 강사 픽업 요청]\n' + cname + '\n' + pks.map(function(x){ var r = resp[x], pl = r.pkPlace || '픽업장소';
-            return '\n▶ ' + slotShort(p1of(r)) + ' · ' + (r.name||'') + ' ' + (r.title||'강사')
-              + '\n   ' + pl + ' → 항기원 : ' + (r.pkArr ? r.pkArr + ' ' + pl + ' 도착' : '')
-              + '\n   항기원 → ' + pl + ' : ' + (r.pkDep ? r.pkDep + ' ' + pl + ' 출발' : ''); }).join('\n')) : '';
-        /* [K174] 숙박·픽업 — 같은 제목 형식 + 가운데 정렬된 표/칩으로 */
+        /* [K175] 기사님 카톡 — 평소 쓰시는 형식 그대로. 픽업=열차 도착 시각, 항기원 출발=귀가 열차 출발 1시간 전 */
+        var minus1h = function(t){ var m = String(t||'').match(/^(\d{1,2}):(\d{2})$/); if(!m) return ''; var x = Number(m[1])*60 + Number(m[2]) - 60; if(x < 0) x = 0; return String(Math.floor(x/60)).padStart(2,'0') + ':' + String(x%60).padStart(2,'0'); };
+        var dayTxt = function(k){ if(!k) return '일정 미정'; var d = k.slice(0,10); return Number(d.slice(5,7)) + '/' + Number(d.slice(8,10)) + '(' + WD[new Date(d+'T00:00:00').getDay()] + ')'; };
+        V._kakao = pks.length ? ('강사 수송 요청드립니다.\n\n<' + cname + '>\n' + pks.map(function(x){ var r = resp[x], pl = r.pkPlace || '오송역', tel = TELS[x] || '';
+            return '■ ' + dayTxt(p1of(r)) + '\n' + (r.name||'') + ' ' + (r.title||'강사') + (tel ? '\n(' + tel + ')' : '')
+              + '\n' + (r.pkArr || '  :  ') + ' ' + pl + ' >> 항기원'
+              + '\n' + (minus1h(r.pkDep) || '  :  ') + ' 항기원 >> ' + pl; }).join('\n\n') + '\n\n즐거운 한주되세요') : '';
         if(stays.length || pks.length){
             var secT = function(ic, col, t){ return '<div style="margin-top:30px;font-size:19px;font-weight:900;color:#0f172a"><i class="fa-solid ' + ic + '" style="color:' + col + '"></i> ' + t + '</div>'; };
             var cardHead = function(ic, col, t, n, unit, right){ return '<div style="display:flex;align-items:center;gap:10px;min-height:44px"><i class="fa-solid ' + ic + '" style="color:' + col + ';font-size:18px"></i><span style="font-size:16.5px;font-weight:900;color:#1e293b">' + t + '</span><b style="font-size:20px;color:' + col + '">' + n + '</b><span style="font-size:14px;font-weight:800;color:#64748b">' + unit + '</span><span style="flex:1"></span>' + (right||'') + '</div>'; };
@@ -20521,9 +20526,9 @@ ui.preSurveyOpen = async function(){
               + '<div style="margin-top:10px;text-align:center">' + (stays.map(function(x){ return chip(who(resp[x])); }).join('') || '<span style="color:#94a3b8;font-weight:800">없음</span>') + '</div></div>'
               + '<div style="border:1px solid #fde68a;background:#fffdf5;border-radius:18px;padding:16px 18px">' + cardHead('fa-van-shuttle', '#ca8a04', '픽업', pks.length, '건',
                   pks.length ? '<button id="psvKakao" title="기사님 카톡방에 붙여넣을 메시지 복사" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:12px;background:#FEE500;color:#191919;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12)"><i class="fa-solid fa-comment"></i> 기사님 카톡 복사</button>' : '')
-              + (pks.length ? '<table style="width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed"><thead><tr>' + ['강의 일자','탑승 장소','강사','도착','출발'].map(function(t){ return '<th style="padding:8px 6px;font-size:13.5px;font-weight:900;color:#a16207;border-bottom:1.5px solid #fde68a;text-align:center">' + t + '</th>'; }).join('') + '</tr></thead><tbody>'
+              + (pks.length ? '<table style="width:100%;border-collapse:collapse;margin-top:10px;table-layout:fixed"><thead><tr>' + ['강의 일자','탑승 장소','강사','연락처','픽업(도착)','항기원 출발'].map(function(t){ return '<th style="padding:8px 6px;font-size:13.5px;font-weight:900;color:#a16207;border-bottom:1.5px solid #fde68a;text-align:center">' + t + '</th>'; }).join('') + '</tr></thead><tbody>'
                   + pks.map(function(x){ var r = resp[x], td = 'padding:10px 6px;font-size:15.5px;font-weight:800;color:#334155;text-align:center;border-bottom:1px dashed #fef3c7';
-                      return '<tr><td style="' + td + '">' + slotShort(p1of(r)) + '</td><td style="' + td + ';color:#92400e;font-weight:900">' + esc(r.pkPlace||'-') + '</td><td style="' + td + '">' + who(r) + '</td><td style="' + td + '">' + (esc(r.pkArr||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (esc(r.pkDep||'') || '<span style="color:#cbd5e1">-</span>') + '</td></tr>'; }).join('')
+                      return '<tr><td style="' + td + '">' + slotShort(p1of(r)) + '</td><td style="' + td + ';color:#92400e;font-weight:900">' + esc(r.pkPlace||'-') + '</td><td style="' + td + '">' + who(r) + '</td><td style="' + td + ';font-size:14.5px">' + (esc(TELS[x]||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (esc(r.pkArr||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (r.pkDep ? '<b style="color:#b45309">' + minus1h(r.pkDep) + '</b><div style="font-size:12px;color:#94a3b8;font-weight:800">귀가편 ' + esc(r.pkDep) + '</div>' : '<span style="color:#cbd5e1">-</span>') + '</td></tr>'; }).join('')
                   + '</tbody></table>' : '<div style="margin-top:10px;text-align:center;color:#94a3b8;font-weight:800">없음</div>')
               + '</div></div>';
         }
@@ -20540,7 +20545,7 @@ ui.preSurveyOpen = async function(){
         box.innerHTML = h;
         box.querySelector('#psvLink').onclick = function(){ ui.matExtLink(); };
         var kb = box.querySelector('#psvKakao'); if(kb) kb.onclick = function(){ var t = V._kakao; ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('기사님께 보낼 메시지를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); };
-        var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; saved('초기화', ref.set({ course: cname })); };
+        var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; telRef.remove().catch(function(){}); saved('초기화', ref.set({ course: cname })); };
         var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); saved('조사 기간', ref.child('range').set({ s: a, e: b })); };
         box.querySelector('#psvS').onchange = setR; box.querySelector('#psvE').onchange = setR;
         box.querySelector('#psvDue').onchange = function(){ touch(); saved('교재 제출 기한', ref.child('matDue').set(this.value || null)); };   // [K169]
@@ -20550,7 +20555,7 @@ ui.preSurveyOpen = async function(){
         box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; saved('막기 해제', ref.child('blocks/' + td.getAttribute('data-ub')).remove()); }; });
         box.querySelectorAll('[data-mat]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); var m = MATS.filter(function(x){ return x.id === a.getAttribute('data-mat'); })[0]; if(!m) return;
             var u = window.kacMaterials.fileUrl(m); if(/\.pdf$/i.test(m.fileName||'')) u += (u.indexOf('?') >= 0 ? '&' : '?') + 'view=1'; window.open(u, '_blank', 'noopener'); }; });
-        box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; saved('응답 삭제', ref.child('resp/' + x).remove()); }; });
+        box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; telRef.child(x).remove().catch(function(){}); saved('응답 삭제', ref.child('resp/' + x).remove()); }; });
     }
 };
 
