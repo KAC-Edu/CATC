@@ -88,6 +88,11 @@
         .hr b{ font-weight:900; color:#1e293b; } .hr a{ color:#2563eb; text-decoration:none; }
         .hn{ margin-top:8px; padding-top:10px; border-top:1px dashed #cbd5e1; font-size:14.5px; font-weight:700; color:#334155; line-height:1.65; word-break:keep-all; }
         .due{ margin-left:6px; padding:3px 10px; border-radius:999px; background:#fef2f2; color:#b91c1c; font-size:12.5px; font-weight:900; }
+        .tPair{ display:flex; gap:6px; }
+        .tPair select{ flex:1; min-width:0; padding:12px 8px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:16px; font-weight:800; background:#fff; }
+        .mailRow{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:10px; font-size:13.5px; font-weight:800; color:#64748b; }
+        .mailRow button{ padding:10px 16px; border:1.5px solid #c7d2fe; border-radius:12px; background:#fff; color:#4338ca; font-size:14px; font-weight:900; cursor:pointer; }
+        .mailRow button:hover{ background:#eef2ff; }
     </style>
 </head>
 <body>
@@ -138,6 +143,7 @@
           + '<div class="pcD">일정은 지금 제출하시고, 교재는 PC에서 <b>같은 링크</b>로 열어 올려 주세요.</div>'
           + '<div class="pcB"><button type="button" id="pcCopy"><i class="fa-solid fa-copy"></i> 링크 복사</button><button type="button" id="pcMail"><i class="fa-solid fa-envelope"></i> 내 메일로 보내기</button></div>'
           + '<div class="muted" style="margin-top:6px;">복사한 링크는 카카오톡 \'나와의 채팅\'에 붙여 두시면 PC 카톡에서 바로 여실 수 있습니다.</div></div>' : '')
+      + '<div id="mailWrap"></div>'
       + '<div class="drop" id="dz"><i class="fa-solid fa-file-arrow-up"></i><div class="dt">눌러서 파일 선택</div><div class="muted">또는 여기로 끌어다 놓기</div></div>'
       + '<input type="file" id="fi" multiple style="display:none;">'
       + '<div id="list"></div>'
@@ -184,6 +190,7 @@
       var pd = r[0], hol = r[1];
       SV.prof = r[2]; SV.period = pd;
       if(SV.prof) firebase.database().ref('system/professorProfiles/' + SV.prof.replace(/[.#$\[\]\/]/g,'') + '/phone').once('value').then(function(s){ SV.phone = String(s.val()||'').trim(); drawHead(); }).catch(function(){});
+      if(SV.prof) firebase.database().ref('system/professorProfiles/' + SV.prof.replace(/[.#$\[\]\/]/g,'') + '/email').once('value').then(function(s){ SV.email = String(s.val()||'').trim(); drawMail(); }).catch(function(){});
       svRef().on('value', function(s){
         var v = s.val() || {};
         var rg = v.range || {}, ps = pd.split('~').map(function(x){ return x.trim(); });
@@ -205,6 +212,17 @@
   }
   function one(m){ var k = Object.keys(m||{}).sort()[0]; var o = {}; if(k) o[k] = true; return o; }
   /* [K167] 머리 정보 — 교육기간 · 담임 교수(연락처) · 담당자 안내 문구 */
+  /* [K171] 교재를 메일로 내실 분 — 담임교수님 메일로 바로 쓰기(교수 프로필의 메일 주소) */
+  function drawMail(){
+    var w = document.getElementById('mailWrap'); if(!w) return;
+    if(!/@/.test(SV.email||'')){ w.innerHTML = ''; return; }
+    w.innerHTML = '<div class="mailRow"><span>메일 제출이 편하시면</span><button type="button" id="mailGo"><i class="fa-solid fa-envelope"></i> 담임교수님께 메일로 제출</button></div>';
+    document.getElementById('mailGo').onclick = function(){
+      var nm = myName() || '강사';
+      location.href = 'mailto:' + encodeURIComponent(SV.email) + '?subject=' + encodeURIComponent('[교재 제출] ' + (info.c || '') + ' — ' + nm)
+        + '&body=' + encodeURIComponent((SV.prof ? SV.prof + ' 교수님께,\n\n' : '') + (info.c || '') + ' 과정 교재를 첨부해 제출합니다.\n\n' + nm + ' 드림');
+    };
+  }
   function drawHead(){
     var el = document.getElementById('hdInfo'); if(!el) return;
     var ps = String(SV.period||'').split('~').map(function(x){ return x.trim(); });
@@ -232,6 +250,13 @@
   }
   var PK_TIMES = (function(){ var a = []; [8,9,10,11,13,14,15,16,17].forEach(function(hh){ a.push(String(hh).padStart(2,'0')+':00'); if(hh!==11 && hh!==17) a.push(String(hh).padStart(2,'0')+':30'); }); return a; })();
   function yn(f, v, label){ var cur = SV.my[f]; var on = (v ? cur === true : cur === false); return '<button type="button" class="seg' + (on?' on':'') + '" data-yn="' + f + '" data-v="' + (v?1:0) + '">' + label + '</button>'; }
+  /* [K171] 시각 고르기 — 09~18시, 10분 단위 (오전/오후 구분 없음) */
+  function tSel(id, v){
+    var m = String(v||'').match(/^(\d{2}):(\d{2})$/), hv = m ? m[1] : '', mv = m ? String(Math.floor(Number(m[2])/10)*10).padStart(2,'0') : '';
+    var hs = '<option value="">시</option>'; for(var i=9;i<=18;i++){ var x = String(i).padStart(2,'0'); hs += '<option value="' + x + '"' + (x===hv?' selected':'') + '>' + x + '시</option>'; }
+    var ms = '<option value="">분</option>'; for(var j=0;j<60;j+=10){ var y = String(j).padStart(2,'0'); ms += '<option value="' + y + '"' + (y===mv?' selected':'') + '>' + y + '분</option>'; }
+    return '<div class="tPair"><select id="' + id + 'H">' + hs + '</select><select id="' + id + 'M">' + ms + '</select></div>';
+  }
   function who(r){ return esc(r.name) + ' ' + esc(r.title || '강사'); }
   function svDraw(){
     var w = document.getElementById('svWrap'), fno = document.getElementById('fileNo'); if(!w) return;
@@ -240,7 +265,7 @@
     var me = svKey(myName()), my = SV.my, a = my.avail;
     var seg = function(v, label){ return '<button type="button" class="seg' + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
-      + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[일정 다시 제출]</b>을 눌러 주세요.</div>' : '')
+      + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[수정 내용 제출]</b>을 눌러 주세요.</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
     if(a === '가능' || a === '미정'){
       h += '<div class="muted" style="margin:12px 2px 8px;">먼저 누른 칸이 <b class="b1">1안</b>, 다음 칸이 <b class="b2">2안</b> · 다시 누르면 취소</div><table class="sv"><thead><tr><th></th><th>오전</th><th>오후</th></tr></thead><tbody>';
@@ -272,16 +297,16 @@
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
             /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
             + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각</div>'
-              + '<div class="tGrid"><label><span>' + esc(my.pkPlace) + ' <b>도착</b></span><input type="time" id="pkArr" value="' + esc(my.pkArr||'') + '"></label>'
-              + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span><input type="time" id="pkDep" value="' + esc(my.pkDep||'') + '"></label></div>'
+              + '<div class="tGrid"><label><span>' + esc(my.pkPlace) + ' <b>도착</b></span>' + tSel('pkArr', my.pkArr) + '</label>'
+              + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span>' + tSel('pkDep', my.pkDep) + '</label></div>'
               : '') : '');
     }
     /* [K168] 전달 사항은 별도 3번 항목 — 픽업과 헷갈리지 않게 분리, 제출 버튼은 그 아래 */
     if(a){
-      h += '<div class="step"><span class="no">3</span> 전달 사항</div>'
-        + '<textarea id="svMsg" rows="3" placeholder="담당자에게 전하실 말씀">' + esc(my.msg) + '</textarea>'
-        + '<button type="button" class="btn" id="svGo" style="width:100%; justify-content:center; margin-top:10px; padding:14px;"><i class="fa-solid fa-paper-plane"></i> ' + (my.at ? '일정 다시 제출' : '일정 제출') + '</button>'
-        + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출됨 · 고치고 다시 누르면 바뀝니다</div>' : '');
+      h += '<div class="step"><span class="no">3</span> 담임교수님께 전달할 사항</div>'
+        + '<textarea id="svMsg" rows="3" placeholder="담임교수님께 전하실 말씀">' + esc(my.msg) + '</textarea>'
+        + '<button type="button" class="btn" id="svGo" style="width:100%; justify-content:center; margin-top:10px; padding:14px;"><i class="fa-solid fa-paper-plane"></i> ' + (my.at ? '수정 내용 제출' : '제출하기') + '</button>'
+        + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출 완료 · 내용을 고치신 뒤 다시 누르시면 수정됩니다</div>' : '');
     }
     w.innerHTML = h;
     w.querySelectorAll('[data-av]').forEach(function(b){ b.onclick = function(){ if(!svNeedName()) return; SV.my.avail = b.getAttribute('data-av'); SV.dirty = true; svDraw(); }; });
@@ -297,7 +322,9 @@
       SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-yn]').forEach(function(b){ b.onclick = function(){ my[b.getAttribute('data-yn')] = b.getAttribute('data-v') === '1'; SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-pp]').forEach(function(b){ b.onclick = function(){ my.pkPlace = b.getAttribute('data-pp'); SV.dirty = true; svDraw(); }; });
-    [['pkArr','pkArr'],['pkDep','pkDep'],['pkMemo','pkMemo']].forEach(function(x){ var el = document.getElementById(x[0]); if(el) el.oninput = el.onchange = function(){ my[x[1]] = el.value; SV.dirty = true; }; });
+    ['pkArr','pkDep'].forEach(function(f){ var hh = document.getElementById(f + 'H'), mm = document.getElementById(f + 'M'); if(!hh || !mm) return;
+      var up = function(){ if(!hh.value){ my[f] = ''; mm.value = ''; } else { if(!mm.value) mm.value = '00'; my[f] = hh.value + ':' + mm.value; } SV.dirty = true; };
+      hh.onchange = up; mm.onchange = function(){ if(!hh.value){ mm.value = ''; return; } up(); }; });
     var ta = document.getElementById('svMsg'); if(ta) ta.oninput = function(){ my.msg = ta.value; SV.dirty = true; };
     var go = document.getElementById('svGo'); if(go) go.onclick = svSubmit;
   }
