@@ -5027,6 +5027,7 @@ setMode: function(mode) {
         }
         else if (mode === 'foodnews') { if(typeof ui.loadFoodNews==='function') ui.loadFoodNews(); }
         else if (mode === 'materials') { if(typeof ui.loadMaterials==='function') ui.loadMaterials(); }   // [K68] 교재 자료실
+        else if (mode === 'presurvey') { if(typeof ui.preSurveyOpen==='function') ui.preSurveyOpen(); }   // [K173] 강사 사전조사(페이지)
 
         // 4. 상단 탭 활성화 표시
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -20264,7 +20265,7 @@ ui._matKeyValid = async function(){
 };
 ui.matExtLink = async function(){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 만들 수 없습니다.');
-    var room = state.room; if(!room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
+    var room = state.room; if(!room){ var _hp = document.getElementById('psvPage'); if(_hp) _hp.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;font-weight:800;background:#fff;border-radius:24px">강의실을 먼저 선택해 주세요.</div>'; return; }
     var cname = ui._matCourseName() || ('Room ' + room);
     var ce = 0;
     try{ var pd = String((await firebase.database().ref('courses/'+room+'/settings/period').once('value')).val() || ''); var e = pd.indexOf('~')>=0 ? pd.split('~').pop().trim() : ''; if(/^\d{4}-\d{2}-\d{2}$/.test(e)) ce = new Date(e+'T23:59:59').getTime(); }catch(err){}
@@ -20386,14 +20387,15 @@ ui.preSurveyOpen = async function(){
         return { full: full && part.length, part: part };
     };
 
+    /* [K173] 팝업 → 페이지(교육 메뉴 화면) — #view-presurvey 안의 #psvPage 에 그린다 */
+    var host = document.getElementById('psvPage'); if(!host) return;
+    if(typeof ui._psvOff === 'function'){ try{ ui._psvOff(); }catch(e){} }
+    host.innerHTML = '';
     var o = document.createElement('div'); o.id = 'psvOv';
-    o.style.cssText = 'position:fixed;inset:0;z-index:2147482000;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:24px 18px;overflow:auto';
-    o.innerHTML = '<div id="psvBox" style="background:#fff;border-radius:20px;padding:28px 34px 30px;width:100%;max-width:1200px;box-shadow:0 30px 70px rgba(0,0,0,.3)"><div style="padding:60px;text-align:center;color:#94a3b8;font-weight:800">불러오는 중…</div></div>'
+    o.innerHTML = '<div id="psvBox" style="background:#fff;border-radius:24px;padding:30px 36px 34px;width:100%;box-shadow:0 18px 45px rgba(15,23,42,.08)"><div style="padding:60px;text-align:center;color:#94a3b8;font-weight:800">불러오는 중…</div></div>'
       + '<style>#psvOv table{border-collapse:separate;border-spacing:5px;width:100%;table-layout:fixed}#psvOv .pc{border:2px solid #e2e8f0;border-radius:14px;height:78px;padding:8px;vertical-align:top;cursor:pointer;transition:border-color .12s,background .12s}#psvOv .pc:hover{border-color:#fdba74;background:#fffbf5}#psvOv .pb{border-radius:14px;height:78px;padding:8px;vertical-align:middle;text-align:center;background:repeating-linear-gradient(135deg,#f1f5f9 0 9px,#e2e8f0 9px 18px);color:#334155;font-weight:900;font-size:15px;cursor:pointer}#psvOv .ch{display:inline-block;margin:3px;padding:6px 12px;border-radius:10px;font-size:15.5px;font-weight:800;white-space:nowrap}#psvOv .c1{background:#eef2ff;color:#3730a3}#psvOv .c2{background:#f0f9ff;color:#0369a1}#psvOv .rt td,#psvOv .rt th{padding:13px 14px;border-bottom:1px solid #eef2f7;font-size:15.5px;text-align:left;vertical-align:top}#psvOv .rt th{color:#64748b;font-weight:900;font-size:14px;background:#f8fafc}#psvOv .pc.dup{border-color:#f87171;background:#fff5f5}#psvOv .dupb{display:inline-block;margin:2px 0 3px;padding:2px 9px;border-radius:999px;background:#ef4444;color:#fff;font-size:12.5px;font-weight:900}#psvOv input[type=date]{padding:10px 12px;border:2px solid #e2e8f0;border-radius:11px;font:inherit;font-size:16px;font-weight:800}</style>';
-    document.body.appendChild(o);
+    host.appendChild(o);
     var box = o.querySelector('#psvBox');
-    var close = function(){ try{ ref.off('value', cb); }catch(e){} o.remove(); ui._preSurveyCount(); };
-    o.addEventListener('mousedown', function(e){ if(e.target === o) close(); });
     var V = {};
     /* [K168] 이 과정에 외부강사가 링크로 올린 교재 — 성함으로 응답과 짝지어 교재 칸에 아이콘으로 */
     var MATS = [];
@@ -20414,6 +20416,7 @@ ui.preSurveyOpen = async function(){
     })();
     var cb = function(s){ var a = document.activeElement; V = s.val() || {}; if(a && a.id === 'psvNote' && box.contains(a)) return; draw(); };
     ref.on('value', cb);
+    ui._psvOff = function(){ try{ ref.off('value', cb); }catch(e){} ui._psvOff = null; };
     /* [K164] 하루 일정 막기 편집 — 종일/오전/오후/시간 지정 + 사유 고르기 */
     function dayEditor(d, t, days){
         var WDs = WD[new Date(d + 'T00:00:00').getDay()];
@@ -20463,17 +20466,20 @@ ui.preSurveyOpen = async function(){
         var days = daysOf(s, e), blocks = V.blocks || {}, resp = V.resp || {};
         var keys = Object.keys(resp).sort(function(a,b){ return (resp[a].at||0)-(resp[b].at||0); });
         var stale = V.course && V.course !== cname;
-        var h = '<div style="display:flex;align-items:center;gap:10px"><div style="flex:1"><div style="font-size:28px;font-weight:900;color:#0f172a;letter-spacing:-.5px"><i class="fa-solid fa-user-clock" style="color:#ea580c"></i> 강사 사전조사</div>'
-          + '<div style="font-size:17px;color:#475569;font-weight:800;margin-top:6px">' + esc(cname) + ' · 응답 <b style="color:#ea580c;font-size:20px">' + keys.length + '</b>명</div></div>'
-          + '<button id="psvLink" style="padding:13px 20px;border:none;border-radius:13px;background:#ea580c;color:#fff;font-size:16px;font-weight:900;cursor:pointer"><i class="fa-solid fa-link"></i> 강사님께 보낼 링크</button>'
-          + '<button id="psvX" title="닫기" style="width:48px;height:48px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:17px;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></div>';
+        var nStay = keys.filter(function(x){ return resp[x].stay; }).length, nPk = keys.filter(function(x){ return resp[x].pickup; }).length;
+        var nMat = keys.filter(function(x){ var n = normN(resp[x].name); return MATS.some(function(m){ return normN(m.uploader) === n; }); }).length;
+        var stat = function(ic, col, lab, n){ return '<div style="display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:14px;background:' + col + '14;border:1px solid ' + col + '33"><i class="fa-solid ' + ic + '" style="color:' + col + ';font-size:18px"></i><span style="font-size:14px;font-weight:800;color:#475569">' + lab + '</span><b style="font-size:22px;color:' + col + '">' + n + '</b></div>'; };
+        var h = '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><div style="font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.4px">' + esc(cname) + '</div>'
+          + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">' + stat('fa-user-check', '#ea580c', '응답', keys.length) + stat('fa-bed', '#2563eb', '숙박', nStay) + stat('fa-van-shuttle', '#ca8a04', '픽업', nPk) + stat('fa-file-pdf', '#dc2626', '교재', nMat) + '</div></div>'
+          + '<button id="psvLink" style="align-self:flex-start;padding:15px 24px;border:none;border-radius:14px;background:#ea580c;color:#fff;font-size:16.5px;font-weight:900;cursor:pointer;box-shadow:0 8px 20px rgba(234,88,12,.25)"><i class="fa-solid fa-link"></i> 강사님께 보낼 링크</button></div>';
         if(stale) h += '<div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13.5px;font-weight:800;color:#92400e;display:flex;align-items:center;gap:10px"><span style="flex:1">이전 과정(<b>' + esc(V.course) + '</b>)의 조사 결과입니다.</span><button id="psvReset" style="padding:7px 13px;border:none;border-radius:9px;background:#f59e0b;color:#fff;font-weight:900;cursor:pointer">비우고 새로 시작</button></div>';
-        h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px;font-size:16px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"><span style="margin-left:18px">교재 제출 기한</span> <input type="date" id="psvDue" value="' + esc(V.matDue || '') + '"></div>'
-          + '<textarea id="psvNote" rows="2" placeholder="강사님께 전할 말 — 링크 화면 맨 위(교육기간·담임 아래)에 보입니다" style="width:100%;box-sizing:border-box;margin-top:12px;padding:13px 15px;border:2px solid #e2e8f0;border-radius:13px;font:inherit;font-size:16px;font-weight:700;resize:vertical">' + esc(V.note || '') + '</textarea>';
+        h += '<div style="margin-top:24px;padding:18px 20px;border-radius:18px;background:#f8fafc;border:1px solid #eef2f7"><div style="font-size:15px;font-weight:900;color:#0f172a;margin-bottom:12px"><i class="fa-solid fa-sliders" style="color:#6366f1"></i> 조사 설정</div>'
+          + '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:16px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"><span style="margin-left:18px">교재 제출 기한</span> <input type="date" id="psvDue" value="' + esc(V.matDue || '') + '"></div>'
+          + '<textarea id="psvNote" rows="2" placeholder="강사님께 전할 말 — 링크 화면 맨 위(교육기간·담임 아래)에 보입니다" style="width:100%;box-sizing:border-box;margin-top:12px;padding:13px 15px;border:2px solid #e2e8f0;border-radius:13px;font:inherit;font-size:16px;font-weight:700;resize:vertical;background:#fff">' + esc(V.note || '') + '</textarea></div>';
         if(!days.length){
             h += '<div style="margin-top:18px;padding:40px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:14px">조사 기간을 정해 주세요.</div>';
         } else {
-            h += '<div style="margin-top:20px;display:flex;align-items:center;gap:8px;font-size:15px;color:#64748b;font-weight:800"><span style="flex:1"><i class="fa-solid fa-hand-pointer"></i> 날짜·칸을 누르면 배정 막기</span><span class="ch c1" style="font-size:13px;padding:3px 10px">1안</span><span class="ch c2" style="font-size:13px;padding:3px 10px">2안</span></div>'
+            h += '<div style="margin-top:28px;display:flex;align-items:center;gap:8px;font-size:15px;color:#64748b;font-weight:800"><span style="flex:1"><b style="font-size:19px;color:#0f172a;margin-right:10px"><i class="fa-solid fa-calendar-week" style="color:#6366f1"></i> 강의 가능 일정</b> 날짜·칸을 누르면 배정 막기</span><span class="ch c1" style="font-size:13px;padding:3px 10px">1안</span><span class="ch c2" style="font-size:13px;padding:3px 10px">2안</span></div>'
               + '<table style="margin-top:6px"><thead><tr><th style="width:110px"></th><th style="font-size:16px;color:#475569;padding:4px">오전 <small style="color:#94a3b8;font-weight:700">09~12</small></th><th style="font-size:16px;color:#475569;padding:4px">오후 <small style="color:#94a3b8;font-weight:700">13~18</small></th></tr></thead><tbody>';
             days.forEach(function(d){
                 h += '<tr><th data-day="' + d.d + '" data-t="all" title="눌러서 이 날 일정 막기" style="text-align:left;font-size:19px;font-weight:900;color:#1e293b;white-space:nowrap;cursor:pointer">' + Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10)) + ' <small style="color:#94a3b8">(' + WD[d.w] + ')</small></th>';
@@ -20523,7 +20529,6 @@ ui.preSurveyOpen = async function(){
             h += '</tbody></table></div>';
         }
         box.innerHTML = h;
-        box.querySelector('#psvX').onclick = close;
         box.querySelector('#psvLink').onclick = function(){ ui.matExtLink(); };
         var kb = box.querySelector('#psvKakao'); if(kb) kb.onclick = function(){ var t = V._kakao; ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('기사님께 보낼 메시지를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); };
         var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; saved('초기화', ref.set({ course: cname })); };
@@ -20541,9 +20546,7 @@ ui.preSurveyOpen = async function(){
 };
 
 
-/* [K166] 'presurvey' 는 화면 전환이 아니라 팝업 — 리모컨·포스트잇·메뉴 어디서 눌러도 사전조사 창을 연다 */
-(function(){ var _sm = ui.setMode; if(typeof _sm !== 'function' || _sm._psv) return;
-  ui.setMode = function(m){ if(m === 'presurvey'){ ui.preSurveyOpen(); return; } return _sm.apply(this, arguments); }; ui.setMode._psv = true; })();
+/* [K173] 'presurvey' 는 이제 일반 화면(view-presurvey) — setMode 가 그대로 연다 */
 
 /* [K155] 링크 보여주기 + [복사] 버튼 — 암호 입력 등으로 시간이 지나면 브라우저가 자동 복사를 막으므로 버튼을 눌러 복사 */
 ui._showLinkCopy = function(url, until){
