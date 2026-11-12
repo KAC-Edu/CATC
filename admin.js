@@ -20363,6 +20363,15 @@ ui.preSurveyOpen = async function(){
     var tm = function(ms){ var d=new Date(Number(ms)), p=function(n){ return String(n).padStart(2,'0'); }; return (d.getMonth()+1)+'.'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); };
     var slotTxt = function(map){ return Object.keys(map||{}).sort().map(function(k){ var d=k.slice(0,10); return Number(d.slice(5,7))+'.'+Number(d.slice(8,10))+'('+WD[new Date(d+'T00:00:00').getDay()]+') '+(k.slice(-2)==='am'?'오전':'오후'); }).join(', '); };
     var touch = function(){ return ref.child('course').set(cname); };
+    /* [K164] 담당자 일정 막기 — 시간 단위(bk/{날짜}/{id} = {s,e,why}) */
+    var bkLabel = function(b){ var s = Number(b.s), e = Number(b.e); return (s <= 9 && e >= 18 ? '종일' : (s + '~' + e + '시')) + ' ' + (b.why || ''); };
+    var slotBk = function(bk, d, t){
+        var day = (bk || {})[d] || {}, list = Object.keys(day).map(function(id){ return day[id]; });
+        var a = t === 'am' ? 9 : 13, z = t === 'am' ? 12 : 18, full = true, part = [];
+        for(var x = a; x < z; x++){ if(!list.some(function(b){ return Number(b.s) <= x && Number(b.e) >= x + 1; })) full = false; }
+        list.forEach(function(b){ if(Number(b.s) < z && Number(b.e) > a) part.push(bkLabel(b)); });
+        return { full: full && part.length, part: part };
+    };
 
     var o = document.createElement('div'); o.id = 'psvOv';
     o.style.cssText = 'position:fixed;inset:0;z-index:2147482000;background:rgba(15,23,42,.6);display:flex;align-items:flex-start;justify-content:center;padding:28px 18px;overflow:auto';
@@ -20375,6 +20384,50 @@ ui.preSurveyOpen = async function(){
     var V = {};
     var cb = function(s){ V = s.val() || {}; draw(); };
     ref.on('value', cb);
+    /* [K164] 하루 일정 막기 편집 — 종일/오전/오후/시간 지정 + 사유 고르기 */
+    function dayEditor(d, t, days){
+        var WDs = WD[new Date(d + 'T00:00:00').getDay()];
+        var cur = ((V.bk || {})[d]) || {};
+        var sel = t === 'am' ? [9,12] : (t === 'pm' ? [13,18] : [9,18]), why = '현장 견학';
+        var REASONS = ['현장 견학', '담당자 강의', '행사·회의', '출장', '휴강'];
+        var pop = document.createElement('div');
+        pop.style.cssText = 'position:fixed;inset:0;z-index:2147482500;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:20px';
+        var hrs = [9,10,11,12,13,14,15,16,17,18];
+        var B = 'border:none;border-radius:11px;font-weight:900;cursor:pointer;';
+        var paint = function(){
+            var preset = function(a, b, lab){ var on = sel[0] === a && sel[1] === b; return '<button data-ps="' + a + '-' + b + '" style="flex:1;padding:11px 6px;border:2px solid ' + (on ? '#ea580c' : '#e2e8f0') + ';background:' + (on ? '#fff7ed' : '#fff') + ';color:' + (on ? '#c2410c' : '#475569') + ';border-radius:11px;font-weight:900;cursor:pointer;font-size:14px">' + lab + '</button>'; };
+            var opt = function(list, v){ return list.map(function(x){ return '<option value="' + x + '"' + (x === v ? ' selected' : '') + '>' + x + '시</option>'; }).join(''); };
+            var ex = Object.keys(cur).map(function(id){ var b = cur[id]; return '<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #fed7aa;background:#fffbf5;border-radius:10px;margin-top:6px;font-size:13.5px;font-weight:800;color:#9a3412"><i class="fa-solid fa-ban"></i><span style="flex:1">' + esc(bkLabel(b)) + '</span><button data-del="' + esc(id) + '" style="' + B + 'padding:5px 10px;background:#fef2f2;color:#dc2626;font-size:12.5px">풀기</button></div>'; }).join('');
+            pop.innerHTML = '<div style="background:#fff;border-radius:18px;padding:22px 24px;width:100%;max-width:440px;box-shadow:0 24px 60px rgba(0,0,0,.3)">'
+              + '<div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-ban" style="color:#ea580c"></i> ' + Number(d.slice(5,7)) + '.' + Number(d.slice(8,10)) + ' (' + WDs + ') 강사 배정 막기</div>'
+              + (ex ? '<div style="margin-top:10px">' + ex + '</div>' : '')
+              + '<div style="margin-top:16px;font-size:13px;font-weight:900;color:#334155">시간</div>'
+              + '<div style="display:flex;gap:6px;margin-top:6px">' + preset(9,18,'종일') + preset(9,12,'오전') + preset(13,18,'오후') + '</div>'
+              + '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:13.5px;font-weight:800;color:#475569">직접 <select id="dS" style="flex:1;padding:9px;border:1.5px solid #e2e8f0;border-radius:10px;font:inherit;font-weight:800">' + opt(hrs.slice(0,-1), sel[0]) + '</select> ~ <select id="dE" style="flex:1;padding:9px;border:1.5px solid #e2e8f0;border-radius:10px;font:inherit;font-weight:800">' + opt(hrs.slice(1), sel[1]) + '</select></div>'
+              + '<div style="margin-top:16px;font-size:13px;font-weight:900;color:#334155">사유</div>'
+              + '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">' + REASONS.map(function(r){ var on = why === r; return '<button data-why="' + r + '" style="padding:8px 13px;border:2px solid ' + (on ? '#ea580c' : '#e2e8f0') + ';background:' + (on ? '#fff7ed' : '#fff') + ';color:' + (on ? '#c2410c' : '#475569') + ';border-radius:999px;font-weight:900;cursor:pointer;font-size:13px">' + r + '</button>'; }).join('')
+              + '<input id="dW" placeholder="직접 입력" value="' + (REASONS.indexOf(why) < 0 ? esc(why) : '') + '" style="flex:1;min-width:110px;padding:8px 12px;border:2px solid #e2e8f0;border-radius:999px;font:inherit;font-size:13px;font-weight:800"></div>'
+              + '<div style="display:flex;gap:8px;margin-top:18px"><button id="dOk" style="' + B + 'flex:2;padding:13px;background:#ea580c;color:#fff;font-size:15px"><i class="fa-solid fa-ban"></i> ' + (sel[0] <= 9 && sel[1] >= 18 ? '종일' : sel[0] + '~' + sel[1] + '시') + ' 막기</button><button id="dNo" style="' + B + 'flex:1;padding:13px;background:#f1f5f9;color:#475569">닫기</button></div></div>';
+        };
+        paint(); document.body.appendChild(pop);
+        pop.addEventListener('mousedown', function(e){ if(e.target === pop) pop.remove(); });
+        pop.addEventListener('change', function(e){
+            if(e.target.id === 'dS' || e.target.id === 'dE'){ var a = Number(pop.querySelector('#dS').value), b = Number(pop.querySelector('#dE').value); if(b <= a) b = a + 1; sel = [a, b]; paint(); }
+        });
+        pop.addEventListener('input', function(e){ if(e.target.id === 'dW') why = e.target.value; });
+        pop.addEventListener('click', async function(e){
+            var x;
+            if((x = e.target.closest('[data-ps]'))){ sel = x.getAttribute('data-ps').split('-').map(Number); paint(); return; }
+            if((x = e.target.closest('[data-why]'))){ why = x.getAttribute('data-why'); paint(); return; }
+            if((x = e.target.closest('[data-del]'))){ await ref.child('bk/' + d + '/' + x.getAttribute('data-del')).remove(); delete cur[x.getAttribute('data-del')]; paint(); return; }
+            if(e.target.closest('#dNo')){ pop.remove(); return; }
+            if(e.target.closest('#dOk')){
+                var w = String(why || '').trim().slice(0, 20) || '배정 불가';
+                touch(); var r = ref.child('bk/' + d).push(); await r.set({ s: sel[0], e: sel[1], why: w });
+                pop.remove();
+            }
+        });
+    }
     function draw(){
         var rg = V.range || {}, s = rg.s || ps[0] || '', e = rg.e || ps[1] || '';
         var days = daysOf(s, e), blocks = V.blocks || {}, resp = V.resp || {};
@@ -20390,18 +20443,21 @@ ui.preSurveyOpen = async function(){
         if(!days.length){
             h += '<div style="margin-top:18px;padding:40px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:14px">조사 기간을 정해 주세요.</div>';
         } else {
-            h += '<div style="margin-top:16px;font-size:12.5px;color:#94a3b8;font-weight:800"><i class="fa-solid fa-hand-pointer"></i> 빈 칸을 누르면 <b style="color:#475569">강사 배정 막기</b>(견학·내 강의 등) · 막힌 칸을 누르면 풀기 &nbsp; <span class="ch c1" style="font-size:11.5px">1안</span><span class="ch c2" style="font-size:11.5px">2안</span></div>'
+            h += '<div style="margin-top:16px;font-size:12.5px;color:#94a3b8;font-weight:800"><i class="fa-solid fa-hand-pointer"></i> 날짜나 칸을 누르면 <b style="color:#475569">강사 배정 막기</b>(견학·내 강의 등 — 종일·오전·오후·시간 지정) &nbsp; <span class="ch c1" style="font-size:11.5px">1안</span><span class="ch c2" style="font-size:11.5px">2안</span></div>'
               + '<table style="margin-top:6px"><thead><tr><th style="width:84px"></th><th style="font-size:13px;color:#64748b">오전</th><th style="font-size:13px;color:#64748b">오후</th></tr></thead><tbody>';
             days.forEach(function(d){
-                h += '<tr><th style="text-align:left;font-size:14.5px;font-weight:900;color:#1e293b;white-space:nowrap">' + Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10)) + ' <small style="color:#94a3b8">(' + WD[d.w] + ')</small></th>';
+                h += '<tr><th data-day="' + d.d + '" data-t="all" title="눌러서 이 날 일정 막기" style="text-align:left;font-size:14.5px;font-weight:900;color:#1e293b;white-space:nowrap;cursor:pointer">' + Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10)) + ' <small style="color:#94a3b8">(' + WD[d.w] + ')</small></th>';
                 ['am','pm'].forEach(function(t){
                     var k = d.d + '_' + t;
                     if(d.hol){ h += '<td class="pb" style="cursor:default">' + esc(d.hol) + '</td>'; return; }
                     if(blocks[k]){ h += '<td class="pb" data-ub="' + k + '" title="누르면 풀기"><i class="fa-solid fa-ban" style="margin-right:5px"></i>' + esc(blocks[k]) + '</td>'; return; }
+                    var sb = slotBk(V.bk, d.d, t);
+                    if(sb.full){ h += '<td class="pb" data-day="' + d.d + '" data-t="' + t + '" title="눌러서 고치기"><i class="fa-solid fa-ban" style="margin-right:5px"></i>' + esc(sb.part.join(' · ')) + '</td>'; return; }
                     var c = keys.filter(function(x){ var r = resp[x]||{}; return r.avail !== '불가능' && ((r.p1||{})[k] || (r.p2||{})[k]); })
                         .sort(function(a,b){ return ((resp[a].p1||{})[k]?0:1) - ((resp[b].p1||{})[k]?0:1); })
                         .map(function(x){ var r = resp[x]; return '<span class="ch ' + ((r.p1||{})[k]?'c1':'c2') + '">' + who(r) + '</span>'; }).join('');
-                    h += '<td class="pc" data-b="' + k + '">' + c + '</td>';
+                    var pw = sb.part.length ? '<div style="font-size:11.5px;font-weight:900;color:#b45309;margin-bottom:2px"><i class="fa-solid fa-ban"></i> ' + esc(sb.part.join(' · ')) + '</div>' : '';
+                    h += '<td class="pc" data-day="' + d.d + '" data-t="' + t + '">' + pw + c + '</td>';
                 });
                 h += '</tr>';
             });
@@ -20433,10 +20489,7 @@ ui.preSurveyOpen = async function(){
         var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); ref.child('range').set({ s: a, e: b }); };
         box.querySelector('#psvS').onchange = setR; box.querySelector('#psvE').onchange = setR;
         var nt = box.querySelector('#psvNote'); nt.onchange = function(){ touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null); };
-        box.querySelectorAll('[data-b]').forEach(function(td){ td.onclick = function(){
-            var k = td.getAttribute('data-b'), n = td.querySelectorAll('.ch').length;
-            var lab = prompt((n ? '이 칸에 신청한 강사님이 ' + n + '명 있습니다. 그래도 막을까요?\n\n' : '') + '이 시간을 강사 배정에서 막습니다. 사유를 적어 주세요.', '담당자 일정');
-            if(lab === null) return; touch(); ref.child('blocks/' + k).set(String(lab).trim().slice(0,20) || '배정 불가'); }; });
+        box.querySelectorAll('[data-day]').forEach(function(el){ el.onclick = function(){ dayEditor(el.getAttribute('data-day'), el.getAttribute('data-t'), days); }; });
         box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; ref.child('blocks/' + td.getAttribute('data-ub')).remove(); }; });
         box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; ref.child('resp/' + x).remove(); }; });
     }
