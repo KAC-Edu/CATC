@@ -296,9 +296,11 @@
             + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
             /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
-            + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각</div>'
-              + '<div class="tGrid"><label><span>' + esc(my.pkPlace) + ' <b>도착</b></span>' + tSel('pkArr', my.pkArr) + '</label>'
-              + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span>' + tSel('pkDep', my.pkDep) + '</label></div>'
+            /* [K172] 탑승 장소에 맞춰 교통수단 이름으로 — 열차/항공편/버스의 도착·출발 시각 */
+            + (my.pkPlace ? (function(){ var tv = { '오송역':['열차','fa-train'], '청주공항':['항공편','fa-plane'], '청주터미널':['버스','fa-bus'] }[my.pkPlace] || ['교통편',''];
+                return '<div class="sub2" style="margin-top:14px;">' + (tv[1] ? '<i class="fa-solid ' + tv[1] + '"></i>' : '') + tv[0] + ' 시각</div>'
+                  + '<div class="tGrid"><label><span>오실 때 <b>' + tv[0] + ' 도착</b></span>' + tSel('pkArr', my.pkArr) + '</label>'
+                  + '<label><span>가실 때 <b>' + tv[0] + ' 출발</b></span>' + tSel('pkDep', my.pkDep) + '</label></div>'; })()
               : '') : '');
     }
     /* [K168] 전달 사항은 별도 3번 항목 — 픽업과 헷갈리지 않게 분리, 제출 버튼은 그 아래 */
