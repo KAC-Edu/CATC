@@ -64,6 +64,7 @@
         .pkInfo{ margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:11px 13px; font-size:13px; font-weight:700; color:#92400e; line-height:1.65; }
         .sel{ flex:1; padding:12px 10px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:14.5px; font-weight:800; background:#fff; }
         .pkMemo{ margin-top:8px; font-size:14.5px !important; padding:12px 14px !important; }
+        .pw{ display:block; margin:1px 0 2px; font-size:11px; font-weight:800; color:#b45309; }
     </style>
 </head>
 <body>
@@ -87,14 +88,6 @@
   var fmt = function(ms){ var d = new Date(Number(ms)); return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+'.'; };
   var fmtSize = function(b){ b=Number(b)||0; return b>=1048576 ? (b/1048576).toFixed(1)+'MB' : Math.max(1,Math.round(b/1024))+'KB'; };
   /* [K155] 짧은 주소(?k=번호) — 서명 토큰을 서버에서 받아온다 */
-  var k = qs.get('k');
-  if(k && !tok){
-    firebase.database().ref('system/coord/uploadLinks/' + String(k).replace(/[^a-z0-9]/gi,'')).once('value').then(function(s){
-      var v = s.val() || {}; tok = String(v.tok || ''); start();
-    }).catch(function(){ start(); });
-    return;
-  }
-  start();
   function start(){
   parseTok();
   if(!info || !info.r || !info.e) return fail('링크가 올바르지 않습니다.<br>받으신 주소 전체를 다시 확인해 주세요.');
@@ -158,11 +151,20 @@
         var v = s.val() || {};
         var rg = v.range || {}, ps = pd.split('~').map(function(x){ return x.trim(); });
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
-        SV.blocks = v.blocks || {}; SV.resp = v.resp || {}; SV.note = String(v.note || '');
+        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
         svOnName(true); svDraw();
       });
     });
+  }
+  /* [K164] 담당자 일정 막기 — bk/{날짜}/{id} = {s:시작시, e:끝시, why}. 오전 9~12시·오후 13~18시를 다 덮으면 그 칸은 선택 불가, 일부만 덮으면 안내만 */
+  function bkLabel(b){ var s = Number(b.s), e = Number(b.e); return (s <= 9 && e >= 18 ? '종일' : (s + '~' + e + '시')) + ' ' + (b.why || ''); }
+  function slotBk(d, t){
+    var list = []; var day = (SV.bk || {})[d] || {}; Object.keys(day).forEach(function(id){ list.push(day[id]); });
+    var a = t === 'am' ? 9 : 13, z = t === 'am' ? 12 : 18, full = true, part = [];
+    for(var x = a; x < z; x++){ if(!list.some(function(b){ return Number(b.s) <= x && Number(b.e) >= x + 1; })) full = false; }
+    list.forEach(function(b){ if(Number(b.s) < z && Number(b.e) > a) part.push(bkLabel(b)); });
+    return { full: full && part.length ? part.join(' · ') : '', part: part };
   }
   function svOnName(force){
     var k = svKey(myName());
@@ -192,12 +194,13 @@
         var md = Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10));
         h += '<tr><th>' + md + '<small>(' + WD[d.w] + ')</small></th>';
         ['am','pm'].forEach(function(t){
-          var k = d.d + '_' + t, bl = SV.blocks[k] || d.hol;
+          var k = d.d + '_' + t, sb = slotBk(d.d, t), bl = SV.blocks[k] || d.hol || sb.full;
           if(bl){ h += '<td class="bl"><span>' + esc(bl) + '</span></td>'; return; }
           var others = Object.keys(SV.resp).filter(function(x){ var r = SV.resp[x]||{}; return x !== me && r.avail !== '불가능' && ((r.p1||{})[k] || (r.p2||{})[k]); })
             .map(function(x){ var r = SV.resp[x]; return '<span class="oc' + ((r.p1||{})[k] ? '' : ' o2') + '">' + who(r) + '</span>'; }).join('');
           var mine = my.p1[k] ? '<b class="mb b1">1안</b>' : (my.p2[k] ? '<b class="mb b2">2안</b>' : '');
-          h += '<td class="c' + (my.p1[k] ? ' s1' : (my.p2[k] ? ' s2' : '')) + '" data-k="' + k + '">' + mine + others + '</td>';
+          var warn = sb.part.length ? '<span class="pw"><i class="fa-solid fa-triangle-exclamation"></i> ' + esc(sb.part.join(' · ')) + '</span>' : '';
+          h += '<td class="c' + (my.p1[k] ? ' s1' : (my.p2[k] ? ' s2' : '')) + '" data-k="' + k + '">' + warn + mine + others + '</td>';
         });
         h += '</tr>';
       });
@@ -346,6 +349,14 @@
       }
     }
   }
+  /* [K163] 시작은 반드시 맨 끝에서 — 위의 var 변수(SV·mine 등)가 모두 준비된 뒤에 실행해야 한다.
+     (중간에서 return 하던 예전 구조 때문에 짧은 주소로 열면 설문이 안 보이고 업로드가 멈췄음) */
+  var k = qs.get('k');
+  if(k && !tok){
+    firebase.database().ref('system/coord/uploadLinks/' + String(k).replace(/[^a-z0-9]/gi,'')).once('value').then(function(s){
+      var v = s.val() || {}; tok = String(v.tok || ''); start();
+    }).catch(function(){ start(); });
+  } else start();
 })();
 </script>
 </body>
