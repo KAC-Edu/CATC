@@ -20365,6 +20365,17 @@ ui.preSurveyOpen = async function(){
     var tm = function(ms){ var d=new Date(Number(ms)), p=function(n){ return String(n).padStart(2,'0'); }; return (d.getMonth()+1)+'.'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); };
     var slotTxt = function(map){ return Object.keys(map||{}).sort().map(function(k){ var d=k.slice(0,10); return Number(d.slice(5,7))+'.'+Number(d.slice(8,10))+'('+WD[new Date(d+'T00:00:00').getDay()]+') '+(k.slice(-2)==='am'?'오전':'오후'); }).join(', '); };
     var touch = function(){ return ref.child('course').set(cname); };
+    /* [K170] 저장 결과를 바로 보여 준다 — 성공: 초록 / 실패: 빨강 */
+    var saved = function(label, p){
+        var show = function(ok, err){
+            var t = document.getElementById('psvToast'); if(t) t.remove();
+            t = document.createElement('div'); t.id = 'psvToast';
+            t.style.cssText = 'position:fixed;left:50%;top:28px;transform:translateX(-50%);z-index:2147483600;padding:14px 24px;border-radius:999px;font-size:16px;font-weight:900;box-shadow:0 12px 32px rgba(0,0,0,.25);transition:opacity .35s;color:#fff;background:' + (ok ? '#16a34a' : '#dc2626');
+            t.innerHTML = '<i class="fa-solid ' + (ok ? 'fa-circle-check' : 'fa-circle-exclamation') + '" style="margin-right:8px"></i>' + esc(label) + (ok ? ' 저장됨 · 강사님 화면에 바로 반영' : ' 저장 실패 — 다시 시도해 주세요' + (err ? ' (' + esc(err) + ')' : ''));
+            document.body.appendChild(t); setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 400); }, ok ? 2200 : 4500);
+        };
+        return Promise.resolve(p).then(function(){ show(true); }, function(e){ show(false, e && (e.code || e.message)); });
+    };
     /* [K164] 담당자 일정 막기 — 시간 단위(bk/{날짜}/{id} = {s,e,why}) */
     var bkLabel = function(b){ var s = Number(b.s), e = Number(b.e); return (s <= 9 && e >= 18 ? '종일' : (s + '~' + e + '시')) + ' ' + (b.why || ''); };
     var slotBk = function(bk, d, t){
@@ -20438,11 +20449,11 @@ ui.preSurveyOpen = async function(){
             var x;
             if((x = e.target.closest('[data-ps]'))){ sel = x.getAttribute('data-ps').split('-').map(Number); paint(); return; }
             if((x = e.target.closest('[data-why]'))){ why = x.getAttribute('data-why'); paint(); return; }
-            if((x = e.target.closest('[data-del]'))){ await ref.child('bk/' + d + '/' + x.getAttribute('data-del')).remove(); delete cur[x.getAttribute('data-del')]; paint(); return; }
+            if((x = e.target.closest('[data-del]'))){ await saved('막기 해제', ref.child('bk/' + d + '/' + x.getAttribute('data-del')).remove()); delete cur[x.getAttribute('data-del')]; paint(); return; }
             if(e.target.closest('#dNo')){ pop.remove(); return; }
             if(e.target.closest('#dOk')){
                 var w = String(why || '').trim().slice(0, 20) || '배정 불가';
-                touch(); var r = ref.child('bk/' + d).push(); await r.set({ s: sel[0], e: sel[1], why: w });
+                touch(); var r = ref.child('bk/' + d).push(); await saved('배정 막기', r.set({ s: sel[0], e: sel[1], why: w }));
                 pop.remove();
             }
         });
@@ -20515,17 +20526,17 @@ ui.preSurveyOpen = async function(){
         box.querySelector('#psvX').onclick = close;
         box.querySelector('#psvLink').onclick = function(){ ui.matExtLink(); };
         var kb = box.querySelector('#psvKakao'); if(kb) kb.onclick = function(){ var t = V._kakao; ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('기사님께 보낼 메시지를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); };
-        var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; ref.set({ course: cname }); };
-        var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); ref.child('range').set({ s: a, e: b }); };
+        var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; saved('초기화', ref.set({ course: cname })); };
+        var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); saved('조사 기간', ref.child('range').set({ s: a, e: b })); };
         box.querySelector('#psvS').onchange = setR; box.querySelector('#psvE').onchange = setR;
-        box.querySelector('#psvDue').onchange = function(){ touch(); ref.child('matDue').set(this.value || null); };   // [K169]
+        box.querySelector('#psvDue').onchange = function(){ touch(); saved('교재 제출 기한', ref.child('matDue').set(this.value || null)); };   // [K169]
         var nt = box.querySelector('#psvNote'), ntT = null;
-        nt.oninput = function(){ clearTimeout(ntT); ntT = setTimeout(function(){ V._noteLocal = true; touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null).then(function(){ ui._linkToast ? ui._noteSavedTip(nt) : 0; }); }, 700); };
+        nt.oninput = function(){ clearTimeout(ntT); ntT = setTimeout(function(){ V._noteLocal = true; touch(); saved('안내 문구', ref.child('note').set(String(nt.value||'').slice(0,600) || null)); }, 900); };
         box.querySelectorAll('[data-day]').forEach(function(el){ el.onclick = function(){ dayEditor(el.getAttribute('data-day'), el.getAttribute('data-t'), days); }; });
-        box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; ref.child('blocks/' + td.getAttribute('data-ub')).remove(); }; });
+        box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; saved('막기 해제', ref.child('blocks/' + td.getAttribute('data-ub')).remove()); }; });
         box.querySelectorAll('[data-mat]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); var m = MATS.filter(function(x){ return x.id === a.getAttribute('data-mat'); })[0]; if(!m) return;
             var u = window.kacMaterials.fileUrl(m); if(/\.pdf$/i.test(m.fileName||'')) u += (u.indexOf('?') >= 0 ? '&' : '?') + 'view=1'; window.open(u, '_blank', 'noopener'); }; });
-        box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; ref.child('resp/' + x).remove(); }; });
+        box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; saved('응답 삭제', ref.child('resp/' + x).remove()); }; });
     }
 };
 
