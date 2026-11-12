@@ -87,6 +87,7 @@
         .hr span{ flex-shrink:0; width:64px; color:#94a3b8; font-weight:800; font-size:13.5px; padding-top:1px; }
         .hr b{ font-weight:900; color:#1e293b; } .hr a{ color:#2563eb; text-decoration:none; }
         .hn{ margin-top:8px; padding-top:10px; border-top:1px dashed #cbd5e1; font-size:14.5px; font-weight:700; color:#334155; line-height:1.65; word-break:keep-all; }
+        .due{ margin-left:6px; padding:3px 10px; border-radius:999px; background:#fef2f2; color:#b91c1c; font-size:12.5px; font-weight:900; }
     </style>
 </head>
 <body>
@@ -131,7 +132,7 @@
       + '<div class="step"><span class="no">1</span> 성함</div>'
       + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
       + '<div id="svWrap"></div>'
-      + '<div class="step"><span class="no" id="fileNo">2</span> 교재 파일 <span class="muted" style="margin-left:4px;">(있으면)</span></div>'
+      + '<div class="step"><span class="no" id="fileNo">2</span> 교재 파일 <span id="matDue" class="due" style="display:none;"></span></div>'
       /* [K165] 휴대폰으로 열었으면 — 교재는 PC에서 올리도록 같은 링크를 나에게 보내는 버튼 */
       + (IS_MOBILE ? '<div class="pcBox"><div class="pcT"><i class="fa-solid fa-desktop"></i> 교재는 PC에서 올리시면 편합니다</div>'
           + '<div class="pcD">일정은 지금 제출하시고, 교재는 PC에서 <b>같은 링크</b>로 열어 올려 주세요.</div>'
@@ -187,7 +188,7 @@
         var v = s.val() || {};
         var rg = v.range || {}, ps = pd.split('~').map(function(x){ return x.trim(); });
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
-        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.resp = v.resp || {}; SV.note = String(v.note || '');
+        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || ''); SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
         svOnName(true); svDraw(); drawHead();
       });
@@ -215,6 +216,9 @@
     if(SV.prof) rows += '<div class="hr"><span>담임 교수</span><b>' + esc(SV.prof) + (/(교수|강사)$/.test(SV.prof) ? '' : ' 교수') + (SV.phone ? ' · <a href="tel:' + esc(SV.phone.replace(/[^0-9+]/g,'')) + '">' + esc(SV.phone) + '</a>' : '') + '</b></div>';
     if(SV.note) rows += '<div class="hn">' + esc(SV.note).replace(/\n/g,'<br>') + '</div>';
     el.innerHTML = rows ? '<div class="hd">' + rows + '</div>' : '';
+    /* [K169] 교재 제출 기한 — 담당자가 정해 두면 교재 칸 제목 옆에 표시 */
+    var du = document.getElementById('matDue');
+    if(du){ if(SV.matDue){ du.innerHTML = '<i class="fa-solid fa-calendar-check"></i> ' + esc(f(SV.matDue)) + '까지 · 기한을 지켜 주시기 바랍니다'; du.style.display = ''; } else du.style.display = 'none'; }
   }
   function svOnName(force){
     var k = svKey(myName());
