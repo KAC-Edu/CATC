@@ -1257,7 +1257,7 @@ body.in-course #moreToggleTab{ display:flex !important; }
             <button type="button" onclick="ui.matPickUpload()" style="padding:10px 18px; border:none; border-radius:10px; background:#2563eb; color:#fff; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-upload"></i> 새로 올리기</button>
             <button type="button" onclick="ui.matOpenLibrary()" style="padding:10px 18px; border:1px solid #c7d2fe; border-radius:10px; background:#eef2ff; color:#4338ca; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-folder-open"></i> 자료실에서 가져오기</button>
             <button type="button" onclick="ui.matShowQr()" style="padding:10px 18px; border:1px solid #cbd5e1; border-radius:10px; background:#fff; color:#334155; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-share-nodes"></i> 교육생에게 보내기</button>
-            <button type="button" onclick="ui.matExtLink()" title="외부 강사님께 보낼 교재 업로드 링크(기간 한정 · 올리기만 가능)" style="padding:10px 18px; border:1px solid #fed7aa; border-radius:10px; background:#fff7ed; color:#c2410c; font-weight:800; font-size:14px; cursor:pointer;"><i class="fa-solid fa-link"></i> 외부 강사 업로드 링크</button>
+            <!-- [K168] 외부 강사 링크 버튼은 "강사 사전조사" 창으로 일원화 -->
         </div>
         <!-- 끌어다 놓기 영역 -->
         <div id="matDrop" style="border:2px dashed #c7d2fe; border-radius:16px; background:#f8faff; padding:22px; text-align:center; color:#64748b; font-weight:800; font-size:14px; margin-bottom:16px; transition:.15s;">
@@ -3219,7 +3219,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=261112K167"></script>
+    <script src="admin.js?v=261112K168"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
