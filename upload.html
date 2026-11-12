@@ -245,6 +245,7 @@
       SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, pkPlace: r.pkPlace||'', pkArr: r.pkArr||'', pkDep: r.pkDep||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
                 : { avail:'', p1:{}, p2:{}, stay:null, pickup:null, pkPlace:'', pkDate:'', pkTime:'', pkMemo:'', msg:'', title:'' };
       SV.dirty = false; SV.loadedFor = k; SV.fromServer = !!r;
+      if(r && r.pickup && k){ var kk = k; firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + k).once('value').then(function(s){ if(SV.loadedFor === kk && !SV.dirty && s.val()){ SV.my.tel = String(s.val()); svDraw(); } }).catch(function(){}); }
     }
     svDraw();
   }
@@ -295,6 +296,9 @@
             + '<div class="pkN">12:00 ~ 13:00 은 기사님 점심시간으로 운행하지 않습니다.</div></div>'
             + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
+            /* [K175] 기사님 연락용 휴대폰 — 픽업 신청 때만. 다른 강사님 화면에는 내려가지 않도록 별도 위치(preSurveyPhone)에 저장 */
+            + '<div class="sub2" style="margin-top:14px;">기사님 연락용 휴대폰</div>'
+            + '<input type="tel" id="pkTel" inputmode="tel" placeholder="010-0000-0000" value="' + esc(my.tel||'') + '" style="width:100%;padding:13px 14px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:17px;font-weight:800;">'
             /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
             /* [K172] 탑승 장소에 맞춰 교통수단 이름으로 — 열차/항공편/버스의 도착·출발 시각 */
             + (my.pkPlace ? (function(){ var tv = { '오송역':['열차','fa-train'], '청주공항':['항공편','fa-plane'], '청주터미널':['버스','fa-bus'] }[my.pkPlace] || ['교통편',''];
@@ -324,6 +328,7 @@
       SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-yn]').forEach(function(b){ b.onclick = function(){ my[b.getAttribute('data-yn')] = b.getAttribute('data-v') === '1'; SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-pp]').forEach(function(b){ b.onclick = function(){ my.pkPlace = b.getAttribute('data-pp'); SV.dirty = true; svDraw(); }; });
+    var tel = document.getElementById('pkTel'); if(tel) tel.oninput = function(){ var d = tel.value.replace(/[^0-9]/g,'').slice(0,11); tel.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,d.length-4)+'-'+d.slice(-4) : (d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d); my.tel = tel.value; SV.dirty = true; };
     ['pkArr','pkDep'].forEach(function(f){ var hh = document.getElementById(f + 'H'), mm = document.getElementById(f + 'M'); if(!hh || !mm) return;
       var up = function(){ if(!hh.value){ my[f] = ''; mm.value = ''; } else { if(!mm.value) mm.value = '00'; my[f] = hh.value + ':' + mm.value; } SV.dirty = true; };
       hh.onchange = up; mm.onchange = function(){ if(!hh.value){ mm.value = ''; return; } up(); }; });
@@ -346,6 +351,7 @@
       if(my.stay !== true && my.stay !== false){ alert('교육 전날 숙박 여부를 골라 주세요.'); return; }
       if(my.pickup !== true && my.pickup !== false){ alert('픽업 요청 여부를 골라 주세요.'); return; }
       if(my.pickup && !my.pkPlace){ alert('픽업 탑승 장소를 골라 주세요.'); return; }
+      if(my.pickup && String(my.tel||'').replace(/[^0-9]/g,'').length < 10){ alert('기사님 연락용 휴대폰 번호를 적어 주세요.'); var te = document.getElementById('pkTel'); if(te) te.focus(); return; }
     }
     var tm = nm.match(TTL_RE), ttl = tm ? tm[1] : '';
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
@@ -353,7 +359,9 @@
                 pkPlace: (my.pickup && my.avail!=='불가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail!=='불가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail!=='불가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail!=='불가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now() };
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var go = document.getElementById('svGo'); if(go){ go.disabled = true; go.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 제출 중…'; }
-    svRef().child('resp/' + svKey(nm)).set(rec).then(function(){ SV.dirty = false; SV.fromServer = false; SV.my.at = rec.at; svDraw(); toast('일정을 제출했습니다. 감사합니다!'); })
+    var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + svKey(nm));
+    var telP = (rec.pickup && my.tel) ? telRef.set(String(my.tel)) : telRef.remove();
+    Promise.all([svRef().child('resp/' + svKey(nm)).set(rec), telP.catch(function(){})]).then(function(){ SV.dirty = false; SV.fromServer = false; SV.my.at = rec.at; svDraw(); toast('일정을 제출했습니다. 감사합니다!'); })
       .catch(function(e){ alert('제출하지 못했습니다. 잠시 후 다시 눌러 주세요.\n(' + (e && e.message || e) + ')'); svDraw(); });
   }
   function toast(msg, warn){ var t = document.createElement('div'); t.className = 'toast' + (warn ? ' warn' : ''); t.innerHTML = '<i class="fa-solid ' + (warn ? 'fa-triangle-exclamation' : 'fa-circle-check') + '" style="color:' + (warn ? '#fbbf24' : '#4ade80') + ';"></i> ' + esc(msg); document.body.appendChild(t); setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 350); }, warn ? 4200 : 2600); }
