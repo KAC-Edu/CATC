@@ -271,14 +271,14 @@
             + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
             /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
-            + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각 <span class="muted">(선택)</span></div>'
+            + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각</div>'
               + '<div class="tGrid"><label><span>' + esc(my.pkPlace) + ' <b>도착</b></span><input type="time" id="pkArr" value="' + esc(my.pkArr||'') + '"></label>'
               + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span><input type="time" id="pkDep" value="' + esc(my.pkDep||'') + '"></label></div>'
               : '') : '');
     }
     /* [K168] 전달 사항은 별도 3번 항목 — 픽업과 헷갈리지 않게 분리, 제출 버튼은 그 아래 */
     if(a){
-      h += '<div class="step"><span class="no">3</span> 전달 사항 <span class="muted" style="margin-left:4px;">(있으면)</span></div>'
+      h += '<div class="step"><span class="no">3</span> 전달 사항</div>'
         + '<textarea id="svMsg" rows="3" placeholder="담당자에게 전하실 말씀">' + esc(my.msg) + '</textarea>'
         + '<button type="button" class="btn" id="svGo" style="width:100%; justify-content:center; margin-top:10px; padding:14px;"><i class="fa-solid fa-paper-plane"></i> ' + (my.at ? '일정 다시 제출' : '일정 제출') + '</button>'
         + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출됨 · 고치고 다시 누르면 바뀝니다</div>' : '');
