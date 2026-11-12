@@ -61,10 +61,21 @@
         .btn:disabled{ opacity:.6; cursor:default; }
         .sub2{ margin:16px 2px 8px; font-size:14px; font-weight:900; color:#334155; }
         .sub2 i{ color:#6366f1; margin-right:4px; }
-        .pkInfo{ margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:11px 13px; font-size:13px; font-weight:700; color:#92400e; line-height:1.65; }
+        .pkInfo{ margin-top:10px; background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:13px 15px; color:#78350f; }
+        .pkT{ font-size:14px; font-weight:900; margin-bottom:8px; } .pkT i{ color:#d97706; margin-right:4px; }
+        .pkR{ display:flex; align-items:center; gap:10px; padding:4px 0; font-size:15px; }
+        .pkR span{ width:38px; font-weight:800; color:#a16207; } .pkR b{ font-weight:900; letter-spacing:.3px; }
+        .pkR em{ font-style:normal; font-size:12px; font-weight:800; color:#b45309; background:#fef3c7; padding:2px 8px; border-radius:999px; }
+        .pkN{ margin-top:8px; padding-top:8px; border-top:1px dashed #fcd34d; font-size:12.5px; font-weight:700; color:#92400e; line-height:1.6; word-break:keep-all; }
         .sel{ flex:1; padding:12px 10px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:14.5px; font-weight:800; background:#fff; }
         .pkMemo{ margin-top:8px; font-size:14.5px !important; padding:12px 14px !important; }
         .pw{ display:block; margin:1px 0 2px; font-size:11px; font-weight:800; color:#b45309; }
+        .pcBox{ margin-bottom:10px; background:#f0f9ff; border:1px solid #bae6fd; border-radius:14px; padding:13px 15px; }
+        .pcT{ font-size:14.5px; font-weight:900; color:#0c4a6e; } .pcT i{ color:#0284c7; margin-right:4px; }
+        .pcD{ margin-top:4px; font-size:13px; font-weight:700; color:#475569; line-height:1.6; word-break:keep-all; }
+        .pcB{ display:flex; gap:8px; margin-top:10px; }
+        .pcB button{ flex:1; padding:11px 6px; border:none; border-radius:11px; background:#0284c7; color:#fff; font-size:14px; font-weight:900; cursor:pointer; }
+        .pcB button + button{ background:#fff; color:#0369a1; border:1.5px solid #7dd3fc; }
     </style>
 </head>
 <body>
@@ -110,6 +121,11 @@
       + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
       + '<div id="svWrap"></div>'
       + '<div class="step"><span class="no" id="fileNo">2</span> 교재 파일 <span class="muted" style="margin-left:4px;">(있으면)</span></div>'
+      /* [K165] 휴대폰으로 열었으면 — 교재는 PC에서 올리도록 같은 링크를 나에게 보내는 버튼 */
+      + (IS_MOBILE ? '<div class="pcBox"><div class="pcT"><i class="fa-solid fa-desktop"></i> 교재는 PC에서 올리시면 편합니다</div>'
+          + '<div class="pcD">일정은 지금 제출하시고, 교재는 PC에서 <b>같은 링크</b>로 열어 올려 주세요.</div>'
+          + '<div class="pcB"><button type="button" id="pcCopy"><i class="fa-solid fa-copy"></i> 링크 복사</button><button type="button" id="pcMail"><i class="fa-solid fa-envelope"></i> 내 메일로 보내기</button></div>'
+          + '<div class="muted" style="margin-top:6px;">복사한 링크는 카카오톡 \'나와의 채팅\'에 붙여 두시면 PC 카톡에서 바로 여실 수 있습니다.</div></div>' : '')
       + '<div class="drop" id="dz"><i class="fa-solid fa-file-arrow-up"></i><div class="dt">눌러서 파일 선택</div><div class="muted">또는 여기로 끌어다 놓기</div></div>'
       + '<input type="file" id="fi" multiple style="display:none;">'
       + '<div id="list"></div>'
@@ -122,6 +138,11 @@
     ['dragenter','dragover'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.add('on'); }); });
     ['dragleave','drop'].forEach(function(ev){ dz.addEventListener(ev, function(e){ e.preventDefault(); dz.classList.remove('on'); }); });
     dz.addEventListener('drop', function(e){ go(e.dataTransfer && e.dataTransfer.files); });
+    var pcc = document.getElementById('pcCopy'), pcm = document.getElementById('pcMail');
+    var link = location.origin + location.pathname + location.search;
+    if(pcc) pcc.onclick = function(){ var ok = function(){ toast('링크를 복사했습니다. 카톡 나와의 채팅에 붙여넣기 하세요.'); };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(ok, function(){ prompt('아래 주소를 길게 눌러 복사하세요', link); }); else prompt('아래 주소를 길게 눌러 복사하세요', link); };
+    if(pcm) pcm.onclick = function(){ location.href = 'mailto:?subject=' + encodeURIComponent('[항공기술훈련원] 교재 제출 링크 — ' + (info.c || '')) + '&body=' + encodeURIComponent('PC에서 아래 링크를 열어 교재를 올려 주세요.\n\n' + link); };
     sync(); loadMine(); svStart();
     if(!saved) nmI.focus();
   }
@@ -131,6 +152,7 @@
        · 다른 강사님이 고른 칸은 'OOO 강사'로 보이고, 담당자가 막아 둔 칸(견학 등)은 고를 수 없다 ══ */
   var SV = { on:false, days:[], blocks:{}, resp:{}, my:{ avail:'', p1:{}, p2:{}, stay:false, pickup:false, msg:'', title:'' }, loadedFor:'' , dirty:false };
   var WD = ['일','월','화','수','목','금','토'];
+  var IS_MOBILE = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '') || (window.matchMedia && matchMedia('(pointer:coarse)').matches && innerWidth < 900);
   function svRef(){ return firebase.database().ref('system/coord/preSurvey/' + String(info.r)); }
   var TTL_RE = /\s*(강사|교수|부장|차장|과장|대리|주임|연구원|박사|소장|팀장|원장|사원|위원)$/;
   function svKey(n){ return String(n||'').trim().replace(TTL_RE,'').replace(/[.#$\[\]\/\s]/g,'').slice(0,40); }
@@ -166,11 +188,12 @@
     list.forEach(function(b){ if(Number(b.s) < z && Number(b.e) > a) part.push(bkLabel(b)); });
     return { full: full && part.length ? part.join(' · ') : '', part: part };
   }
+  function one(m){ var k = Object.keys(m||{}).sort()[0]; var o = {}; if(k) o[k] = true; return o; }
   function svOnName(force){
     var k = svKey(myName());
     if(k !== SV.loadedFor || (force && !SV.dirty)){
       var r = k && SV.resp[k];
-      SV.my = r ? { avail: r.avail||'', p1: Object.assign({}, r.p1||{}), p2: Object.assign({}, r.p2||{}), stay: !!r.stay, pickup: !!r.pickup, pkPlace: r.pkPlace||'', pkDate: r.pkDate||'', pkTime: r.pkTime||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
+      SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, pkPlace: r.pkPlace||'', pkDate: r.pkDate||'', pkTime: r.pkTime||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
                 : { avail:'', p1:{}, p2:{}, stay:null, pickup:null, pkPlace:'', pkDate:'', pkTime:'', pkMemo:'', msg:'', title:'' };
       SV.dirty = false; SV.loadedFor = k;
     }
@@ -189,7 +212,7 @@
       + (SV.note ? '<div class="note">' + esc(SV.note).replace(/\n/g,'<br>') + '</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
     if(a === '가능' || a === '미정'){
-      h += '<div class="muted" style="margin:12px 2px 8px;">칸을 누르면 <b class="b1">1안</b> → <b class="b2">2안</b> → 취소</div><table class="sv"><thead><tr><th></th><th>오전</th><th>오후</th></tr></thead><tbody>';
+      h += '<div class="muted" style="margin:12px 2px 8px;">먼저 누른 칸이 <b class="b1">1안</b>, 다음 칸이 <b class="b2">2안</b> · 다시 누르면 취소</div><table class="sv"><thead><tr><th></th><th>오전</th><th>오후</th></tr></thead><tbody>';
       SV.days.forEach(function(d){
         var md = Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10));
         h += '<tr><th>' + md + '<small>(' + WD[d.w] + ')</small></th>';
@@ -210,11 +233,13 @@
         + '<div class="segs">' + yn('stay', true, '숙박 신청합니다') + yn('stay', false, '해당 없음') + '</div>'
         + '<div class="sub2"><i class="fa-solid fa-van-shuttle"></i> 픽업 (기사님 차량)</div>'
         + '<div class="segs">' + yn('pickup', true, '픽업 요청합니다') + yn('pickup', false, '해당 없음') + '</div>'
-        + (my.pickup ? '<div class="pkInfo"><b>운행 가능 시간</b> 오전 08:00~11:00 · 오후 13:00~17:00<br>12~13시는 기사님 점심시간이라 운행하지 않습니다. 기사님 퇴근을 고려해 <b>가급적 16시 이전</b>으로 부탁드립니다.</div>'
-            + '<div class="segs" style="margin-top:8px;">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
-            + '<div style="display:flex; gap:8px; margin-top:8px;"><select id="pkDate" class="sel"><option value="">도착 날짜</option>' + SV.days.map(function(d){ var md = Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10)) + ' (' + WD[d.w] + ')'; return '<option value="' + d.d + '"' + (my.pkDate===d.d?' selected':'') + '>' + md + '</option>'; }).join('') + '</select>'
-            + '<select id="pkTime" class="sel"><option value="">도착 시각</option>' + PK_TIMES.map(function(t){ return '<option value="' + t + '"' + (my.pkTime===t?' selected':'') + '>' + t + (t > '16:00' ? ' (가급적 16시 전)' : '') + '</option>'; }).join('') + '</select></div>'
-            + '<input type="text" id="pkMemo" class="pkMemo" placeholder="열차·버스편 등 (선택) 예) KTX 101편" value="' + esc(my.pkMemo||'') + '">' : '');
+        + (my.pickup ? '<div class="pkInfo"><div class="pkT"><i class="fa-solid fa-clock"></i> 픽업 운행 시간</div>'
+            + '<div class="pkR"><span>오전</span><b>08:00 ~ 11:00</b></div>'
+            + '<div class="pkR"><span>오후</span><b>13:00 ~ 17:00</b><em>가급적 16시 이전</em></div>'
+            + '<div class="pkN">12:00 ~ 13:00 은 기사님 점심시간으로 운행하지 않습니다.</div></div>'
+            + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
+            + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
+            + '<div class="muted" style="margin-top:8px;">도착 시간은 일정 확정 후 담당자가 따로 여쭙겠습니다.</div>' : '');
     }
     if(a){
       h += '<textarea id="svMsg" rows="2" placeholder="전달하실 말씀 (선택)">' + esc(my.msg) + '</textarea>'
@@ -225,14 +250,16 @@
     w.querySelectorAll('[data-av]').forEach(function(b){ b.onclick = function(){ if(!svNeedName()) return; SV.my.avail = b.getAttribute('data-av'); SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('td.c').forEach(function(td){ td.onclick = function(){
       if(!svNeedName()) return; var k = td.getAttribute('data-k');
-      if(my.p1[k]){ delete my.p1[k]; my.p2[k] = true; } else if(my.p2[k]){ delete my.p2[k]; } else { my.p1[k] = true; }
+      /* [K165] 1안·2안은 딱 한 칸씩 — 먼저 누른 칸이 1안, 다음이 2안. 고른 칸을 다시 누르면 취소(1안을 취소하면 2안이 1안으로 올라감) */
+      var h1 = Object.keys(my.p1)[0], h2 = Object.keys(my.p2)[0];
+      if(h1 === k){ my.p1 = {}; if(h2){ my.p1[h2] = true; my.p2 = {}; } }
+      else if(h2 === k){ my.p2 = {}; }
+      else if(!h1){ my.p1 = {}; my.p1[k] = true; }
+      else if(!h2){ my.p2 = {}; my.p2[k] = true; }
+      else { toast('1안·2안을 모두 골랐습니다. 바꾸려면 고른 칸을 눌러 먼저 취소하세요.'); return; }
       SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-yn]').forEach(function(b){ b.onclick = function(){ my[b.getAttribute('data-yn')] = b.getAttribute('data-v') === '1'; SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-pp]').forEach(function(b){ b.onclick = function(){ my.pkPlace = b.getAttribute('data-pp'); SV.dirty = true; svDraw(); }; });
-    var pd = document.getElementById('pkDate'), pt = document.getElementById('pkTime'), pm = document.getElementById('pkMemo');
-    if(pd) pd.onchange = function(){ my.pkDate = pd.value; SV.dirty = true; };
-    if(pt) pt.onchange = function(){ my.pkTime = pt.value; SV.dirty = true; };
-    if(pm) pm.oninput = function(){ my.pkMemo = pm.value; SV.dirty = true; };
     var ta = document.getElementById('svMsg'); if(ta) ta.oninput = function(){ my.msg = ta.value; SV.dirty = true; };
     var go = document.getElementById('svGo'); if(go) go.onclick = svSubmit;
   }
@@ -245,7 +272,7 @@
     if(my.avail !== '불가능'){
       if(my.stay !== true && my.stay !== false){ alert('교육 전날 숙박 여부를 골라 주세요.'); return; }
       if(my.pickup !== true && my.pickup !== false){ alert('픽업 요청 여부를 골라 주세요.'); return; }
-      if(my.pickup && (!my.pkPlace || !my.pkDate || !my.pkTime)){ alert('픽업 장소·도착 날짜·도착 시각을 골라 주세요.'); return; }
+      if(my.pickup && !my.pkPlace){ alert('픽업 탑승 장소를 골라 주세요.'); return; }
     }
     var tm = nm.match(TTL_RE), ttl = tm ? tm[1] : '';
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
