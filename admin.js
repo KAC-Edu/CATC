@@ -20343,6 +20343,7 @@ ui._linkToast = function(msg){
    · 저장: system/coord/preSurvey/{방} = { course, range{s,e}, note, blocks{날짜_am|pm: 사유}, resp{성함: {...}} }
    · 이 화면: 교육 시간표 → [강사 사전조사] — 결과를 시간표 모양으로 보고, 견학·내 강의 등은 칸을 막는다
    ══════════════════════════════════════════════════════════════════════════ */
+ui._noteSavedTip = function(el){ try{ var t = el.parentNode.querySelector('.psvSaved'); if(!t){ t = document.createElement('div'); t.className = 'psvSaved'; t.style.cssText = 'font-size:13px;font-weight:800;color:#16a34a;margin-top:4px;transition:opacity .4s'; el.insertAdjacentElement('afterend', t); } t.innerHTML = '<i class="fa-solid fa-check"></i> 저장됨 — 강사님 화면에 바로 보입니다'; t.style.opacity = '1'; clearTimeout(t._h); t._h = setTimeout(function(){ t.style.opacity = '0'; }, 2200); }catch(e){} };
 ui._preSurveyCount = function(){
     var el = document.getElementById('psvCnt'), room = state.room; if(!el || !room) return;
     firebase.database().ref('system/coord/preSurvey/' + room + '/resp').once('value').then(function(s){
@@ -20383,7 +20384,7 @@ ui.preSurveyOpen = async function(){
     var close = function(){ try{ ref.off('value', cb); }catch(e){} o.remove(); ui._preSurveyCount(); };
     o.addEventListener('mousedown', function(e){ if(e.target === o) close(); });
     var V = {};
-    var cb = function(s){ V = s.val() || {}; draw(); };
+    var cb = function(s){ var a = document.activeElement; V = s.val() || {}; if(a && a.id === 'psvNote' && box.contains(a)) return; draw(); };
     ref.on('value', cb);
     /* [K164] 하루 일정 막기 편집 — 종일/오전/오후/시간 지정 + 사유 고르기 */
     function dayEditor(d, t, days){
@@ -20439,12 +20440,12 @@ ui.preSurveyOpen = async function(){
           + '<button id="psvLink" style="padding:13px 20px;border:none;border-radius:13px;background:#ea580c;color:#fff;font-size:16px;font-weight:900;cursor:pointer"><i class="fa-solid fa-link"></i> 강사님께 보낼 링크</button>'
           + '<button id="psvX" title="닫기" style="width:48px;height:48px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:17px;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></div>';
         if(stale) h += '<div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13.5px;font-weight:800;color:#92400e;display:flex;align-items:center;gap:10px"><span style="flex:1">이전 과정(<b>' + esc(V.course) + '</b>)의 조사 결과입니다.</span><button id="psvReset" style="padding:7px 13px;border:none;border-radius:9px;background:#f59e0b;color:#fff;font-weight:900;cursor:pointer">비우고 새로 시작</button></div>';
-        h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px;font-size:16px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"><span style="font-size:14px;color:#94a3b8;font-weight:700">(주말 제외)</span></div>'
-          + '<textarea id="psvNote" rows="2" placeholder="강사님 화면에 보일 안내 (선택) 예) 10.22 현장 견학 · 교보재 제출 10/16까지" style="width:100%;box-sizing:border-box;margin-top:12px;padding:13px 15px;border:2px solid #e2e8f0;border-radius:13px;font:inherit;font-size:16px;font-weight:700;resize:vertical">' + esc(V.note || '') + '</textarea>';
+        h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px;font-size:16px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"></div>'
+          + '<textarea id="psvNote" rows="2" placeholder="강사님께 전할 말 — 링크 화면 맨 위(교육기간·담임 아래)에 보입니다" style="width:100%;box-sizing:border-box;margin-top:12px;padding:13px 15px;border:2px solid #e2e8f0;border-radius:13px;font:inherit;font-size:16px;font-weight:700;resize:vertical">' + esc(V.note || '') + '</textarea>';
         if(!days.length){
             h += '<div style="margin-top:18px;padding:40px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:14px">조사 기간을 정해 주세요.</div>';
         } else {
-            h += '<div style="margin-top:20px;font-size:15px;color:#64748b;font-weight:800"><i class="fa-solid fa-hand-pointer"></i> 날짜나 칸을 누르면 <b style="color:#475569">강사 배정 막기</b>(견학·내 강의 등 — 종일·오전·오후·시간 지정) &nbsp; <span class="ch c1" style="font-size:13px;padding:3px 10px">1안</span><span class="ch c2" style="font-size:13px;padding:3px 10px">2안</span><span class="dupb" style="margin-left:4px">중복</span> = 1안이 겹친 칸</div>'
+            h += '<div style="margin-top:20px;display:flex;align-items:center;gap:8px;font-size:15px;color:#64748b;font-weight:800"><span style="flex:1"><i class="fa-solid fa-hand-pointer"></i> 날짜·칸을 누르면 배정 막기</span><span class="ch c1" style="font-size:13px;padding:3px 10px">1안</span><span class="ch c2" style="font-size:13px;padding:3px 10px">2안</span></div>'
               + '<table style="margin-top:6px"><thead><tr><th style="width:110px"></th><th style="font-size:16px;color:#475569;padding:4px">오전 <small style="color:#94a3b8;font-weight:700">09~12</small></th><th style="font-size:16px;color:#475569;padding:4px">오후 <small style="color:#94a3b8;font-weight:700">13~18</small></th></tr></thead><tbody>';
             days.forEach(function(d){
                 h += '<tr><th data-day="' + d.d + '" data-t="all" title="눌러서 이 날 일정 막기" style="text-align:left;font-size:19px;font-weight:900;color:#1e293b;white-space:nowrap;cursor:pointer">' + Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10)) + ' <small style="color:#94a3b8">(' + WD[d.w] + ')</small></th>';
@@ -20500,7 +20501,8 @@ ui.preSurveyOpen = async function(){
         var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; ref.set({ course: cname }); };
         var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); ref.child('range').set({ s: a, e: b }); };
         box.querySelector('#psvS').onchange = setR; box.querySelector('#psvE').onchange = setR;
-        var nt = box.querySelector('#psvNote'); nt.onchange = function(){ touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null); };
+        var nt = box.querySelector('#psvNote'), ntT = null;
+        nt.oninput = function(){ clearTimeout(ntT); ntT = setTimeout(function(){ V._noteLocal = true; touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null).then(function(){ ui._linkToast ? ui._noteSavedTip(nt) : 0; }); }, 700); };
         box.querySelectorAll('[data-day]').forEach(function(el){ el.onclick = function(){ dayEditor(el.getAttribute('data-day'), el.getAttribute('data-t'), days); }; });
         box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; ref.child('blocks/' + td.getAttribute('data-ub')).remove(); }; });
         box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; ref.child('resp/' + x).remove(); }; });
