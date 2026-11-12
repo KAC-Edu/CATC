@@ -20384,6 +20384,23 @@ ui.preSurveyOpen = async function(){
     var close = function(){ try{ ref.off('value', cb); }catch(e){} o.remove(); ui._preSurveyCount(); };
     o.addEventListener('mousedown', function(e){ if(e.target === o) close(); });
     var V = {};
+    /* [K168] 이 과정에 외부강사가 링크로 올린 교재 — 성함으로 응답과 짝지어 교재 칸에 아이콘으로 */
+    var MATS = [];
+    var normN = function(s){ return String(s||'').replace(/\s*(강사|교수|부장|차장|과장|대리|주임|연구원|박사|소장|팀장|원장|사원|위원)$/,'').replace(/\s+/g,''); };
+    var matCell = function(r){
+        var n = normN(r.name), list = MATS.filter(function(m){ return normN(m.uploader) === n; });
+        if(!list.length) return '<span style="color:#cbd5e1">-</span>';
+        return list.map(function(m){ var ext = String(m.fileName||'').split('.').pop().toLowerCase(), ic = ext === 'pdf' ? 'fa-file-pdf' : (/pptx?/.test(ext) ? 'fa-file-powerpoint' : (/hwpx?|docx?/.test(ext) ? 'fa-file-word' : 'fa-file-lines')), col = ext === 'pdf' ? '#dc2626' : (/pptx?/.test(ext) ? '#ea580c' : '#2563eb');
+            return '<a href="#" data-mat="' + esc(m.id) + '" title="' + esc(m.fileName||m.title||'') + '" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin:1px;border-radius:9px;background:#fff;border:1.5px solid #e2e8f0;color:' + col + ';font-size:18px;text-decoration:none"><i class="fa-solid ' + ic + '"></i></a>'; }).join('');
+    };
+    (async function(){
+        try{
+            var ids = Object.keys((await firebase.database().ref('courses/' + room + '/materials').once('value')).val() || {});
+            var got = await Promise.all(ids.map(function(id){ return firebase.database().ref('system/materials/' + id).once('value').then(function(s){ var v = s.val(); return v ? Object.assign({ id: id }, v) : null; }).catch(function(){ return null; }); }));
+            MATS = got.filter(function(m){ return m && (m.uploaderRole === '외부강사' || m.viaLink); });
+            if(document.body.contains(o)) draw();
+        }catch(e){}
+    })();
     var cb = function(s){ var a = document.activeElement; V = s.val() || {}; if(a && a.id === 'psvNote' && box.contains(a)) return; draw(); };
     ref.on('value', cb);
     /* [K164] 하루 일정 막기 편집 — 종일/오전/오후/시간 지정 + 사유 고르기 */
@@ -20487,10 +20504,10 @@ ui.preSurveyOpen = async function(){
         h += '<div style="margin-top:26px;font-size:19px;font-weight:900;color:#0f172a">응답 내역</div>';
         if(!keys.length) h += '<div style="margin-top:8px;padding:22px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:12px">아직 응답이 없습니다. [강사님께 보낼 링크]를 복사해 보내 주세요.</div>';
         else {
-            h += '<div style="overflow:auto;margin-top:8px;border:1px solid #eef2f7;border-radius:12px"><table class="rt" style="border-spacing:0;table-layout:auto"><thead><tr><th>강사</th><th>출강</th><th>1안</th><th>2안</th><th>숙박</th><th>픽업</th><th>전달 사항</th><th>제출</th><th></th></tr></thead><tbody>';
+            h += '<div style="overflow:auto;margin-top:8px;border:1px solid #eef2f7;border-radius:12px"><table class="rt" style="border-spacing:0;table-layout:auto"><thead><tr><th>강사</th><th>출강</th><th>1안</th><th>2안</th><th>숙박</th><th>픽업</th><th>교재</th><th>전달 사항</th><th>제출</th><th></th></tr></thead><tbody>';
             keys.forEach(function(x){ var r = resp[x] || {};
                 var av = r.avail === '가능' ? '<b style="color:#16a34a">가능</b>' : (r.avail === '불가능' ? '<b style="color:#dc2626">불가능</b>' : '<b style="color:#d97706">' + esc(r.avail||'-') + '</b>');
-                h += '<tr><td style="font-weight:900;white-space:nowrap">' + who(r) + '</td><td>' + av + '</td><td>' + esc(slotTxt(r.p1)||'-') + '</td><td>' + esc(slotTxt(r.p2)||'-') + '</td><td>' + (r.stay?'<b style="color:#2563eb">신청</b>':'-') + '</td><td style="white-space:nowrap">' + (r.pickup ? '<b style="color:#2563eb">' + esc(r.pkPlace||'신청') + '</b>' + (r.pkArr ? '<br><small style="color:#475569;font-weight:800">도착 ' + esc(r.pkArr) + '</small>' : '') + (r.pkDep ? '<br><small style="color:#475569;font-weight:800">출발 ' + esc(r.pkDep) + '</small>' : '') : '-') + '</td><td style="max-width:240px;white-space:pre-wrap">' + esc(r.msg||'') + '</td><td style="white-space:nowrap;color:#94a3b8;font-weight:700">' + (r.at?tm(r.at):'') + '</td><td><button data-rd="' + esc(x) + '" title="응답 삭제" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px"><i class="fa-solid fa-trash"></i></button></td></tr>';
+                h += '<tr><td style="font-weight:900;white-space:nowrap">' + who(r) + '</td><td>' + av + '</td><td>' + esc(slotTxt(r.p1)||'-') + '</td><td>' + esc(slotTxt(r.p2)||'-') + '</td><td>' + (r.stay?'<b style="color:#2563eb">신청</b>':'-') + '</td><td style="white-space:nowrap">' + (r.pickup ? '<b style="color:#2563eb">' + esc(r.pkPlace||'신청') + '</b>' + (r.pkArr ? '<br><small style="color:#475569;font-weight:800">도착 ' + esc(r.pkArr) + '</small>' : '') + (r.pkDep ? '<br><small style="color:#475569;font-weight:800">출발 ' + esc(r.pkDep) + '</small>' : '') : '-') + '</td><td style="white-space:nowrap">' + matCell(r) + '</td><td style="max-width:240px;white-space:pre-wrap">' + esc(r.msg||'') + '</td><td style="white-space:nowrap;color:#94a3b8;font-weight:700">' + (r.at?tm(r.at):'') + '</td><td><button data-rd="' + esc(x) + '" title="응답 삭제" style="border:none;background:none;color:#cbd5e1;cursor:pointer;font-size:14px"><i class="fa-solid fa-trash"></i></button></td></tr>';
             });
             h += '</tbody></table></div>';
         }
@@ -20505,6 +20522,8 @@ ui.preSurveyOpen = async function(){
         nt.oninput = function(){ clearTimeout(ntT); ntT = setTimeout(function(){ V._noteLocal = true; touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null).then(function(){ ui._linkToast ? ui._noteSavedTip(nt) : 0; }); }, 700); };
         box.querySelectorAll('[data-day]').forEach(function(el){ el.onclick = function(){ dayEditor(el.getAttribute('data-day'), el.getAttribute('data-t'), days); }; });
         box.querySelectorAll('[data-ub]').forEach(function(td){ td.onclick = function(){ if(!confirm('이 칸 막기를 풀까요?')) return; ref.child('blocks/' + td.getAttribute('data-ub')).remove(); }; });
+        box.querySelectorAll('[data-mat]').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); var m = MATS.filter(function(x){ return x.id === a.getAttribute('data-mat'); })[0]; if(!m) return;
+            var u = window.kacMaterials.fileUrl(m); if(/\.pdf$/i.test(m.fileName||'')) u += (u.indexOf('?') >= 0 ? '&' : '?') + 'view=1'; window.open(u, '_blank', 'noopener'); }; });
         box.querySelectorAll('[data-rd]').forEach(function(b){ b.onclick = function(){ var x = b.getAttribute('data-rd'); if(!confirm('"' + ((resp[x]||{}).name||x) + '" 응답을 지울까요?')) return; ref.child('resp/' + x).remove(); }; });
     }
 };
