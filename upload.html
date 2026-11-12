@@ -82,6 +82,11 @@
         .back{ background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; border-radius:12px; padding:11px 13px; font-size:13.5px; font-weight:700; line-height:1.6; margin-bottom:10px; word-break:keep-all; }
         .back i{ color:#10b981; margin-right:3px; }
         .toast.warn{ width:max-content; max-width:min(92vw,520px); white-space:normal; text-align:left; line-height:1.5; border-radius:16px; }
+        .hd{ margin-top:14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:12px 16px; }
+        .hr{ display:flex; gap:12px; padding:4px 0; font-size:15px; }
+        .hr span{ flex-shrink:0; width:64px; color:#94a3b8; font-weight:800; font-size:13.5px; padding-top:1px; }
+        .hr b{ font-weight:900; color:#1e293b; } .hr a{ color:#2563eb; text-decoration:none; }
+        .hn{ margin-top:8px; padding-top:10px; border-top:1px dashed #cbd5e1; font-size:14.5px; font-weight:700; color:#334155; line-height:1.65; word-break:keep-all; }
     </style>
 </head>
 <body>
@@ -122,7 +127,7 @@
     var saved = ''; try{ saved = localStorage.getItem('kac_ext_name') || ''; }catch(e){}
     app.innerHTML = '<div class="top"><i class="fa-solid fa-chalkboard-user"></i> 강의 일정 · 교재 제출</div>'
       + '<div class="course">' + esc(info.c || ('Room ' + info.r)) + '</div>'
-      + '<div class="until">' + fmt(info.e) + '까지</div>'
+      + '<div id="hdInfo"></div>'
       + '<div class="step"><span class="no">1</span> 성함</div>'
       + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
       + '<div id="svWrap"></div>'
@@ -172,16 +177,19 @@
   function svStart(){
     Promise.all([
       firebase.database().ref('courses/' + info.r + '/settings/period').once('value').then(function(s){ return String(s.val()||''); }).catch(function(){ return ''; }),
-      firebase.database().ref('system/holidays').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; })
+      firebase.database().ref('system/holidays').once('value').then(function(s){ return s.val()||{}; }).catch(function(){ return {}; }),
+      firebase.database().ref('courses/' + info.r + '/status/professorName').once('value').then(function(s){ return String(s.val()||'').trim(); }).catch(function(){ return ''; })
     ]).then(function(r){
       var pd = r[0], hol = r[1];
+      SV.prof = r[2]; SV.period = pd;
+      if(SV.prof) firebase.database().ref('system/professorProfiles/' + SV.prof.replace(/[.#$\[\]\/]/g,'') + '/phone').once('value').then(function(s){ SV.phone = String(s.val()||'').trim(); drawHead(); }).catch(function(){});
       svRef().on('value', function(s){
         var v = s.val() || {};
         var rg = v.range || {}, ps = pd.split('~').map(function(x){ return x.trim(); });
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
         SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
-        svOnName(true); svDraw();
+        svOnName(true); svDraw(); drawHead();
       });
     });
   }
@@ -195,6 +203,19 @@
     return { full: full && part.length ? part.join(' · ') : '', part: part };
   }
   function one(m){ var k = Object.keys(m||{}).sort()[0]; var o = {}; if(k) o[k] = true; return o; }
+  /* [K167] 머리 정보 — 교육기간 · 담임 교수(연락처) · 담당자 안내 문구 */
+  function drawHead(){
+    var el = document.getElementById('hdInfo'); if(!el) return;
+    var ps = String(SV.period||'').split('~').map(function(x){ return x.trim(); });
+    var rg = (SV.range||{});
+    var s = ps[0] || '', e = ps[1] || '';
+    var f = function(d){ if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return d; var x = new Date(d+'T00:00:00'); return (x.getMonth()+1) + '. ' + x.getDate() + '.(' + WD[x.getDay()] + ')'; };
+    var rows = '';
+    if(s) rows += '<div class="hr"><span>교육 기간</span><b>' + esc(s.slice(0,4)) + '. ' + esc(f(s)) + (e ? ' ~ ' + esc(f(e)) : '') + '</b></div>';
+    if(SV.prof) rows += '<div class="hr"><span>담임 교수</span><b>' + esc(SV.prof) + (/(교수|강사)$/.test(SV.prof) ? '' : ' 교수') + (SV.phone ? ' · <a href="tel:' + esc(SV.phone.replace(/[^0-9+]/g,'')) + '">' + esc(SV.phone) + '</a>' : '') + '</b></div>';
+    if(SV.note) rows += '<div class="hn">' + esc(SV.note).replace(/\n/g,'<br>') + '</div>';
+    el.innerHTML = rows ? '<div class="hd">' + rows + '</div>' : '';
+  }
   function svOnName(force){
     var k = svKey(myName());
     if(k !== SV.loadedFor || (force && !SV.dirty)){
@@ -216,7 +237,6 @@
     var seg = function(v, label){ return '<button type="button" class="seg' + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
       + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[일정 다시 제출]</b>을 눌러 주세요.</div>' : '')
-      + (SV.note ? '<div class="note">' + esc(SV.note).replace(/\n/g,'<br>') + '</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
     if(a === '가능' || a === '미정'){
       h += '<div class="muted" style="margin:12px 2px 8px;">먼저 누른 칸이 <b class="b1">1안</b>, 다음 칸이 <b class="b2">2안</b> · 다시 누르면 취소</div><table class="sv"><thead><tr><th></th><th>오전</th><th>오후</th></tr></thead><tbody>';
@@ -247,11 +267,10 @@
             + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
             /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
-            + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각 <span class="muted">(선택 · 아직 모르시면 비워 두세요)</span></div>'
+            + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각 <span class="muted">(선택)</span></div>'
               + '<div class="tGrid"><label><span>' + esc(my.pkPlace) + ' <b>도착</b></span><input type="time" id="pkArr" value="' + esc(my.pkArr||'') + '"></label>'
               + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span><input type="time" id="pkDep" value="' + esc(my.pkDep||'') + '"></label></div>'
-              + '<input type="text" id="pkMemo" class="pkMemo" placeholder="열차·버스편 (선택) 예) KTX 101편" value="' + esc(my.pkMemo||'') + '">'
-              + '<div class="muted" style="margin-top:6px;">나중에 같은 링크로 들어와 성함을 넣으시면 이어서 채우실 수 있습니다.</div>' : '') : '');
+              : '') : '');
     }
     if(a){
       h += '<textarea id="svMsg" rows="2" placeholder="전달하실 말씀 (선택)">' + esc(my.msg) + '</textarea>'
