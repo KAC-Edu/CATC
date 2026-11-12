@@ -20457,7 +20457,7 @@ ui.preSurveyOpen = async function(){
           + '<button id="psvLink" style="padding:13px 20px;border:none;border-radius:13px;background:#ea580c;color:#fff;font-size:16px;font-weight:900;cursor:pointer"><i class="fa-solid fa-link"></i> 강사님께 보낼 링크</button>'
           + '<button id="psvX" title="닫기" style="width:48px;height:48px;border:none;border-radius:50%;background:#f1f5f9;color:#475569;font-size:17px;cursor:pointer"><i class="fa-solid fa-xmark"></i></button></div>';
         if(stale) h += '<div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13.5px;font-weight:800;color:#92400e;display:flex;align-items:center;gap:10px"><span style="flex:1">이전 과정(<b>' + esc(V.course) + '</b>)의 조사 결과입니다.</span><button id="psvReset" style="padding:7px 13px;border:none;border-radius:9px;background:#f59e0b;color:#fff;font-weight:900;cursor:pointer">비우고 새로 시작</button></div>';
-        h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px;font-size:16px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"></div>'
+        h += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:20px;font-size:16px;font-weight:900;color:#334155">조사 기간 <input type="date" id="psvS" value="' + esc(s) + '"> ~ <input type="date" id="psvE" value="' + esc(e) + '"><span style="margin-left:18px">교재 제출 기한</span> <input type="date" id="psvDue" value="' + esc(V.matDue || '') + '"></div>'
           + '<textarea id="psvNote" rows="2" placeholder="강사님께 전할 말 — 링크 화면 맨 위(교육기간·담임 아래)에 보입니다" style="width:100%;box-sizing:border-box;margin-top:12px;padding:13px 15px;border:2px solid #e2e8f0;border-radius:13px;font:inherit;font-size:16px;font-weight:700;resize:vertical">' + esc(V.note || '') + '</textarea>';
         if(!days.length){
             h += '<div style="margin-top:18px;padding:40px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:14px">조사 기간을 정해 주세요.</div>';
@@ -20518,6 +20518,7 @@ ui.preSurveyOpen = async function(){
         var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; ref.set({ course: cname }); };
         var setR = function(){ var a = box.querySelector('#psvS').value, b = box.querySelector('#psvE').value; if(a && b && a > b) return ui.showAlert('시작일이 종료일보다 늦습니다.'); touch(); ref.child('range').set({ s: a, e: b }); };
         box.querySelector('#psvS').onchange = setR; box.querySelector('#psvE').onchange = setR;
+        box.querySelector('#psvDue').onchange = function(){ touch(); ref.child('matDue').set(this.value || null); };   // [K169]
         var nt = box.querySelector('#psvNote'), ntT = null;
         nt.oninput = function(){ clearTimeout(ntT); ntT = setTimeout(function(){ V._noteLocal = true; touch(); ref.child('note').set(String(nt.value||'').slice(0,600) || null).then(function(){ ui._linkToast ? ui._noteSavedTip(nt) : 0; }); }, 700); };
         box.querySelectorAll('[data-day]').forEach(function(el){ el.onclick = function(){ dayEditor(el.getAttribute('data-day'), el.getAttribute('data-t'), days); }; });
