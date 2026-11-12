@@ -55,7 +55,7 @@
         .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
         .chip{ padding:10px 14px; border:2px solid #e2e8f0; border-radius:999px; background:#fff; font-size:14px; font-weight:800; color:#475569; cursor:pointer; }
         .chip.on{ border-color:#16a34a; background:#f0fdf4; color:#15803d; }
-        textarea{ width:100%; margin-top:12px; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:14.5px; font-weight:700; resize:vertical; outline:none; }
+        textarea{ width:100%; margin-top:0; padding:12px 14px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:14.5px; font-weight:700; resize:vertical; outline:none; }
         textarea:focus{ border-color:#6366f1; }
         .toast{ position:fixed; left:50%; bottom:40px; transform:translateX(-50%); background:#0f172a; color:#fff; padding:13px 22px; border-radius:999px; font-size:14.5px; font-weight:800; box-shadow:0 10px 30px rgba(0,0,0,.25); transition:opacity .3s; z-index:99999; }
         .btn:disabled{ opacity:.6; cursor:default; }
@@ -232,7 +232,7 @@
   function svDraw(){
     var w = document.getElementById('svWrap'), fno = document.getElementById('fileNo'); if(!w) return;
     if(!SV.on){ w.innerHTML = ''; if(fno) fno.textContent = '2'; return; }
-    if(fno) fno.textContent = '3';
+    if(fno) fno.textContent = '4';
     var me = svKey(myName()), my = SV.my, a = my.avail;
     var seg = function(v, label){ return '<button type="button" class="seg' + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
@@ -262,7 +262,7 @@
         + '<div class="segs">' + yn('pickup', true, '픽업 요청합니다') + yn('pickup', false, '해당 없음') + '</div>'
         + (my.pickup ? '<div class="pkInfo"><div class="pkT"><i class="fa-solid fa-clock"></i> 픽업 운행 시간</div>'
             + '<div class="pkR"><span>오전</span><b>08:00 ~ 11:00</b></div>'
-            + '<div class="pkR"><span>오후</span><b>13:00 ~ 17:00</b><em>가급적 16시 이전</em></div>'
+            + '<div class="pkR"><span>오후</span><b>13:00 ~ 16:00</b></div>'
             + '<div class="pkN">12:00 ~ 13:00 은 기사님 점심시간으로 운행하지 않습니다.</div></div>'
             + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
@@ -272,8 +272,10 @@
               + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span><input type="time" id="pkDep" value="' + esc(my.pkDep||'') + '"></label></div>'
               : '') : '');
     }
+    /* [K168] 전달 사항은 별도 3번 항목 — 픽업과 헷갈리지 않게 분리, 제출 버튼은 그 아래 */
     if(a){
-      h += '<textarea id="svMsg" rows="2" placeholder="전달하실 말씀 (선택)">' + esc(my.msg) + '</textarea>'
+      h += '<div class="step"><span class="no">3</span> 전달 사항 <span class="muted" style="margin-left:4px;">(있으면)</span></div>'
+        + '<textarea id="svMsg" rows="3" placeholder="담당자에게 전하실 말씀">' + esc(my.msg) + '</textarea>'
         + '<button type="button" class="btn" id="svGo" style="width:100%; justify-content:center; margin-top:10px; padding:14px;"><i class="fa-solid fa-paper-plane"></i> ' + (my.at ? '일정 다시 제출' : '일정 제출') + '</button>'
         + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출됨 · 고치고 다시 누르면 바뀝니다</div>' : '');
     }
