@@ -76,6 +76,12 @@
         .pcB{ display:flex; gap:8px; margin-top:10px; }
         .pcB button{ flex:1; padding:11px 6px; border:none; border-radius:11px; background:#0284c7; color:#fff; font-size:14px; font-weight:900; cursor:pointer; }
         .pcB button + button{ background:#fff; color:#0369a1; border:1.5px solid #7dd3fc; }
+        .tGrid{ display:flex; gap:8px; }
+        .tGrid label{ flex:1; display:flex; flex-direction:column; gap:5px; font-size:13px; font-weight:800; color:#475569; }
+        .tGrid input{ padding:11px 10px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:16px; font-weight:800; }
+        .back{ background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; border-radius:12px; padding:11px 13px; font-size:13.5px; font-weight:700; line-height:1.6; margin-bottom:10px; word-break:keep-all; }
+        .back i{ color:#10b981; margin-right:3px; }
+        .toast.warn{ width:max-content; max-width:min(92vw,520px); white-space:normal; text-align:left; line-height:1.5; border-radius:16px; }
     </style>
 </head>
 <body>
@@ -193,9 +199,9 @@
     var k = svKey(myName());
     if(k !== SV.loadedFor || (force && !SV.dirty)){
       var r = k && SV.resp[k];
-      SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, pkPlace: r.pkPlace||'', pkDate: r.pkDate||'', pkTime: r.pkTime||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
+      SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, pkPlace: r.pkPlace||'', pkArr: r.pkArr||'', pkDep: r.pkDep||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
                 : { avail:'', p1:{}, p2:{}, stay:null, pickup:null, pkPlace:'', pkDate:'', pkTime:'', pkMemo:'', msg:'', title:'' };
-      SV.dirty = false; SV.loadedFor = k;
+      SV.dirty = false; SV.loadedFor = k; SV.fromServer = !!r;
     }
     svDraw();
   }
@@ -209,6 +215,7 @@
     var me = svKey(myName()), my = SV.my, a = my.avail;
     var seg = function(v, label){ return '<button type="button" class="seg' + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
+      + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[일정 다시 제출]</b>을 눌러 주세요.</div>' : '')
       + (SV.note ? '<div class="note">' + esc(SV.note).replace(/\n/g,'<br>') + '</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
     if(a === '가능' || a === '미정'){
@@ -239,7 +246,12 @@
             + '<div class="pkN">12:00 ~ 13:00 은 기사님 점심시간으로 운행하지 않습니다.</div></div>'
             + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
-            + '<div class="muted" style="margin-top:8px;">도착 시간은 일정 확정 후 담당자가 따로 여쭙겠습니다.</div>' : '');
+            /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
+            + (my.pkPlace ? '<div class="sub2" style="margin-top:14px;">열차·버스 시각 <span class="muted">(선택 · 아직 모르시면 비워 두세요)</span></div>'
+              + '<div class="tGrid"><label><span>' + esc(my.pkPlace) + ' <b>도착</b></span><input type="time" id="pkArr" value="' + esc(my.pkArr||'') + '"></label>'
+              + '<label><span>' + esc(my.pkPlace) + ' <b>출발</b> (귀가)</span><input type="time" id="pkDep" value="' + esc(my.pkDep||'') + '"></label></div>'
+              + '<input type="text" id="pkMemo" class="pkMemo" placeholder="열차·버스편 (선택) 예) KTX 101편" value="' + esc(my.pkMemo||'') + '">'
+              + '<div class="muted" style="margin-top:6px;">나중에 같은 링크로 들어와 성함을 넣으시면 이어서 채우실 수 있습니다.</div>' : '') : '');
     }
     if(a){
       h += '<textarea id="svMsg" rows="2" placeholder="전달하실 말씀 (선택)">' + esc(my.msg) + '</textarea>'
@@ -254,14 +266,21 @@
       var h1 = Object.keys(my.p1)[0], h2 = Object.keys(my.p2)[0];
       if(h1 === k){ my.p1 = {}; if(h2){ my.p1[h2] = true; my.p2 = {}; } }
       else if(h2 === k){ my.p2 = {}; }
-      else if(!h1){ my.p1 = {}; my.p1[k] = true; }
-      else if(!h2){ my.p2 = {}; my.p2[k] = true; }
+      else if(!h1){ my.p1 = {}; my.p1[k] = true; dupWarn(k); }
+      else if(!h2){ my.p2 = {}; my.p2[k] = true; dupWarn(k); }
       else { toast('1안·2안을 모두 골랐습니다. 바꾸려면 고른 칸을 눌러 먼저 취소하세요.'); return; }
       SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-yn]').forEach(function(b){ b.onclick = function(){ my[b.getAttribute('data-yn')] = b.getAttribute('data-v') === '1'; SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-pp]').forEach(function(b){ b.onclick = function(){ my.pkPlace = b.getAttribute('data-pp'); SV.dirty = true; svDraw(); }; });
+    [['pkArr','pkArr'],['pkDep','pkDep'],['pkMemo','pkMemo']].forEach(function(x){ var el = document.getElementById(x[0]); if(el) el.oninput = el.onchange = function(){ my[x[1]] = el.value; SV.dirty = true; }; });
     var ta = document.getElementById('svMsg'); if(ta) ta.oninput = function(){ my.msg = ta.value; SV.dirty = true; };
     var go = document.getElementById('svGo'); if(go) go.onclick = svSubmit;
+  }
+  /* [K166] 다른 강사님이 1안으로 고른 칸을 고르면 알려 준다(선택은 가능 — 최종 조율은 담당자) */
+  function dupWarn(k){
+    var me = svKey(myName());
+    var who1 = Object.keys(SV.resp).filter(function(x){ var r = SV.resp[x]||{}; return x !== me && r.avail !== '불가능' && (r.p1||{})[k]; }).map(function(x){ var r = SV.resp[x]; return r.name + ' ' + (r.title||'강사') + '님'; });
+    if(who1.length) toast(who1.join(', ') + '도 이 시간을 1안으로 신청하셨습니다. 가능하시면 다른 시간도 함께 골라 주세요.', true);
   }
   function svTime(ms){ var d = new Date(Number(ms)), p = function(n){ return String(n).padStart(2,'0'); }; return (d.getMonth()+1)+'.'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); }
   function svNeedName(){ if(myName()) return true; var ni = document.getElementById('nm'); ni.focus(); ni.classList.add('need'); setTimeout(function(){ ni.classList.remove('need'); }, 1200); return false; }
@@ -277,13 +296,13 @@
     var tm = nm.match(TTL_RE), ttl = tm ? tm[1] : '';
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
     var rec = { name: pure, title: ttl || my.title || '강사', avail: my.avail, p1: (my.avail==='불가능'?null:my.p1), p2: (my.avail==='불가능'?null:my.p2), stay: my.avail!=='불가능' && my.stay===true, pickup: my.avail!=='불가능' && my.pickup===true,
-                pkPlace: (my.pickup && my.avail!=='불가능') ? my.pkPlace : null, pkDate: (my.pickup && my.avail!=='불가능') ? my.pkDate : null, pkTime: (my.pickup && my.avail!=='불가능') ? my.pkTime : null, pkMemo: (my.pickup && my.avail!=='불가능') ? String(my.pkMemo||'').slice(0,80) : null, msg: String(my.msg||'').slice(0,500), at: Date.now() };
+                pkPlace: (my.pickup && my.avail!=='불가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail!=='불가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail!=='불가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail!=='불가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now() };
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var go = document.getElementById('svGo'); if(go){ go.disabled = true; go.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 제출 중…'; }
-    svRef().child('resp/' + svKey(nm)).set(rec).then(function(){ SV.dirty = false; SV.my.at = rec.at; svDraw(); toast('일정을 제출했습니다. 감사합니다!'); })
+    svRef().child('resp/' + svKey(nm)).set(rec).then(function(){ SV.dirty = false; SV.fromServer = false; SV.my.at = rec.at; svDraw(); toast('일정을 제출했습니다. 감사합니다!'); })
       .catch(function(e){ alert('제출하지 못했습니다. 잠시 후 다시 눌러 주세요.\n(' + (e && e.message || e) + ')'); svDraw(); });
   }
-  function toast(msg){ var t = document.createElement('div'); t.className = 'toast'; t.innerHTML = '<i class="fa-solid fa-circle-check" style="color:#4ade80;"></i> ' + esc(msg); document.body.appendChild(t); setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 350); }, 2600); }
+  function toast(msg, warn){ var t = document.createElement('div'); t.className = 'toast' + (warn ? ' warn' : ''); t.innerHTML = '<i class="fa-solid ' + (warn ? 'fa-triangle-exclamation' : 'fa-circle-check') + '" style="color:' + (warn ? '#fbbf24' : '#4ade80') + ';"></i> ' + esc(msg); document.body.appendChild(t); setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 350); }, warn ? 4200 : 2600); }
 
   var mine = [];   // [{id, ...rec}]
   function loadMine(){
