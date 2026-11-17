@@ -20260,7 +20260,9 @@ ui.matExtLink = async function(){
     /* [K160] 한 과정에 링크는 1개 — 그 링크를 여러 강사님께 함께 보낸다(강사 화면은 성함으로 각자 파일 구분) */
     var links = {}; try{ links = (await firebase.database().ref('system/coord/uploadLinks').orderByChild('room').equalTo(room).once('value')).val() || {}; }catch(e){}
     var alive = Object.keys(links).map(function(k){ return Object.assign({ id:k }, links[k]); })
-        .filter(function(v){ return !v.revoked && Number(v.exp) >= now && v.url; })
+        .filter(function(v){ var nn = function(t){ return String(t||'').replace(/[\s()\-_·.]/g,'').replace(/\d+차/g,''); };
+            if(!v.revoked && Number(v.exp) >= now && v.url && v.course && nn(v.course) !== nn(cname)){ firebase.database().ref('system/coord/uploadLinks/' + v.id + '/revoked').set(true).catch(function(){}); return false; }   // [K203] 지난 과정 링크는 정리
+            return !v.revoked && Number(v.exp) >= now && v.url; })
         .sort(function(a,b){ return (Number(b.createdAt)||0) - (Number(a.createdAt)||0); });
     var cur = alive[0] || null;
     alive.slice(1).forEach(function(v){ firebase.database().ref('system/coord/uploadLinks/'+v.id+'/revoked').set(true).catch(function(){}); });   // 예전에 여러 개 만든 것은 정리
