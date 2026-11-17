@@ -2972,7 +2972,7 @@ loadDashboardStats: function() {
         try {
             var _jt = document.getElementById('dashJobToggle');
             if (_jt) {
-                var _cat = ((s.guideCourseInfo || {}).category === 'duty-legal') ? 'duty-legal' : 'duty-general';
+                var _rc = (s.guideCourseInfo || {}).category, _cat = _rc ? (_rc === 'duty-legal' ? 'duty-legal' : 'duty-general') : kacDefCat(s.courseName);   // [K202] 미설정이면 과정명으로 기본값
                 _jt.classList.toggle('is-legal', _cat === 'duty-legal');
                 _jt.dataset.cat = _cat;
             }
@@ -7902,7 +7902,7 @@ resetShuttleRequests: function() {
             window._homeSearchDetailData[room]={roomData:r,roster:rosterList};
             results.push({room:room, course:course||'(과정명 미정)', period:period, prof:prof, cnt:cnt, planned:planned, assigned:assigned, outing:outing, depart:depart, kakao:kakaoOn,
                 venue:String(settings.roomDetailName||'').trim(),                                  // [K1] 강의장소 (연간계획·전 화면 공통 roomDetailName)
-                cat:String(((settings.guideCourseInfo||{}).category)||'duty-general')});           // [K1] 교육구분 (입교안내 PDF '교육과정 안내'와 동일 데이터)
+                cat:String(((settings.guideCourseInfo||{}).category)||kacDefCat(settings.courseName||course))});   // [K202]           // [K1] 교육구분 (입교안내 PDF '교육과정 안내'와 동일 데이터)
         });
         var e=ui._esc;
         if(!results.length){
@@ -9484,6 +9484,11 @@ closeSummaryAndExit: function(silent) {
 
 
 /* --- [수정 3차 - 강의실별 완전 독립] 입교안내 가이드 관리 로직 --- */
+/* [K202] 직무 법정 기본값 — 항행안전시설·항공정보통신시설·감시시설·ILS·전방향·항법 과정은 '직무 법정', 그 외는 '직무 일반'
+   (교수님이 토글로 바꾸면 그 값이 우선) */
+function kacDefCat(name){ return /항행안전시설|항공정보통신|감시시설|감시\s*(초기|정기)|ILS|전방향|항법/i.test(String(name||'')) ? 'duty-legal' : 'duty-general'; }
+window.kacDefCat = kacDefCat;
+
 const scheduleMgr = {
     escapeHtml: function(v) {
         return String(v || '').replace(/[&<>"']/g, ch => ({
@@ -10739,7 +10744,7 @@ init: function() {
             ci.courseName = set.courseName || '';
             ci.period = set.period || '';
             const gi = set.guideCourseInfo || {};
-            if (gi.category) ci.category = gi.category;       // 기본값: 직무 일반
+            if (gi.category) ci.category = gi.category; else ci.category = kacDefCat(ci.courseName);   // [K202] 기본값: 과정명으로(법정 과정은 직무 법정)
             if (gi.evaluation) ci.evaluation = gi.evaluation; // 기본값: 없음(근태10%)
             slot.pagePos = set.guidePagePos || {};            // 삽입 페이지 수동 위치
             slot.pageEnable = set.guidePageEnable || {};      // 오픈톡방 QR·채널안내 표시 여부(체크박스)
@@ -16024,7 +16029,7 @@ ui.renderOverviewOverlay = async function () {
         name = String(set.courseName || '').trim();
         period = String(set.period || '').trim();
         var gi = set.guideCourseInfo || {};
-        if (gi.category) cat = gi.category;
+        if (gi.category) cat = gi.category; else cat = kacDefCat(name);   // [K202]
         if (gi.evaluation) ev = gi.evaluation;
         var stu = results[1].val() || {};
         count = new Set(Object.keys(stu).filter(function (k) { return kacIsRealStudent(stu[k], k); }).map(function (k) { return String(stu[k].name).trim(); })).size;
@@ -20558,10 +20563,12 @@ ui.preSurveyOpen = async function(){
         /* [K175] 기사님 카톡 — 평소 쓰시는 형식 그대로. 픽업=열차 도착 시각, 항기원 출발=귀가 열차 출발 1시간 전 */
         var minus1h = function(t){ var m = String(t||'').match(/^(\d{1,2}):(\d{2})$/); if(!m) return ''; var x = Number(m[1])*60 + Number(m[2]) - 60; if(x < 0) x = 0; return String(Math.floor(x/60)).padStart(2,'0') + ':' + String(x%60).padStart(2,'0'); };
         var dayTxt = function(k){ if(!k) return '일정 미정'; var d = k.slice(0,10); return Number(d.slice(5,7)) + '/' + Number(d.slice(8,10)) + '(' + WD[new Date(d+'T00:00:00').getDay()] + ')'; };
-        V._kakao = pks.length ? ('강사 수송 요청드립니다.\n\n<' + cname + '>\n' + pks.map(function(x){ var r = resp[x], pl = r.pkPlace || '오송역', tel = TELS[x] || '';
+        /* [K201] 카톡 문구 — 전체(일괄) 또는 강사 한 명(개별) */
+        var kakaoOf = function(ids){ return ids.length ? ('강사 수송 요청드립니다.\n\n<' + cname + '>\n' + ids.map(function(x){ var r = resp[x], pl = r.pkPlace || '오송역', tel = TELS[x] || '';
             return '■ ' + dayTxt(p1of(r)) + '\n' + (r.name||'') + ' ' + (r.title||'강사') + (tel ? '\n(' + tel + ')' : '')
               + '\n' + (r.pkArr || '  :  ') + ' ' + pl + ' >> 항기원'
-              + '\n' + (minus1h(r.pkDep) || '  :  ') + ' 항기원 >> ' + pl; }).join('\n\n') + '\n\n즐거운 한주되세요') : '';
+              + '\n' + (minus1h(r.pkDep) || '  :  ') + ' 항기원 >> ' + pl; }).join('\n\n') + '\n\n즐거운 한주되세요') : ''; };
+        V._kakao = kakaoOf(pks); V._kakaoOne = {}; pks.forEach(function(x){ V._kakaoOne[x] = kakaoOf([x]); });
         if(stays.length || pks.length){
             var secT = function(ic, col, t){ return '<div style="margin-top:30px;font-size:19px;font-weight:900;color:#0f172a"><i class="fa-solid ' + ic + '" style="color:' + col + '"></i> ' + t + '</div>'; };
             var cardHead = function(ic, col, t, n, unit, right){ return '<div style="display:flex;align-items:center;gap:10px;min-height:44px"><i class="fa-solid ' + ic + '" style="color:' + col + ';font-size:18px"></i><span style="font-size:16.5px;font-weight:900;color:#1e293b">' + t + '</span><b style="font-size:20px;color:' + col + '">' + n + '</b><span style="font-size:14px;font-weight:800;color:#64748b">' + unit + '</span><span style="flex:1"></span>' + (right||'') + '</div>'; };
@@ -20571,10 +20578,10 @@ ui.preSurveyOpen = async function(){
               + '<div style="border:1px solid #dbeafe;background:#f8fbff;border-radius:18px;padding:16px 18px">' + cardHead('fa-bed', '#2563eb', '전날 숙박', stays.length, '명')
               + '<div style="margin-top:10px;text-align:center">' + (stays.map(function(x){ return chip(who(resp[x])); }).join('') || '<span style="color:#94a3b8;font-weight:800">없음</span>') + '</div></div>'
               + '<div style="border:1px solid #fde68a;background:#fffdf5;border-radius:18px;padding:16px 18px">' + cardHead('fa-van-shuttle', '#ca8a04', '픽업', pks.length, '건',
-                  pks.length ? '<button id="psvKakao" title="기사님 카톡방에 붙여넣을 메시지 복사" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:12px;background:#FEE500;color:#191919;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12)"><i class="fa-solid fa-comment"></i> 기사님 카톡 복사</button>' : '')
-              + (pks.length ? '<table style="width:100%;border-collapse:collapse;margin-top:10px;table-layout:auto"><thead><tr>' + ['강의 일자','탑승 장소','강사','연락처','픽업(도착)','항기원 출발'].map(function(t){ return '<th style="padding:8px 6px;font-size:13.5px;font-weight:900;color:#a16207;border-bottom:1.5px solid #fde68a;text-align:center;white-space:nowrap">' + t + '</th>'; }).join('') + '</tr></thead><tbody>'
+                  pks.length ? '<button id="psvKakao" title="기사님 카톡방에 붙여넣을 메시지 복사" style="display:inline-flex;align-items:center;gap:6px;padding:10px 16px;border:none;border-radius:12px;background:#FEE500;color:#191919;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.12)"><i class="fa-solid fa-comment"></i> 기사님 카톡 일괄 복사</button>' : '')
+              + (pks.length ? '<table style="width:100%;border-collapse:collapse;margin-top:10px;table-layout:auto"><thead><tr>' + ['강의 일자','탑승 장소','강사','연락처','픽업(도착)','항기원 출발','카톡'].map(function(t){ return '<th style="padding:8px 6px;font-size:13.5px;font-weight:900;color:#a16207;border-bottom:1.5px solid #fde68a;text-align:center;white-space:nowrap">' + t + '</th>'; }).join('') + '</tr></thead><tbody>'
                   + pks.map(function(x){ var r = resp[x], td = 'padding:10px 8px;font-size:15.5px;font-weight:800;color:#334155;text-align:center;border-bottom:1px dashed #fef3c7;white-space:nowrap';
-                      return '<tr><td style="' + td + '">' + slotShort(p1of(r)) + '</td><td style="' + td + ';color:#92400e;font-weight:900">' + esc(r.pkPlace||'-') + '</td><td style="' + td + '">' + who(r) + '</td><td style="' + td + ';font-size:14.5px">' + (esc(TELS[x]||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (esc(r.pkArr||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (r.pkDep ? '<b style="color:#b45309">' + minus1h(r.pkDep) + '</b> <span style="font-size:12.5px;color:#94a3b8;font-weight:800">(귀가편 ' + esc(r.pkDep) + ')</span>' : '<span style="color:#cbd5e1">-</span>') + '</td></tr>'; }).join('')
+                      return '<tr><td style="' + td + '">' + slotShort(p1of(r)) + '</td><td style="' + td + ';color:#92400e;font-weight:900">' + esc(r.pkPlace||'-') + '</td><td style="' + td + '">' + who(r) + '</td><td style="' + td + ';font-size:14.5px">' + (esc(TELS[x]||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (esc(r.pkArr||'') || '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '">' + (r.pkDep ? '<b style="color:#b45309">' + minus1h(r.pkDep) + '</b> <span style="font-size:12.5px;color:#94a3b8;font-weight:800">(귀가편 ' + esc(r.pkDep) + ')</span>' : '<span style="color:#cbd5e1">-</span>') + '</td><td style="' + td + '"><button data-kk="' + esc(x) + '" title="이 강사님만 카톡 문구 복사" style="width:34px;height:34px;border:none;border-radius:10px;background:#FEE500;color:#191919;cursor:pointer;box-shadow:0 2px 5px rgba(0,0,0,.12)"><i class="fa-solid fa-comment"></i></button></td></tr>'; }).join('')
                   + '</tbody></table>' : '<div style="margin-top:10px;text-align:center;color:#94a3b8;font-weight:800">없음</div>')
               + '</div></div>' + secEnd;
         }
@@ -20594,6 +20601,7 @@ ui.preSurveyOpen = async function(){
         var setAcc = function(id, on){ var sec = box.querySelector('#psvSec-' + id); if(!sec) return; OPEN[id] = on; sec.classList.toggle('on', on); sec.querySelector('.psvAccB').style.display = on ? 'block' : 'none'; };
         box.querySelectorAll('[data-acc]').forEach(function(hd){ hd.onclick = function(){ var id = hd.getAttribute('data-acc'); setAcc(id, !OPEN[id]); }; });
         box.querySelectorAll('[data-acc-go]').forEach(function(c){ c.onclick = function(){ var id = c.getAttribute('data-acc-go'); if(!id) return; setAcc(id, true); var sec = box.querySelector('#psvSec-' + id); if(sec) sec.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
+        box.querySelectorAll('[data-kk]').forEach(function(b){ b.onclick = function(){ var t = (V._kakaoOne || {})[b.getAttribute('data-kk')] || ''; ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('이 강사님 카톡 문구를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); }; });
         var kb = box.querySelector('#psvKakao'); if(kb) kb.onclick = function(){ var t = V._kakao; ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('기사님께 보낼 메시지를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); };
         var rs = box.querySelector('#psvReset'); if(rs) rs.onclick = function(){ if(!confirm('이전 과정의 조사 결과를 모두 지우고 새로 시작할까요?')) return; telRef.remove().catch(function(){}); saved('초기화', ref.set({ course: cname })); };
         box.querySelectorAll('.psvDt').forEach(function(b){ b.onclick = function(){ var k = b.getAttribute('data-dt');
