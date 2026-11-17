@@ -20346,7 +20346,7 @@ ui.preSurveyOpen = async function(){
     var who = function(r){ return esc(r.name||'') + ' ' + esc(r.title||'강사'); };
     var tm = function(ms){ var d=new Date(Number(ms)), p=function(n){ return String(n).padStart(2,'0'); }; return (d.getMonth()+1)+'.'+d.getDate()+' '+p(d.getHours())+':'+p(d.getMinutes()); };
     var slotTxt = function(map){ return Object.keys(map||{}).sort().map(function(k){ var d=k.slice(0,10); return Number(d.slice(5,7))+'.'+Number(d.slice(8,10))+'('+WD[new Date(d+'T00:00:00').getDay()]+') '+(k.slice(-2)==='am'?'오전':'오후'); }).join(', '); };
-    var touch = function(){ return ref.child('course').set(cname); };
+    var touch = function(){ return ref.update({ course: cname, period: pd || null }); };   // [K194] 과정명 + 교육기간으로 '이번 과정'을 구분
     /* [K170] 저장 결과를 바로 보여 준다 — 성공: 초록 / 실패: 빨강 */
     var saved = function(label, p){
         var show = function(ok, err){
@@ -20399,7 +20399,23 @@ ui.preSurveyOpen = async function(){
             if(document.body.contains(o)) draw();
         }catch(e){}
     })();
-    var cb = function(s){ var a = document.activeElement; V = s.val() || {}; if(a && a.id === 'psvNote' && box.contains(a)) return; draw(); };
+    /* [K194] 지난 과정의 조사 결과는 자동 정리 — 과정명이나 교육기간이 바뀌면 이전 결과를 보관함으로 옮기고 비운다(연락처는 삭제)
+       · 기간이 저장되지 않은 옛 자료는 응답한 날짜가 모두 이번 교육기간 밖이면 지난 과정으로 본다 */
+    var cleaning = false;
+    var isStale = function(v){
+        if(!v || !Object.keys(v).length) return false;
+        if(v.course && v.course !== cname) return true;
+        if(v.period && pd && v.period !== pd) return true;
+        if(!v.period && pd){ var rs = v.resp || {}, ds = [], s0 = ps[0] || '', e0 = ps[1] || '';
+            Object.keys(rs).forEach(function(k){ var r = rs[k] || {}; Object.keys(Object.assign({}, r.p1 || {}, r.p2 || {})).forEach(function(x){ ds.push(x.slice(0,10)); }); });
+            if(ds.length && s0 && e0 && ds.every(function(d){ return d < s0 || d > e0; })) return true; }
+        return false; };
+    var cb = function(s){ var a = document.activeElement; V = s.val() || {};
+        if(isStale(V) && !cleaning){ cleaning = true; var old = V;
+            firebase.database().ref('system/coord/preSurveyArchive/' + room + '_' + Date.now()).set(old).catch(function(){})
+              .then(function(){ return Promise.all([ ref.set({ course: cname, period: pd || null }), firebase.database().ref('system/coord/preSurveyPhone/' + room).remove().catch(function(){}) ]); })
+              .then(function(){ cleaning = false; }, function(){ cleaning = false; });
+            V = {}; } if(a && a.id === 'psvNote' && box.contains(a)) return; draw(); };
     ref.on('value', cb);
     ui._psvOff = function(){ try{ ref.off('value', cb); telRef.off('value', telCb); }catch(e){} ui._psvOff = null; };
     /* [K164] 하루 일정 막기 편집 — 종일/오전/오후/시간 지정 + 사유 고르기 */
