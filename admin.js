@@ -20418,9 +20418,10 @@ ui.preSurveyOpen = async function(){
     var normN = function(s){ return String(s||'').replace(/\s*(강사|교수|부장|차장|과장|대리|주임|연구원|박사|소장|팀장|원장|사원|위원)$/,'').replace(/\s+/g,''); };
     var matCell = function(r){
         var n = normN(r.name), list = MATS.filter(function(m){ return normN(m.uploader) === n; });
-        if(!list.length) return '<span style="color:#cbd5e1">-</span>';
+        var mb = r.mailSent ? '<span title="메일 제출 알림 ' + new Date(Number(r.mailSent)).toLocaleString('ko-KR') + '" style="display:inline-flex;align-items:center;gap:4px;margin:1px;padding:6px 10px;border-radius:9px;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;font-size:13px;font-weight:900"><i class="fa-solid fa-envelope"></i> 메일</span>' : '';
+        if(!list.length) return mb || '<span style="color:#cbd5e1">-</span>';
         return list.map(function(m){ var ext = String(m.fileName||'').split('.').pop().toLowerCase(), ic = ext === 'pdf' ? 'fa-file-pdf' : (/pptx?/.test(ext) ? 'fa-file-powerpoint' : (/hwpx?|docx?/.test(ext) ? 'fa-file-word' : 'fa-file-lines')), col = ext === 'pdf' ? '#dc2626' : (/pptx?/.test(ext) ? '#ea580c' : '#2563eb');
-            return '<a href="#" data-mat="' + esc(m.id) + '" title="' + esc(m.fileName||m.title||'') + '" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin:1px;border-radius:9px;background:#fff;border:1.5px solid #e2e8f0;color:' + col + ';font-size:18px;text-decoration:none"><i class="fa-solid ' + ic + '"></i></a>'; }).join('');
+            return '<a href="#" data-mat="' + esc(m.id) + '" title="' + esc(m.fileName||m.title||'') + '" style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;margin:1px;border-radius:9px;background:#fff;border:1.5px solid #e2e8f0;color:' + col + ';font-size:18px;text-decoration:none"><i class="fa-solid ' + ic + '"></i></a>'; }).join('') + mb;
     };
     (async function(){
         try{
@@ -20490,7 +20491,7 @@ ui.preSurveyOpen = async function(){
         var secEnd = '</div></div>';
         var md = function(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d||'') ? Number(d.slice(5,7)) + '.' + Number(d.slice(8,10)) : ''; };
         var nStay = keys.filter(function(x){ return resp[x].stay; }).length, nPk = keys.filter(function(x){ return resp[x].pickup; }).length;
-        var nMat = keys.filter(function(x){ var n = normN(resp[x].name); return MATS.some(function(m){ return normN(m.uploader) === n; }); }).length;
+        var nMat = keys.filter(function(x){ var n = normN(resp[x].name); return resp[x].mailSent || MATS.some(function(m){ return normN(m.uploader) === n; }); }).length;
         var stat = function(ic, col, lab, n, acc){ return '<div data-acc-go="' + (acc||'') + '" title="눌러서 상세 보기" style="cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:14px;background:' + col + '14;border:1px solid ' + col + '33"><i class="fa-solid ' + ic + '" style="color:' + col + ';font-size:18px"></i><span style="font-size:14px;font-weight:800;color:#475569">' + lab + '</span><b style="font-size:22px;color:' + col + '">' + n + '</b></div>'; };
         var h = '<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><div style="font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.4px">' + esc(cname) + '</div>'
           + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">' + stat('fa-user-check', '#ea580c', '응답', keys.length, 'resp') + stat('fa-bed', '#2563eb', '숙박', nStay, 'pick') + stat('fa-van-shuttle', '#ca8a04', '픽업', nPk, 'pick') + stat('fa-file-pdf', '#dc2626', '교재', nMat, 'resp') + '</div></div>'
