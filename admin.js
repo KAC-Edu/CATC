@@ -20680,7 +20680,7 @@ async function kacSurveyParse(doc){
   R.inst.list = (R._ir||[]).filter(function(x){ return x.rows.length; }).map(function(x){ var s=0; x.rows.forEach(function(r){ s+=r.sum; }); var N = Math.max.apply(null, x.rows.map(function(r){ return r.N; })) || Nf; return { n:x.n || '강사', score: Math.round(s/(5*N*x.rows.length)*100000)/1000 }; });
   delete R._ir;
   var avg = function(arr){ var v = arr.map(function(x){ return x.score; }).filter(function(x){ return x != null; }); return v.length ? Math.round(v.reduce(function(a,b){ return a+b; },0)/v.length*1000)/1000 : null; };
-  var pick = function(T, arr){ var a = avg(arr); var ps = T._ps; delete T._ps; T.score = (ps != null && (a == null || Math.abs(ps - a) < 1.5)) ? ps : a; };
+  var pick = function(T, arr){ var a = avg(arr); var ps = T._ps; delete T._ps; if(!arr.length || (ps != null && ps < 30)) ps = null; T.score = (ps != null && (a == null || Math.abs(ps - a) < 1.5)) ? ps : a; };
   pick(R.op, R.op.items); pick(R.env, R.env.items); pick(R.inst, R.inst.list);
   var comp = [R.op.score, R.env.score, R.inst.score].filter(function(x){ return x != null; });
   if(R.total != null && comp.length && (R.total < Math.min.apply(null, comp) - 0.5 || R.total > Math.max.apply(null, comp) + 0.5)) R.total = null;
@@ -20729,12 +20729,21 @@ ui._svySeriesOf = function(title){
 };
 ui._svyRoundOf = function(title){ var m = String(title||'').match(/(\d+)\s*차/); return m ? Number(m[1]) : 0; };
 ui._svyTag = function(t){
-    var s = String(t||'');
-    if(/불편|춥|추워|추움|추웠|덥|더워|더움|고장|부족|아쉽|아쉬|냄새|소음|시끄|꺼져|꺼졌|꺼지|느리|느림|안\s?되|안돼|불만|불친절|좁|낡|노후|힘들|어렵|어려웠|불량|끊기|끊겨|지저분|더럽|비싸|못\s?해|못했|불가/.test(s)) return 'neg';
-    if(/(했|하|되|있|주셨|주시|해주셨|해주시)으면|바랍|원합|원해|희망|필요|추가|요청|건의|좋겠|좋을\s?(것|거)|바람/.test(s)) return 'sug';
-    if(/좋았|좋습|좋아|만족|감사|최고|유익|도움|친절|맛있|깔끔|훌륭|재미|재밌/.test(s)) return 'pos';
+    var s = String(t||'').trim();
+    if(/불편|춥|추워|추움|추웠|덥|더워|더움|고장|부족|아쉽|아쉬|냄새|소음|시끄|꺼져|꺼졌|꺼지|느리|느림|안\s?되|안돼|불만|불친절|좁|낡|노후|힘들|어렵|어려웠|불량|끊기|끊겨|지저분|더럽|비싸|못\s?해|못했/.test(s)) return 'neg';
+    if(s.replace(/\s/g,'').length < 10) return /좋았|만족|감사|최고|유익|맛있|친절/.test(s) ? 'pos' : 'etc';   // 너무 짧은 조각은 분류하지 않음
+    if(/(있|했|하|되|됐|주셨|주시|해주셨|해주시|해\s주시)으면|바랍니다|바람|원합|원해요|원함|희망|추가(해|되|로|를|했|하)|요청|건의|좋겠|좋을\s?(것|거)\s?같|개선(이|을|해|되|이\s?필요)|필요합니다|필요함|필요할\s?(것|듯)|필요해\s?보|필요하다고/.test(s)) return 'sug';
+    if(/좋았|좋습|좋아|좋은|좋다|만족|감사|최고|유익|도움|친절|맛있|깔끔|훌륭|재미|재밌|인상\s?깊|알찬|최선/.test(s)) return 'pos';
     return 'etc';
 };
+/* [K186] 제목 통일 — '계열명(회차)'. 회차가 없는 옛 결과지는 같은 해 안에서 기간 순서로 매김 */
+ui._svyNorm = function(list){
+    var byY = {}; list.forEach(function(r){ (byY[r.year] = byY[r.year] || []).push(r); });
+    Object.keys(byY).forEach(function(y){ var arr = byY[y].sort(function(a,b){ return String(a.period).localeCompare(String(b.period)); }); var used = {}; arr.forEach(function(r){ if(r.round) used[r.round] = 1; });
+        var n = 1; arr.forEach(function(r){ r._round = r.round; if(!r._round){ while(used[n]) n++; r._round = n; used[n] = 1; } }); });
+    list.forEach(function(r){ r._title = (r.seriesName || r.title) + '(' + r._round + '차)'; });
+};
+ui._svyVal = function(r, k){ if(r.hide && r.hide[k]) return null; var v = k === 'total' ? r.total : (r[k] || {}).score; if(v == null || !(v > 30)) return null; if(k !== 'total' && !(((r[k] || {}).items || (r[k] || {}).list || []).length)) return null; return v; };
 ui._SVY_CAT = [
     ['생활관', /생활관|숙소|기숙사|객실|히터|난방|냉방|에어컨|침대|이불|베개|샤워|온수|화장실|세탁|1인실|2인실|방이|방에|방음/],
     ['식당', /식당|식사|밥|메뉴|반찬|음식|급식|조식|중식|석식|맛있|맛이/],
@@ -20810,34 +20819,61 @@ ui.surveyOpen = async function(){
     var recs = Object.keys(all).map(function(k){ return Object.assign({ id: k }, all[k]); });
     var series = {}; recs.forEach(function(r){ (series[r.series] = series[r.series] || { key: r.series, name: r.seriesName || r.series, list: [] }).list.push(r); });
     var cur = state.room ? ui._svySeriesOf(ui._matCourseName ? ui._matCourseName() : '').key : '';
-    var sel = ui._svySel && series[ui._svySel] ? ui._svySel : (series[cur] ? cur : (Object.keys(series).sort(function(a,b){ return series[b].list.length - series[a].list.length; })[0] || ''));
+    /* [K188] 과정 안에서 열면 '이 과정과 같은 이름의 설문'만 — 다른 과정은 보이지 않게 고정. 메인(현황판)에서 열면 검색·목록으로 고른다 */
+    var inCourse = !!(state.room && cur);
+    var sel = inCourse ? cur : (ui._svySel && series[ui._svySel] ? ui._svySel : '');
     ui._svySel = sel;
-    var S = series[sel];
-    var list = S ? S.list.slice().sort(function(a,b){ return String(a.period).localeCompare(String(b.period)); }) : [];
+    var S = series[sel] || (inCourse ? { key: cur, name: ui._svySeriesOf(ui._matCourseName ? ui._matCourseName() : '').name, list: [] } : null);
+    var full = S ? S.list.slice().sort(function(a,b){ return String(a.period).localeCompare(String(b.period)); }) : [];
+    ui._svyNorm(full);
+    var years = []; full.forEach(function(r){ if(r.year && years.indexOf(r.year) < 0) years.push(r.year); });
+    var yf = (ui._svyYF && years.indexOf(ui._svyYF) >= 0) ? ui._svyYF : (years[0] || 0), yt = (ui._svyYT && years.indexOf(ui._svyYT) >= 0) ? ui._svyYT : (years[years.length-1] || 0);
+    if(yf > yt){ var tmp = yf; yf = yt; yt = tmp; }
+    var list = full.filter(function(r){ return !r.year || (r.year >= yf && r.year <= yt); });
     await Promise.all(list.map(function(r){ return ui._svyCmRef().child(r.id).once('value').then(function(s){ r.comments = s.val() || []; }).catch(function(){ r.comments = []; }); }));
-    var lab = function(r){ return String(r.year).slice(2) + '년 ' + (r.round ? r.round + '차' : ''); };
+    var lab = function(r){ return String(r.year).slice(2) + '년 ' + (r._round || r.round || '') + '차'; };
     var f1 = function(v){ return v == null ? '-' : (Math.round(v*10)/10).toFixed(1); };
     var card = 'margin-top:16px;background:#fff;border-radius:24px;padding:24px 28px;box-shadow:0 18px 45px rgba(15,23,42,.06)';
-    var h = '<div style="background:#fff;border-radius:24px;padding:28px 32px;box-shadow:0 18px 45px rgba(15,23,42,.08)">'
-      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><div style="font-size:13px;font-weight:800;color:#6366f1">과정 계열</div>'
-      + '<select id="svySel" style="margin-top:6px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:19px;font-weight:900;color:#0f172a;min-width:300px">'
-      + (Object.keys(series).length ? Object.keys(series).sort().map(function(k){ return '<option value="' + esc(k) + '"' + (k === sel ? ' selected' : '') + '>' + esc(series[k].name) + ' (' + series[k].list.length + '건)' + (k === cur ? ' · 현재 과정' : '') + '</option>'; }).join('') : '<option>아직 올린 결과지가 없습니다</option>')
-      + '</select></div>'
-      + '<button onclick="ui.surveyUpload()" style="padding:14px 22px;border:none;border-radius:14px;background:#4f46e5;color:#fff;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 8px 20px rgba(79,70,229,.25)"><i class="fa-solid fa-file-arrow-up"></i> 설문결과지(PDF) 올리기</button></div>'
-      + '<div style="margin-top:10px;font-size:13px;font-weight:700;color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> PDF 원본은 저장하지 않고 점수·의견만 저장 · 강사 이름은 장**처럼 가림 · 10년 지난 자료는 자동 정리 · 여러 개를 한 번에 골라도 됩니다</div>'
+    /* [K187] 머리 — 과정 검색 + [전체 과정] 목록 */
+    var lastOf = function(sr){ var a = sr.list.slice().sort(function(x,y){ return String(x.period).localeCompare(String(y.period)); }); return a[a.length-1]; };
+    var yrs = function(sr){ var ys = sr.list.map(function(r){ return r.year; }).filter(Boolean).sort(); return ys.length ? (ys[0] === ys[ys.length-1] ? ys[0] + '년' : ys[0] + '~' + ys[ys.length-1]) : ''; };
+    var skeys = Object.keys(series).sort(function(a,b){ return (series[a].name).localeCompare(series[b].name); });
+    var h = '<div style="background:#fff;border-radius:24px;padding:24px 30px;box-shadow:0 18px 45px rgba(15,23,42,.08)">'
+      + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      + (inCourse ? '<div style="flex:1;min-width:280px;font-size:14px;font-weight:800;color:#64748b"><i class="fa-solid fa-lock" style="color:#94a3b8"></i> 이 과정과 같은 이름의 설문만 보여 줍니다 <span style="color:#94a3b8;font-weight:700">· 다른 과정은 현황판(메인)의 \'교육생 의견\'에서 찾기</span></div>' : '<div style="position:relative;flex:1;min-width:280px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:16px"></i>'
+      + '<input id="svyQ" autocomplete="off" placeholder="과정명으로 찾기 (예: 정보통신, 항법 초기)" style="width:100%;box-sizing:border-box;padding:14px 16px 14px 44px;border:2px solid #e2e8f0;border-radius:14px;font:inherit;font-size:17px;font-weight:800;outline:none">'
+      + '<div id="svySug" class="svySug" style="display:none"></div></div>'
+      + '<button id="svyAllBtn" class="svyHB' + (sel ? '' : ' on') + '"><i class="fa-solid fa-table-list"></i> 전체 과정 ' + skeys.length + '</button>')
+      + '<button onclick="ui.surveyUpload()" class="svyHB pri"><i class="fa-solid fa-file-arrow-up"></i> 결과지(PDF) 올리기</button></div>'
+      + (sel ? '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px"><span style="font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.4px">' + esc(S.name) + '</span>'
+          + (sel === cur ? '<span style="padding:3px 10px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:12.5px;font-weight:900">현재 운영 과정</span>' : '')
+          + '<span style="font-size:14px;font-weight:800;color:#94a3b8">결과지 ' + S.list.length + '건 · ' + yrs(S) + '</span>'
+          + (years.length > 1 ? '<span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:14px;font-weight:900;color:#475569">기간 <select id="svyYF" class="svyYs">' + years.map(function(y){ return '<option' + (y === yf ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select> ~ <select id="svyYT" class="svyYs">' + years.map(function(y){ return '<option' + (y === yt ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>' + ((yf !== years[0] || yt !== years[years.length-1]) ? ' <a href="#" id="svyYAll" style="color:#6366f1;text-decoration:none;font-size:13px">전체</a>' : '') + '</span>' : '')
+          + '</div>' : '')
+      + '<div style="margin-top:12px;font-size:12.5px;font-weight:700;color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> PDF 원본은 저장하지 않고 점수·의견만 저장 · 강사 이름은 장**처럼 가림 · 10년 지난 자료는 자동 정리 · 여러 개를 한 번에 골라도 됩니다</div>'
       + '<div id="svyMsg" style="' + (ui._svyLastMsg ? '' : 'display:none;') + 'margin-top:12px;padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:14px">' + (ui._svyLastMsg || '') + '</div></div>';
+    ui._svySeries = series; ui._svySkeys = skeys; ui._svyCur = cur;
+    var css0 = '<style>.svySug{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,.15);overflow:hidden;max-height:360px;overflow-y:auto}.svySug div{padding:12px 16px;font-size:15.5px;font-weight:800;color:#1e293b;cursor:pointer;display:flex;gap:8px;align-items:center}.svySug div:hover,.svySug div.on{background:#eef2ff}.svySug small{margin-left:auto;color:#94a3b8;font-weight:800}.svyHB{padding:14px 18px;border:2px solid #e2e8f0;border-radius:14px;background:#fff;font:inherit;font-size:15px;font-weight:900;color:#334155;cursor:pointer;white-space:nowrap}.svyHB:hover,.svyHB.on{border-color:#6366f1;color:#3730a3;background:#eef2ff}.svyHB.pri{border:none;background:#4f46e5;color:#fff;box-shadow:0 8px 20px rgba(79,70,229,.25)}.svyHB.pri:hover{background:#4338ca;color:#fff}.svyCat{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.svyCard{padding:18px 20px;border:1.5px solid #e2e8f0;border-radius:18px;background:#fff;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}.svyCard:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(15,23,42,.1);border-color:#a5b4fc}.svyCard .nm{font-size:17px;font-weight:900;color:#0f172a;line-height:1.35}.svyCard .mt{margin-top:6px;font-size:13px;font-weight:800;color:#94a3b8}.svyCard .sc{margin-top:12px;display:flex;align-items:baseline;gap:6px}.svyCard .sc b{font-size:28px;color:#1e3a8a}.svyCard .sc span{font-size:13px;font-weight:800;color:#64748b}</style>';
+    if(!sel){
+        ui._svyLastMsg = '';
+        host.innerHTML = h + '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:14px"><i class="fa-solid fa-table-list" style="color:#6366f1"></i> 등록된 과정 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 눌러서 추이 보기</span></div>'
+          + (skeys.length ? '<div class="svyCat" id="svyCat">' + skeys.map(function(k){ var sr = series[k], lr = lastOf(sr); return '<div class="svyCard" data-sel="' + esc(k) + '" data-name="' + esc(sr.name) + '"><div class="nm">' + esc(sr.name) + (k === cur ? ' <span style="padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle">현재 과정</span>' : '') + '</div><div class="mt">결과지 ' + sr.list.length + '건 · ' + yrs(sr) + '</div><div class="sc"><b>' + f1(lr && lr.total > 30 ? lr.total : null) + '</b><span>최근 종합</span></div></div>'; }).join('') + '</div>'
+            : '<div style="padding:40px;text-align:center;color:#94a3b8;font-weight:800">아직 올린 결과지가 없습니다. [결과지(PDF) 올리기]로 시작하세요.</div>')
+          + '</div>' + css0;
+        ui._svyBind(host); return;
+    }
     ui._svyLastMsg = '';
-    if(!list.length){ host.innerHTML = h + '<div style="' + card + ';padding:50px;text-align:center;color:#94a3b8;font-weight:800">이 계열의 결과지를 올리면 추이가 여기에 그려집니다.</div>'; ui._svyBind(host); return; }
+    if(!list.length){ host.innerHTML = h + css0 + '<div style="' + card + ';padding:50px;text-align:center;color:#94a3b8;font-weight:800">이 계열의 결과지를 올리면 추이가 여기에 그려집니다.</div>'; ui._svyBind(host); return; }
     var last = list[list.length-1], prev = list.length > 1 ? list[list.length-2] : null;
     var kpi = function(t, v, pv, col, ic){ var d = (v != null && pv != null) ? v - pv : null;
         return '<div style="flex:1;min-width:170px;padding:16px 18px;border-radius:18px;background:' + col + '10;border:1px solid ' + col + '30"><div style="font-size:14px;font-weight:900;color:#475569"><i class="fa-solid ' + ic + '" style="color:' + col + '"></i> ' + t + '</div>'
           + '<div style="margin-top:6px;display:flex;align-items:baseline;gap:8px"><b style="font-size:32px;color:' + col + '">' + f1(v) + '</b>'
           + (d != null ? '<span style="font-size:14px;font-weight:900;color:' + (d >= 0 ? '#16a34a' : '#dc2626') + '">' + (d >= 0 ? '▲' : '▼') + ' ' + Math.abs(Math.round(d*10)/10).toFixed(1) + '</span>' : '') + '</div></div>'; };
     h += '<div style="' + card + '">'
-      + '<div style="font-size:15px;font-weight:900;color:#64748b">최근 결과 · ' + esc(last.title) + ' <span style="color:#94a3b8">(' + esc(String(last.period).replace('~',' ~ ')) + (last.n ? ' · 응답 ' + last.n + '명' : '') + ')</span></div>'
-      + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">' + kpi('종합', last.total, prev && prev.total, '#1e3a8a', 'fa-star') + kpi('과정운영', last.op && last.op.score, prev && prev.op && prev.op.score, '#2563eb', 'fa-book-open')
-      + kpi('교육환경', last.env && last.env.score, prev && prev.env && prev.env.score, '#16a34a', 'fa-building') + kpi('강사', last.inst && last.inst.score, prev && prev.inst && prev.inst.score, '#ea580c', 'fa-chalkboard-user') + '</div>'
-      + '<div style="margin-top:22px;font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chart-line" style="color:#6366f1"></i> 점수 추이</div>' + ui._svyChart(list, lab) + '</div>';
+      + '<div style="font-size:15px;font-weight:900;color:#64748b">최근 결과 · ' + esc(last._title) + ' <span style="color:#94a3b8">(' + esc(String(last.period).replace('~',' ~ ')) + (last.n ? ' · 응답 ' + last.n + '명' : '') + ')</span></div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">' + kpi('종합', ui._svyVal(last,'total'), prev && ui._svyVal(prev,'total'), '#1e3a8a', 'fa-star') + kpi('과정운영', ui._svyVal(last,'op'), prev && ui._svyVal(prev,'op'), '#2563eb', 'fa-book-open')
+      + kpi('교육환경', ui._svyVal(last,'env'), prev && ui._svyVal(prev,'env'), '#16a34a', 'fa-building') + kpi('강사', ui._svyVal(last,'inst'), prev && ui._svyVal(prev,'inst'), '#ea580c', 'fa-chalkboard-user') + '</div>'
+      + '<div style="margin-top:22px;font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chart-line" style="color:#6366f1"></i> 점수 추이 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 이상한 점은 눌러서 빼기/되돌리기</span></div>' + ui._svyChart(list, lab) + '</div>';
     /* 문항별 */
     var items = []; list.forEach(function(r){ [['op', r.op], ['env', r.env]].forEach(function(p){ ((p[1] || {}).items || []).forEach(function(it){ if(items.indexOf(p[0] + '|' + it.k) < 0) items.push(p[0] + '|' + it.k); }); }); });
     var cell = function(v){ if(v == null) return '<td style="color:#cbd5e1">-</td>'; var bg = v >= 98 ? '#dcfce7' : v >= 95 ? '#f0fdf4' : v >= 90 ? '#fef9c3' : '#fee2e2', fg = v >= 95 ? '#15803d' : v >= 90 ? '#a16207' : '#b91c1c'; return '<td style="background:' + bg + ';color:' + fg + ';font-weight:900">' + f1(v) + '</td>'; };
@@ -20854,7 +20890,7 @@ ui.surveyOpen = async function(){
       + ins.map(function(v){ return '<tr><td style="text-align:left;padding-left:14px;font-weight:900">' + esc(v.n) + '</td><td>' + v.cnt + '회</td>' + cell(v.avg) + list.map(function(r, ri){ return cell(v.s[ri]); }).join('') + '</tr>'; }).join('')
       + '</tbody></table></div></div>';
     /* 의견 분석 */
-    var cms = []; list.forEach(function(r){ (r.comments || []).forEach(function(c){ cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c) }); }); });
+    var cms = []; list.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c) }); }); });
     var bad = cms.filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }), good = cms.filter(function(c){ return c.tag === 'pos'; });
     var cc = {}; bad.forEach(function(c){ cc[c.cat] = (cc[c.cat] || 0) + 1; });
     var cats = Object.keys(cc).sort(function(a,b){ return cc[b] - cc[a]; }), mx = cats.length ? cc[cats[0]] : 1;
@@ -20866,46 +20902,80 @@ ui.surveyOpen = async function(){
       + '<div class="svyVoice">'
       + '<div><div style="font-size:14px;font-weight:900;color:#475569;margin-bottom:8px">불만·개선요청은 어디에 많을까 <span style="color:#94a3b8;font-weight:700">· 누르면 해당 의견만</span></div>'
       + (cats.length ? cats.map(function(k){ var col = CAT_C[k] || '#64748b'; return '<div class="svyBar" data-cat="' + esc(k) + '"><span class="svyBL">' + esc(k) + '</span><span class="svyBT"><i style="width:' + Math.max(6, Math.round(cc[k]/mx*100)) + '%;background:' + col + '"></i></span><b style="color:' + col + '">' + cc[k] + '</b></div>'; }).join('') : '<div style="color:#94a3b8;font-weight:800;padding:20px 0">불만·개선요청 의견이 없습니다</div>')
-      + (kws.length ? '<div style="font-size:14px;font-weight:900;color:#475569;margin:16px 0 8px">자주 나온 단어</div><div>' + kws.map(function(w){ return '<span class="svyKw" style="font-size:' + Math.min(20, 12 + kw[w]*1.5) + 'px">' + esc(w) + ' <b>' + kw[w] + '</b></span>'; }).join('') + '</div>' : '')
+      + (kws.length ? '<div style="font-size:14px;font-weight:900;color:#475569;margin:16px 0 8px">자주 나온 단어 <span style="color:#94a3b8;font-weight:700">· 누르면 해당 의견</span></div><div>' + kws.map(function(w){ return '<span class="svyKw" data-kw="' + esc(w) + '" title="눌러서 이 단어가 나온 의견 보기" style="font-size:' + Math.min(20, 12 + kw[w]*1.5) + 'px">' + esc(w) + ' <b>' + kw[w] + '</b></span>'; }).join('') + '</div>' : '')
       + '</div><div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center"><button class="svyTab on" data-tab="bad">불만·개선 ' + bad.length + '</button><button class="svyTab" data-tab="good">칭찬 ' + good.length + '</button><button class="svyTab" data-tab="all">전체 ' + cms.length + '</button><span id="svyCatF" style="margin-left:auto;font-size:13px;font-weight:800;color:#6366f1"></span></div><div id="svyList" class="svyList"></div></div></div></div>';
     /* 올린 자료 */
-    h += '<div style="' + card + ';padding:20px 28px"><div style="font-size:16px;font-weight:900;color:#0f172a"><i class="fa-solid fa-folder-open" style="color:#64748b"></i> 올린 결과지 ' + list.length + '건</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
-      + list.slice().reverse().map(function(r){ return '<span class="svyRec">' + esc(r.title) + ' <small>' + esc(String(r.period).slice(0,10)) + '</small><button data-del="' + esc(r.id) + '" title="삭제"><i class="fa-solid fa-xmark"></i></button></span>'; }).join('') + '</div></div>';
-    host.innerHTML = h + '<style>.svyT{border-collapse:separate;border-spacing:0;width:100%}.svyT th{padding:10px 12px;font-size:13.5px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:center}.svyT td{padding:10px 12px;font-size:15px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyG{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:900}.svyG.op{background:#dbeafe;color:#1d4ed8}.svyG.env{background:#dcfce7;color:#15803d}.svyVoice{display:grid;grid-template-columns:minmax(260px,1fr) 1.3fr;gap:18px;margin-top:14px}@media(max-width:900px){.svyVoice{grid-template-columns:1fr}}.svyBar{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;cursor:pointer}.svyBar:hover,.svyBar.on{background:#f1f5f9}.svyBL{width:120px;font-size:14.5px;font-weight:900;color:#334155}.svyBT{flex:1;height:14px;background:#f1f5f9;border-radius:999px;overflow:hidden}.svyBT i{display:block;height:100%;border-radius:999px}.svyKw{display:inline-block;margin:3px;padding:5px 11px;border-radius:999px;background:#fdf2f8;color:#9d174d;font-weight:900}.svyKw b{color:#db2777}.svyTab{padding:8px 14px;border:2px solid #e2e8f0;border-radius:999px;background:#fff;font:inherit;font-size:13.5px;font-weight:900;color:#475569;cursor:pointer}.svyTab.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3}.svyList{max-height:460px;overflow:auto;border:1px solid #eef2f7;border-radius:14px}.svyC{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:14.5px;font-weight:700;color:#334155;line-height:1.6}.svyC .tg{flex-shrink:0;padding:2px 9px;height:fit-content;border-radius:999px;font-size:12px;font-weight:900}.svyC .tg.neg{background:#fee2e2;color:#b91c1c}.svyC .tg.sug{background:#fef3c7;color:#a16207}.svyC .tg.pos{background:#dcfce7;color:#15803d}.svyC .tg.etc{background:#f1f5f9;color:#64748b}.svyC small{display:block;color:#94a3b8;font-weight:800;font-size:12px}.svyRec{display:inline-flex;align-items:center;gap:6px;padding:7px 8px 7px 13px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;font-weight:800;color:#334155}.svyRec small{color:#94a3b8}.svyRec button{border:none;background:none;color:#cbd5e1;cursor:pointer}.svyRec button:hover{color:#dc2626}</style>';
+    h += '<div style="' + card + ';padding:20px 28px"><div style="font-size:16px;font-weight:900;color:#0f172a"><i class="fa-solid fa-folder-open" style="color:#64748b"></i> 올린 결과지 ' + full.length + '건' + (list.length !== full.length ? ' <span style="font-size:13px;color:#6366f1">(기간 안 ' + list.length + '건)</span>' : '') + '</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
+      + full.slice().reverse().map(function(r){ return '<span class="svyRec" title="원래 제목: ' + esc(r.title) + '">' + esc(r._title) + ' <small>' + esc(String(r.period).slice(0,10)) + '</small><button data-del="' + esc(r.id) + '" title="삭제"><i class="fa-solid fa-xmark"></i></button></span>'; }).join('') + '</div></div>';
+    host.innerHTML = h + css0 + '<style>.svyT{border-collapse:separate;border-spacing:0;width:100%}.svyT th{padding:10px 12px;font-size:13.5px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:center}.svyT td{padding:10px 12px;font-size:15px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyG{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:900}.svyG.op{background:#dbeafe;color:#1d4ed8}.svyG.env{background:#dcfce7;color:#15803d}.svyVoice{display:grid;grid-template-columns:minmax(260px,1fr) 1.3fr;gap:18px;margin-top:14px}@media(max-width:900px){.svyVoice{grid-template-columns:1fr}}.svyBar{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;cursor:pointer}.svyBar:hover,.svyBar.on{background:#f1f5f9}.svyBL{width:120px;font-size:14.5px;font-weight:900;color:#334155}.svyBT{flex:1;height:14px;background:#f1f5f9;border-radius:999px;overflow:hidden}.svyBT i{display:block;height:100%;border-radius:999px}.svyKw{display:inline-block;margin:3px;padding:5px 11px;border-radius:999px;background:#fdf2f8;color:#9d174d;font-weight:900}.svyKw b{color:#db2777}.svyKw{cursor:pointer;transition:background .15s}.svyKw:hover,.svyKw.on{background:#db2777;color:#fff}.svyKw:hover b,.svyKw.on b{color:#fff}.svyYs{padding:7px 8px;border:2px solid #e2e8f0;border-radius:10px;font:inherit;font-size:14px;font-weight:900}.svyPt{cursor:pointer}.svyTab{padding:8px 14px;border:2px solid #e2e8f0;border-radius:999px;background:#fff;font:inherit;font-size:13.5px;font-weight:900;color:#475569;cursor:pointer}.svyTab.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3}.svyList{max-height:460px;overflow:auto;border:1px solid #eef2f7;border-radius:14px}.svyC{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:14.5px;font-weight:700;color:#334155;line-height:1.6}.svyC .tg{flex-shrink:0;padding:2px 9px;height:fit-content;border-radius:999px;font-size:12px;font-weight:900}.svyC .tg.neg{background:#fee2e2;color:#b91c1c}.svyC .tg.sug{background:#fef3c7;color:#a16207}.svyC .tg.pos{background:#dcfce7;color:#15803d}.svyC .tg.etc{background:#f1f5f9;color:#64748b}.svyC small{display:block;color:#94a3b8;font-weight:800;font-size:12px}.svyRec{display:inline-flex;align-items:center;gap:6px;padding:7px 8px 7px 13px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;font-weight:800;color:#334155}.svyRec small{color:#94a3b8}.svyRec button{border:none;background:none;color:#cbd5e1;cursor:pointer}.svyRec button:hover{color:#dc2626}</style>';
     ui._svyBind(host);
     ui._svyShow('bad', '');
 };
-ui._svyShow = function(tab, cat){
-    var box = document.getElementById('svyList'); if(!box) return; ui._svyTabSt = tab; ui._svyCatSt = cat;
-    var L = (ui._svyCms || []).filter(function(c){ return (tab === 'all' || (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos')) && (!cat || c.cat === cat); }).slice().reverse();
+ui._svyShow = function(tab, cat, kw){
+    var box = document.getElementById('svyList'); if(!box) return; ui._svyTabSt = tab; ui._svyCatSt = cat; ui._svyKwSt = kw || '';
+    var L = (ui._svyCms || []).filter(function(c){ return (tab === 'all' || (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos')) && (!cat || c.cat === cat) && (!kw || String(c.t).indexOf(kw) >= 0); }).slice().reverse();
     var TN = { neg:'불만', sug:'개선요청', pos:'칭찬', etc:'의견' };
-    box.innerHTML = L.length ? L.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><div>' + ui._esc(c.t) + '<small>' + ui._esc(c.r) + ' · ' + ui._esc(c.cat) + '</small></div></div>'; }).join('') : '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">해당 의견이 없습니다</div>';
-    var cf = document.getElementById('svyCatF'); if(cf) cf.innerHTML = cat ? ui._esc(cat) + ' 만 보는 중 <a href="#" id="svyCatX" style="color:#94a3b8;text-decoration:none">✕</a>' : '';
-    var x = document.getElementById('svyCatX'); if(x) x.onclick = function(e){ e.preventDefault(); document.querySelectorAll('.svyBar').forEach(function(b){ b.classList.remove('on'); }); ui._svyShow(ui._svyTabSt, ''); };
+    var hl = function(t){ t = ui._esc(t); return kw ? t.split(ui._esc(kw)).join('<mark style="background:#fce7f3;color:#9d174d;border-radius:4px;padding:0 2px">' + ui._esc(kw) + '</mark>') : t; };
+    box.innerHTML = L.length ? L.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><div>' + hl(c.t) + '<small>' + ui._esc(c.r) + ' · ' + ui._esc(c.cat) + '</small></div></div>'; }).join('') : '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">해당 의견이 없습니다</div>';
+    var cf = document.getElementById('svyCatF'); if(cf) cf.innerHTML = (cat || kw) ? '"' + ui._esc(kw || cat) + '" 만 보는 중 <a href="#" id="svyCatX" style="color:#94a3b8;text-decoration:none">✕</a>' : '';
+    var x = document.getElementById('svyCatX'); if(x) x.onclick = function(e){ e.preventDefault(); document.querySelectorAll('.svyBar,.svyKw').forEach(function(b){ b.classList.remove('on'); }); ui._svyShow(ui._svyTabSt, '', ''); };
 };
 ui._svyBind = function(host){
-    var s = host.querySelector('#svySel'); if(s) s.onchange = function(){ ui._svySel = s.value; ui.surveyOpen(); };
+    var go = function(k){ ui._svySel = k; ui._svyYF = ui._svyYT = 0; ui.surveyOpen(); };
+    host.querySelectorAll('[data-sel]').forEach(function(c){ c.onclick = function(){ go(c.getAttribute('data-sel')); }; });
+    var ab = host.querySelector('#svyAllBtn'); if(ab) ab.onclick = function(){ ui._svySel = ''; ui.surveyOpen(); };
+    var q = host.querySelector('#svyQ'), sug = host.querySelector('#svySug');
+    if(q && sug){
+        var norm = function(t){ return String(t||'').replace(/\s+/g,'').toLowerCase(); };
+        var hits = [], idx = 0;
+        var draw = function(){
+            var v = norm(q.value), S2 = ui._svySeries || {};
+            var cards = host.querySelectorAll('#svyCat .svyCard'); cards.forEach(function(c){ c.style.display = (!v || norm(c.getAttribute('data-name')).indexOf(v) >= 0) ? '' : 'none'; });
+            if(!v){ sug.style.display = 'none'; return; }
+            hits = (ui._svySkeys || []).filter(function(k){ var n = norm(S2[k].name); return v.split('').every(function(ch){ return n.indexOf(ch) >= 0; }) && (n.indexOf(v) >= 0 || v.length >= 2); })
+                .sort(function(a,b){ return (norm(S2[a].name).indexOf(v) >= 0 ? 0 : 1) - (norm(S2[b].name).indexOf(v) >= 0 ? 0 : 1); });
+            idx = 0;
+            sug.innerHTML = hits.length ? hits.map(function(k, i){ return '<div data-k="' + ui._esc(k) + '" class="' + (i === 0 ? 'on' : '') + '"><i class="fa-solid fa-book" style="color:#6366f1"></i>' + ui._esc(S2[k].name) + (k === ui._svyCur ? ' <span style="font-size:11.5px;color:#15803d">· 현재 과정</span>' : '') + '<small>' + S2[k].list.length + '건</small></div>'; }).join('') : '<div style="color:#94a3b8;cursor:default">찾는 과정이 없습니다</div>';
+            sug.style.display = 'block';
+            sug.querySelectorAll('[data-k]').forEach(function(d){ d.onmousedown = function(e){ e.preventDefault(); go(d.getAttribute('data-k')); }; });
+        };
+        q.oninput = draw;
+        q.onkeydown = function(e){ var items = sug.querySelectorAll('[data-k]');
+            if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); if(!items.length) return; idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; items.forEach(function(x, i){ x.classList.toggle('on', i === idx); }); }
+            if(e.key === 'Enter' && hits.length) go(hits[idx] || hits[0]);
+            if(e.key === 'Escape'){ q.value = ''; draw(); } };
+        q.onblur = function(){ setTimeout(function(){ sug.style.display = 'none'; }, 150); };
+        q.onfocus = function(){ if(q.value) draw(); };
+    }
+    var yfE = host.querySelector('#svyYF'), ytE = host.querySelector('#svyYT'), ya = host.querySelector('#svyYAll');
+    if(yfE) yfE.onchange = function(){ ui._svyYF = Number(yfE.value); ui._svyYT = Number(ytE.value); ui.surveyOpen(); };
+    if(ytE) ytE.onchange = function(){ ui._svyYF = Number(yfE.value); ui._svyYT = Number(ytE.value); ui.surveyOpen(); };
+    if(ya) ya.onclick = function(e){ e.preventDefault(); ui._svyYF = ui._svyYT = 0; ui.surveyOpen(); };
+    host.querySelectorAll('.svyKw').forEach(function(k){ k.onclick = function(){ var on = !k.classList.contains('on'); host.querySelectorAll('.svyKw,.svyBar').forEach(function(x){ x.classList.remove('on'); }); if(on) k.classList.add('on'); host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-tab') === 'bad'); }); ui._svyShow('bad', '', on ? k.getAttribute('data-kw') : ''); var lst = document.getElementById('svyList'); if(lst) lst.scrollTop = 0; }; });
+    host.querySelectorAll('.svyPt').forEach(function(pt){ pt.onclick = function(){ if(state.isObserver) return; var id = pt.getAttribute('data-id'), k = pt.getAttribute('data-k'), hid = pt.getAttribute('data-hid') === '1';
+        if(!confirm(hid ? '빼 두었던 이 값을 다시 그래프에 넣을까요?' : '이 값(' + pt.getAttribute('data-v') + ')을 그래프·평균에서 뺄까요?\n(데이터는 지우지 않고 숨기기만 합니다)')) return;
+        ui._svyRef().child(id + '/hide/' + k).set(hid ? null : true).then(function(){ ui.surveyOpen(); }); }; });
     host.querySelectorAll('.svyTab').forEach(function(b){ b.onclick = function(){ host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); ui._svyShow(b.getAttribute('data-tab'), ui._svyCatSt || ''); }; });
-    host.querySelectorAll('.svyBar').forEach(function(b){ b.onclick = function(){ var on = !b.classList.contains('on'); host.querySelectorAll('.svyBar').forEach(function(x){ x.classList.remove('on'); }); if(on) b.classList.add('on'); host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-tab') === 'bad'); }); ui._svyShow('bad', on ? b.getAttribute('data-cat') : ''); }; });
+    host.querySelectorAll('.svyBar').forEach(function(b){ b.onclick = function(){ var on = !b.classList.contains('on'); host.querySelectorAll('.svyBar,.svyKw').forEach(function(x){ x.classList.remove('on'); }); if(on) b.classList.add('on'); host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-tab') === 'bad'); }); ui._svyShow('bad', on ? b.getAttribute('data-cat') : ''); }; });
     host.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ if(state.isObserver) return; if(!confirm('이 결과지 데이터를 지울까요?')) return; ui._svyCmRef().child(b.getAttribute('data-del')).remove().catch(function(){}); ui._svyRef().child(b.getAttribute('data-del')).remove().then(function(){ ui._svyCount(); ui.surveyOpen(); }); }; });
 };
 /* 점수 추이 선 그래프(SVG) */
 ui._svyChart = function(list, lab){
     var W = 1000, H = 300, pl = 46, pr = 20, pt = 18, pb = 46;
     var ser = [['종합', 'total', '#1e3a8a'], ['과정운영', 'op', '#2563eb'], ['교육환경', 'env', '#16a34a'], ['강사', 'inst', '#ea580c']];
-    var val = function(r, k){ return k === 'total' ? r.total : (r[k] || {}).score; };
-    var vs = []; list.forEach(function(r){ ser.forEach(function(s){ var v = val(r, s[1]); if(v != null) vs.push(v); }); });
-    var lo = Math.floor(Math.min.apply(null, vs.concat([95])) - 1), hi = 100;
+    var raw = function(r, k){ var v = k === 'total' ? r.total : (r[k] || {}).score; return (v > 30) ? v : null; };
+    var vs = []; list.forEach(function(r){ ser.forEach(function(s){ var v = ui._svyVal(r, s[1]); if(v != null) vs.push(v); }); });
+    var lo = Math.max(0, Math.floor(Math.min.apply(null, vs.concat([95])) - 1)), hi = 100;
     var X = function(i){ return list.length < 2 ? (pl + (W-pl-pr)/2) : pl + i * (W-pl-pr) / (list.length - 1); };
-    var Y = function(v){ return pt + (hi - v) / (hi - lo) * (H - pt - pb); };
+    var Y = function(v){ return pt + (hi - Math.max(lo, v)) / (hi - lo) * (H - pt - pb); };
     var g = '', step = Math.max(1, Math.round((hi-lo)/5));
-    for(var t = lo; t <= hi; t += step){ g += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="#eef2f7"/><text x="' + (pl-8) + '" y="' + (Y(t)+4) + '" text-anchor="end" font-size="12" fill="#94a3b8" font-weight="700">' + t + '</text>'; }
+    for(var t = hi; t >= lo; t -= step){ g += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="#eef2f7"/><text x="' + (pl-8) + '" y="' + (Y(t)+4) + '" text-anchor="end" font-size="12" fill="#94a3b8" font-weight="700">' + t + '</text>'; }
     list.forEach(function(r, i){ g += '<text x="' + X(i) + '" y="' + (H-pb+22) + '" text-anchor="middle" font-size="12.5" fill="#475569" font-weight="800">' + ui._esc(lab(r)) + '</text>'; });
-    ser.forEach(function(s){ var pts = []; list.forEach(function(r, i){ var v = val(r, s[1]); if(v != null) pts.push([X(i), Y(v), v]); });
+    ser.forEach(function(s){ var pts = [];
+        list.forEach(function(r, i){ var v = ui._svyVal(r, s[1]); if(v != null) pts.push([X(i), Y(v), v, r.id]); else { var rv = raw(r, s[1]); if(rv != null && r.hide && r.hide[s[1]]) g += '<g class="svyPt" data-id="' + ui._esc(r.id) + '" data-k="' + s[1] + '" data-hid="1"><circle cx="' + X(i) + '" cy="' + Y(rv) + '" r="5" fill="#fff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2 2"><title>' + s[0] + ' ' + (Math.round(rv*10)/10) + ' (빼 둔 값 · 눌러서 되돌리기)</title></circle></g>'; } });
         if(pts.length > 1) g += '<polyline fill="none" stroke="' + s[2] + '" stroke-width="' + (s[1] === 'total' ? 4 : 2.5) + '" stroke-linejoin="round" points="' + pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' ') + '"/>';
-        pts.forEach(function(p){ g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (s[1] === 'total' ? 5 : 3.5) + '" fill="#fff" stroke="' + s[2] + '" stroke-width="2.5"><title>' + s[0] + ' ' + (Math.round(p[2]*10)/10) + '</title></circle>'; }); });
+        pts.forEach(function(p){ g += '<g class="svyPt" data-id="' + ui._esc(p[3]) + '" data-k="' + s[1] + '" data-v="' + (Math.round(p[2]*10)/10) + '"><circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (s[1] === 'total' ? 5 : 3.5) + '" fill="#fff" stroke="' + s[2] + '" stroke-width="2.5"><title>' + s[0] + ' ' + (Math.round(p[2]*10)/10) + ' · 눌러서 빼기</title></circle></g>'; }); });
     var leg = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13.5px;font-weight:900;color:#475569">' + ser.map(function(s){ return '<span><i style="display:inline-block;width:14px;height:4px;border-radius:2px;background:' + s[2] + ';vertical-align:middle;margin-right:5px"></i>' + s[0] + '</span>'; }).join('') + '</div>';
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;margin-top:8px">' + g + '</svg>' + leg;
 };
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
