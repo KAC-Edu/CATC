@@ -259,7 +259,7 @@
           if(!stale && !v.period && pd && ps[0] && ps[1]){ var ds = []; Object.keys(v.resp || {}).forEach(function(k){ var r = v.resp[k] || {}; Object.keys(Object.assign({}, r.p1 || {}, r.p2 || {})).forEach(function(x){ ds.push(x.slice(0,10)); }); }); stale = ds.length && ds.every(function(d){ return d < ps[0] || d > ps[1]; }); }
           if(stale){ v = { course: v.course }; rg = {}; } })();
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
-        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || ''); SV.resp = v.resp || {}; SV.note = String(v.note || '');
+        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || prevFri(ps[0] || '')); SV.replyBy = String(v.replyBy || prevFri(ps[0] || ''));   // [K196] 기본 = 과정 시작 전주 금요일 SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
         svOnName(true); svDraw(); drawHead(); drawMail();
       });
@@ -298,6 +298,7 @@
       svRef().child('resp/' + k + '/mailSent').set(Date.now()).then(function(){ toast('메일 제출을 알려 주셔서 감사합니다.'); }).catch(function(e){ alert('저장하지 못했습니다. 다시 눌러 주세요.'); });
     };
   }
+  function prevFri(st){ if(!/^\d{4}-\d{2}-\d{2}$/.test(st||'')) return ''; var d = new Date(st + 'T00:00:00'), off = ((d.getDay() - 5 + 7) % 7) || 7; d.setDate(d.getDate() - off); return ymd(d); }
   function drawHead(){
     var el = document.getElementById('hdInfo'); if(!el) return;
     var ps = String(SV.period||'').split('~').map(function(x){ return x.trim(); });
@@ -307,6 +308,7 @@
     var rows = '';
     if(s) rows += '<div class="hr"><span>교육 기간</span><b>' + esc(s.slice(0,4)) + '. ' + esc(f(s)) + (e ? ' ~ ' + esc(f(e)) : '') + '</b></div>';
     if(SV.prof) rows += '<div class="hr"><span>담임 교수</span><b>' + esc(SV.prof) + (/(교수|강사)$/.test(SV.prof) ? '' : ' 교수') + (SV.phone ? ' · <a href="tel:' + esc(SV.phone.replace(/[^0-9+]/g,'')) + '">' + esc(SV.phone) + '</a>' : '') + '</b></div>';
+    if(SV.replyBy && SV.replyBy >= ymd(new Date())) rows += '<div class="hr"><span>회신 마감</span><b style="color:#b91c1c">' + esc(f(SV.replyBy)) + '까지</b></div>';
     if(SV.note) rows += '<div class="hn">' + esc(SV.note).replace(/\n/g,'<br>') + '</div>';
     el.innerHTML = rows ? '<div class="hd">' + rows + '</div>' : '';
     /* [K169] 교재 제출 기한 — 담당자가 정해 두면 교재 칸 제목 옆에 표시 */
