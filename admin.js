@@ -19087,27 +19087,11 @@ ui.matRemoveSelected = function(){
     var preview = names.slice(0,5).map(function(n){ return '· ' + ui._esc(n); }).join('<br>')
                 + (names.length > 5 ? '<br>· 외 ' + (names.length-5) + '건' : '');
 
-    var ov = document.createElement('div');
-    ov.id = 'matBulkRmOv';
-    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:22px;';
-    ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
-    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:500px; box-shadow:0 24px 60px rgba(15,23,42,.4);">'
-      + '<div style="font-size:17px; font-weight:900; color:#0f172a; margin-bottom:10px;">선택한 교재 ' + ids.length + '건을 어떻게 할까요?</div>'
-      + '<div style="max-height:150px; overflow-y:auto; padding:11px 13px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:11px; font-size:12.5px; font-weight:700; color:#475569; line-height:1.7; margin-bottom:16px;">' + preview + '</div>'
-      + '<button onclick="document.getElementById(\'matBulkRmOv\').remove(); ui._matBulkRun(0);" '
-        + 'style="width:100%; text-align:left; margin-bottom:10px; padding:14px 16px; border:1.5px solid #bfdbfe; border-radius:13px; background:#eff6ff; cursor:pointer;">'
-        + '<div style="font-size:14.5px; font-weight:900; color:#1d4ed8;"><i class="fa-solid fa-link-slash"></i> 이번 과정에서만 빼기</div>'
-        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">교육생 화면에서만 사라집니다.<br>자료실에는 그대로 남습니다.</div></button>'
-      + '<button onclick="document.getElementById(\'matBulkRmOv\').remove(); ui._matBulkRun(1);" '
-        + 'style="width:100%; text-align:left; padding:14px 16px; border:1.5px solid #fecaca; border-radius:13px; background:#fef2f2; cursor:pointer;">'
-        + '<div style="font-size:14.5px; font-weight:900; color:#dc2626;"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</div>'
-        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">파일이 지워지며 되돌릴 수 없습니다.<br>다른 과정에서 쓰고 있다면 거기서도 사라집니다.'
-        + (others ? '<br><b style="color:#b45309;">⚠️ 이 중 ' + others + '건은 다른 분이 올린 자료입니다.</b>' : '') + '</div></button>'
-      + '<button onclick="document.getElementById(\'matBulkRmOv\').remove();" '
-        + 'style="width:100%; margin-top:12px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">취소</button>'
-      + '</div>';
-    document.body.appendChild(ov);
+    /* [K184] 이 화면의 '빼기'는 이번 과정에서만 뺀다 — 완전 삭제는 [자료실에서 가져오기] 화면에서만(실수 방지) */
+    if(!confirm('선택한 교재 ' + ids.length + '건을 이번 과정에서 뺄까요?\n\n' + names.slice(0,5).map(function(n){ return '· ' + n; }).join('\n') + (names.length > 5 ? '\n· 외 ' + (names.length-5) + '건' : '')
+        + '\n\n교육생 화면에서만 사라지고, 자료실에는 그대로 남습니다.\n(완전 삭제는 [자료실에서 가져오기] 화면에서 할 수 있습니다)')) return;
     ui._matBulkIds = ids;
+    ui._matBulkRun(0);
 };
 
 ui._matBulkRun = async function(destroy){
@@ -19442,28 +19426,9 @@ ui.matRemove = function(id){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
     if(!m) return ui.matUnlink(id);          // 자료실에서 이미 사라진 항목 → 목록에서만 제거
-    var mine = (m.uploader === ui._matWho());
-    var ov = document.createElement('div');
-    ov.id = 'matRemoveOv';
-    ov.style.cssText = 'position:fixed; inset:0; z-index:2147483100; background:rgba(15,23,42,.6); display:flex; align-items:center; justify-content:center; padding:22px;';
-    ov.onclick = function(e){ if(e.target===ov) ov.remove(); };
-    ov.innerHTML = '<div style="background:#fff; border-radius:20px; padding:26px 28px; width:100%; max-width:470px; box-shadow:0 24px 60px rgba(15,23,42,.4);">'
-      + '<div style="font-size:17px; font-weight:900; color:#0f172a; margin-bottom:5px;">교재를 어떻게 할까요?</div>'
-      + '<div style="font-size:13px; font-weight:800; color:#475569; margin-bottom:4px; word-break:break-all;">' + ui._esc(m.title||m.fileName) + '</div>'
-      + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-bottom:16px;">' + ui._esc(m.uploader||'-') + ' · ' + window.kacMaterials.fmtSize(m.size) + '</div>'
-      + '<button onclick="document.getElementById(\'matRemoveOv\').remove(); ui.matUnlink(\''+id+'\', 1);" '
-        + 'style="width:100%; text-align:left; margin-bottom:10px; padding:14px 16px; border:1.5px solid #bfdbfe; border-radius:13px; background:#eff6ff; cursor:pointer;">'
-        + '<div style="font-size:14.5px; font-weight:900; color:#1d4ed8;"><i class="fa-solid fa-link-slash"></i> 이번 과정에서만 빼기</div>'
-        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">교육생 화면에서는 사라집니다.<br>자료실에는 그대로 남아 다음 기수에 다시 쓸 수 있습니다.</div></button>'
-      + '<button onclick="document.getElementById(\'matRemoveOv\').remove(); ui.matDestroy(\''+id+'\');" '
-        + 'style="width:100%; text-align:left; padding:14px 16px; border:1.5px solid #fecaca; border-radius:13px; background:#fef2f2; cursor:pointer;">'
-        + '<div style="font-size:14.5px; font-weight:900; color:#dc2626;"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</div>'
-        + '<div style="font-size:12px; font-weight:700; color:#64748b; margin-top:4px; line-height:1.5;">파일이 지워지며 되돌릴 수 없습니다.<br>다른 과정에서 쓰고 있다면 거기서도 사라집니다.'
-        + (mine ? '' : '<br><b style="color:#b45309;">⚠️ 다른 분(' + ui._esc(m.uploader||'미상') + ')이 올린 자료입니다.</b>') + '</div></button>'
-      + '<button onclick="document.getElementById(\'matRemoveOv\').remove();" '
-        + 'style="width:100%; margin-top:12px; padding:12px; border:none; border-radius:11px; background:#f1f5f9; color:#475569; font-weight:800; font-size:14px; cursor:pointer;">취소</button>'
-      + '</div>';
-    document.body.appendChild(ov);
+    /* [K184] 과정 화면에서는 '이번 과정에서만 빼기'만 — 완전 삭제는 [자료실에서 가져오기] 화면에서 */
+    if(!confirm('"' + (m.title||m.fileName) + '"\n이번 과정에서 뺄까요?\n\n교육생 화면에서만 사라지고, 자료실에는 그대로 남습니다.\n(완전 삭제는 [자료실에서 가져오기] 화면에서 할 수 있습니다)')) return;
+    ui.matUnlink(id, 1);
 };
 
 /* ── 연결 해제 / 삭제 ───────────────────────────────────── */
