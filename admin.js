@@ -5028,6 +5028,7 @@ setMode: function(mode) {
         else if (mode === 'foodnews') { if(typeof ui.loadFoodNews==='function') ui.loadFoodNews(); }
         else if (mode === 'materials') { if(typeof ui.loadMaterials==='function') ui.loadMaterials(); }   // [K68] 교재 자료실
         else if (mode === 'presurvey') { if(typeof ui.preSurveyOpen==='function') ui.preSurveyOpen(); }   // [K173] 강사 사전조사(페이지)
+        else if (mode === 'survey') { if(typeof ui.surveyOpen==='function') ui.surveyOpen(); }   // [K185] 교육생 의견 · 추이 분석
 
         // 4. 상단 탭 활성화 표시
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -7207,6 +7208,7 @@ resetShuttleRequests: function() {
             ui._setStat('stat-active-count', activeCount);
             ui._setStat('stat-student-count', studentTotal + ' / ' + plannedTotal);
             ui._setStat('stat-outing-count', outingTotal);
+            try{ ui._svyCount(); }catch(e){}   // [K185] 교육생 의견 접수 건수
             window._homeStatsData=d; window._homeStatsToday=today;
             // [홈 로딩] 실시간 데이터 최초 도착 → 준비완료 표시 + 로딩 배지 숨김 + 대기중 검색 재실행
             if(!window._homeStatsReady){
@@ -17986,7 +17988,8 @@ ui.confirmRouletteLeader = function(){
     {mode:'quiz', label:'퀴즈모드', icon:'fa-clipboard-question'},
     {mode:'schedule', label:'교육시간표', icon:'fa-calendar-days'},
     {mode:'materials', label:'교재자료실', icon:'fa-book-open'},   // [K72] 교재 자료실
-    {mode:'presurvey', label:'강사사전조사', icon:'fa-user-clock'}   // [K166] 강사 사전조사(팝업)
+    {mode:'presurvey', label:'강사사전조사', icon:'fa-user-clock'},   // [K166] 강사 사전조사
+    {mode:'survey', label:'교육생의견', icon:'fa-chart-line'}   // [K185] 교육생 의견 · 추이
   ];
   var defaults = ['qa','guide','notice','students','admin-action','attendance'];   // 중앙=과정현황 고정, 상단 슬롯 기본 Q&A
 
@@ -20577,4 +20580,332 @@ ui._showLinkCopy = function(url, until){
         else { try{ document.execCommand('copy'); ok(); }catch(e){} }
     };
 };
+
+/* ══════════════════════════════════════════════════════════════════════════
+   [K185] 교육생 의견 · 추이 분석 — SKY CAMPUS 설문결과지(PDF)를 올리면 점수·의견만 뽑아 저장
+   · 저장: system/coord/surveyResults/{과정계열_시작일} — PDF 원본은 저장하지 않음(점수·의견 데이터만)
+   · 강사 이름은 '장**'로 가려서 저장(의견 속 이름도 가림) · 10년 지난 자료는 열 때 자동 정리
+   · 같은 계열(예: 항공정보통신시설 초기 1차·2차 …)끼리 연도별 추이를 본다
+   ══════════════════════════════════════════════════════════════════════════ */
+/* [K185] 설문결과 PDF → 데이터 (pdf.js 문서를 받아 분석) */
+async function kacSurveyParse(doc){
+  var L = [];
+  for(var p=1;p<=doc.numPages;p++){
+    var pg = await doc.getPage(p), vp = pg.getViewport({scale:1}), tc = await pg.getTextContent();
+    var its = tc.items.filter(function(i){ return i.str && i.str.trim(); }).map(function(i){ return { s:i.str, x:i.transform[4]/vp.width, y:vp.height-i.transform[5], w:(i.width||0)/vp.width, h:Math.abs(i.transform[3])||8, pw:vp.width }; });
+    its.sort(function(a,b){ return a.y-b.y || a.x-b.x; });
+    var cur = null;
+    its.forEach(function(it){ if(cur && Math.abs(it.y-cur.y) <= Math.max(2, it.h*0.35)) cur.items.push(it); else { cur = { y:it.y, p:p, items:[it] }; L.push(cur); } });
+  }
+  var joinIt = function(arr){ var t = '', prev = null; arr.forEach(function(it){ if(prev){ var gap = (it.x - (prev.x + prev.w)) * it.pw; t += (gap > Math.max(1.6, it.h*0.16) ? ' ' : ''); } t += it.s; prev = it; }); return t.replace(/\s+/g,' ').trim(); };
+  L.forEach(function(l){ l.items.sort(function(a,b){ return a.x-b.x; });
+    l.t = joinIt(l.items); l.n = l.t.replace(/\s+/g,''); });
+  L = L.filter(function(l){ return !/SKYCAMPUS|skycampus\.airport|^\d+\/\d+$|^26\.\d+\.\d+\./.test(l.n); });
+  var R = { title:'', period:'', total:null, op:{score:null, items:[]}, env:{score:null, items:[]}, inst:{score:null, list:[]}, comments:[], n:0 };
+  var all = L.map(function(l){ return l.t; }).join('\n');
+  var m = all.match(/과\s*정\s*명\s*(.+?)\s*교\s*육\s*기\s*간/); if(m) R.title = m[1].trim();
+  if(!R.title){ m = all.match(/과\s*정\s*명\s*(.+)/); if(m) R.title = m[1].replace(/\d{4}[-.].*$/,'').trim(); }
+  m = all.match(/(\d{4})\s*[-.]\s*(\d{1,2})\s*[-.]\s*(\d{1,2})\.?\s*~\s*(?:(\d{4})\s*[-.]\s*)?(\d{1,2})\s*[-.]\s*(\d{1,2})/);
+  if(m){ var pad = function(v){ return String(v).padStart(2,'0'); }; R.period = m[1]+'-'+pad(m[2])+'-'+pad(m[3])+'~'+(m[4]||m[1])+'-'+pad(m[5])+'-'+pad(m[6]); }
+  var scoreOf = function(t){ var q = t.replace(/\s+/g,'').match(/(?:점수)?(\d{2,3}(?:\.\d+)?)점$/); return q ? Number(q[1]) : null; };
+  // 구역 나누기
+  var sec = null, secs = [];
+  var kindOf = function(n){
+    if(/강사평가/.test(n)) return /문항별/.test(n) ? 'skip' : 'inst';
+    if(/과정운영의견|소감청취|운영전반/.test(n)) return 'opinion';
+    if(/교육환경/.test(n)) return /객관식|만족도/.test(n) ? 'envO' : 'envS';
+    if(/과정운영|교육과정/.test(n)) return /객관식|만족도/.test(n) ? 'opO' : (/주관식/.test(n) ? 'opS' : null);
+    if(/불만족사유/.test(n)) return 'opS';
+    if(/유익했던과목|신설희망|신설을요하는/.test(n) && n.length < 30) return 'opS';
+    return null;
+  };
+  L.forEach(function(l){
+    var n = l.n, k = (n.length < 40 && !/^\d+(이수만족|교과목)/.test(n) && (/^\d?[-.\d]*\.?\s*/.test(n))) ? kindOf(n) : null;
+    if(k && !/\(본과정|불만족하신다면|이유는/.test(n)){ sec = { k:k, lines:[], score: scoreOf(l.t) }; secs.push(sec); return; }
+    if(!sec){ var sc = scoreOf(l.t); if(sc != null && R.total == null && /점수|점$/.test(n)) R.total = sc; return; }
+    if(sec.lines.length === 0 && sec.score == null && /^점수/.test(n)){ sec.score = scoreOf(l.t); return; }
+    sec.lines.push(l);
+  });
+  // 객관식 한 줄 읽기
+  var rowOf = function(t){
+    var q = t.match(/^\s*(.*?)\s*((?:[\d,]+(?:\.\d+)?\s*){5,9})$/); if(!q) return null;
+    var label = q[1].replace(/^\d+\s+/, '').trim();
+    var nums = q[2].trim().split(/\s+/), ints = [];
+    nums.forEach(function(v){ if(!/\./.test(v)) ints.push(Number(v.replace(/,/g,''))); });
+    if(!label){ /* 번호가 숫자 묶음에 섞였을 수 있음 */ }
+    var ok = function(arr){ return arr.length >= 6 && arr[0]*5+arr[1]*4+arr[2]*3+arr[3]*2+arr[4] === arr[5]; };
+    var a,b,c,d,e,s, found = false;
+    for(var off=0; off<=1 && !found; off++){ var w = ints.slice(off); if(ok(w)){ a=w[0];b=w[1];c=w[2];d=w[3];e=w[4];s=w[5]; found = true; } }
+    for(var off2=0; off2<=1 && !found; off2++){ var w2 = ints.slice(off2); if(w2.length < 5) continue; var r = w2[4]-(4*w2[0]+3*w2[1]+2*w2[2]+w2[3]); if(r >= 0 && r % 5 === 0){ b=w2[0];c=w2[1];d=w2[2];e=w2[3];s=w2[4];a=r/5; found = true; } }
+    if(!found) return null;
+    var N = a+b+c+d+e; if(!N) return null;
+    return { label: label, a:a,b:b,c:c,d:d,e:e, sum:s, N:N };
+  };
+  var near = function(lines, idx){ var t = lines[idx].t; [-1,1].forEach(function(dd){ var l = lines[idx+dd]; if(l && Math.abs(l.y - lines[idx].y) <= 13 && !rowOf(l.t)) t += ' ' + l.t; }); return t; };
+  var OPK = [['이수','이수만족'],['교과목','교과목'],['교재','교재유용성'],['업무수행','업무수행'],['사전안내','사전안내']];
+  var ENK = [['강의실','강의실·기자재'],['생활관시설','생활관 시설'],['생활관관리','생활관 관리'],['생활관','생활관 시설'],['체육','체육·편의'],['편의시설','체육·편의'],['식사','식사'],['식당','식사'],['친절','친절도'],['교육환경','교육환경']];
+  var keyOf = function(label, map){ var n = label.replace(/\s+/g,''); for(var i=0;i<map.length;i++) if(n.indexOf(map[i][0]) >= 0) return map[i][1]; return null; };
+  var IT = /강의자세|강의기법|기여도/;
+  secs.forEach(function(S){
+    if(S.k === 'opO' || S.k === 'envO'){
+      var tgt0 = S.k === 'opO' ? R.op : R.env; if(S.score != null && tgt0._ps == null) tgt0._ps = S.score;
+      S.lines.forEach(function(l, idx){ var r = rowOf(l.t); if(!r) return; var lab = (r.label + ' ' + (r.label.length < 2 ? near(S.lines, idx) : '')).trim();
+        if(/소계|합계/.test(lab)) return;
+        var ke = keyOf(lab, ENK), ko = keyOf(lab, OPK), k, tgt;
+        if(ke && !(ko && S.k === 'opO' && !/강의실|생활관|식당|식사|체육|친절/.test(lab))){ k = ke; tgt = R.env; } else { k = ko || lab.replace(/\(.*$/,'').trim().slice(0,12) || '기타'; tgt = (S.k === 'envO') ? R.env : R.op; }
+        tgt.items.push({ k:k, sum:r.sum, N:r.N, _raw:r });
+        if(tgt === R.op) R.n = Math.max(R.n, r.N); });
+    }
+    if(S.k === 'inst'){
+      if(S.score != null) R.inst._ps = S.score;
+      var cur = null, list = R._ir || (R._ir = []);
+      var nameNear = function(idx){ for(var d=-1; d<=1; d++){ var l = S.lines[idx+d]; if(!l) continue; if(d !== 0 && Math.abs(l.y - S.lines[idx].y) > 14) continue;
+          for(var j=0;j<l.items.length;j++){ var it = l.items[j], s = it.s.trim(); if(it.x < 0.32 && /^[가-힣]{2,4}$/.test(s) && !IT.test(s) && !/소계|합계|강사명|설문|번호/.test(s)) return s; } } return null; };
+      S.lines.forEach(function(l, idx){
+        if(!IT.test(l.n)) return; var r = rowOf(l.t.replace(/^(\d+\s+)?[가-힣]{2,4}\s+(?=강의|기여)/, '$1')); if(!r) return;
+        var it = (l.n.match(IT)||[''])[0];
+        if(it === '강의자세' || !cur){ cur = { n:'', rows:[] }; list.push(cur); }
+        var nm = nameNear(idx); if(!nm){ var mm = l.t.match(/([가-힣]{2,4})\s*(?:\(\s*\d*\s*\)?)?\s*(강의자세|강의기법|기여도)/); if(mm && !IT.test(mm[1]) && !/소계|합계|강사명|설문/.test(mm[1])) nm = mm[1]; }
+        if(!nm){ [-1,-2,1].forEach(function(dd){ var l2 = S.lines[idx+dd]; if(!nm && l2 && Math.abs(l2.y - l.y) < 26){ var t2 = l2.t.replace(/[\s()0-9]/g,''); if(/^[가-힣]{2,4}$/.test(t2) && !IT.test(t2) && !/소계|합계/.test(t2)) nm = t2; } }); }
+        if(nm && !cur.n) cur.n = nm;
+        cur.rows.push({ k:it, sum:r.sum, N:r.N });
+      });
+    }
+  });
+  /* 점수 — 문항별 '응답한 사람' 기준(결과지 연도마다 기준이 달라 통일) */
+  var Nf = R.n || 0;
+  var sc = function(sum, N){ var n = N || Nf; return n ? Math.round(sum/(5*n)*100000)/1000 : null; };   // 응답자 기준
+  [R.op, R.env].forEach(function(T){ var m = {}; T.items.forEach(function(x){ if(m[x.k]){ m[x.k].sum += x.sum; m[x.k].N = Math.max(m[x.k].N, x.N); m[x.k].cnt++; } else m[x.k] = { k:x.k, sum:x.sum, N:x.N, cnt:1 }; });
+    T.items = Object.keys(m).map(function(k){ var v = m[k]; return { k:k, score: v.cnt > 1 ? Math.round(v.sum/(5*(v.N||Nf)*v.cnt)*100000)/1000 : sc(v.sum, v.N) }; }); });
+  R.inst.list = (R._ir||[]).filter(function(x){ return x.rows.length; }).map(function(x){ var s=0; x.rows.forEach(function(r){ s+=r.sum; }); var N = Math.max.apply(null, x.rows.map(function(r){ return r.N; })) || Nf; return { n:x.n || '강사', score: Math.round(s/(5*N*x.rows.length)*100000)/1000 }; });
+  delete R._ir;
+  var avg = function(arr){ var v = arr.map(function(x){ return x.score; }).filter(function(x){ return x != null; }); return v.length ? Math.round(v.reduce(function(a,b){ return a+b; },0)/v.length*1000)/1000 : null; };
+  var pick = function(T, arr){ var a = avg(arr); var ps = T._ps; delete T._ps; T.score = (ps != null && (a == null || Math.abs(ps - a) < 1.5)) ? ps : a; };
+  pick(R.op, R.op.items); pick(R.env, R.env.items); pick(R.inst, R.inst.list);
+  var comp = [R.op.score, R.env.score, R.inst.score].filter(function(x){ return x != null; });
+  if(R.total != null && comp.length && (R.total < Math.min.apply(null, comp) - 0.5 || R.total > Math.max.apply(null, comp) + 0.5)) R.total = null;
+  if(R.total == null){ var t = [R.op.score, R.env.score, R.inst.score].filter(function(x){ return x != null; }); R.total = t.length ? Math.round(t.reduce(function(a,b){return a+b;},0)/t.length*1000)/1000 : null; }
+  // 주관식
+  var TRIV = /^[\s.\-·~_ㆍ,!]*(만족(함|합니다|스럽습니다|스러웠습니다)?|없(음|습니다|다|더|어요)|해당\s*(사항)?\s*없음|특이사항\s*없음|민족합니다|좋(음|습니다|았습니다)|감사(합니다)?|예|아니오|모두|전부|n\/?a|x)?[\s.\-·~_ㆍ,!]*$/i;
+  var push = function(cat, txt, grp){ txt = String(txt||'').replace(/\d*\s*[가-힣,·]+\s*\((?:[^)]*?)(이유|과목|소감|의향|사유)[^)]*\)\??/g,' ').replace(/(^|\s)\d{1,3}(?=\s|$)/g,' ').replace(/\s+/g,' ').replace(/^[O○●•ㅇ·\-\s]+/,'').trim(); if(!txt || TRIV.test(txt) || txt.length < 3) return; R.comments.push({ c: cat || '', t: txt, g: grp }); };
+  secs.forEach(function(S){
+    if(!/S$|opinion/.test(S.k)) return;
+    var grp = S.k === 'envS' ? 'env' : (S.k === 'opinion' ? 'opinion' : 'op');
+    var hdr = S.lines.filter(function(l){ return /답\s*변/.test(l.t) && /(설문내용|관련항목|설\s*문\s*내\s*용|관\s*련\s*항\s*목)/.test(l.t.replace(/\s+/g,'') + l.t); })[0];
+    var two = !!hdr;
+    if(two){
+      var qs = []; S.lines.forEach(function(l){ l.items.forEach(function(it){ if(/^[가-힣A-Za-z ,·]+\s*\(/.test(it.s) || /^(이수만족|교과목|교재|업무수행|강의실|생활관|체육|식사|식당|친절|기타)/.test(it.s)) qs.push(it.x); }); });
+      qs.sort(function(a,b){ return a-b; }); var qx = qs.length ? qs[Math.floor(qs.length/2)] : 0.14;
+      var ents = [], qstarts = [];
+      S.lines.forEach(function(l){ if(l === hdr) return;
+        var its = l.items.slice(); while(its.length && /^\d+$/.test(its[0].s.trim()) && its[0].x < qx - 0.01) its.shift();
+        var qt = '', at = '';
+        if(its.length && Math.abs(its[0].x - qx) < 0.03){ var k = 0, prev = null; while(k < its.length && (!prev || its[k].x - (prev.x+prev.w) < 0.02)){ qt += its[k].s; prev = its[k]; k++; } at = joinIt(its.slice(k)); }
+        else at = joinIt(its);
+        if(/^\d+$/.test(at.trim())) at = '';
+        var cm = qt.replace(/\s+/g,'').match(/^([가-힣A-Za-z,·]+?)\(/); if(cm || /^(이수만족|교과목|교재유용성|업무수행|강의실기자재|생활관|체육|식사|식당|친절도)/.test(qt.replace(/\s+/g,''))) qstarts.push({ y:l.y, p:l.p, c:(cm ? cm[1] : qt.replace(/\s+/g,'').slice(0,6)) });
+        if(at.trim()) ents.push({ y:l.y, p:l.p, t:at.trim() });
+      });
+      var groups = []; ents.forEach(function(e){ var g = groups[groups.length-1]; if(g && g.p === e.p && e.y - g.y2 <= 20) { g.t += ' ' + e.t; g.y2 = e.y; } else groups.push({ p:e.p, y:e.y, y2:e.y, t:e.t }); });
+      groups.forEach(function(g){ var best = null, bd = 1e9; qstarts.forEach(function(q){ if(q.p !== g.p) return; var d = Math.abs(q.y - (g.y+g.y2)/2); if(d < bd){ bd = d; best = q; } }); push(best && bd < 40 ? best.c : '', g.t, grp); });
+    } else {
+      var gp = null;
+      S.lines.forEach(function(l){ if(/답\s*변|소감청취|^번호/.test(l.t) && l.t.length < 30) return;
+        var bullet = /^[O○●•ㅇ]\s/.test(l.t) || /^\d+\s+[가-힣]/.test(l.t) && false;
+        if(!gp || bullet || l.p !== gp.p || l.y - gp.y2 > 20){ if(gp) push('', gp.t, grp); gp = { p:l.p, y:l.y, y2:l.y, t:l.t }; } else { gp.t += ' ' + l.t; gp.y2 = l.y; } });
+      if(gp) push('', gp.t, grp);
+    }
+  });
+  return R;
+}
+window.kacSurveyParse = kacSurveyParse;
+ui._svyRef = function(){ return firebase.database().ref('system/coord/surveyResults'); };
+ui._svyCmRef = function(){ return firebase.database().ref('system/coord/surveyComments'); };   // 의견은 따로 — 고른 계열 것만 읽어 데이터 사용량을 줄인다
+ui._svyMask = function(n){ n = String(n||'').trim(); return n ? n.charAt(0) + '**' : '강사'; };
+ui._svySeriesOf = function(title){
+    var t = String(title||'').replace(/\(([^)]*)\)/g, function(m, x){ return /차|집체|온라인|비대면|대면/.test(x) ? '' : m; }).replace(/[-_\s]*\d+\s*차/g,'').replace(/집체|온라인|비대면/g,'');
+    var name = t.replace(/\s+/g,' ').replace(/[-_\s]+$/,'').trim();
+    return { key: name.replace(/[\s\-_·.()]/g,''), name: name };
+};
+ui._svyRoundOf = function(title){ var m = String(title||'').match(/(\d+)\s*차/); return m ? Number(m[1]) : 0; };
+ui._svyTag = function(t){
+    var s = String(t||'');
+    if(/불편|춥|추워|추움|추웠|덥|더워|더움|고장|부족|아쉽|아쉬|냄새|소음|시끄|꺼져|꺼졌|꺼지|느리|느림|안\s?되|안돼|불만|불친절|좁|낡|노후|힘들|어렵|어려웠|불량|끊기|끊겨|지저분|더럽|비싸|못\s?해|못했|불가/.test(s)) return 'neg';
+    if(/(했|하|되|있|주셨|주시|해주셨|해주시)으면|바랍|원합|원해|희망|필요|추가|요청|건의|좋겠|좋을\s?(것|거)|바람/.test(s)) return 'sug';
+    if(/좋았|좋습|좋아|만족|감사|최고|유익|도움|친절|맛있|깔끔|훌륭|재미|재밌/.test(s)) return 'pos';
+    return 'etc';
+};
+ui._SVY_CAT = [
+    ['생활관', /생활관|숙소|기숙사|객실|히터|난방|냉방|에어컨|침대|이불|베개|샤워|온수|화장실|세탁|1인실|2인실|방이|방에|방음/],
+    ['식당', /식당|식사|밥|메뉴|반찬|음식|급식|조식|중식|석식|맛있|맛이/],
+    ['강의실·기자재', /강의실|기자재|모니터|프로젝터|빔|마이크|의자|책상|컴퓨터|노트북|스크린|실습\s?장비|키보드|마우스/],
+    ['체육·편의', /노래방|폼롤러|헬스|체육|운동|편의시설|탁구|당구|매점|편의점|자판기|비디오|산책/],
+    ['인터넷·와이파이', /와이파이|wifi|wi-fi|인터넷/i],
+    ['교재·자료', /교재|자료|ppt|피피티|책자|책으로|컬러|인쇄|pdf/i],
+    ['교과목·커리큘럼', /교과목|과목|커리큘럼|실습|시험|평가|진도|난이도|신설|강의\s?내용|이론/],
+    ['운영·일정', /일정|시간표|안내|공지|셔틀|차량|버스|픽업|입교|운영|휴식|쉬는\s?시간|출결|온라인|zoom|줌|기간|시간이/i]
+];
+ui._svyCatOf = function(c){
+    var s = String(c.t||''), hint = String(c.c||'').replace(/\s+/g,'');
+    for(var i=0;i<ui._SVY_CAT.length;i++) if(ui._SVY_CAT[i][1].test(s)) return ui._SVY_CAT[i][0];
+    if(/생활관/.test(hint)) return '생활관'; if(/식사|식당/.test(hint)) return '식당'; if(/강의실/.test(hint)) return '강의실·기자재';
+    if(/체육|편의/.test(hint)) return '체육·편의'; if(/교재/.test(hint)) return '교재·자료'; if(/교과목|이수|업무수행/.test(hint)) return '교과목·커리큘럼';
+    if(/친절/.test(hint)) return '친절·응대';
+    return c.g === 'env' ? '교육환경 기타' : '기타';
+};
+
+/* ── 올리기 ─────────────────────────────────────────── */
+ui.surveyUpload = function(){
+    if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 올릴 수 없습니다.');
+    var fi = document.createElement('input'); fi.type = 'file'; fi.accept = '.pdf,application/pdf'; fi.multiple = true;
+    fi.onchange = function(){ ui._svyIngest(Array.prototype.slice.call(fi.files || [])); };
+    fi.click();
+};
+ui._svyIngest = async function(files){
+    files = files.filter(function(f){ return /\.pdf$/i.test(f.name); }); if(!files.length) return;
+    try{ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; }catch(e){}
+    var box = document.getElementById('svyMsg'), ok = [], bad = [];
+    var say = function(t){ if(box){ box.style.display = 'block'; box.innerHTML = t; } };
+    var exist = {}; try{ exist = (await ui._svyRef().once('value')).val() || {}; }catch(e){}
+    for(var i=0;i<files.length;i++){
+        var f = files[i]; say('<i class="fa-solid fa-spinner fa-spin"></i> 분석 중… (' + (i+1) + '/' + files.length + ') ' + ui._esc(f.name));
+        try{
+            var buf = new Uint8Array(await f.arrayBuffer());
+            var doc = await pdfjsLib.getDocument({ data: buf, cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/', cMapPacked: true }).promise;
+            var r = await window.kacSurveyParse(doc);
+            if(!r.title || (r.op.score == null && r.env.score == null && r.inst.score == null)) throw new Error('설문결과지 형식을 읽지 못했습니다');
+            var sr = ui._svySeriesOf(r.title), st = (r.period || '').slice(0,10), year = Number((st || '').slice(0,4)) || 0;
+            var names = (r.inst.list || []).map(function(x){ return x.n; }).filter(function(n){ return /^[가-힣]{2,4}$/.test(n); });
+            var maskTxt = function(t){ t = String(t||''); names.forEach(function(n){ t = t.split(n).join(ui._svyMask(n)); }); return t.replace(/([가-힣])[가-힣]{1,2}(\s*)(교수|강사)님/g, '$1**$2$3님').slice(0, 400); };
+            var rec = { title: r.title, series: sr.key, seriesName: sr.name, round: ui._svyRoundOf(r.title), year: year, period: r.period || '', n: r.n || 0,
+                total: r.total, op: { score: r.op.score, items: r.op.items }, env: { score: r.env.score, items: r.env.items },
+                inst: { score: r.inst.score, list: (r.inst.list || []).map(function(x){ return { n: ui._svyMask(x.n), score: x.score }; }) },
+                nc: (r.comments || []).length,
+                at: Date.now(), by: (ui._matWho ? ui._matWho() : '') };
+            var key = (sr.key + '_' + (st || (year + '-' + rec.round))).replace(/[.#$\[\]\/]/g,'_');
+            var was = !!exist[key];
+            await ui._svyRef().child(key).set(JSON.parse(JSON.stringify(rec)));
+            await ui._svyCmRef().child(key).set((r.comments || []).slice(0, 300).map(function(c){ return { c: c.c || '', t: maskTxt(c.t), g: c.g || '' }; }));
+            exist[key] = true;
+            ok.push((was ? '갱신 ' : '') + r.title + (year ? ' (' + year + ')' : ''));
+        }catch(e){ bad.push(f.name + ' — ' + ((e && e.message) || '오류')); }
+    }
+    ui._svyLastMsg = '<b style="color:#15803d"><i class="fa-solid fa-circle-check"></i> ' + ok.length + '건 저장</b>' + (ok.length ? '<div style="margin-top:4px;color:#475569;font-weight:700">' + ok.map(ui._esc).join(' · ') + '</div>' : '')
+        + (bad.length ? '<div style="margin-top:6px;color:#b91c1c;font-weight:800"><i class="fa-solid fa-triangle-exclamation"></i> 읽지 못함 ' + bad.length + '건: ' + bad.map(ui._esc).join(' / ') + '</div>' : '');
+    ui._svyCount();
+    ui.surveyOpen();
+};
+
+/* ── 화면 ─────────────────────────────────────────── */
+ui._svyCount = function(){
+    ui._svyRef().once('value').then(function(s){ var n = s.numChildren ? s.numChildren() : 0; var el = document.getElementById('stat-survey-count'); if(el) el.textContent = n; }).catch(function(){});
+};
+ui.surveyOpen = async function(){
+    var host = document.getElementById('svyPage'); if(!host) return;
+    var esc = ui._esc;
+    if(!host.innerHTML.trim()) host.innerHTML = '<div style="padding:60px;text-align:center;color:#94a3b8;font-weight:800;background:#fff;border-radius:24px">불러오는 중…</div>';
+    var all = {}; try{ all = (await ui._svyRef().once('value')).val() || {}; }catch(e){}
+    var lim = new Date().getFullYear() - 10;   // 10년 지난 자료 정리
+    Object.keys(all).forEach(function(k){ var y = Number((all[k] || {}).year) || 0; if(y && y < lim){ ui._svyRef().child(k).remove().catch(function(){}); ui._svyCmRef().child(k).remove().catch(function(){}); delete all[k]; } });
+    var recs = Object.keys(all).map(function(k){ return Object.assign({ id: k }, all[k]); });
+    var series = {}; recs.forEach(function(r){ (series[r.series] = series[r.series] || { key: r.series, name: r.seriesName || r.series, list: [] }).list.push(r); });
+    var cur = state.room ? ui._svySeriesOf(ui._matCourseName ? ui._matCourseName() : '').key : '';
+    var sel = ui._svySel && series[ui._svySel] ? ui._svySel : (series[cur] ? cur : (Object.keys(series).sort(function(a,b){ return series[b].list.length - series[a].list.length; })[0] || ''));
+    ui._svySel = sel;
+    var S = series[sel];
+    var list = S ? S.list.slice().sort(function(a,b){ return String(a.period).localeCompare(String(b.period)); }) : [];
+    await Promise.all(list.map(function(r){ return ui._svyCmRef().child(r.id).once('value').then(function(s){ r.comments = s.val() || []; }).catch(function(){ r.comments = []; }); }));
+    var lab = function(r){ return String(r.year).slice(2) + '년 ' + (r.round ? r.round + '차' : ''); };
+    var f1 = function(v){ return v == null ? '-' : (Math.round(v*10)/10).toFixed(1); };
+    var card = 'margin-top:16px;background:#fff;border-radius:24px;padding:24px 28px;box-shadow:0 18px 45px rgba(15,23,42,.06)';
+    var h = '<div style="background:#fff;border-radius:24px;padding:28px 32px;box-shadow:0 18px 45px rgba(15,23,42,.08)">'
+      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px"><div style="font-size:13px;font-weight:800;color:#6366f1">과정 계열</div>'
+      + '<select id="svySel" style="margin-top:6px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:19px;font-weight:900;color:#0f172a;min-width:300px">'
+      + (Object.keys(series).length ? Object.keys(series).sort().map(function(k){ return '<option value="' + esc(k) + '"' + (k === sel ? ' selected' : '') + '>' + esc(series[k].name) + ' (' + series[k].list.length + '건)' + (k === cur ? ' · 현재 과정' : '') + '</option>'; }).join('') : '<option>아직 올린 결과지가 없습니다</option>')
+      + '</select></div>'
+      + '<button onclick="ui.surveyUpload()" style="padding:14px 22px;border:none;border-radius:14px;background:#4f46e5;color:#fff;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 8px 20px rgba(79,70,229,.25)"><i class="fa-solid fa-file-arrow-up"></i> 설문결과지(PDF) 올리기</button></div>'
+      + '<div style="margin-top:10px;font-size:13px;font-weight:700;color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> PDF 원본은 저장하지 않고 점수·의견만 저장 · 강사 이름은 장**처럼 가림 · 10년 지난 자료는 자동 정리 · 여러 개를 한 번에 골라도 됩니다</div>'
+      + '<div id="svyMsg" style="' + (ui._svyLastMsg ? '' : 'display:none;') + 'margin-top:12px;padding:12px 14px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:14px">' + (ui._svyLastMsg || '') + '</div></div>';
+    ui._svyLastMsg = '';
+    if(!list.length){ host.innerHTML = h + '<div style="' + card + ';padding:50px;text-align:center;color:#94a3b8;font-weight:800">이 계열의 결과지를 올리면 추이가 여기에 그려집니다.</div>'; ui._svyBind(host); return; }
+    var last = list[list.length-1], prev = list.length > 1 ? list[list.length-2] : null;
+    var kpi = function(t, v, pv, col, ic){ var d = (v != null && pv != null) ? v - pv : null;
+        return '<div style="flex:1;min-width:170px;padding:16px 18px;border-radius:18px;background:' + col + '10;border:1px solid ' + col + '30"><div style="font-size:14px;font-weight:900;color:#475569"><i class="fa-solid ' + ic + '" style="color:' + col + '"></i> ' + t + '</div>'
+          + '<div style="margin-top:6px;display:flex;align-items:baseline;gap:8px"><b style="font-size:32px;color:' + col + '">' + f1(v) + '</b>'
+          + (d != null ? '<span style="font-size:14px;font-weight:900;color:' + (d >= 0 ? '#16a34a' : '#dc2626') + '">' + (d >= 0 ? '▲' : '▼') + ' ' + Math.abs(Math.round(d*10)/10).toFixed(1) + '</span>' : '') + '</div></div>'; };
+    h += '<div style="' + card + '">'
+      + '<div style="font-size:15px;font-weight:900;color:#64748b">최근 결과 · ' + esc(last.title) + ' <span style="color:#94a3b8">(' + esc(String(last.period).replace('~',' ~ ')) + (last.n ? ' · 응답 ' + last.n + '명' : '') + ')</span></div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">' + kpi('종합', last.total, prev && prev.total, '#1e3a8a', 'fa-star') + kpi('과정운영', last.op && last.op.score, prev && prev.op && prev.op.score, '#2563eb', 'fa-book-open')
+      + kpi('교육환경', last.env && last.env.score, prev && prev.env && prev.env.score, '#16a34a', 'fa-building') + kpi('강사', last.inst && last.inst.score, prev && prev.inst && prev.inst.score, '#ea580c', 'fa-chalkboard-user') + '</div>'
+      + '<div style="margin-top:22px;font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chart-line" style="color:#6366f1"></i> 점수 추이</div>' + ui._svyChart(list, lab) + '</div>';
+    /* 문항별 */
+    var items = []; list.forEach(function(r){ [['op', r.op], ['env', r.env]].forEach(function(p){ ((p[1] || {}).items || []).forEach(function(it){ if(items.indexOf(p[0] + '|' + it.k) < 0) items.push(p[0] + '|' + it.k); }); }); });
+    var cell = function(v){ if(v == null) return '<td style="color:#cbd5e1">-</td>'; var bg = v >= 98 ? '#dcfce7' : v >= 95 ? '#f0fdf4' : v >= 90 ? '#fef9c3' : '#fee2e2', fg = v >= 95 ? '#15803d' : v >= 90 ? '#a16207' : '#b91c1c'; return '<td style="background:' + bg + ';color:' + fg + ';font-weight:900">' + f1(v) + '</td>'; };
+    var th = list.map(function(r){ return '<th>' + esc(lab(r)) + '</th>'; }).join('');
+    h += '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-table-cells" style="color:#2563eb"></i> 문항별 변화 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 98↑ 초록 / 90~95 노랑 / 90↓ 빨강</span></div>'
+      + '<div style="overflow:auto;margin-top:12px"><table class="svyT"><thead><tr><th style="text-align:left;padding-left:14px">문항</th>' + th + '</tr></thead><tbody>'
+      + items.map(function(ik){ var g = ik.split('|')[0], k = ik.split('|')[1]; return '<tr><td style="text-align:left;padding-left:14px;font-weight:900;white-space:nowrap"><span class="svyG ' + g + '">' + (g === 'op' ? '과정' : '환경') + '</span> ' + esc(k) + '</td>' + list.map(function(r){ var it = (((r[g] || {}).items) || []).filter(function(x){ return x.k === k; })[0]; return cell(it ? it.score : null); }).join('') + '</tr>'; }).join('')
+      + '</tbody></table></div></div>';
+    /* 강사 */
+    var inst = {}; list.forEach(function(r, ri){ ((r.inst || {}).list || []).forEach(function(x){ (inst[x.n] = inst[x.n] || { n: x.n, s: {} }).s[ri] = x.score; }); });
+    var ins = Object.keys(inst).map(function(k){ var v = inst[k], arr = Object.keys(v.s).map(function(i){ return v.s[i]; }); v.avg = arr.reduce(function(a,b){ return a+b; },0) / arr.length; v.cnt = arr.length; return v; }).sort(function(a,b){ return b.cnt - a.cnt || b.avg - a.avg; });
+    h += '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chalkboard-user" style="color:#ea580c"></i> 강사 선호도 변화 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 이름은 가림 · 응답자 기준 점수</span></div>'
+      + '<div style="overflow:auto;margin-top:12px"><table class="svyT"><thead><tr><th style="text-align:left;padding-left:14px">강사</th><th>출강</th><th>평균</th>' + th + '</tr></thead><tbody>'
+      + ins.map(function(v){ return '<tr><td style="text-align:left;padding-left:14px;font-weight:900">' + esc(v.n) + '</td><td>' + v.cnt + '회</td>' + cell(v.avg) + list.map(function(r, ri){ return cell(v.s[ri]); }).join('') + '</tr>'; }).join('')
+      + '</tbody></table></div></div>';
+    /* 의견 분석 */
+    var cms = []; list.forEach(function(r){ (r.comments || []).forEach(function(c){ cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c) }); }); });
+    var bad = cms.filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }), good = cms.filter(function(c){ return c.tag === 'pos'; });
+    var cc = {}; bad.forEach(function(c){ cc[c.cat] = (cc[c.cat] || 0) + 1; });
+    var cats = Object.keys(cc).sort(function(a,b){ return cc[b] - cc[a]; }), mx = cats.length ? cc[cats[0]] : 1;
+    var kw = {}; bad.forEach(function(c){ ui._SVY_CAT.forEach(function(p){ var m = String(c.t).match(new RegExp(p[1].source, 'g' + (p[1].ignoreCase ? 'i' : ''))); (m || []).forEach(function(w){ w = w.trim(); kw[w] = (kw[w] || 0) + 1; }); }); ['추워','추움','더워','고장','부족','냄새','소음','꺼져','좁','불편'].forEach(function(w){ if(String(c.t).indexOf(w) >= 0) kw[w] = (kw[w] || 0) + 1; }); });
+    var kws = Object.keys(kw).sort(function(a,b){ return kw[b] - kw[a]; }).slice(0, 16);
+    var CAT_C = { '생활관':'#2563eb', '식당':'#ea580c', '강의실·기자재':'#7c3aed', '체육·편의':'#0891b2', '인터넷·와이파이':'#0d9488', '교재·자료':'#db2777', '교과목·커리큘럼':'#4f46e5', '운영·일정':'#ca8a04', '친절·응대':'#16a34a' };
+    ui._svyCms = cms;
+    h += '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-comments" style="color:#db2777"></i> 교육생 목소리 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 의미 있는 의견 ' + cms.length + '건 (불만·개선요청 ' + bad.length + ' · 칭찬 ' + good.length + ')</span></div>'
+      + '<div class="svyVoice">'
+      + '<div><div style="font-size:14px;font-weight:900;color:#475569;margin-bottom:8px">불만·개선요청은 어디에 많을까 <span style="color:#94a3b8;font-weight:700">· 누르면 해당 의견만</span></div>'
+      + (cats.length ? cats.map(function(k){ var col = CAT_C[k] || '#64748b'; return '<div class="svyBar" data-cat="' + esc(k) + '"><span class="svyBL">' + esc(k) + '</span><span class="svyBT"><i style="width:' + Math.max(6, Math.round(cc[k]/mx*100)) + '%;background:' + col + '"></i></span><b style="color:' + col + '">' + cc[k] + '</b></div>'; }).join('') : '<div style="color:#94a3b8;font-weight:800;padding:20px 0">불만·개선요청 의견이 없습니다</div>')
+      + (kws.length ? '<div style="font-size:14px;font-weight:900;color:#475569;margin:16px 0 8px">자주 나온 단어</div><div>' + kws.map(function(w){ return '<span class="svyKw" style="font-size:' + Math.min(20, 12 + kw[w]*1.5) + 'px">' + esc(w) + ' <b>' + kw[w] + '</b></span>'; }).join('') + '</div>' : '')
+      + '</div><div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center"><button class="svyTab on" data-tab="bad">불만·개선 ' + bad.length + '</button><button class="svyTab" data-tab="good">칭찬 ' + good.length + '</button><button class="svyTab" data-tab="all">전체 ' + cms.length + '</button><span id="svyCatF" style="margin-left:auto;font-size:13px;font-weight:800;color:#6366f1"></span></div><div id="svyList" class="svyList"></div></div></div></div>';
+    /* 올린 자료 */
+    h += '<div style="' + card + ';padding:20px 28px"><div style="font-size:16px;font-weight:900;color:#0f172a"><i class="fa-solid fa-folder-open" style="color:#64748b"></i> 올린 결과지 ' + list.length + '건</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
+      + list.slice().reverse().map(function(r){ return '<span class="svyRec">' + esc(r.title) + ' <small>' + esc(String(r.period).slice(0,10)) + '</small><button data-del="' + esc(r.id) + '" title="삭제"><i class="fa-solid fa-xmark"></i></button></span>'; }).join('') + '</div></div>';
+    host.innerHTML = h + '<style>.svyT{border-collapse:separate;border-spacing:0;width:100%}.svyT th{padding:10px 12px;font-size:13.5px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:center}.svyT td{padding:10px 12px;font-size:15px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyG{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:900}.svyG.op{background:#dbeafe;color:#1d4ed8}.svyG.env{background:#dcfce7;color:#15803d}.svyVoice{display:grid;grid-template-columns:minmax(260px,1fr) 1.3fr;gap:18px;margin-top:14px}@media(max-width:900px){.svyVoice{grid-template-columns:1fr}}.svyBar{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;cursor:pointer}.svyBar:hover,.svyBar.on{background:#f1f5f9}.svyBL{width:120px;font-size:14.5px;font-weight:900;color:#334155}.svyBT{flex:1;height:14px;background:#f1f5f9;border-radius:999px;overflow:hidden}.svyBT i{display:block;height:100%;border-radius:999px}.svyKw{display:inline-block;margin:3px;padding:5px 11px;border-radius:999px;background:#fdf2f8;color:#9d174d;font-weight:900}.svyKw b{color:#db2777}.svyTab{padding:8px 14px;border:2px solid #e2e8f0;border-radius:999px;background:#fff;font:inherit;font-size:13.5px;font-weight:900;color:#475569;cursor:pointer}.svyTab.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3}.svyList{max-height:460px;overflow:auto;border:1px solid #eef2f7;border-radius:14px}.svyC{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f1f5f9;font-size:14.5px;font-weight:700;color:#334155;line-height:1.6}.svyC .tg{flex-shrink:0;padding:2px 9px;height:fit-content;border-radius:999px;font-size:12px;font-weight:900}.svyC .tg.neg{background:#fee2e2;color:#b91c1c}.svyC .tg.sug{background:#fef3c7;color:#a16207}.svyC .tg.pos{background:#dcfce7;color:#15803d}.svyC .tg.etc{background:#f1f5f9;color:#64748b}.svyC small{display:block;color:#94a3b8;font-weight:800;font-size:12px}.svyRec{display:inline-flex;align-items:center;gap:6px;padding:7px 8px 7px 13px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;font-weight:800;color:#334155}.svyRec small{color:#94a3b8}.svyRec button{border:none;background:none;color:#cbd5e1;cursor:pointer}.svyRec button:hover{color:#dc2626}</style>';
+    ui._svyBind(host);
+    ui._svyShow('bad', '');
+};
+ui._svyShow = function(tab, cat){
+    var box = document.getElementById('svyList'); if(!box) return; ui._svyTabSt = tab; ui._svyCatSt = cat;
+    var L = (ui._svyCms || []).filter(function(c){ return (tab === 'all' || (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos')) && (!cat || c.cat === cat); }).slice().reverse();
+    var TN = { neg:'불만', sug:'개선요청', pos:'칭찬', etc:'의견' };
+    box.innerHTML = L.length ? L.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><div>' + ui._esc(c.t) + '<small>' + ui._esc(c.r) + ' · ' + ui._esc(c.cat) + '</small></div></div>'; }).join('') : '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">해당 의견이 없습니다</div>';
+    var cf = document.getElementById('svyCatF'); if(cf) cf.innerHTML = cat ? ui._esc(cat) + ' 만 보는 중 <a href="#" id="svyCatX" style="color:#94a3b8;text-decoration:none">✕</a>' : '';
+    var x = document.getElementById('svyCatX'); if(x) x.onclick = function(e){ e.preventDefault(); document.querySelectorAll('.svyBar').forEach(function(b){ b.classList.remove('on'); }); ui._svyShow(ui._svyTabSt, ''); };
+};
+ui._svyBind = function(host){
+    var s = host.querySelector('#svySel'); if(s) s.onchange = function(){ ui._svySel = s.value; ui.surveyOpen(); };
+    host.querySelectorAll('.svyTab').forEach(function(b){ b.onclick = function(){ host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); ui._svyShow(b.getAttribute('data-tab'), ui._svyCatSt || ''); }; });
+    host.querySelectorAll('.svyBar').forEach(function(b){ b.onclick = function(){ var on = !b.classList.contains('on'); host.querySelectorAll('.svyBar').forEach(function(x){ x.classList.remove('on'); }); if(on) b.classList.add('on'); host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-tab') === 'bad'); }); ui._svyShow('bad', on ? b.getAttribute('data-cat') : ''); }; });
+    host.querySelectorAll('[data-del]').forEach(function(b){ b.onclick = function(){ if(state.isObserver) return; if(!confirm('이 결과지 데이터를 지울까요?')) return; ui._svyCmRef().child(b.getAttribute('data-del')).remove().catch(function(){}); ui._svyRef().child(b.getAttribute('data-del')).remove().then(function(){ ui._svyCount(); ui.surveyOpen(); }); }; });
+};
+/* 점수 추이 선 그래프(SVG) */
+ui._svyChart = function(list, lab){
+    var W = 1000, H = 300, pl = 46, pr = 20, pt = 18, pb = 46;
+    var ser = [['종합', 'total', '#1e3a8a'], ['과정운영', 'op', '#2563eb'], ['교육환경', 'env', '#16a34a'], ['강사', 'inst', '#ea580c']];
+    var val = function(r, k){ return k === 'total' ? r.total : (r[k] || {}).score; };
+    var vs = []; list.forEach(function(r){ ser.forEach(function(s){ var v = val(r, s[1]); if(v != null) vs.push(v); }); });
+    var lo = Math.floor(Math.min.apply(null, vs.concat([95])) - 1), hi = 100;
+    var X = function(i){ return list.length < 2 ? (pl + (W-pl-pr)/2) : pl + i * (W-pl-pr) / (list.length - 1); };
+    var Y = function(v){ return pt + (hi - v) / (hi - lo) * (H - pt - pb); };
+    var g = '', step = Math.max(1, Math.round((hi-lo)/5));
+    for(var t = lo; t <= hi; t += step){ g += '<line x1="' + pl + '" x2="' + (W-pr) + '" y1="' + Y(t) + '" y2="' + Y(t) + '" stroke="#eef2f7"/><text x="' + (pl-8) + '" y="' + (Y(t)+4) + '" text-anchor="end" font-size="12" fill="#94a3b8" font-weight="700">' + t + '</text>'; }
+    list.forEach(function(r, i){ g += '<text x="' + X(i) + '" y="' + (H-pb+22) + '" text-anchor="middle" font-size="12.5" fill="#475569" font-weight="800">' + ui._esc(lab(r)) + '</text>'; });
+    ser.forEach(function(s){ var pts = []; list.forEach(function(r, i){ var v = val(r, s[1]); if(v != null) pts.push([X(i), Y(v), v]); });
+        if(pts.length > 1) g += '<polyline fill="none" stroke="' + s[2] + '" stroke-width="' + (s[1] === 'total' ? 4 : 2.5) + '" stroke-linejoin="round" points="' + pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' ') + '"/>';
+        pts.forEach(function(p){ g += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (s[1] === 'total' ? 5 : 3.5) + '" fill="#fff" stroke="' + s[2] + '" stroke-width="2.5"><title>' + s[0] + ' ' + (Math.round(p[2]*10)/10) + '</title></circle>'; }); });
+    var leg = '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:6px;font-size:13.5px;font-weight:900;color:#475569">' + ser.map(function(s){ return '<span><i style="display:inline-block;width:14px;height:4px;border-radius:2px;background:' + s[2] + ';vertical-align:middle;margin-right:5px"></i>' + s[0] + '</span>'; }).join('') + '</div>';
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;margin-top:8px">' + g + '</svg>' + leg;
+};
+
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
