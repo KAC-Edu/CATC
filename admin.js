@@ -20406,6 +20406,7 @@ ui.preSurveyOpen = async function(){
         return { full: full && part.length, part: part };
     };
 
+    ui._psvOpen = null; ui._psvNoteOn = false;   // [K210] 과정을 옮기거나 다시 열면 펼침 상태 초기화
     /* [K173] 팝업 → 페이지(교육 메뉴 화면) — #view-presurvey 안의 #psvPage 에 그린다 */
     var host = document.getElementById('psvPage'); if(!host) return;
     if(typeof ui._psvOff === 'function'){ try{ ui._psvOff(); }catch(e){} }
@@ -20519,7 +20520,7 @@ ui.preSurveyOpen = async function(){
         var keys = Object.keys(resp).sort(function(a,b){ return (resp[a].at||0)-(resp[b].at||0); });
         var stale = V.course && V.course !== cname;
         /* [K177] 항목별 접기/펼치기 — 머리를 누르면 아래로 상세가 펼쳐진다(기본: 강의 가능 일정만 펼침) */
-        var OPEN = ui._psvOpen || (ui._psvOpen = {});   // [K207] 처음엔 모두 접힘
+        var OPEN = ui._psvOpen || (ui._psvOpen = { resp: keys.length > 0 });   // [K210] 열 때마다 새로 — 응답이 있으면 '응답 내역'만 펼침
         var secStart = function(id, ic, col, title, sum){ var on = !!OPEN[id];
             return '<div class="psvAcc' + (on ? ' on' : '') + '" id="psvSec-' + id + '"><div class="psvAccH" data-acc="' + id + '"><i class="fa-solid ' + ic + '" style="color:' + col + ';width:22px;text-align:center"></i><span>' + title + '</span>'
               + (sum ? '<span class="psvSum">' + sum + '</span>' : '') + '<span style="flex:1"></span><i class="fa-solid fa-chevron-down psvChev"></i></div><div class="psvAccB" style="display:' + (on ? 'block' : 'none') + '">'; };
