@@ -154,6 +154,15 @@
         .dateBtn .chg{ margin-left:auto; font-size:13.5px; font-weight:900; color:#6366f1; }
         .dateBtn.open{ border-color:#6366f1; border-bottom-left-radius:6px; border-bottom-right-radius:6px; }
         .dateBtn + .cal{ margin-top:6px; }
+        .smCard{ border:2px solid #bbf7d0; background:#f0fdf4; border-radius:16px; padding:14px 16px 12px; }
+        .smTop{ font-size:14px; font-weight:900; color:#15803d; margin-bottom:8px; } .smTop i{ margin-right:4px; }
+        .smR{ display:flex; gap:12px; padding:7px 2px; border-top:1px dashed #bbf7d0; font-size:15px; }
+        .smR span{ width:72px; flex-shrink:0; color:#64748b; font-weight:800; font-size:13.5px; padding-top:1px; } .smR b{ font-weight:900; color:#1e293b; word-break:keep-all; }
+        .smR em{ font-style:normal; padding:2px 10px; border-radius:999px; font-size:13.5px; } .smR em.ok{ background:#dcfce7; color:#15803d; } .smR em.no{ background:#fee2e2; color:#b91c1c; } .smR em.tbd{ background:#f1f5f9; color:#475569; }
+        .smEdit{ width:100%; margin-top:10px; padding:12px; border:2px solid #86efac; border-radius:12px; background:#fff; color:#15803d; font:inherit; font-size:15px; font-weight:900; cursor:pointer; }
+        .pkMore{ margin-top:16px; border:2px solid #fde68a; background:#fffdf5; border-radius:16px; padding:14px 16px 16px; }
+        .pkMT{ font-size:16px; font-weight:900; color:#92400e; display:flex; align-items:center; gap:6px; } .pkMT > i{ color:#ca8a04; }
+        .pkOk{ margin-left:auto; padding:2px 10px; border-radius:999px; background:#dcfce7; color:#15803d; font-size:12.5px; }
     </style>
 </head>
 <body>
@@ -371,6 +380,8 @@
     var me = svKey(myName()), my = SV.my, a = my.avail;
     /* [K180] 출강 여부 색 — 가능=초록, 불가능=빨강, 미정=회색 */
     var seg = function(v, label){ var c = v === '가능' ? ' ok' : (v === '불가능' ? ' no' : ' tbd'); return '<button type="button" class="seg' + c + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
+    /* [K198] 제출한 뒤(또는 다시 들어와 성함을 넣으면) — 요약을 먼저 보여 주고, 아래에서 픽업 상세(시각·연락처)를 이어서 받는다 */
+    if(my.at && !SV.editing && !SV.dirty){ svSummary(w); return; }
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
       + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[수정 내용 제출]</b>을 눌러 주세요.</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
@@ -409,22 +420,10 @@
         + '<div class="segs">' + yn('stay', true, '숙박 신청합니다') + yn('stay', false, '해당 없음') + '</div>'
         + '<div class="sub2"><i class="fa-solid fa-van-shuttle"></i> 픽업 (기사님 차량)</div>'
         + '<div class="segs">' + yn('pickup', true, '픽업 요청합니다') + yn('pickup', false, '해당 없음') + '</div>'
-        + (my.pickup ? '<div class="pkInfo"><div class="pkT"><i class="fa-solid fa-clock"></i> 픽업 운행 시간</div>'
-            + '<div class="pkR"><span>오전</span><b>08:00 ~ 11:00</b></div>'
-            + '<div class="pkR"><span>오후</span><b>13:00 ~ 16:00</b></div>'
-            + '<div class="pkN">12:00 ~ 13:00 은 기사님 점심시간으로 운행하지 않습니다.</div></div>'
-            + '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
+        /* [K198] 처음 제출 땐 '픽업 요청 + 탑승 장소'만 — 시간·연락처는 제출 후 요약 화면 아래에서 이어서(선택) */
+        + (my.pickup ? '<div class="sub2" style="margin-top:12px;">탑승 장소</div>'
             + '<div class="segs">' + ['오송역','청주공항','청주터미널'].map(function(v){ return '<button type="button" class="seg' + (my.pkPlace===v?' on':'') + '" data-pp="' + v + '">' + v + '</button>'; }).join('') + '</div>'
-            /* [K175] 기사님 연락용 휴대폰 — 픽업 신청 때만. 다른 강사님 화면에는 내려가지 않도록 별도 위치(preSurveyPhone)에 저장 */
-            + '<div class="sub2" style="margin-top:14px;">기사님 연락용 휴대폰</div>'
-            + '<input type="tel" id="pkTel" inputmode="tel" placeholder="010-0000-0000" value="' + esc(my.tel||'') + '" style="width:100%;padding:13px 14px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:17px;font-weight:800;">'
-            /* [K166] 선택 — 대중교통 도착·출발 시각(모르면 비워 두고 나중에 같은 링크로 채움) */
-            /* [K172] 탑승 장소에 맞춰 교통수단 이름으로 — 열차/항공편/버스의 도착·출발 시각 */
-            + (my.pkPlace ? (function(){ var tv = { '오송역':['열차','fa-train'], '청주공항':['항공편','fa-plane'], '청주터미널':['버스','fa-bus'] }[my.pkPlace] || ['교통편',''];
-                return '<div class="sub2" style="margin-top:14px;">' + (tv[1] ? '<i class="fa-solid ' + tv[1] + '"></i>' : '') + tv[0] + ' 시각</div>'
-                  + '<div class="tGrid"><label><span>오실 때 <b>' + tv[0] + ' 도착</b></span>' + tSel('pkArr', my.pkArr) + '</label>'
-                  + '<label><span>가실 때 <b>' + tv[0] + ' 출발</b></span>' + tSel('pkDep', my.pkDep) + '</label></div>'; })()
-              : '') : '');
+            + '<div class="muted" style="margin-top:8px;"><i class="fa-solid fa-circle-info"></i> 도착·출발 시각과 연락처는 제출하신 뒤 이어서 알려 주실 수 있습니다.</div>' : '');
     }
     /* [K168] 전달 사항은 별도 3번 항목 — 픽업과 헷갈리지 않게 분리, 제출 버튼은 그 아래 */
     if(a){
@@ -458,6 +457,47 @@
     var ta = document.getElementById('svMsg'); if(ta) ta.oninput = function(){ my.msg = ta.value; SV.dirty = true; };
     var go = document.getElementById('svGo'); if(go) go.onclick = svSubmit;
   }
+  function slotLabel(k){ if(!k) return ''; var d = k.slice(0,10), x = new Date(d + 'T00:00:00'); return (x.getMonth()+1) + '.' + x.getDate() + '(' + WD[x.getDay()] + ') ' + (k.slice(-2) === 'am' ? '오전' : '오후'); }
+  function svSummary(w){
+    var my = SV.my, a = my.avail, k1 = Object.keys(my.p1||{})[0], k2 = Object.keys(my.p2||{})[0];
+    var row = function(l, v){ return '<div class="smR"><span>' + l + '</span><b>' + v + '</b></div>'; };
+    var avTxt = a === '가능' ? '<em class="ok">출강 가능</em>' : (a === '불가능' ? '<em class="no">불가능</em>' : '<em class="tbd">미정</em>');
+    var h = '<div class="step"><span class="no">2</span> 제출하신 내용</div>'
+      + '<div class="smCard"><div class="smTop"><i class="fa-solid fa-circle-check"></i> ' + svTime(my.at) + ' 제출 완료</div>'
+      + row('출강', avTxt)
+      + (a === '가능' ? row('1안', k1 ? slotLabel(k1) : '-') + row('2안', k2 ? slotLabel(k2) : '-') + row('전날 숙박', my.stay ? '신청' : '해당 없음') + row('픽업', my.pickup ? '요청 · ' + esc(my.pkPlace || '') : '해당 없음') : '')
+      + (a === '불가능' && my.reason ? row('불참 사유', esc(my.reason)) : '')
+      + (a === '미정' && my.replyBy ? row('회신 예정', slotLabel(my.replyBy + '_x').replace(/ 오후$| 오전$/, '') + '까지') : '')
+      + (my.msg ? row('전달 사항', esc(my.msg)) : '')
+      + '<button type="button" class="smEdit" id="smEdit"><i class="fa-solid fa-pen"></i> 내용 수정하기</button></div>';
+    if(a === '가능' && my.pickup){
+      var tv = { '오송역':['열차','fa-train'], '청주공항':['항공편','fa-plane'], '청주터미널':['버스','fa-bus'] }[my.pkPlace] || ['교통편','fa-route'];
+      var done = my.pkArr || my.pkDep;
+      h += '<div class="pkMore"><div class="pkMT"><i class="fa-solid fa-van-shuttle"></i> 픽업 상세 알려 주기 <span class="optTag">선택</span>' + (done ? ' <span class="pkOk"><i class="fa-solid fa-check"></i> 저장됨</span>' : '') + '</div>'
+        + '<div class="muted" style="margin:4px 2px 10px;">시각이 정해지면 알려 주세요. 기사님 배차에 씁니다. 나중에 같은 링크로 들어와 채우셔도 됩니다.</div>'
+        + '<div class="pkInfo"><div class="pkT"><i class="fa-solid fa-clock"></i> 픽업 운행 시간</div><div class="pkR"><span>오전</span><b>08:00 ~ 11:00</b></div><div class="pkR"><span>오후</span><b>13:00 ~ 16:00</b></div><div class="pkN">12:00 ~ 13:00 은 기사님 점심시간으로 운행하지 않습니다.</div></div>'
+        + '<div class="sub2" style="margin-top:14px;"><i class="fa-solid ' + tv[1] + '"></i>' + tv[0] + ' 시각 <span class="muted">· ' + esc(my.pkPlace || '') + '</span></div>'
+        + '<div class="tGrid"><label><span>오실 때 <b>' + tv[0] + ' 도착</b></span>' + tSel('pkArr', my.pkArr) + '</label><label><span>가실 때 <b>' + tv[0] + ' 출발</b></span>' + tSel('pkDep', my.pkDep) + '</label></div>'
+        + '<div class="sub2" style="margin-top:14px;">기사님 연락용 휴대폰</div>'
+        + '<input type="tel" id="pkTel" inputmode="tel" placeholder="010-0000-0000" value="' + esc(my.tel||'') + '" style="width:100%;padding:13px 14px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:17px;font-weight:800;">'
+        + '<button type="button" class="btn" id="pkSave" style="width:100%;justify-content:center;margin-top:12px;padding:14px;background:#ca8a04;"><i class="fa-solid fa-floppy-disk"></i> 픽업 정보 저장</button></div>';
+    }
+    w.innerHTML = h;
+    document.getElementById('smEdit').onclick = function(){ SV.editing = true; svDraw(); };
+    var tel = document.getElementById('pkTel'); if(tel) tel.oninput = function(){ var d = tel.value.replace(/[^0-9]/g,'').slice(0,11); tel.value = d.length > 7 ? d.slice(0,3)+'-'+d.slice(3,d.length-4)+'-'+d.slice(-4) : (d.length > 3 ? d.slice(0,3)+'-'+d.slice(3) : d); my.tel = tel.value; };
+    ['pkArr','pkDep'].forEach(function(f){ var hh = document.getElementById(f + 'H'), mm = document.getElementById(f + 'M'); if(!hh || !mm) return;
+      var up = function(){ if(!hh.value){ my[f] = ''; mm.value = ''; } else { if(!mm.value) mm.value = '00'; my[f] = hh.value + ':' + mm.value; } };
+      hh.onchange = up; mm.onchange = function(){ if(!hh.value){ mm.value = ''; return; } up(); }; });
+    var sv = document.getElementById('pkSave'); if(sv) sv.onclick = function(){
+      var k = svKey(myName()); if(!k) return;
+      if(my.tel && my.tel.replace(/[^0-9]/g,'').length < 10){ alert('휴대폰 번호를 끝까지 적어 주세요.'); return; }
+      sv.disabled = true; sv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 저장 중…';
+      var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + k);
+      Promise.all([ svRef().child('resp/' + k).update({ pkArr: my.pkArr || null, pkDep: my.pkDep || null }), (my.tel ? telRef.set(String(my.tel)) : Promise.resolve()) ])
+        .then(function(){ toast('픽업 정보를 저장했습니다. 감사합니다!'); svDraw(); })
+        .catch(function(){ alert('저장하지 못했습니다. 다시 눌러 주세요.'); sv.disabled = false; sv.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 픽업 정보 저장'; });
+    };
+  }
   /* [K166] 다른 강사님이 1안으로 고른 칸을 고르면 알려 준다(선택은 가능 — 최종 조율은 담당자) */
   function dupWarn(k){
     var me = svKey(myName());
@@ -475,7 +515,7 @@
       if(my.stay !== true && my.stay !== false){ alert('교육 전날 숙박 여부를 골라 주세요.'); return; }
       if(my.pickup !== true && my.pickup !== false){ alert('픽업 요청 여부를 골라 주세요.'); return; }
       if(my.pickup && !my.pkPlace){ alert('픽업 탑승 장소를 골라 주세요.'); return; }
-      if(my.pickup && String(my.tel||'').replace(/[^0-9]/g,'').length < 10){ alert('기사님 연락용 휴대폰 번호를 적어 주세요.'); var te = document.getElementById('pkTel'); if(te) te.focus(); return; }
+      /* [K198] 연락처는 제출 후 '픽업 상세'에서 받음 */
     }
     var tm = nm.match(TTL_RE), ttl = tm ? tm[1] : '';
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
@@ -484,8 +524,8 @@
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var go = document.getElementById('svGo'); if(go){ go.disabled = true; go.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 제출 중…'; }
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + svKey(nm));
-    var telP = (rec.pickup && my.tel) ? telRef.set(String(my.tel)) : telRef.remove();
-    Promise.all([svRef().child('resp/' + svKey(nm)).set(rec), telP.catch(function(){})]).then(function(){ SV.dirty = false; SV.fromServer = false; SV.my.at = rec.at; svDraw(); toast('일정을 제출했습니다. 감사합니다!'); })
+    var telP = !rec.pickup ? telRef.remove() : (my.tel ? telRef.set(String(my.tel)) : Promise.resolve());
+    Promise.all([svRef().child('resp/' + svKey(nm)).set(rec), telP.catch(function(){})]).then(function(){ SV.dirty = false; SV.fromServer = false; SV.editing = false; SV.my.at = rec.at; svDraw(); try{ document.getElementById('svWrap').scrollIntoView({ behavior:'smooth', block:'start' }); }catch(e){} toast('일정을 제출했습니다. 감사합니다!'); })
       .catch(function(e){ alert('제출하지 못했습니다. 잠시 후 다시 눌러 주세요.\n(' + (e && e.message || e) + ')'); svDraw(); });
   }
   function toast(msg, warn){ var t = document.createElement('div'); t.className = 'toast' + (warn ? ' warn' : ''); t.innerHTML = '<i class="fa-solid ' + (warn ? 'fa-triangle-exclamation' : 'fa-circle-check') + '" style="color:' + (warn ? '#fbbf24' : '#4ade80') + ';"></i> ' + esc(msg); document.body.appendChild(t); setTimeout(function(){ t.style.opacity = '0'; setTimeout(function(){ t.remove(); }, 350); }, warn ? 4200 : 2600); }
