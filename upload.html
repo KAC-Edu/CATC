@@ -194,7 +194,12 @@
   firebase.database().ref('system/coord/uploadLinks/' + String(info.n||'x')).once('value').then(function(s){
     var v = s.val();
     if(v && v.revoked) return fail('담당자가 이 업로드 링크를 중지했습니다.<br>필요하시면 새 링크를 요청해 주세요.');
-    render();
+    /* [K200] 강의실의 과정이 바뀌었으면(링크를 만든 과정과 이름이 다르면) 지난 링크로 막는다 — 다른 과정 조사에 섞이지 않게 */
+    firebase.database().ref('courses/' + info.r + '/settings/courseName').once('value').then(function(cs){
+      var now = String(cs.val() || '').replace(/[\s()\-_·.]/g,'').replace(/\d+차/g,''), was = String(info.c || '').replace(/[\s()\-_·.]/g,'').replace(/\d+차/g,'');
+      if(now && was && now !== was) return fail('과정이 바뀌어 더 이상 쓸 수 없는 링크입니다.<br>담당자에게 새 링크를 요청해 주세요.');
+      render();
+    }).catch(function(){ render(); });
   }).catch(function(){ render(); });
   }
 
@@ -268,7 +273,7 @@
           if(!stale && !v.period && pd && ps[0] && ps[1]){ var ds = []; Object.keys(v.resp || {}).forEach(function(k){ var r = v.resp[k] || {}; Object.keys(Object.assign({}, r.p1 || {}, r.p2 || {})).forEach(function(x){ ds.push(x.slice(0,10)); }); }); stale = ds.length && ds.every(function(d){ return d < ps[0] || d > ps[1]; }); }
           if(stale){ v = { course: v.course }; rg = {}; } })();
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
-        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || prevFri(ps[0] || '')); SV.replyBy = String(v.replyBy || prevFri(ps[0] || ''));   // [K196] 기본 = 과정 시작 전주 금요일 SV.resp = v.resp || {}; SV.note = String(v.note || '');
+        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || prevFri(ps[0] || '')); SV.replyBy = String(v.replyBy || prevFri(ps[0] || '')); /* [K196] 기본 = 과정 시작 전주 금요일 */ SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
         svOnName(true); svDraw(); drawHead(); drawMail();
       });
@@ -358,7 +363,7 @@
       var r = k && SV.resp[k];
       SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, reason: r.reason||'', replyBy: r.replyBy||'', pkPlace: r.pkPlace||'', pkArr: r.pkArr||'', pkDep: r.pkDep||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
                 : { avail:'', p1:{}, p2:{}, stay:null, pickup:null, pkPlace:'', pkDate:'', pkTime:'', pkMemo:'', msg:'', title:'' };
-      SV.dirty = false; SV.loadedFor = k; SV.fromServer = !!r;
+      SV.dirty = false; SV.loadedFor = k; SV.fromServer = !!r; SV.editing = false;
       if(r && r.pickup && k){ var kk = k; firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + k).once('value').then(function(s){ if(SV.loadedFor === kk && !SV.dirty && s.val()){ SV.my.tel = String(s.val()); svDraw(); } }).catch(function(){}); }
     }
     svDraw();
