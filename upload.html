@@ -125,6 +125,12 @@
         .mailD a{ color:#2563eb; font-weight:900; text-decoration:none; }
         .mailDone{ width:100%; margin-top:10px; padding:13px; border:2px solid #e2e8f0; border-radius:12px; background:#fff; color:#334155; font-size:15px; font-weight:900; cursor:pointer; }
         .mailDone.ok{ border-color:#86efac; background:#f0fdf4; color:#15803d; }
+        .seg.ok.on{ border-color:#16a34a; background:#f0fdf4; color:#15803d; }
+        .seg.no.on{ border-color:#dc2626; background:#fef2f2; color:#b91c1c; }
+        .seg.tbd.on{ border-color:#64748b; background:#f1f5f9; color:#334155; }
+        #mailWrap{ display:block !important; }
+        .mailBox{ text-align:center; }
+        .mailDone{ display:block; margin-left:auto; margin-right:auto; }
     </style>
 </head>
 <body>
@@ -306,7 +312,8 @@
     if(!SV.on){ w.innerHTML = ''; if(fno) fno.textContent = '2'; return; }
     if(fno) fno.textContent = '4';
     var me = svKey(myName()), my = SV.my, a = my.avail;
-    var seg = function(v, label){ return '<button type="button" class="seg' + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
+    /* [K180] 출강 여부 색 — 가능=초록, 불가능=빨강, 미정=회색 */
+    var seg = function(v, label){ var c = v === '가능' ? ' ok' : (v === '불가능' ? ' no' : ' tbd'); return '<button type="button" class="seg' + c + (a===v?' on':'') + '" data-av="' + v + '">' + label + '</button>'; };
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
       + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[수정 내용 제출]</b>을 눌러 주세요.</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
