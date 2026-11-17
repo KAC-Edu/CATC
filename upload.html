@@ -134,6 +134,26 @@
         .rsn{ display:flex; flex-wrap:wrap; gap:8px; }
         .rsn .chip.on{ border-color:#dc2626; background:#fef2f2; color:#b91c1c; }
         .dateIn{ width:100%; padding:13px 14px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:16px; font-weight:800; background:#fff; }
+        .cal{ border:2px solid #e2e8f0; border-radius:16px; padding:12px 12px 10px; background:#fff; }
+        .calH{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+        .calH b{ font-size:16px; font-weight:900; color:#1e293b; }
+        .calH button{ width:36px; height:36px; border:none; border-radius:10px; background:#f1f5f9; color:#475569; cursor:pointer; }
+        .calG{ display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+        .calW{ text-align:center; font-size:12.5px; font-weight:900; color:#94a3b8; padding:4px 0; } .calW.sun{ color:#f87171; }
+        .calD{ position:relative; height:42px; border:none; border-radius:10px; background:#f8fafc; font:inherit; font-size:15px; font-weight:800; color:#1e293b; cursor:pointer; display:flex; align-items:center; justify-content:center; flex-direction:column; line-height:1.1; }
+        button.calD:hover{ background:#eef2ff; }
+        .calD.off{ background:none; color:#cbd5e1; cursor:default; }
+        .calD.edu{ background:#fee2e2; color:#dc2626; font-weight:900; }
+        .calD.edu i{ font-style:normal; font-size:9.5px; font-weight:900; }
+        .calD.sel{ background:#4f46e5; color:#fff; }
+        .calL{ margin-top:10px; font-size:12.5px; font-weight:800; color:#b91c1c; display:flex; align-items:center; gap:6px; word-break:keep-all; }
+        .calL .dot{ width:12px; height:12px; border-radius:4px; background:#fee2e2; border:1.5px solid #f87171; flex-shrink:0; }
+        .calS{ margin-top:8px; font-size:14px; font-weight:900; color:#4338ca; text-align:center; }
+        .dateBtn{ width:100%; display:flex; align-items:center; gap:8px; padding:14px 16px; border:2px solid #c7d2fe; border-radius:14px; background:#f8faff; font:inherit; font-size:16px; font-weight:800; color:#334155; cursor:pointer; text-align:left; }
+        .dateBtn > i{ color:#4f46e5; font-size:17px; } .dateBtn b{ font-size:17px; font-weight:900; color:#3730a3; }
+        .dateBtn .chg{ margin-left:auto; font-size:13.5px; font-weight:900; color:#6366f1; }
+        .dateBtn.open{ border-color:#6366f1; border-bottom-left-radius:6px; border-bottom-right-radius:6px; }
+        .dateBtn + .cal{ margin-top:6px; }
     </style>
 </head>
 <body>
@@ -289,6 +309,34 @@
     var du = document.getElementById('matDue');
     if(du){ if(SV.matDue){ du.innerHTML = '<i class="fa-solid fa-calendar-check"></i> <b>' + esc(f(SV.matDue)) + '</b>까지 제출해 주시기 바랍니다'; du.style.display = ''; } else du.style.display = 'none'; }
   }
+  /* [K182] 회신 날짜 달력 — 교육 일정은 빨간색으로 표시, 교육 시작일부터는 고를 수 없음 */
+  function defReply(){
+    var ps = String(SV.period||'').split('~').map(function(x){ return x.trim(); }), cs = /^\d{4}-\d{2}-\d{2}$/.test(ps[0]||'') ? ps[0] : '';
+    var t = new Date(Date.now() + 86400000), tm = ymd(t);
+    if(!cs) { var w = new Date(Date.now() + 7*86400000); return ymd(w); }
+    var d = new Date(cs + 'T00:00:00'); d.setDate(d.getDate() - 3); var dv = ymd(d);
+    if(dv < tm){ var p = new Date(cs + 'T00:00:00'); p.setDate(p.getDate() - 1); dv = ymd(p) < tm ? tm : ymd(p); }
+    return dv;
+  }
+  function calHtml(){
+    var ps = String(SV.period||'').split('~').map(function(x){ return x.trim(); });
+    var cs = /^\d{4}-\d{2}-\d{2}$/.test(ps[0]||'') ? ps[0] : '', ce = /^\d{4}-\d{2}-\d{2}$/.test(ps[1]||'') ? ps[1] : cs;
+    var today = ymd(new Date());
+    if(!SV.calM){ var b = SV.my.replyBy ? new Date(SV.my.replyBy + 'T00:00:00') : new Date(); SV.calM = new Date(b.getFullYear(), b.getMonth(), 1); }
+    var y = SV.calM.getFullYear(), m = SV.calM.getMonth(), first = new Date(y, m, 1), last = new Date(y, m + 1, 0).getDate();
+    var c = '<div class="cal"><div class="calH"><button type="button" data-calnav="-1"><i class="fa-solid fa-chevron-left"></i></button><b>' + y + '년 ' + (m+1) + '월</b><button type="button" data-calnav="1"><i class="fa-solid fa-chevron-right"></i></button></div>'
+      + '<div class="calG">' + ['일','월','화','수','목','금','토'].map(function(d, i){ return '<span class="calW' + (i===0?' sun':'') + '">' + d + '</span>'; }).join('');
+    for(var i = 0; i < first.getDay(); i++) c += '<span></span>';
+    for(var d = 1; d <= last; d++){
+      var ds = y + '-' + String(m+1).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+      var edu = cs && ds >= cs && ds <= ce, past = ds <= today, late = cs && ds >= cs, sel = SV.my.replyBy === ds;
+      var cls = 'calD' + (edu ? ' edu' : '') + ((past || late) ? ' off' : '') + (sel ? ' sel' : '');
+      c += (past || late) ? '<span class="' + cls + '">' + d + (edu ? '<i>교육</i>' : '') + '</span>' : '<button type="button" class="' + cls + '" data-cal="' + ds + '">' + d + '</button>';
+    }
+    c += '</div>';
+    if(cs) c += '<div class="calL"><span class="dot"></span> 교육 일정 ' + Number(cs.slice(5,7)) + '.' + Number(cs.slice(8,10)) + (ce !== cs ? ' ~ ' + Number(ce.slice(5,7)) + '.' + Number(ce.slice(8,10)) : '') + ' · 그 전까지 알려 주시면 감사하겠습니다</div>';
+    return c + '</div>';
+  }
   function svOnName(force){
     var k = svKey(myName());
     if(k !== SV.loadedFor || (force && !SV.dirty)){
@@ -326,9 +374,12 @@
         + ['개인 사정','출장','다른 강의 일정','건강 사유','기타'].map(function(v){ return '<button type="button" class="chip' + (my.reason===v?' on':'') + '" data-rs="' + v + '">' + v + '</button>'; }).join('') + '</div>';
     }
     if(a === '미정'){
-      var tmr = new Date(Date.now() + 86400000), minD = tmr.getFullYear() + '-' + String(tmr.getMonth()+1).padStart(2,'0') + '-' + String(tmr.getDate()).padStart(2,'0');
-      h += '<div class="sub2" style="margin-top:14px;">언제까지 회신 주실 수 있을까요?</div>'
-        + '<input type="date" id="replyBy" min="' + minD + '" value="' + esc(my.replyBy||'') + '" class="dateIn">';
+      /* [K183] 날짜 칸을 미리 채워 두고(교육 3일 전, 최소 내일) — 칸을 누르면 달력이 펼쳐져 바꿀 수 있다 */
+      if(!my.replyBy){ my.replyBy = defReply(); }
+      var rbD = new Date(my.replyBy + 'T00:00:00');
+      h += '<div class="sub2" style="margin-top:14px;">이 날짜까지 회신 가능하실까요?</div>'
+        + '<button type="button" class="dateBtn' + (SV.calOpen ? ' open' : '') + '" id="calTog"><i class="fa-regular fa-calendar"></i><b>' + (rbD.getMonth()+1) + '월 ' + rbD.getDate() + '일(' + WD[rbD.getDay()] + ')</b>까지<span class="chg">' + (SV.calOpen ? '닫기' : '바꾸기') + ' <i class="fa-solid fa-chevron-' + (SV.calOpen ? 'up' : 'down') + '"></i></span></button>'
+        + (SV.calOpen ? calHtml() : '');
     }
     if(a === '가능'){
       h += '<div class="muted" style="margin:12px 2px 8px;">먼저 누른 칸이 <b class="b1">1안</b>, 다음 칸이 <b class="b2">2안</b> · 다시 누르면 취소</div><table class="sv"><thead><tr><th></th><th>오전</th><th>오후</th></tr></thead><tbody>';
@@ -371,14 +422,16 @@
     }
     /* [K168] 전달 사항은 별도 3번 항목 — 픽업과 헷갈리지 않게 분리, 제출 버튼은 그 아래 */
     if(a){
-      h += '<div class="step"><span class="no">3</span> 담임교수님께 전달할 사항</div>'
-        + '<textarea id="svMsg" rows="3" placeholder="담임교수님께 전하실 말씀">' + esc(my.msg) + '</textarea>'
+      h += '<div class="step"><span class="no">3</span> 담임교수님께 전달할 사항 <span class="optTag">선택</span></div>'
+        + '<textarea id="svMsg" rows="3" placeholder="전하실 말씀이 있을 때만 적어 주세요. 비워 두셔도 제출됩니다.">' + esc(my.msg) + '</textarea>'
         + '<button type="button" class="btn" id="svGo" style="width:100%; justify-content:center; margin-top:10px; padding:14px;"><i class="fa-solid fa-paper-plane"></i> ' + (my.at ? '수정 내용 제출' : '제출하기') + '</button>'
         + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출 완료 · 내용을 고치신 뒤 다시 누르시면 수정됩니다</div>' : '');
     }
     w.innerHTML = h;
     w.querySelectorAll('[data-rs]').forEach(function(b){ b.onclick = function(){ var v = b.getAttribute('data-rs'); my.reason = (my.reason === v ? '' : v); SV.dirty = true; svDraw(); }; });
-    var rb = document.getElementById('replyBy'); if(rb) rb.onchange = function(){ my.replyBy = rb.value; SV.dirty = true; };
+    w.querySelectorAll('[data-cal]').forEach(function(b){ b.onclick = function(){ my.replyBy = b.getAttribute('data-cal'); SV.dirty = true; SV.calOpen = false; svDraw(); }; });
+    var ct = document.getElementById('calTog'); if(ct) ct.onclick = function(){ SV.calOpen = !SV.calOpen; if(SV.calOpen && my.replyBy){ var x = new Date(my.replyBy + 'T00:00:00'); SV.calM = new Date(x.getFullYear(), x.getMonth(), 1); } svDraw(); };
+    w.querySelectorAll('[data-calnav]').forEach(function(b){ b.onclick = function(){ var d = SV.calM; d.setMonth(d.getMonth() + Number(b.getAttribute('data-calnav'))); svDraw(); }; });
     w.querySelectorAll('[data-av]').forEach(function(b){ b.onclick = function(){ if(!svNeedName()) return; SV.my.avail = b.getAttribute('data-av'); SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('td.c').forEach(function(td){ td.onclick = function(){
       if(!svNeedName()) return; var k = td.getAttribute('data-k');
@@ -411,7 +464,7 @@
     if(!svNeedName()) return;
     var my = SV.my, nm = myName();
     if(my.avail === '가능' && !Object.keys(my.p1).length && !Object.keys(my.p2).length){ alert('가능한 칸을 하나 이상 눌러 주세요.'); return; }
-    if(my.avail === '미정' && !my.replyBy){ alert('회신 주실 수 있는 날짜를 골라 주세요.'); var rbi = document.getElementById('replyBy'); if(rbi) rbi.focus(); return; }
+    if(my.avail === '미정' && !my.replyBy){ alert('회신 주실 수 있는 날짜를 골라 주세요.'); var rbi = document.querySelector('.cal'); if(rbi) rbi.scrollIntoView({ behavior:'smooth', block:'center' }); return; }
     if(my.avail === '가능'){
       if(my.stay !== true && my.stay !== false){ alert('교육 전날 숙박 여부를 골라 주세요.'); return; }
       if(my.pickup !== true && my.pickup !== false){ alert('픽업 요청 여부를 골라 주세요.'); return; }
