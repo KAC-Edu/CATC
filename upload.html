@@ -284,7 +284,7 @@
       if(SV.prof) firebase.database().ref('system/professorProfiles/' + SV.prof.replace(/[.#$\[\]\/]/g,'') + '/email').once('value').then(function(s){ SV.email = String(s.val()||'').trim(); drawMail(); }).catch(function(){});
       svRef().on('value', function(s){
         var v = s.val() || {};
-        var rg = v.range || {}, ps = pd.split('~').map(function(x){ return x.trim(); });
+        var rg = {}, ps = pd.split('~').map(function(x){ return x.trim(); });
         /* [K194] 지난 과정의 조사 결과는 보이지 않게(과정명·교육기간이 다르면) — 담당자 화면을 열면 자동 정리됨 */
         (function(){ var stale = (v.period && pd && v.period !== pd);
           if(!stale && !v.period && pd && ps[0] && ps[1]){ var ds = []; Object.keys(v.resp || {}).forEach(function(k){ var r = v.resp[k] || {}; Object.keys(Object.assign({}, r.p1 || {}, r.p2 || {})).forEach(function(x){ ds.push(x.slice(0,10)); }); }); stale = ds.length && ds.every(function(d){ return d < ps[0] || d > ps[1]; }); }
