@@ -131,6 +131,9 @@
         #mailWrap{ display:block !important; }
         .mailBox{ text-align:center; }
         .mailDone{ display:block; margin-left:auto; margin-right:auto; }
+        .rsn{ display:flex; flex-wrap:wrap; gap:8px; }
+        .rsn .chip.on{ border-color:#dc2626; background:#fef2f2; color:#b91c1c; }
+        .dateIn{ width:100%; padding:13px 14px; border:2px solid #e2e8f0; border-radius:12px; font:inherit; font-size:16px; font-weight:800; background:#fff; }
     </style>
 </head>
 <body>
@@ -290,7 +293,7 @@
     var k = svKey(myName());
     if(k !== SV.loadedFor || (force && !SV.dirty)){
       var r = k && SV.resp[k];
-      SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, pkPlace: r.pkPlace||'', pkArr: r.pkArr||'', pkDep: r.pkDep||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
+      SV.my = r ? { avail: r.avail||'', p1: one(r.p1), p2: one(r.p2), stay: !!r.stay, pickup: !!r.pickup, reason: r.reason||'', replyBy: r.replyBy||'', pkPlace: r.pkPlace||'', pkArr: r.pkArr||'', pkDep: r.pkDep||'', pkMemo: r.pkMemo||'', msg: r.msg||'', title: r.title||'', at: r.at }
                 : { avail:'', p1:{}, p2:{}, stay:null, pickup:null, pkPlace:'', pkDate:'', pkTime:'', pkMemo:'', msg:'', title:'' };
       SV.dirty = false; SV.loadedFor = k; SV.fromServer = !!r;
       if(r && r.pickup && k){ var kk = k; firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + k).once('value').then(function(s){ if(SV.loadedFor === kk && !SV.dirty && s.val()){ SV.my.tel = String(s.val()); svDraw(); } }).catch(function(){}); }
@@ -317,7 +320,17 @@
     var h = '<div class="step"><span class="no">2</span> 강의 가능 일정</div>'
       + (my.at && SV.fromServer ? '<div class="back"><i class="fa-solid fa-clock-rotate-left"></i> <b>' + svTime(my.at) + '</b>에 제출하신 내용을 불러왔습니다.<br>고칠 부분만 바꾸고 아래 <b>[수정 내용 제출]</b>을 눌러 주세요.</div>' : '')
       + '<div class="segs">' + seg('가능','출강 가능') + seg('불가능','불가능') + seg('미정','미정') + '</div>';
-    if(a === '가능' || a === '미정'){
+    /* [K181] 불가능 → 사유 고르기(선택) / 미정 → 회신 가능 날짜(필수). 일정표·숙박·픽업은 '출강 가능'일 때만 */
+    if(a === '불가능'){
+      h += '<div class="sub2" style="margin-top:14px;">불참 사유</div><div class="rsn">'
+        + ['개인 사정','출장','다른 강의 일정','건강 사유','기타'].map(function(v){ return '<button type="button" class="chip' + (my.reason===v?' on':'') + '" data-rs="' + v + '">' + v + '</button>'; }).join('') + '</div>';
+    }
+    if(a === '미정'){
+      var tmr = new Date(Date.now() + 86400000), minD = tmr.getFullYear() + '-' + String(tmr.getMonth()+1).padStart(2,'0') + '-' + String(tmr.getDate()).padStart(2,'0');
+      h += '<div class="sub2" style="margin-top:14px;">언제까지 회신 주실 수 있을까요?</div>'
+        + '<input type="date" id="replyBy" min="' + minD + '" value="' + esc(my.replyBy||'') + '" class="dateIn">';
+    }
+    if(a === '가능'){
       h += '<div class="muted" style="margin:12px 2px 8px;">먼저 누른 칸이 <b class="b1">1안</b>, 다음 칸이 <b class="b2">2안</b> · 다시 누르면 취소</div><table class="sv"><thead><tr><th></th><th>오전</th><th>오후</th></tr></thead><tbody>';
       SV.days.forEach(function(d){
         var md = Number(d.d.slice(5,7)) + '.' + Number(d.d.slice(8,10));
@@ -364,6 +377,8 @@
         + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출 완료 · 내용을 고치신 뒤 다시 누르시면 수정됩니다</div>' : '');
     }
     w.innerHTML = h;
+    w.querySelectorAll('[data-rs]').forEach(function(b){ b.onclick = function(){ var v = b.getAttribute('data-rs'); my.reason = (my.reason === v ? '' : v); SV.dirty = true; svDraw(); }; });
+    var rb = document.getElementById('replyBy'); if(rb) rb.onchange = function(){ my.replyBy = rb.value; SV.dirty = true; };
     w.querySelectorAll('[data-av]').forEach(function(b){ b.onclick = function(){ if(!svNeedName()) return; SV.my.avail = b.getAttribute('data-av'); SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('td.c').forEach(function(td){ td.onclick = function(){
       if(!svNeedName()) return; var k = td.getAttribute('data-k');
@@ -396,7 +411,8 @@
     if(!svNeedName()) return;
     var my = SV.my, nm = myName();
     if(my.avail === '가능' && !Object.keys(my.p1).length && !Object.keys(my.p2).length){ alert('가능한 칸을 하나 이상 눌러 주세요.'); return; }
-    if(my.avail !== '불가능'){
+    if(my.avail === '미정' && !my.replyBy){ alert('회신 주실 수 있는 날짜를 골라 주세요.'); var rbi = document.getElementById('replyBy'); if(rbi) rbi.focus(); return; }
+    if(my.avail === '가능'){
       if(my.stay !== true && my.stay !== false){ alert('교육 전날 숙박 여부를 골라 주세요.'); return; }
       if(my.pickup !== true && my.pickup !== false){ alert('픽업 요청 여부를 골라 주세요.'); return; }
       if(my.pickup && !my.pkPlace){ alert('픽업 탑승 장소를 골라 주세요.'); return; }
@@ -404,8 +420,8 @@
     }
     var tm = nm.match(TTL_RE), ttl = tm ? tm[1] : '';
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
-    var rec = { name: pure, title: ttl || my.title || '강사', avail: my.avail, p1: (my.avail==='불가능'?null:my.p1), p2: (my.avail==='불가능'?null:my.p2), stay: my.avail!=='불가능' && my.stay===true, pickup: my.avail!=='불가능' && my.pickup===true,
-                pkPlace: (my.pickup && my.avail!=='불가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail!=='불가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail!=='불가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail!=='불가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now(), mailSent: (SV.resp[svKey(nm)]||{}).mailSent || null };
+    var rec = { name: pure, title: ttl || my.title || '강사', avail: my.avail, p1: (my.avail!=='가능'?null:my.p1), p2: (my.avail!=='가능'?null:my.p2), stay: my.avail==='가능' && my.stay===true, pickup: my.avail==='가능' && my.pickup===true,
+                pkPlace: (my.pickup && my.avail==='가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail==='가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail==='가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail==='가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now(), reason: (my.avail==='불가능' && my.reason) ? my.reason : null, replyBy: (my.avail==='미정' && my.replyBy) ? my.replyBy : null, mailSent: (SV.resp[svKey(nm)]||{}).mailSent || null };
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var go = document.getElementById('svGo'); if(go){ go.disabled = true; go.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 제출 중…'; }
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + svKey(nm));
