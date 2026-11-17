@@ -20556,6 +20556,8 @@ ui.preSurveyOpen = async function(){
 
 
 /* [K173] 'presurvey' 는 이제 일반 화면(view-presurvey) — setMode 가 그대로 연다 */
+(function(){ var _gh = ui.goHomeSmart; if(typeof _gh !== 'function' || _gh._svy) return;
+  ui.goHomeSmart = function(){ if(state.currentMode === 'survey' && !state.room && ui._svySel){ ui._svySel = ''; ui.surveyOpen(); try{ window.scrollTo(0,0); }catch(e){} return; } return _gh.apply(this, arguments); }; ui.goHomeSmart._svy = true; })();
 
 /* [K155] 링크 보여주기 + [복사] 버튼 — 암호 입력 등으로 시간이 지나면 브라우저가 자동 복사를 막으므로 버튼을 눌러 복사 */
 ui._showLinkCopy = function(url, until){
@@ -20729,11 +20731,13 @@ ui._svySeriesOf = function(title){
 };
 ui._svyRoundOf = function(title){ var m = String(title||'').match(/(\d+)\s*차/); return m ? Number(m[1]) : 0; };
 ui._svyTag = function(t){
-    var s = String(t||'').trim();
+    var s0 = String(t||'').trim();
+    /* [K192] '불편하지 않았다 / 큰 불편 없이 / 힘드셨을텐데(상대 배려)'처럼 부정이 뒤집힌 말은 불만에서 뺀다 */
+    var s = s0.replace(/(큰\s?)?(불편|어렵|어려|부족|아쉬|문제|힘들|불만|지장)[가-힣]{0,5}\s?(없|않|안\s?되|안\s?했)/g, ' ').replace(/힘드셨|수고하셨|고생하셨|고생\s?많|애쓰셨/g, ' ');
     if(/불편|춥|추워|추움|추웠|덥|더워|더움|고장|부족|아쉽|아쉬|냄새|소음|시끄|꺼져|꺼졌|꺼지|느리|느림|안\s?되|안돼|불만|불친절|좁|낡|노후|힘들|어렵|어려웠|불량|끊기|끊겨|지저분|더럽|비싸|못\s?해|못했/.test(s)) return 'neg';
-    if(s.replace(/\s/g,'').length < 10) return /좋았|만족|감사|최고|유익|맛있|친절/.test(s) ? 'pos' : 'etc';   // 너무 짧은 조각은 분류하지 않음
+    if(s0.replace(/\s/g,'').length < 10) return /좋았|만족|감사|최고|유익|맛있|친절/.test(s0) ? 'pos' : 'etc';   // 너무 짧은 조각은 분류하지 않음
     if(/(있|했|하|되|됐|주셨|주시|해주셨|해주시|해\s주시)으면|바랍니다|바람|원합|원해요|원함|희망|추가(해|되|로|를|했|하)|요청|건의|좋겠|좋을\s?(것|거)\s?같|개선(이|을|해|되|이\s?필요)|필요합니다|필요함|필요할\s?(것|듯)|필요해\s?보|필요하다고/.test(s)) return 'sug';
-    if(/좋았|좋습|좋아|좋은|좋다|만족|감사|최고|유익|도움|친절|맛있|깔끔|훌륭|재미|재밌|인상\s?깊|알찬|최선/.test(s)) return 'pos';
+    if(/좋았|좋습|좋아|좋은|좋다|만족|감사|최고|유익|도움|친절|맛있|깔끔|훌륭|재미|재밌|인상\s?깊|알찬|최선|원활|수고|고생/.test(s0)) return 'pos';
     return 'etc';
 };
 /* [K186] 제목 통일 — '계열명(회차)'. 회차가 없는 옛 결과지는 같은 해 안에서 기간 순서로 매김 */
@@ -20852,7 +20856,7 @@ ui.surveyOpen = async function(){
       + '<div id="svySug" class="svySug" style="display:none"></div></div>'
       + '<button id="svyAllBtn" class="svyHB' + (sel ? '' : ' on') + '"><i class="fa-solid fa-table-list"></i> 전체 과정 ' + skeys.length + '</button>')
       + '<button onclick="ui.surveyUpload()" class="svyHB pri"><i class="fa-solid fa-file-arrow-up"></i> 결과지(PDF) 올리기</button></div>'
-      + (sel ? '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px"><span style="font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.4px">' + esc(S.name) + '</span>'
+      + (sel ? '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px">' + (inCourse ? '' : '<button id="svyBack" class="svyHB" style="padding:9px 14px;font-size:14px"><i class="fa-solid fa-arrow-left"></i> 전체 과정</button>') + '<span style="font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.4px">' + esc(S.name) + '</span>'
           + (sel === cur ? '<span style="padding:3px 10px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:12.5px;font-weight:900">현재 운영 과정</span>' : '')
           + '<span style="font-size:14px;font-weight:800;color:#94a3b8">결과지 ' + S.list.length + '건 · ' + yrs(S) + '</span>'
           + (years.length > 1 ? '<span style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;font-size:14px;font-weight:900;color:#475569">기간 <select id="svyYF" class="svyYs">' + years.map(function(y){ return '<option' + (y === yf ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select> ~ <select id="svyYT" class="svyYs">' + years.map(function(y){ return '<option' + (y === yt ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>' + ((yf !== years[0] || yt !== years[years.length-1]) ? ' <a href="#" id="svyYAll" style="color:#6366f1;text-decoration:none;font-size:13px">전체</a>' : '') + '</span>' : '')
@@ -20863,10 +20867,18 @@ ui.surveyOpen = async function(){
     var css0 = '<style>.svySug{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:50;background:#fff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 16px 40px rgba(15,23,42,.15);overflow:hidden;max-height:360px;overflow-y:auto}.svySug div{padding:12px 16px;font-size:15.5px;font-weight:800;color:#1e293b;cursor:pointer;display:flex;gap:8px;align-items:center}.svySug div:hover,.svySug div.on{background:#eef2ff}.svySug small{margin-left:auto;color:#94a3b8;font-weight:800}.svyHB{padding:14px 18px;border:2px solid #e2e8f0;border-radius:14px;background:#fff;font:inherit;font-size:15px;font-weight:900;color:#334155;cursor:pointer;white-space:nowrap}.svyHB:hover,.svyHB.on{border-color:#6366f1;color:#3730a3;background:#eef2ff}.svyHB.pri{border:none;background:#4f46e5;color:#fff;box-shadow:0 8px 20px rgba(79,70,229,.25)}.svyHB.pri:hover{background:#4338ca;color:#fff}.svyCat{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}.svyCard{padding:18px 20px;border:1.5px solid #e2e8f0;border-radius:18px;background:#fff;cursor:pointer;transition:transform .15s,box-shadow .15s,border-color .15s}.svyCard:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(15,23,42,.1);border-color:#a5b4fc}.svyCard .nm{font-size:17px;font-weight:900;color:#0f172a;line-height:1.35}.svyCard .mt{margin-top:6px;font-size:13px;font-weight:800;color:#94a3b8}.svyCard .sc{margin-top:12px;display:flex;align-items:baseline;gap:6px}.svyCard .sc b{font-size:28px;color:#1e3a8a}.svyCard .sc span{font-size:13px;font-weight:800;color:#64748b}</style>';
     if(!sel){
         ui._svyLastMsg = '';
-        host.innerHTML = h + '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:14px"><i class="fa-solid fa-table-list" style="color:#6366f1"></i> 등록된 과정 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 눌러서 추이 보기</span></div>'
-          + (skeys.length ? '<div class="svyCat" id="svyCat">' + skeys.map(function(k){ var sr = series[k], lr = lastOf(sr); return '<div class="svyCard" data-sel="' + esc(k) + '" data-name="' + esc(sr.name) + '"><div class="nm">' + esc(sr.name) + (k === cur ? ' <span style="padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle">현재 과정</span>' : '') + '</div><div class="mt">결과지 ' + sr.list.length + '건 · ' + yrs(sr) + '</div><div class="sc"><b>' + f1(lr && lr.total > 30 ? lr.total : null) + '</b><span>최근 종합</span></div></div>'; }).join('') + '</div>'
+        var avgOf = function(sr){ var a = sr.list.filter(function(r){ return !r.off; }).map(function(r){ return ui._svyVal(r, 'total'); }).filter(function(v){ return v != null; }); return a.length ? a.reduce(function(x,y){ return x+y; },0) / a.length : null; };
+        var lastP = function(sr){ var lr = lastOf(sr); return lr ? String(lr.period).slice(0,10) : ''; };
+        host.innerHTML = h + '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:12px"><i class="fa-solid fa-table-list" style="color:#6366f1"></i> 등록된 과정 ' + skeys.length + ' <span style="font-size:13px;color:#94a3b8;font-weight:700">· 가나다순 · 눌러서 추이 보기</span></div>'
+          + (skeys.length ? '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:16px"><table class="svyT svyCatT" id="svyCat"><thead><tr><th style="text-align:left;padding-left:18px">과정명</th><th>결과지</th><th>기간</th><th>평균 만족도</th><th>최근 결과</th><th></th></tr></thead><tbody>'
+              + skeys.map(function(k){ var sr = series[k], av = avgOf(sr), lr = lastOf(sr);
+                  return '<tr class="svyCard" data-sel="' + esc(k) + '" data-name="' + esc(sr.name) + '"><td style="text-align:left;padding-left:18px;font-weight:900;font-size:16px;color:#0f172a">' + esc(sr.name) + (k === cur ? ' <span style="padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle">현재 과정</span>' : '') + '</td>'
+                    + '<td><b>' + sr.list.length + '</b>건</td><td style="color:#64748b;font-weight:800">' + yrs(sr) + '</td>'
+                    + '<td><b style="font-size:17px;color:#1e3a8a">' + f1(av) + '</b>' + (av != null ? '점' : '') + '</td>'
+                    + '<td style="color:#64748b;font-weight:800">' + (lr ? f1(ui._svyVal(lr, 'total')) + '점 <small style="color:#94a3b8">(' + esc(lastP(sr)) + ')</small>' : '-') + '</td>'
+                    + '<td style="color:#a5b4fc"><i class="fa-solid fa-chevron-right"></i></td></tr>'; }).join('') + '</tbody></table></div>'
             : '<div style="padding:40px;text-align:center;color:#94a3b8;font-weight:800">아직 올린 결과지가 없습니다. [결과지(PDF) 올리기]로 시작하세요.</div>')
-          + '</div>' + css0;
+          + '</div>' + css0 + '<style>.svyCatT tbody tr{cursor:pointer;transition:background .12s}.svyCatT tbody tr:hover td{background:#f5f7ff}.svyCatT td{padding:14px 12px}</style>';
         ui._svyBind(host); return;
     }
     ui._svyLastMsg = '';
@@ -20897,7 +20909,7 @@ ui.surveyOpen = async function(){
       + ins.map(function(v){ return '<tr><td style="text-align:left;padding-left:14px;font-weight:900">' + esc(v.n) + '</td><td>' + v.cnt + '회</td>' + cell(v.avg) + list.map(function(r, ri){ return cell(v.s[ri]); }).join('') + '</tr>'; }).join('')
       + '</tbody></table></div></div>';
     /* 의견 분석 */
-    var cms = []; list.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c) }); }); });
+    var cms = []; list.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(/(무엇입니까|하십니까|이유는|있습니까|어떠셨|바랍니다\?)\s*\??\s*$/.test(c.t) || /^\d+-\d+\./.test(String(c.t).trim())) return; cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c) }); }); });
     var bad = cms.filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }), good = cms.filter(function(c){ return c.tag === 'pos'; });
     var cc = {}; bad.forEach(function(c){ cc[c.cat] = (cc[c.cat] || 0) + 1; });
     var cats = Object.keys(cc).sort(function(a,b){ return cc[b] - cc[a]; }), mx = cats.length ? cc[cats[0]] : 1;
@@ -20933,6 +20945,9 @@ ui._svyBind = function(host){
     var go = function(k){ ui._svySel = k; ui._svyYF = ui._svyYT = 0; ui.surveyOpen(); };
     host.querySelectorAll('[data-sel]').forEach(function(c){ c.onclick = function(){ go(c.getAttribute('data-sel')); }; });
     var ab = host.querySelector('#svyAllBtn'); if(ab) ab.onclick = function(){ ui._svySel = ''; ui.surveyOpen(); };
+    var bk = host.querySelector('#svyBack'); if(bk) bk.onclick = function(){ ui._svySel = ''; ui.surveyOpen(); window.scrollTo && window.scrollTo(0,0); };
+    /* [K192] 아래 남색 버튼 — 메인에서 과정 하나를 보고 있으면 '전체 과정'으로 돌아가게 */
+    try{ var fb = document.getElementById('floatingHomeBtn'), sp = fb && fb.querySelector('span'); if(sp){ if(!state.room && ui._svySel){ sp.textContent = '전체 과정'; fb.title = '등록된 과정 목록으로'; } else if(!state.room){ sp.textContent = '현황판으로'; } } }catch(e){}
     var q = host.querySelector('#svyQ'), sug = host.querySelector('#svySug');
     if(q && sug){
         var norm = function(t){ return String(t||'').replace(/\s+/g,'').toLowerCase(); };
