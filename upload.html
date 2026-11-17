@@ -109,6 +109,22 @@
         #mailWrap{ flex:1; display:flex; } #mailWrap:empty{ display:none; }
         .mailBtn{ flex:1; padding:18px 10px; border:2px solid #e2e8f0; border-radius:16px; background:#fff; color:#334155; font-size:16.5px; font-weight:900; cursor:pointer; }
         .mailBtn i{ color:#64748b; margin-right:6px; } .mailBtn:hover{ background:#f8fafc; border-color:#cbd5e1; }
+        .optCard{ margin-top:34px; padding:20px 18px 18px; border:1.5px dashed #cbd5e1; border-radius:18px; background:#fcfcfd; }
+        .optHead{ display:flex; align-items:center; gap:8px; font-size:17px; font-weight:900; color:#1e293b; }
+        .optHead > i{ color:#64748b; }
+        .optTag{ padding:2px 10px; border-radius:999px; background:#e2e8f0; color:#475569; font-size:12.5px; font-weight:900; }
+        .optSub{ margin:6px 2px 12px; font-size:13.5px; font-weight:700; color:#64748b; line-height:1.6; word-break:keep-all; }
+        .optCard .due{ margin:0 2px 12px; }
+        .optCard .drop{ display:flex; align-items:center; justify-content:center; gap:8px; padding:17px 10px; border:2px dashed #a5b4fc; border-radius:14px; background:#f8faff; font-size:16.5px; font-weight:900; color:#3730a3; cursor:pointer; }
+        .optCard .drop > i{ font-size:19px; color:#dc2626; }
+        .optCard .drop.on, .optCard .drop:hover{ background:#eef2ff; border-color:#6366f1; }
+        .optNote{ margin:6px 2px 0; font-size:12.5px; font-weight:800; color:#94a3b8; text-align:center; }
+        .mailBox{ margin-top:16px; padding-top:14px; border-top:1px solid #e2e8f0; }
+        .mailT{ font-size:14px; font-weight:900; color:#334155; } .mailT i{ color:#64748b; margin-right:4px; }
+        .mailD{ margin-top:4px; font-size:13.5px; font-weight:700; color:#64748b; line-height:1.65; word-break:keep-all; }
+        .mailD a{ color:#2563eb; font-weight:900; text-decoration:none; }
+        .mailDone{ width:100%; margin-top:10px; padding:13px; border:2px solid #e2e8f0; border-radius:12px; background:#fff; color:#334155; font-size:15px; font-weight:900; cursor:pointer; }
+        .mailDone.ok{ border-color:#86efac; background:#f0fdf4; color:#15803d; }
     </style>
 </head>
 <body>
@@ -153,15 +169,18 @@
       + '<div class="step"><span class="no">1</span> 성함</div>'
       + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
       + '<div id="svWrap"></div>'
-      /* [K177] 교재 — 제목 · 기한 한 줄 · [파일 올리기] [메일로 제출] 두 버튼만 */
-      + '<div class="step"><span class="no" id="fileNo">2</span> 교재 파일</div>'
+      /* [K179] 교재는 '선택' — 설문 제출과 분리된 별도 카드(번호 없음). 나중에 같은 링크로 다시 와서 올려도 됨 */
+      + '<div class="optCard"><div class="optHead"><i class="fa-solid fa-paperclip"></i> 강의 교재 제출 <span class="optTag">선택</span></div>'
+      + '<div class="optSub">설문 제출과 별개입니다. 교재가 준비되면 나중에 <b>이 링크로 다시 들어와</b> 올리셔도 됩니다.</div>'
       + '<div id="matDue" class="due" style="display:none;"></div>'
-      + '<div class="fileBtns"><div class="drop" id="dz"><i class="fa-solid fa-arrow-up-from-bracket"></i> 파일 올리기</div><div id="mailWrap"></div></div>'
-      + '<input type="file" id="fi" multiple style="display:none;">'
+      + '<div class="drop" id="dz"><i class="fa-solid fa-file-pdf"></i> PDF 파일 올리기</div>'
+      + '<div class="optNote">PDF 파일만 올려 주세요.</div>'
+      + '<div id="mailWrap"></div></div>'
+      + '<input type="file" id="fi" multiple accept=".pdf,application/pdf" style="display:none;">'
       + '<div id="list"></div>'
       + '<div id="mineWrap" style="display:none;"><div class="step" style="margin-top:26px;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> 제출한 파일 <span id="mineCnt" class="muted"></span></div><div id="mine"></div></div>';
     var dz = document.getElementById('dz'), fi = document.getElementById('fi'), nmI = document.getElementById('nm');
-    var sync = function(){ dz.classList.toggle('off', !nmI.value.trim()); drawMine(); svOnName(); };
+    var sync = function(){ dz.classList.toggle('off', !nmI.value.trim()); drawMine(); svOnName(); drawMail(); };
     nmI.addEventListener('input', sync);
     dz.onclick = function(){ if(!nmI.value.trim()){ nmI.focus(); nmI.classList.add('need'); setTimeout(function(){ nmI.classList.remove('need'); }, 1200); return; } fi.click(); };
     fi.onchange = function(){ go(fi.files); fi.value=''; };
@@ -209,7 +228,7 @@
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
         SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || ''); SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
-        svOnName(true); svDraw(); drawHead();
+        svOnName(true); svDraw(); drawHead(); drawMail();
       });
     });
   }
@@ -225,14 +244,25 @@
   function one(m){ var k = Object.keys(m||{}).sort()[0]; var o = {}; if(k) o[k] = true; return o; }
   /* [K167] 머리 정보 — 교육기간 · 담임 교수(연락처) · 담당자 안내 문구 */
   /* [K171] 교재를 메일로 내실 분 — 담임교수님 메일로 바로 쓰기(교수 프로필의 메일 주소) */
+  /* [K179] 메일 제출 안내 + '메일로 제출했습니다' 확인 버튼(담당자 화면에 표시) */
+  var MAIL_FALLBACK = 'jds0616@airport.co.kr';
   function drawMail(){
     var w = document.getElementById('mailWrap'); if(!w) return;
-    if(!/@/.test(SV.email||'')){ w.innerHTML = ''; return; }
-    w.innerHTML = '<button type="button" class="mailBtn" id="mailGo"><i class="fa-solid fa-envelope"></i> 메일로 제출</button>';
-    document.getElementById('mailGo').onclick = function(){
-      var nm = myName() || '강사';
-      location.href = 'mailto:' + encodeURIComponent(SV.email) + '?subject=' + encodeURIComponent('[교재 제출] ' + (info.c || '') + ' — ' + nm)
-        + '&body=' + encodeURIComponent((SV.prof ? SV.prof + ' 교수님께,\n\n' : '') + (info.c || '') + ' 과정 교재를 첨부해 제출합니다.\n\n' + nm + ' 드림');
+    var to = /@/.test(SV.email||'') ? SV.email : MAIL_FALLBACK;
+    var r = SV.resp[svKey(myName())] || {}, sent = r.mailSent;
+    w.innerHTML = '<div class="mailBox"><div class="mailT"><i class="fa-solid fa-envelope"></i> 메일로 보내실 경우</div>'
+      + '<div class="mailD"><a href="#" id="mailGo">' + esc(to) + '</a> 로 보내 주시고,<br>보내신 뒤 아래 버튼을 눌러 주세요. 확인 후 정리하겠습니다.</div>'
+      + '<button type="button" class="mailDone' + (sent ? ' ok' : '') + '" id="mailDone">' + (sent ? '<i class="fa-solid fa-circle-check"></i> 메일 제출 확인됨 · ' + svTime(sent) : '<i class="fa-solid fa-paper-plane"></i> 메일로 제출했습니다') + '</button></div>';
+    document.getElementById('mailGo').onclick = function(ev){
+      ev.preventDefault(); var nm = myName() || '강사';
+      location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent('[교재 제출] ' + (info.c || '') + ' — ' + nm)
+        + '&body=' + encodeURIComponent((SV.prof ? SV.prof + ' 교수님께,\n\n' : '') + (info.c || '') + ' 과정 교재(PDF)를 첨부해 제출합니다.\n\n' + nm + ' 드림');
+    };
+    document.getElementById('mailDone').onclick = function(){
+      if(!svNeedName()) return;
+      var k = svKey(myName());
+      if(!SV.resp[k]){ alert('먼저 위의 설문을 [제출하기]로 제출해 주세요.'); return; }
+      svRef().child('resp/' + k + '/mailSent').set(Date.now()).then(function(){ toast('메일 제출을 알려 주셔서 감사합니다.'); }).catch(function(e){ alert('저장하지 못했습니다. 다시 눌러 주세요.'); });
     };
   }
   function drawHead(){
@@ -265,9 +295,9 @@
   function yn(f, v, label){ var cur = SV.my[f]; var on = (v ? cur === true : cur === false); return '<button type="button" class="seg' + (on?' on':'') + '" data-yn="' + f + '" data-v="' + (v?1:0) + '">' + label + '</button>'; }
   /* [K171] 시각 고르기 — 09~18시, 10분 단위 (오전/오후 구분 없음) */
   function tSel(id, v){
-    var m = String(v||'').match(/^(\d{2}):(\d{2})$/), hv = m ? m[1] : '', mv = m ? String(Math.floor(Number(m[2])/10)*10).padStart(2,'0') : '';
+    var m = String(v||'').match(/^(\d{2}):(\d{2})$/), hv = m ? m[1] : '', mv = m ? String(Math.floor(Number(m[2])/5)*5).padStart(2,'0') : '';
     var hs = '<option value="">시</option>'; for(var i=9;i<=18;i++){ var x = String(i).padStart(2,'0'); hs += '<option value="' + x + '"' + (x===hv?' selected':'') + '>' + x + '시</option>'; }
-    var ms = '<option value="">분</option>'; for(var j=0;j<60;j+=10){ var y = String(j).padStart(2,'0'); ms += '<option value="' + y + '"' + (y===mv?' selected':'') + '>' + y + '분</option>'; }
+    var ms = '<option value="">분</option>'; for(var j=0;j<60;j+=5){ var y = String(j).padStart(2,'0'); ms += '<option value="' + y + '"' + (y===mv?' selected':'') + '>' + y + '분</option>'; }
     return '<div class="tPair"><select id="' + id + 'H">' + hs + '</select><select id="' + id + 'M">' + ms + '</select></div>';
   }
   function who(r){ return esc(r.name) + ' ' + esc(r.title || '강사'); }
@@ -368,7 +398,7 @@
     var tm = nm.match(TTL_RE), ttl = tm ? tm[1] : '';
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
     var rec = { name: pure, title: ttl || my.title || '강사', avail: my.avail, p1: (my.avail==='불가능'?null:my.p1), p2: (my.avail==='불가능'?null:my.p2), stay: my.avail!=='불가능' && my.stay===true, pickup: my.avail!=='불가능' && my.pickup===true,
-                pkPlace: (my.pickup && my.avail!=='불가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail!=='불가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail!=='불가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail!=='불가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now() };
+                pkPlace: (my.pickup && my.avail!=='불가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail!=='불가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail!=='불가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail!=='불가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now(), mailSent: (SV.resp[svKey(nm)]||{}).mailSent || null };
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var go = document.getElementById('svGo'); if(go){ go.disabled = true; go.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 제출 중…'; }
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + svKey(nm));
@@ -436,6 +466,8 @@
     var nm = myName();
     if(!nm){ var ni = document.getElementById('nm'); ni.focus(); ni.classList.add('need'); setTimeout(function(){ ni.classList.remove('need'); }, 1200); return; }
     try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
+    var bad = files.filter(function(f){ return !/\.pdf$/i.test(f.name || ''); });
+    if(bad.length){ alert('PDF 파일만 올려 주세요.\n(제외: ' + bad.map(function(f){ return f.name; }).join(', ') + ')'); files = files.filter(function(f){ return /\.pdf$/i.test(f.name || ''); }); if(!files.length) return; }
     var list = document.getElementById('list');
     for(var i=0;i<files.length;i++){
       var f = files[i];
