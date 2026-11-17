@@ -21009,6 +21009,7 @@ ui.surveyOpen = async function(){
         return '<div style="flex:1;min-width:170px;padding:16px 18px;border-radius:18px;background:' + col + '10;border:1px solid ' + col + '30"><div style="font-size:14px;font-weight:900;color:#475569"><i class="fa-solid ' + ic + '" style="color:' + col + '"></i> ' + t + '</div>'
           + '<div style="margin-top:6px;display:flex;align-items:baseline;gap:8px"><b style="font-size:32px;color:' + col + '">' + f1(v) + '</b>'
           + (d != null ? '<span style="font-size:14px;font-weight:900;color:' + (d >= 0 ? '#16a34a' : '#dc2626') + '">' + (d >= 0 ? '▲' : '▼') + ' ' + Math.abs(Math.round(d*10)/10).toFixed(1) + '</span>' : '') + '</div></div>'; };
+    h += ui._svyInsight(list, card);   // [K216] 한눈에 보는 분석
     h += '<div style="' + card + '">'
       + '<div style="font-size:15px;font-weight:900;color:#64748b">최근 결과 · ' + esc(last._title) + ' <span style="color:#94a3b8">(' + esc(String(last.period).replace('~',' ~ ')) + (last.n ? ' · 응답 ' + last.n + '명' : '') + ')</span></div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">' + kpi('종합', ui._svyVal(last,'total'), prev && ui._svyVal(prev,'total'), '#1e3a8a', 'fa-star') + kpi('과정운영', ui._svyVal(last,'op'), prev && ui._svyVal(prev,'op'), '#2563eb', 'fa-book-open')
@@ -21123,6 +21124,47 @@ ui._svyBind = function(host){
     host.querySelectorAll('.svyTab').forEach(function(b){ b.onclick = function(){ host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); ui._svyShow(b.getAttribute('data-tab'), ui._svyCatSt || ''); }; });
     host.querySelectorAll('.svyBar').forEach(function(b){ b.onclick = function(){ var on = !b.classList.contains('on'); host.querySelectorAll('.svyBar,.svyKw').forEach(function(x){ x.classList.remove('on'); }); if(on) b.classList.add('on'); host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-tab') === 'bad'); }); ui._svyShow('bad', on ? b.getAttribute('data-cat') : ''); }; });
     host.querySelectorAll('[data-on]').forEach(function(cb){ cb.onchange = function(){ if(state.isObserver){ cb.checked = !cb.checked; return; } ui._svyRef().child(cb.getAttribute('data-on') + '/off').set(cb.checked ? null : true).then(function(){ ui._svyCount(); ui.surveyOpen(); }); }; });
+};
+/* [K216] 한눈에 보는 분석 — 최근(마지막 해) vs 이전을 비교해 좋은 징조·주의 신호를 문장으로 */
+ui._svyInsight = function(list, card){
+    if(!list || list.length < 2) return '';
+    var esc = ui._esc, f1 = function(v){ return (Math.round(v*10)/10).toFixed(1); };
+    var years = []; list.forEach(function(r){ if(r.year && years.indexOf(r.year) < 0) years.push(r.year); }); years.sort();
+    var recentY = years[years.length-1], rec, base, recLab, baseLab;
+    if(years.length >= 2){ rec = list.filter(function(r){ return r.year === recentY; }); base = list.filter(function(r){ return r.year !== recentY; }); recLab = recentY + '년'; baseLab = years[0] === years[years.length-2] ? years[0] + '년' : years[0] + '~' + years[years.length-2] + '년'; }
+    else { rec = [list[list.length-1]]; base = list.slice(0, -1); recLab = '최근 회차'; baseLab = '이전 회차'; }
+    var avgOf = function(arr, fn){ var v = arr.map(fn).filter(function(x){ return x != null; }); return v.length ? v.reduce(function(a,b){ return a+b; },0) / v.length : null; };
+    var good = [], bad = [];
+    /* 1) 종합 */
+    var tR = avgOf(rec, function(r){ return ui._svyVal(r,'total'); }), tB = avgOf(base, function(r){ return ui._svyVal(r,'total'); });
+    var head = (tR != null && tB != null) ? recLab + ' 종합 만족도는 <b>' + f1(tR) + '점</b>으로 ' + baseLab + ' 평균(' + f1(tB) + '점)보다 ' + (Math.abs(tR - tB) < 0.3 ? '<b>비슷한 수준</b>입니다.' : (tR > tB ? '<b class="up">' + f1(tR - tB) + '점 올랐습니다.</b>' : '<b class="dn">' + f1(tB - tR) + '점 내려갔습니다.</b>')) : '';
+    /* 2) 문항별 점수 변화 */
+    var keys = []; list.forEach(function(r){ ['op','env'].forEach(function(g){ ((r[g] || {}).items || []).forEach(function(it){ if(/온라인|사전안내/.test(it.k)) return; if(keys.indexOf(g + '|' + it.k) < 0) keys.push(g + '|' + it.k); }); }); });
+    var up = [], dn = [], low = [];
+    keys.forEach(function(gk){ var g = gk.split('|')[0], k = gk.split('|')[1], get = function(r){ var it = (((r[g] || {}).items) || []).filter(function(x){ return x.k === k; })[0]; return it && it.score > 30 ? it.score : null; };
+        var a = avgOf(rec, get), b = avgOf(base, get); if(a == null) return;
+        if(b != null && a - b >= 1.5) up.push(k + '(+' + f1(a - b) + ')'); if(b != null && b - a >= 1.5) dn.push(k + '(−' + f1(b - a) + ')'); if(a < 95) low.push(k + ' ' + f1(a) + '점'); });
+    if(up.length) good.push('<b>' + up.slice(0,4).join(' · ') + '</b> 점수가 ' + baseLab + '보다 좋아졌습니다.');
+    if(dn.length) bad.push('<b>' + dn.slice(0,4).join(' · ') + '</b> 점수가 ' + baseLab + '보다 낮아졌습니다.');
+    if(low.length) bad.push(recLab + ' 기준 95점 미만: <b>' + low.slice(0,4).join(' · ') + '</b>');
+    /* 3) 주제별 의견 — 회차당 건수로 비교(회차 수가 달라도 공정하게) */
+    var TOP = [['견학', /견학|현장\s?(방문|학습)|ACC|센터\s?방문/i], ['실습', /실습/], ['체력단련·운동', /헬스|체력|운동|폼롤러|러닝|런닝|체육|탁구/], ['노래방', /노래방/], ['식당·식사', /식당|식사|밥|메뉴|반찬|음식|단백질/], ['생활관', /생활관|숙소|침대|벽지|샤워|객실|방음|곰팡이/], ['난방·추위', /히터|난방|추워|추움|추웠|춥/], ['와이파이·인터넷', /와이파이|wifi|인터넷/i], ['교재·자료', /교재|자료|ppt|피피티/i], ['강의·강사', /강의|교수|강사/]];
+    var cnt = function(arr, tagOk, re){ var n = 0; arr.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var t = String(c.t), key = t.replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(re.test(t) && tagOk(ui._svyTag(t))) n++; }); }); return n; };
+    var isBad = function(t){ return t === 'neg' || t === 'sug'; }, isGood = function(t){ return t === 'pos'; };
+    TOP.forEach(function(tp){ var nR = cnt(rec, isBad, tp[1]), nB = cnt(base, isBad, tp[1]), rR = nR / rec.length, rB = base.length ? nB / base.length : 0;
+        if(nR >= 2 && rR - rB >= 0.5) bad.push('<b>' + tp[0] + '</b> 관련 불만·개선요청이 늘었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>');
+        else if(nB >= 2 && rB - rR >= 0.5) good.push('<b>' + tp[0] + '</b> 관련 불만이 줄었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>');
+        var pR = cnt(rec, isGood, tp[1]), pB = cnt(base, isGood, tp[1]), qR = pR / rec.length, qB = base.length ? pB / base.length : 0;
+        if(pR >= 2 && (pB === 0 || qR - qB >= 0.7)) good.push('<b>' + tp[0] + '</b>에 대한 호평이 ' + (pB === 0 ? '새로 나타났습니다' : '늘었습니다') + ' <span class="ev">(' + recLab + ' ' + pR + '건)</span>'); });
+    if(!head && !good.length && !bad.length) return '';
+    var li = function(arr, cls, ic){ return arr.map(function(t){ return '<li class="' + cls + '"><i class="fa-solid ' + ic + '"></i><span>' + t + '</span></li>'; }).join(''); };
+    return '<div style="' + card + '"><div style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-wand-magic-sparkles" style="color:#8b5cf6"></i> 한눈에 보는 분석 <span style="font-size:13px;color:#94a3b8;font-weight:700">· ' + esc(recLab) + ' vs ' + esc(baseLab) + ' · 결과지 자동 비교</span></div>'
+      + (head ? '<div class="svyHead">' + head + '</div>' : '')
+      + '<div class="svyIns">'
+      + '<div><div class="svyInT g"><i class="fa-solid fa-arrow-trend-up"></i> 좋은 징조</div><ul>' + (good.length ? li(good, 'g', 'fa-circle-check') : '<li class="n"><span>뚜렷한 개선 신호는 아직 없습니다</span></li>') + '</ul></div>'
+      + '<div><div class="svyInT b"><i class="fa-solid fa-triangle-exclamation"></i> 주의 신호</div><ul>' + (bad.length ? li(bad, 'b', 'fa-circle-exclamation') : '<li class="n"><span>특별히 나빠진 부분은 없습니다</span></li>') + '</ul></div>'
+      + '</div><div style="margin-top:10px;font-size:12px;font-weight:700;color:#94a3b8">※ 점수·의견을 자동으로 비교한 참고 자료입니다. 응답자 수가 적은 회차는 수치가 크게 흔들릴 수 있습니다.</div></div>'
+      + '<style>.svyHead{margin-top:12px;padding:14px 16px;border-radius:14px;background:#f5f3ff;border:1px solid #ddd6fe;font-size:16px;font-weight:700;color:#1e293b;line-height:1.6}.svyHead b{font-weight:900}.svyHead b.up{color:#15803d}.svyHead b.dn{color:#b91c1c}.svyIns{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}@media(max-width:900px){.svyIns{grid-template-columns:1fr}}.svyIns ul{list-style:none;margin:8px 0 0;padding:0}.svyIns li{display:flex;gap:9px;padding:9px 4px;border-bottom:1px dashed #e2e8f0;font-size:15px;font-weight:700;color:#334155;line-height:1.55}.svyIns li:last-child{border-bottom:none}.svyIns li i{margin-top:4px}.svyIns li.g i{color:#16a34a}.svyIns li.b i{color:#dc2626}.svyIns li.n{color:#94a3b8}.svyIns li b{font-weight:900;color:#0f172a}.svyIns .ev{color:#94a3b8;font-size:13px;font-weight:800}.svyInT{font-size:15px;font-weight:900;padding:8px 12px;border-radius:10px}.svyInT.g{background:#f0fdf4;color:#15803d}.svyInT.b{background:#fef2f2;color:#b91c1c}</style>';
 };
 /* 점수 추이 선 그래프(SVG) */
 ui._svyChart = function(list, lab){
