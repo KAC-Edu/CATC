@@ -373,8 +373,12 @@
     return '<div class="tPair"><select id="' + id + 'H">' + hs + '</select><select id="' + id + 'M">' + ms + '</select></div>';
   }
   function who(r){ return esc(r.name) + ' ' + esc(r.title || '강사'); }
+  /* [K199] 교재 카드도 '제출 후 요약 아래'에만 — 처음 작성·수정 중에는 숨긴다(설문이 없는 링크면 항상 보임) */
+  function matVis(){ var show = !SV.on || (SV.my && SV.my.at && !SV.editing && !SV.dirty);
+    ['.optCard','#list','#mineWrap'].forEach(function(sel){ var el = document.querySelector(sel); if(!el) return; if(sel === '#mineWrap'){ if(!show) el.style.display = 'none'; else drawMine(); } else el.style.display = show ? '' : 'none'; }); }
   function svDraw(){
     var w = document.getElementById('svWrap'), fno = document.getElementById('fileNo'); if(!w) return;
+    setTimeout(matVis, 0);
     if(!SV.on){ w.innerHTML = ''; if(fno) fno.textContent = '2'; return; }
     if(fno) fno.textContent = '4';
     var me = svKey(myName()), my = SV.my, a = my.avail;
@@ -430,6 +434,7 @@
       h += '<div class="step"><span class="no">3</span> 담임교수님께 전달할 사항 <span class="optTag">선택</span></div>'
         + '<textarea id="svMsg" rows="3" placeholder="전하실 말씀이 있을 때만 적어 주세요. 비워 두셔도 제출됩니다.">' + esc(my.msg) + '</textarea>'
         + '<button type="button" class="btn" id="svGo" style="width:100%; justify-content:center; margin-top:10px; padding:14px;"><i class="fa-solid fa-paper-plane"></i> ' + (my.at ? '수정 내용 제출' : '제출하기') + '</button>'
+        + (!my.at ? '<div class="muted" style="margin-top:8px;text-align:center;"><i class="fa-solid fa-paperclip"></i> 강의 교재는 제출하신 뒤 이어서 올리실 수 있습니다</div>' : '')
         + (my.at ? '<div class="muted" style="margin-top:8px; text-align:center;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> ' + svTime(my.at) + ' 제출 완료 · 내용을 고치신 뒤 다시 누르시면 수정됩니다</div>' : '');
     }
     w.innerHTML = h;
