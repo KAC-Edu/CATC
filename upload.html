@@ -3,7 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>강의 일정 · 교재 제출 — 항공기술훈련원</title>
+    <title>강사 사전조사 · 교재 제출 | 항공기술훈련원</title>
+    <!-- [K177] 카톡·문자 링크 미리보기 -->
+    <meta name="description" content="한국공항공사 항공기술훈련원 — 강의 가능 일정 조사와 교재 제출을 한 번에 해 주세요.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="한국공항공사 항공기술훈련원">
+    <meta property="og:title" content="강사 사전조사 · 교재 제출 | 항공기술훈련원">
+    <meta property="og:description" content="강의 가능 일정, 숙박·픽업, 교재를 한 화면에서 제출해 주세요.">
+    <meta property="og:image" content="https://kac-edu.github.io/CATC/catc.png">
+    <meta name="robots" content="noindex, nofollow">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app-check.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
@@ -93,6 +101,14 @@
         .mailRow{ display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:10px; font-size:13.5px; font-weight:800; color:#64748b; }
         .mailRow button{ padding:10px 16px; border:1.5px solid #c7d2fe; border-radius:12px; background:#fff; color:#4338ca; font-size:14px; font-weight:900; cursor:pointer; }
         .mailRow button:hover{ background:#eef2ff; }
+        .due{ margin:-2px 2px 12px; padding:0; background:none; color:#b91c1c; font-size:14.5px; font-weight:800; border-radius:0; }
+        .fileBtns{ display:flex; gap:10px; }
+        .fileBtns .drop{ flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:18px 10px; border:2px dashed #a5b4fc; border-radius:16px; background:#f8faff; font-size:16.5px; font-weight:900; color:#3730a3; cursor:pointer; text-align:center; }
+        .fileBtns .drop > i{ font-size:18px; color:#4f46e5; }
+        .fileBtns .drop.on, .fileBtns .drop:hover{ background:#eef2ff; border-color:#6366f1; }
+        #mailWrap{ flex:1; display:flex; } #mailWrap:empty{ display:none; }
+        .mailBtn{ flex:1; padding:18px 10px; border:2px solid #e2e8f0; border-radius:16px; background:#fff; color:#334155; font-size:16.5px; font-weight:900; cursor:pointer; }
+        .mailBtn i{ color:#64748b; margin-right:6px; } .mailBtn:hover{ background:#f8fafc; border-color:#cbd5e1; }
     </style>
 </head>
 <body>
@@ -137,14 +153,10 @@
       + '<div class="step"><span class="no">1</span> 성함</div>'
       + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
       + '<div id="svWrap"></div>'
-      + '<div class="step"><span class="no" id="fileNo">2</span> 교재 파일 <span id="matDue" class="due" style="display:none;"></span></div>'
-      /* [K165] 휴대폰으로 열었으면 — 교재는 PC에서 올리도록 같은 링크를 나에게 보내는 버튼 */
-      + (IS_MOBILE ? '<div class="pcBox"><div class="pcT"><i class="fa-solid fa-desktop"></i> 교재는 PC에서 올리시면 편합니다</div>'
-          + '<div class="pcD">일정은 지금 제출하시고, 교재는 PC에서 <b>같은 링크</b>로 열어 올려 주세요.</div>'
-          + '<div class="pcB"><button type="button" id="pcCopy"><i class="fa-solid fa-copy"></i> 링크 복사</button><button type="button" id="pcMail"><i class="fa-solid fa-envelope"></i> 내 메일로 보내기</button></div>'
-          + '<div class="muted" style="margin-top:6px;">복사한 링크는 카카오톡 \'나와의 채팅\'에 붙여 두시면 PC 카톡에서 바로 여실 수 있습니다.</div></div>' : '')
-      + '<div id="mailWrap"></div>'
-      + '<div class="drop" id="dz"><i class="fa-solid fa-file-arrow-up"></i><div class="dt">눌러서 파일 선택</div><div class="muted">또는 여기로 끌어다 놓기</div></div>'
+      /* [K177] 교재 — 제목 · 기한 한 줄 · [파일 올리기] [메일로 제출] 두 버튼만 */
+      + '<div class="step"><span class="no" id="fileNo">2</span> 교재 파일</div>'
+      + '<div id="matDue" class="due" style="display:none;"></div>'
+      + '<div class="fileBtns"><div class="drop" id="dz"><i class="fa-solid fa-arrow-up-from-bracket"></i> 파일 올리기</div><div id="mailWrap"></div></div>'
       + '<input type="file" id="fi" multiple style="display:none;">'
       + '<div id="list"></div>'
       + '<div id="mineWrap" style="display:none;"><div class="step" style="margin-top:26px;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> 제출한 파일 <span id="mineCnt" class="muted"></span></div><div id="mine"></div></div>';
@@ -216,7 +228,7 @@
   function drawMail(){
     var w = document.getElementById('mailWrap'); if(!w) return;
     if(!/@/.test(SV.email||'')){ w.innerHTML = ''; return; }
-    w.innerHTML = '<div class="mailRow"><span>메일 제출이 편하시면</span><button type="button" id="mailGo"><i class="fa-solid fa-envelope"></i> 담임교수님께 메일로 제출</button></div>';
+    w.innerHTML = '<button type="button" class="mailBtn" id="mailGo"><i class="fa-solid fa-envelope"></i> 메일로 제출</button>';
     document.getElementById('mailGo').onclick = function(){
       var nm = myName() || '강사';
       location.href = 'mailto:' + encodeURIComponent(SV.email) + '?subject=' + encodeURIComponent('[교재 제출] ' + (info.c || '') + ' — ' + nm)
@@ -236,7 +248,7 @@
     el.innerHTML = rows ? '<div class="hd">' + rows + '</div>' : '';
     /* [K169] 교재 제출 기한 — 담당자가 정해 두면 교재 칸 제목 옆에 표시 */
     var du = document.getElementById('matDue');
-    if(du){ if(SV.matDue){ du.innerHTML = '<i class="fa-solid fa-calendar-check"></i> ' + esc(f(SV.matDue)) + '까지 · 기한을 지켜 주시기 바랍니다'; du.style.display = ''; } else du.style.display = 'none'; }
+    if(du){ if(SV.matDue){ du.innerHTML = '<i class="fa-solid fa-calendar-check"></i> <b>' + esc(f(SV.matDue)) + '</b>까지 제출해 주시기 바랍니다'; du.style.display = ''; } else du.style.display = 'none'; }
   }
   function svOnName(force){
     var k = svKey(myName());
@@ -276,8 +288,8 @@
         ['am','pm'].forEach(function(t){
           var k = d.d + '_' + t, sb = slotBk(d.d, t), bl = SV.blocks[k] || d.hol || sb.full;
           if(bl){ h += '<td class="bl"><span>' + esc(bl) + '</span></td>'; return; }
-          var others = Object.keys(SV.resp).filter(function(x){ var r = SV.resp[x]||{}; return x !== me && r.avail !== '불가능' && ((r.p1||{})[k] || (r.p2||{})[k]); })
-            .map(function(x){ var r = SV.resp[x]; return '<span class="oc' + ((r.p1||{})[k] ? '' : ' o2') + '">' + who(r) + '</span>'; }).join('');
+          /* [K177] 다른 강사님 이름은 강사 화면에 보이지 않게(본인 선택과 헷갈림) — 조율은 담당자 화면에서 */
+          var others = '';
           var mine = my.p1[k] ? '<b class="mb b1">1안</b>' : (my.p2[k] ? '<b class="mb b2">2안</b>' : '');
           var warn = sb.part.length ? '<span class="pw"><i class="fa-solid fa-triangle-exclamation"></i> ' + esc(sb.part.join(' · ')) + '</span>' : '';
           h += '<td class="c' + (my.p1[k] ? ' s1' : (my.p2[k] ? ' s2' : '')) + '" data-k="' + k + '">' + warn + mine + others + '</td>';
@@ -322,8 +334,8 @@
       var h1 = Object.keys(my.p1)[0], h2 = Object.keys(my.p2)[0];
       if(h1 === k){ my.p1 = {}; if(h2){ my.p1[h2] = true; my.p2 = {}; } }
       else if(h2 === k){ my.p2 = {}; }
-      else if(!h1){ my.p1 = {}; my.p1[k] = true; dupWarn(k); }
-      else if(!h2){ my.p2 = {}; my.p2[k] = true; dupWarn(k); }
+      else if(!h1){ my.p1 = {}; my.p1[k] = true; }
+      else if(!h2){ my.p2 = {}; my.p2[k] = true; }
       else { toast('1안·2안을 모두 골랐습니다. 바꾸려면 고른 칸을 눌러 먼저 취소하세요.'); return; }
       SV.dirty = true; svDraw(); }; });
     w.querySelectorAll('[data-yn]').forEach(function(b){ b.onclick = function(){ my[b.getAttribute('data-yn')] = b.getAttribute('data-v') === '1'; SV.dirty = true; svDraw(); }; });
