@@ -21009,15 +21009,15 @@ ui.surveyOpen = async function(){
     h += '<div style="' + card + '">'
       + '<div style="font-size:15px;font-weight:900;color:#64748b">최근 결과 · ' + esc(last._title) + ' <span style="color:#94a3b8">(' + esc(String(last.period).replace('~',' ~ ')) + (last.n ? ' · 응답 ' + last.n + '명' : '') + ')</span></div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">' + kpi('종합', ui._svyVal(last,'total'), prev && ui._svyVal(prev,'total'), '#1e3a8a', 'fa-star') + kpi('과정운영', ui._svyVal(last,'op'), prev && ui._svyVal(prev,'op'), '#2563eb', 'fa-book-open')
-      + kpi('교육환경', ui._svyVal(last,'env'), prev && ui._svyVal(prev,'env'), '#16a34a', 'fa-building') + kpi('강사', ui._svyVal(last,'inst'), prev && ui._svyVal(prev,'inst'), '#ea580c', 'fa-chalkboard-user') + '</div>'
+      + kpi('지원시설', ui._svyVal(last,'env'), prev && ui._svyVal(prev,'env'), '#16a34a', 'fa-building') + kpi('강사', ui._svyVal(last,'inst'), prev && ui._svyVal(prev,'inst'), '#ea580c', 'fa-chalkboard-user') + '</div>'
       + '<div style="margin-top:22px;font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chart-line" style="color:#6366f1"></i> 점수 추이 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 이상한 점은 눌러서 빼기/되돌리기</span></div>' + ui._svyChart(list, lab) + '</div>';
     /* 문항별 */
-    var items = []; list.forEach(function(r){ [['op', r.op], ['env', r.env]].forEach(function(p){ ((p[1] || {}).items || []).forEach(function(it){ if(items.indexOf(p[0] + '|' + it.k) < 0) items.push(p[0] + '|' + it.k); }); }); });
+    var items = []; list.forEach(function(r){ [['op', r.op], ['env', r.env]].forEach(function(p){ ((p[1] || {}).items || []).forEach(function(it){ if(/온라인/.test(it.k)) return; if(items.indexOf(p[0] + '|' + it.k) < 0) items.push(p[0] + '|' + it.k); }); }); });   // [K211] 온라인 한정(21년) 문항은 뺌
     var cell = function(v){ if(v == null) return '<td style="color:#cbd5e1">-</td>'; var bg = v >= 98 ? '#dcfce7' : v >= 95 ? '#f0fdf4' : v >= 90 ? '#fef9c3' : '#fee2e2', fg = v >= 95 ? '#15803d' : v >= 90 ? '#a16207' : '#b91c1c'; return '<td style="background:' + bg + ';color:' + fg + ';font-weight:900">' + f1(v) + '</td>'; };
     var th = list.map(function(r){ return '<th>' + esc(lab(r)) + '</th>'; }).join('');
     h += '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-table-cells" style="color:#2563eb"></i> 문항별 변화 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 98↑ 초록 / 90~95 노랑 / 90↓ 빨강</span></div>'
       + '<div style="overflow:auto;margin-top:12px"><table class="svyT"><thead><tr><th style="text-align:left;padding-left:14px">문항</th>' + th + '</tr></thead><tbody>'
-      + items.map(function(ik){ var g = ik.split('|')[0], k = ik.split('|')[1]; return '<tr><td style="text-align:left;padding-left:14px;font-weight:900;white-space:nowrap"><span class="svyG ' + g + '">' + (g === 'op' ? '과정' : '환경') + '</span> ' + esc(k) + '</td>' + list.map(function(r){ var it = (((r[g] || {}).items) || []).filter(function(x){ return x.k === k; })[0]; return cell(it ? it.score : null); }).join('') + '</tr>'; }).join('')
+      + items.map(function(ik){ var g = ik.split('|')[0], k = ik.split('|')[1]; return '<tr><td style="text-align:left;padding-left:14px;font-weight:900;white-space:nowrap"><span class="svyG ' + g + '">' + (g === 'op' ? '과정운영' : '지원시설') + '</span> ' + esc(k) + '</td>' + list.map(function(r){ var it = (((r[g] || {}).items) || []).filter(function(x){ return x.k === k; })[0]; return cell(it ? it.score : null); }).join('') + '</tr>'; }).join('')
       + '</tbody></table></div></div>';
     /* 강사 */
     var inst = {}; list.forEach(function(r, ri){ ((r.inst || {}).list || []).forEach(function(x){ (inst[x.n] = inst[x.n] || { n: x.n, s: {} }).s[ri] = x.score; }); });
@@ -21098,7 +21098,7 @@ ui._svyBind = function(host){
 /* 점수 추이 선 그래프(SVG) */
 ui._svyChart = function(list, lab){
     var W = 1000, H = 300, pl = 46, pr = 20, pt = 18, pb = 46;
-    var ser = [['종합', 'total', '#1e3a8a'], ['과정운영', 'op', '#2563eb'], ['교육환경', 'env', '#16a34a'], ['강사', 'inst', '#ea580c']];
+    var ser = [['종합', 'total', '#1e3a8a'], ['과정운영', 'op', '#2563eb'], ['지원시설', 'env', '#16a34a'], ['강사', 'inst', '#ea580c']];
     var raw = function(r, k){ var v = k === 'total' ? r.total : (r[k] || {}).score; return (v > 30) ? v : null; };
     var vs = []; list.forEach(function(r){ ser.forEach(function(s){ var v = ui._svyVal(r, s[1]); if(v != null) vs.push(v); }); });
     var lo = Math.max(0, Math.floor(Math.min.apply(null, vs.concat([95])) - 1)), hi = 100;
