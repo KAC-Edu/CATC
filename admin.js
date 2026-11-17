@@ -20852,10 +20852,10 @@ ui.surveyOpen = async function(){
     var h = '<div style="background:#fff;border-radius:24px;padding:24px 30px;box-shadow:0 18px 45px rgba(15,23,42,.08)">'
       + '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
       + (inCourse ? '<div style="flex:1;min-width:280px;font-size:14px;font-weight:800;color:#64748b"><i class="fa-solid fa-lock" style="color:#94a3b8"></i> 이 과정과 같은 이름의 설문만 보여 줍니다 <span style="color:#94a3b8;font-weight:700">· 다른 과정은 현황판(메인)의 \'교육생 의견\'에서 찾기</span></div>' : '<div style="position:relative;flex:1;min-width:280px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:16px"></i>'
-      + '<input id="svyQ" autocomplete="off" placeholder="과정명으로 찾기 (예: 정보통신, 항법 초기)" style="width:100%;box-sizing:border-box;padding:14px 16px 14px 44px;border:2px solid #e2e8f0;border-radius:14px;font:inherit;font-size:17px;font-weight:800;outline:none">'
+      + '<input id="svyQ" autocomplete="off" placeholder="과정명으로 찾기 (예: 항공정보통신 초기, 감시 정기)" value="' + esc(ui._svyQ || '') + '" style="width:100%;box-sizing:border-box;padding:14px 16px 14px 44px;border:2px solid #e2e8f0;border-radius:14px;font:inherit;font-size:17px;font-weight:800;outline:none">'
       + '<div id="svySug" class="svySug" style="display:none"></div></div>'
-      + '<button id="svyAllBtn" class="svyHB' + (sel ? '' : ' on') + '"><i class="fa-solid fa-table-list"></i> 전체 과정 ' + skeys.length + '</button>')
-      + '<button onclick="ui.surveyUpload()" class="svyHB pri"><i class="fa-solid fa-file-arrow-up"></i> 결과지(PDF) 올리기</button></div>'
+      )
+      + '<button onclick="ui.surveyUpload()" class="svyHB pri"><i class="fa-solid fa-file-arrow-up"></i> 설문평가 결과 올리기</button></div>'
       + (sel ? '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px">' + (inCourse ? '' : '<button id="svyBack" class="svyHB" style="padding:9px 14px;font-size:14px"><i class="fa-solid fa-arrow-left"></i> 전체 과정</button>') + '<span style="font-size:24px;font-weight:900;color:#0f172a;letter-spacing:-.4px">' + esc(S.name) + '</span>'
           + (sel === cur ? '<span style="padding:3px 10px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:12.5px;font-weight:900">현재 운영 과정</span>' : '')
           + '<span style="font-size:14px;font-weight:800;color:#94a3b8">결과지 ' + S.list.length + '건 · ' + yrs(S) + '</span>'
@@ -20869,16 +20869,16 @@ ui.surveyOpen = async function(){
         ui._svyLastMsg = '';
         var avgOf = function(sr){ var a = sr.list.filter(function(r){ return !r.off; }).map(function(r){ return ui._svyVal(r, 'total'); }).filter(function(v){ return v != null; }); return a.length ? a.reduce(function(x,y){ return x+y; },0) / a.length : null; };
         var lastP = function(sr){ var lr = lastOf(sr); return lr ? String(lr.period).slice(0,10) : ''; };
-        host.innerHTML = h + '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:12px"><i class="fa-solid fa-table-list" style="color:#6366f1"></i> 등록된 과정 ' + skeys.length + ' <span style="font-size:13px;color:#94a3b8;font-weight:700">· 가나다순 · 눌러서 추이 보기</span></div>'
-          + (skeys.length ? '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:16px"><table class="svyT svyCatT" id="svyCat"><thead><tr><th style="text-align:left;padding-left:18px">과정명</th><th>결과지</th><th>기간</th><th>평균 만족도</th><th>최근 결과</th><th></th></tr></thead><tbody>'
+        host.innerHTML = h + '<div style="' + card + '"><div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:12px"><i class="fa-solid fa-table-list" style="color:#6366f1"></i> 설문평가 결과를 볼 수 있는 과정 <span id="svyCnt">' + skeys.length + '</span> <span style="font-size:13px;color:#94a3b8;font-weight:700">· 가나다순 · 눌러서 추이 보기</span></div>'
+          + (skeys.length ? '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:16px"><table class="svyT svyCatT" id="svyCat" style="width:100%;border-collapse:separate;border-spacing:0"><thead><tr><th style="text-align:left;padding-left:18px">과정명</th><th>결과지</th><th>기간</th><th>평균 만족도</th><th>최근 결과</th><th></th></tr></thead><tbody>'
               + skeys.map(function(k){ var sr = series[k], av = avgOf(sr), lr = lastOf(sr);
                   return '<tr class="svyCard" data-sel="' + esc(k) + '" data-name="' + esc(sr.name) + '"><td style="text-align:left;padding-left:18px;font-weight:900;font-size:16px;color:#0f172a">' + esc(sr.name) + (k === cur ? ' <span style="padding:2px 8px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:11.5px;font-weight:900;vertical-align:middle">현재 과정</span>' : '') + '</td>'
                     + '<td><b>' + sr.list.length + '</b>건</td><td style="color:#64748b;font-weight:800">' + yrs(sr) + '</td>'
                     + '<td><b style="font-size:17px;color:#1e3a8a">' + f1(av) + '</b>' + (av != null ? '점' : '') + '</td>'
                     + '<td style="color:#64748b;font-weight:800">' + (lr ? f1(ui._svyVal(lr, 'total')) + '점 <small style="color:#94a3b8">(' + esc(lastP(sr)) + ')</small>' : '-') + '</td>'
                     + '<td style="color:#a5b4fc"><i class="fa-solid fa-chevron-right"></i></td></tr>'; }).join('') + '</tbody></table></div>'
-            : '<div style="padding:40px;text-align:center;color:#94a3b8;font-weight:800">아직 올린 결과지가 없습니다. [결과지(PDF) 올리기]로 시작하세요.</div>')
-          + '</div>' + css0 + '<style>.svyCatT tbody tr{cursor:pointer;transition:background .12s}.svyCatT tbody tr:hover td{background:#f5f7ff}.svyCatT td{padding:14px 12px}</style>';
+            : '<div style="padding:40px;text-align:center;color:#94a3b8;font-weight:800">아직 올린 설문평가 결과가 없습니다. [설문평가 결과 올리기]로 시작하세요.</div>')
+          + '</div>' + css0 + '<style>.svyCatT th{padding:12px;font-size:14px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center;white-space:nowrap}.svyCatT td{padding:16px 12px;font-size:16px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyCatT tbody tr{cursor:pointer;transition:background .12s}.svyCatT tbody tr:hover td{background:#f5f7ff}.svyCatT tbody tr:last-child td{border-bottom:none}.svyCatT mark{background:#fef08a;border-radius:4px;padding:0 2px}</style>' + '<div id="svyNone" style="display:none;padding:30px;text-align:center;color:#94a3b8;font-weight:800">찾는 과정이 없습니다</div>';
         ui._svyBind(host); return;
     }
     ui._svyLastMsg = '';
@@ -20942,34 +20942,28 @@ ui._svyShow = function(tab, cat, kw){
     var x = document.getElementById('svyCatX'); if(x) x.onclick = function(e){ e.preventDefault(); document.querySelectorAll('.svyBar,.svyKw').forEach(function(b){ b.classList.remove('on'); }); ui._svyShow(ui._svyTabSt, '', ''); };
 };
 ui._svyBind = function(host){
-    var go = function(k){ ui._svySel = k; ui._svyYF = ui._svyYT = 0; ui.surveyOpen(); };
+    var go = function(k){ ui._svySel = k; ui._svyQ = ''; ui._svyYF = ui._svyYT = 0; ui.surveyOpen(); try{ window.scrollTo(0,0); }catch(e){} };
     host.querySelectorAll('[data-sel]').forEach(function(c){ c.onclick = function(){ go(c.getAttribute('data-sel')); }; });
     var ab = host.querySelector('#svyAllBtn'); if(ab) ab.onclick = function(){ ui._svySel = ''; ui.surveyOpen(); };
     var bk = host.querySelector('#svyBack'); if(bk) bk.onclick = function(){ ui._svySel = ''; ui.surveyOpen(); window.scrollTo && window.scrollTo(0,0); };
     /* [K192] 아래 남색 버튼 — 메인에서 과정 하나를 보고 있으면 '전체 과정'으로 돌아가게 */
     try{ var fb = document.getElementById('floatingHomeBtn'), sp = fb && fb.querySelector('span'); if(sp){ if(!state.room && ui._svySel){ sp.textContent = '전체 과정'; fb.title = '등록된 과정 목록으로'; } else if(!state.room){ sp.textContent = '현황판으로'; } } }catch(e){}
-    var q = host.querySelector('#svyQ'), sug = host.querySelector('#svySug');
-    if(q && sug){
+    /* [K193] 검색 — 아래로 펼치는 목록 대신 '과정 목록'을 바로 걸러 준다. 과정 화면에서 치면 목록으로 이동 */
+    var q = host.querySelector('#svyQ');
+    if(q){
         var norm = function(t){ return String(t||'').replace(/\s+/g,'').toLowerCase(); };
-        var hits = [], idx = 0;
-        var draw = function(){
-            var v = norm(q.value), S2 = ui._svySeries || {};
-            var cards = host.querySelectorAll('#svyCat .svyCard'); cards.forEach(function(c){ c.style.display = (!v || norm(c.getAttribute('data-name')).indexOf(v) >= 0) ? '' : 'none'; });
-            if(!v){ sug.style.display = 'none'; return; }
-            hits = (ui._svySkeys || []).filter(function(k){ var n = norm(S2[k].name); return v.split('').every(function(ch){ return n.indexOf(ch) >= 0; }) && (n.indexOf(v) >= 0 || v.length >= 2); })
-                .sort(function(a,b){ return (norm(S2[a].name).indexOf(v) >= 0 ? 0 : 1) - (norm(S2[b].name).indexOf(v) >= 0 ? 0 : 1); });
-            idx = 0;
-            sug.innerHTML = hits.length ? hits.map(function(k, i){ return '<div data-k="' + ui._esc(k) + '" class="' + (i === 0 ? 'on' : '') + '"><i class="fa-solid fa-book" style="color:#6366f1"></i>' + ui._esc(S2[k].name) + (k === ui._svyCur ? ' <span style="font-size:11.5px;color:#15803d">· 현재 과정</span>' : '') + '<small>' + S2[k].list.length + '건</small></div>'; }).join('') : '<div style="color:#94a3b8;cursor:default">찾는 과정이 없습니다</div>';
-            sug.style.display = 'block';
-            sug.querySelectorAll('[data-k]').forEach(function(d){ d.onmousedown = function(e){ e.preventDefault(); go(d.getAttribute('data-k')); }; });
+        var filt = function(){
+            var v = norm(q.value), rows = host.querySelectorAll('#svyCat .svyCard'), n = 0;
+            rows.forEach(function(r){ var nm = r.getAttribute('data-name') || '', hit = !v || norm(nm).indexOf(v) >= 0 || v.split('').every(function(ch){ return norm(nm).indexOf(ch) >= 0; });
+                r.style.display = hit ? '' : 'none'; if(hit) n++;
+                var td = r.querySelector('td'); if(td){ var badge = td.querySelector('span'); var bh = badge ? badge.outerHTML : ''; var raw = ui._esc(nm), qq = q.value.trim();
+                    td.innerHTML = (qq && raw.indexOf(ui._esc(qq)) >= 0 ? raw.split(ui._esc(qq)).join('<mark>' + ui._esc(qq) + '</mark>') : raw) + (bh ? ' ' + bh : ''); } });
+            var c = document.getElementById('svyCnt'); if(c) c.textContent = n; var none = document.getElementById('svyNone'); if(none) none.style.display = (rows.length && !n) ? 'block' : 'none';
+            return n;
         };
-        q.oninput = draw;
-        q.onkeydown = function(e){ var items = sug.querySelectorAll('[data-k]');
-            if(e.key === 'ArrowDown' || e.key === 'ArrowUp'){ e.preventDefault(); if(!items.length) return; idx = (idx + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; items.forEach(function(x, i){ x.classList.toggle('on', i === idx); }); }
-            if(e.key === 'Enter' && hits.length) go(hits[idx] || hits[0]);
-            if(e.key === 'Escape'){ q.value = ''; draw(); } };
-        q.onblur = function(){ setTimeout(function(){ sug.style.display = 'none'; }, 150); };
-        q.onfocus = function(){ if(q.value) draw(); };
+        q.oninput = function(){ ui._svyQ = q.value; if(ui._svySel && !(state.room && ui._svyCur)){ ui._svySel = ''; ui.surveyOpen().then(function(){ var q2 = document.getElementById('svyQ'); if(q2){ q2.focus(); q2.setSelectionRange(q2.value.length, q2.value.length); } }); return; } filt(); };
+        q.onkeydown = function(e){ if(e.key === 'Enter'){ var vis = Array.prototype.filter.call(host.querySelectorAll('#svyCat .svyCard'), function(r){ return r.style.display !== 'none'; }); if(vis.length === 1) go(vis[0].getAttribute('data-sel')); } if(e.key === 'Escape'){ q.value = ''; ui._svyQ = ''; filt(); } };
+        if(q.value) filt();
     }
     var yfE = host.querySelector('#svyYF'), ytE = host.querySelector('#svyYT'), ya = host.querySelector('#svyYAll');
     if(yfE) yfE.onchange = function(){ ui._svyYF = Number(yfE.value); ui._svyYT = Number(ytE.value); ui.surveyOpen(); };
