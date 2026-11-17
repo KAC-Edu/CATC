@@ -176,6 +176,9 @@
         .optCard{ margin-top:16px !important; padding:14px 16px !important; border-style:solid !important; }
         .optCard.open{ padding-bottom:18px !important; } .optCard.open .optSub{ margin-top:10px; }
         .optDue{ margin-left:6px; font-size:12.5px; font-weight:900; color:#b91c1c; }
+        .optCard{ background:#f5f7ff !important; border:2px solid #c7d2fe !important; }
+        .optCard .optHead{ color:#3730a3; } .optCard .optHead > i:first-child{ color:#6366f1; }
+        .optCard.open{ background:#fbfcff !important; }
     </style>
 </head>
 <body>
@@ -236,7 +239,7 @@
       + '<div id="list"></div>'
       + '<div id="mineWrap" style="display:none;"><div class="step" style="margin-top:26px;"><i class="fa-solid fa-circle-check" style="color:#16a34a;"></i> 제출한 파일 <span id="mineCnt" class="muted"></span></div><div id="mine"></div></div>';
     var dz = document.getElementById('dz'), fi = document.getElementById('fi'), nmI = document.getElementById('nm');
-    var ot = document.getElementById('optTog'); if(ot) ot.onclick = function(){ document.getElementById('optCard').classList.toggle('open'); };
+    var ot = document.getElementById('optTog'); if(ot) ot.onclick = function(){ SV.matOpen = !document.getElementById('optCard').classList.contains('open'); document.getElementById('optCard').classList.toggle('open', SV.matOpen); };
     var sync = function(){ dz.classList.toggle('off', !nmI.value.trim()); drawMine(); svOnName(); drawMail(); };
     nmI.addEventListener('input', sync);
     dz.onclick = function(){ if(!nmI.value.trim()){ nmI.focus(); nmI.classList.add('need'); setTimeout(function(){ nmI.classList.remove('need'); }, 1200); return; } fi.click(); };
@@ -288,7 +291,7 @@
           if(stale){ v = { course: v.course }; rg = {}; } })();
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
         SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || prevFri(ps[0] || '')); SV.replyBy = String(v.replyBy || prevFri(ps[0] || '')); /* [K196] 기본 = 과정 시작 전주 금요일 */ SV.resp = v.resp || {}; SV.note = String(v.note || '');
-        SV.on = SV.days.length > 0 && v.enabled !== false;
+        SV.on = SV.days.length > 0 && v.enabled !== false; SV.loaded = true;
         svOnName(true); svDraw(); drawHead(); drawMail();
       });
     });
@@ -394,7 +397,7 @@
   }
   function who(r){ return esc(r.name) + ' ' + esc(r.title || '강사'); }
   /* [K199] 교재 카드도 '제출 후 요약 아래'에만 — 처음 작성·수정 중에는 숨긴다(설문이 없는 링크면 항상 보임) */
-  function matVis(){ var show = !SV.on || (SV.my && SV.my.at && !SV.editing && !SV.dirty); var oc = document.getElementById('optCard'); if(oc && !SV.on) oc.classList.add('open');
+  function matVis(){ var show = !SV.on || (SV.my && SV.my.at && !SV.editing && !SV.dirty); var oc = document.getElementById('optCard'); if(oc && SV.loaded) oc.classList.toggle('open', !SV.on ? true : !!SV.matOpen);   // [K208] 설문 링크면 접힌 가로 바로 시작
     ['.optCard','#list','#mineWrap'].forEach(function(sel){ var el = document.querySelector(sel); if(!el) return; if(sel === '#mineWrap'){ if(!show) el.style.display = 'none'; else drawMine(); } else el.style.display = show ? '' : 'none'; }); }
   function svDraw(){
     var w = document.getElementById('svWrap'), fno = document.getElementById('fileNo'); if(!w) return;
