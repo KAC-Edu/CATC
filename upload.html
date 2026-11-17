@@ -181,7 +181,7 @@
   var tok = qs.get('t') || '';
   var info = null;
   function parseTok(){ info = null; try{ var p = tok.split('~')[0].replace(/-/g,'+').replace(/_/g,'/'); while(p.length % 4) p += '='; info = JSON.parse(decodeURIComponent(escape(atob(p)))); }catch(e){} }
-  function fail(msg){ app.innerHTML = '<h1>교재 업로드</h1><div class="err" style="margin-top:14px;">' + msg + '</div><div class="muted" style="margin-top:12px;">문의: 항공기술훈련원 교육운영부</div>'; }
+  function fail(msg){ app.innerHTML = '<h1>강사 사전조사 · 교재 제출</h1><div class="err" style="margin-top:14px;">' + msg + '</div><div class="muted" style="margin-top:12px;">문의: 항공기술훈련원 교육운영부</div>'; }
   /* [K156/K157] 날짜·크기 표기 함수 — 아래 '짧은 주소' 분기가 먼저 return 하므로 반드시 그 위에서 정의 */
   var fmt = function(ms){ var d = new Date(Number(ms)); return d.getFullYear()+'. '+(d.getMonth()+1)+'. '+d.getDate()+'.'; };
   var fmtSize = function(b){ b=Number(b)||0; return b>=1048576 ? (b/1048576).toFixed(1)+'MB' : Math.max(1,Math.round(b/1024))+'KB'; };
