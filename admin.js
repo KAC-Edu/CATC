@@ -20273,7 +20273,13 @@ ui.matExtLink = async function(){
         var WDk = ['일','월','화','수','목','금','토'], fd = function(d){ var x = new Date(d+'T00:00:00'); return (x.getMonth()+1) + '.' + x.getDate() + '(' + WDk[x.getDay()] + ')'; };
         var pp = pd.split('~').map(function(x){ return x.trim(); }); if(/^\d{4}-\d{2}-\d{2}$/.test(pp[0]||'')) pdTxt = fd(pp[0]) + (/^\d{4}-\d{2}-\d{2}$/.test(pp[1]||'') ? ' ~ ' + fd(pp[1]) : ''); }catch(err){}
     /* [K177] 복사되는 내용 — 카톡·문자에서 과정명·기간이 링크 위에 바로 보이게 */
-    var msgOf = function(u){ return '[한국공항공사 항공기술훈련원]\n' + cname + (pdTxt ? ' (' + pdTxt + ')' : '') + '\n강사 사전조사 · 교재 제출 안내드립니다.\n\n' + u; };
+    /* [K178] 안내 메시지(별도 버튼) — 과정명·담임교수·교육일정·교재 기한은 과정마다 자동으로 바뀐다 */
+    var profNm = ''; try{ profNm = String((await firebase.database().ref('courses/'+room+'/status/professorName').once('value')).val() || '').trim().replace(/\s*교수$/, ''); }catch(err){}
+    var dueTxt = ''; try{ var dv = String((await firebase.database().ref('system/coord/preSurvey/'+room+'/matDue').once('value')).val() || ''); if(/^\d{4}-\d{2}-\d{2}$/.test(dv)){ var dx = new Date(dv+'T00:00:00'); dueTxt = (dx.getMonth()+1) + '.' + dx.getDate() + '(' + ['일','월','화','수','목','금','토'][dx.getDay()] + ')까지'; } }catch(err){}
+    var msgOf = function(u){ return '[한국공항공사 항공기술훈련원]\n\n안녕하십니까.\n' + cname + (profNm ? '\n담임교수 ' + profNm + '입니다.' : ' 담당자입니다.')
+        + '\n\n강사님의 출강 가능 일정 조사와\n교재 제출을 부탁드리고자 연락드립니다.\n아래 링크에서 제출해 주시면\n과정 운영에 소중히 참고하겠습니다.\n바쁘신 중에도 협조해 주셔서 감사합니다.'
+        + '\n\n* 과정명 : ' + cname + (pdTxt ? '\n* 교육일정 : ' + pdTxt : '') + (dueTxt ? '\n* 교재 제출 : ' + dueTxt : '')
+        + '\n\n▶ 제출 링크\n' + u; };
     var day = 86400000, now = Date.now(), opts = [];
     if(ce > now) opts.push([ce + 7*day, '과정 종료 1주 뒤까지']);
     opts.push([now + 60*day, '60일']); opts.push([now + 90*day, '90일']); opts.push([now + 120*day, '120일']);
@@ -20293,7 +20299,8 @@ ui.matExtLink = async function(){
       + '<div style="font-size:13px;color:#64748b;font-weight:700;margin:6px 0 16px;line-height:1.6"><b>' + ui._esc(cname) + '</b> · 이 링크 하나를 강사님들께 함께 보내 주세요.<br>강사님은 <b>강의 가능 일정</b>과 <b>교재</b>를 한 화면에서 제출합니다.</div>'
       + (cur
         ? '<div style="display:flex;align-items:center;gap:8px;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:800;color:#334155">' + ui._esc(cur.url) + '</span><span style="flex-shrink:0;font-size:12.5px;font-weight:800;color:#16a34a">' + fmt(Number(cur.exp)) + '까지</span></div>'
-          + '<button id="lcp" style="margin-top:14px;width:100%;padding:14px;background:#2563eb;color:#fff;font-size:15.5px;' + btnS + '"><i class="fa-solid fa-copy"></i> 링크 복사</button>'
+          + '<div style="display:flex;gap:8px;margin-top:14px"><button id="lcp" style="flex:1;padding:14px;background:#2563eb;color:#fff;font-size:15.5px;' + btnS + '"><i class="fa-solid fa-link"></i> 링크 복사</button>'
+          + '<button id="lmsg" style="flex:1;padding:14px;background:#FEE500;color:#191919;font-size:15.5px;' + btnS + '"><i class="fa-solid fa-comment-dots"></i> 안내 메시지 복사</button></div>'
           + '<div style="display:flex;gap:8px;margin-top:8px"><button id="lstop" style="flex:1;padding:11px;background:#fef2f2;color:#dc2626;font-size:13.5px;' + btnS + '">링크 중지</button><button id="lno" style="flex:1;padding:11px;background:#f1f5f9;color:#475569;font-size:13.5px;' + btnS + '">닫기</button></div>'
         : '<div style="font-size:13px;font-weight:900;color:#334155;margin-bottom:8px">사용 기간</div>'
           + '<div style="display:flex;flex-wrap:wrap;gap:8px">' + opts.map(function(x,i){ return '<label style="display:flex;align-items:center;gap:6px;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:11px;cursor:pointer;font-size:13.5px;font-weight:800"><input type="radio" name="lexp" value="'+x[0]+'"'+(i===0?' checked':'')+'>'+x[1]+' <span style="color:#94a3b8;font-weight:700">('+fmt(x[0])+')</span></label>'; }).join('') + '</div>'
@@ -20303,14 +20310,15 @@ ui.matExtLink = async function(){
     document.body.appendChild(o);
     o.addEventListener('click', async function(e){
         if(e.target===o || e.target.closest('#lno')) return o.remove();
-        if(e.target.closest('#lcp')){ o.remove(); ui._copyLinkNow(cur.url, fmt(Number(cur.exp)), msgOf(cur.url)); return; }
+        if(e.target.closest('#lcp')){ o.remove(); ui._copyLinkNow(cur.url, fmt(Number(cur.exp))); return; }
+        if(e.target.closest('#lmsg')){ var t = msgOf(cur.url); o.remove(); ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('안내 메시지를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); return; }
         if(e.target.closest('#lstop')){ if(!confirm('이 링크를 중지할까요? 중지하면 강사님들이 더 올릴 수 없습니다.')) return; await firebase.database().ref('system/coord/uploadLinks/'+cur.id+'/revoked').set(true); o.remove(); ui.matExtLink(); return; }
         if(e.target.closest('#lmk')){
             var exp = Number((o.querySelector('input[name=lexp]:checked')||{}).value || 0); if(!exp) return;
             /* 주소는 번호만으로 정해지므로 '누른 순간' 바로 복사해 둔다(나중에 복사하면 브라우저가 막는다) */
             var n = Date.now().toString(36) + Math.random().toString(36).slice(2,8);
             var url = location.origin + location.pathname.replace(/[^\/]*$/, '') + 'upload.html?k=' + n;
-            var copied = ui._clipNow(msgOf(url));
+            var copied = ui._clipNow(url);
             o.remove();
             if(!(await ui._matEnsureKey())) return;
             /* [K158] 암호가 맞는지 서버에서 먼저 확인 */
