@@ -254,6 +254,10 @@
       svRef().on('value', function(s){
         var v = s.val() || {};
         var rg = v.range || {}, ps = pd.split('~').map(function(x){ return x.trim(); });
+        /* [K194] 지난 과정의 조사 결과는 보이지 않게(과정명·교육기간이 다르면) — 담당자 화면을 열면 자동 정리됨 */
+        (function(){ var stale = (v.period && pd && v.period !== pd);
+          if(!stale && !v.period && pd && ps[0] && ps[1]){ var ds = []; Object.keys(v.resp || {}).forEach(function(k){ var r = v.resp[k] || {}; Object.keys(Object.assign({}, r.p1 || {}, r.p2 || {})).forEach(function(x){ ds.push(x.slice(0,10)); }); }); stale = ds.length && ds.every(function(d){ return d < ps[0] || d > ps[1]; }); }
+          if(stale){ v = { course: v.course }; rg = {}; } })();
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
         SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || ''); SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false;
