@@ -20419,19 +20419,25 @@ ui.preSurveyOpen = async function(){
     var V = {};
     /* [K204] 이 과정 링크·안내 메시지 미리 준비(누르는 순간 바로 복사하려고) */
     ui._psvLinkC = null;
-    var profNm = ''; firebase.database().ref('courses/' + room + '/status/professorName').once('value').then(function(s){ profNm = String(s.val() || '').trim().replace(/\s*교수$/, ''); }).catch(function(){});
+    var profNm = '', profTel = '', profMail = '';
+    firebase.database().ref('courses/' + room + '/status/professorName').once('value').then(function(s){ var raw = String(s.val() || '').trim(); profNm = raw.replace(/\s*교수$/, '');
+        if(raw) return Promise.all([ firebase.database().ref('system/professorProfiles/' + raw.replace(/[.#$\[\]\/]/g,'') + '/phone').once('value'), firebase.database().ref('system/professorProfiles/' + raw.replace(/[.#$\[\]\/]/g,'') + '/email').once('value') ]).then(function(a){ profTel = String(a[0].val() || '').trim(); profMail = String(a[1].val() || '').trim(); }); }).catch(function(){});
     firebase.database().ref('system/coord/uploadLinks').orderByChild('room').equalTo(room).once('value').then(function(s){ var v = s.val() || {}, now = Date.now(), nn = function(t){ return String(t||'').replace(/[\s()\-_·.]/g,'').replace(/\d+차/g,''); };
         var al = Object.keys(v).map(function(k){ return Object.assign({ id: k }, v[k]); }).filter(function(x){ return !x.revoked && Number(x.exp) >= now && x.url && (!x.course || nn(x.course) === nn(cname)); }).sort(function(a,b){ return (Number(b.createdAt)||0) - (Number(a.createdAt)||0); });
         ui._psvLinkC = al[0] || null; }).catch(function(){});
     var msgOf = function(u){ var WDk = ['일','월','화','수','목','금','토'], fd = function(d){ var x = new Date(d + 'T00:00:00'); return (x.getMonth()+1) + '.' + x.getDate() + '(' + WDk[x.getDay()] + ')'; };
         var pdT = /^\d{4}-\d{2}-\d{2}$/.test(ps[0]||'') ? fd(ps[0]) + (/^\d{4}-\d{2}-\d{2}$/.test(ps[1]||'') ? ' ~ ' + fd(ps[1]) : '') : '';
         var due = V.matDue || ui._prevFri(ps[0] || ''), rb = V.replyBy || ui._prevFri(ps[0] || '');
-        /* [K223] 휴대폰 문자 폭(한 줄 13자 안팎)에 맞춰 짧게 끊고, 요점은 ▶ 제목 + 한 줄 값으로 */
+        /* [K224] 공손하게 — 감사 인사로 시작, 부탁드리는 말투, 끝에 담임교수 연락처(👤📞✉️). 휴대폰 폭에 맞춰 짧게 */
         var pdS = pdT.replace(/ ~ /, '~');
-        return '[항공기술훈련원]\n\n안녕하십니까.\n' + cname + '\n' + (profNm ? '담임교수 ' + profNm + '입니다.' : '담당자입니다.')
-          + '\n\n출강 가능 일정과\n교재 제출을 부탁드립니다.'
-          + (pdS ? '\n\n▶ 교육일정\n' + pdS : '') + (rb && rb >= ui._ymd(new Date()) ? '\n\n▶ 회신 마감\n' + fd(rb) + '까지' : '') + (due ? '\n\n▶ 교재 제출\n' + fd(due) + '까지' : '')
-          + '\n\n아래 링크에서\n제출해 주세요.\n' + u + '\n\n감사합니다.'; };
+        return '[항공기술훈련원]\n\n안녕하십니까 😊\n' + cname + '\n' + (profNm ? '담임교수 ' + profNm + '입니다.' : '담당자입니다.')
+          + '\n\n늘 저희 교육에\n힘을 보태 주셔서\n진심으로 감사드립니다.'
+          + '\n\n이번 과정 준비를 위해\n강사님의 출강 가능 일정과\n교재를 여쭙고자 합니다.'
+          + (pdS ? '\n\n📅 교육일정\n' + pdS : '') + (rb && rb >= ui._ymd(new Date()) ? '\n\n⏰ 회신 부탁드리는 날\n' + fd(rb) + '까지' : '') + (due ? '\n\n📎 교재 제출\n' + fd(due) + '까지' : '')
+          + '\n\n편하실 때 맨 아래 링크에\n남겨 주시면 됩니다 🙏'
+          + '\n\n궁금하신 점은\n언제든 편히 연락 주세요.'
+          + (profNm || profTel || profMail ? '\n' + (profNm ? '\n👤 ' + profNm + ' 교수' : '') + (profTel ? '\n📞 ' + profTel : '') + (profMail ? '\n✉️ ' + profMail : '') : '')
+          + '\n\n감사합니다.\n\n👇 제출 링크\n' + u; };   // [K225] 링크는 맨 끝 — 미리보기 카드가 메시지 아래에 붙도록
     /* [K168] 이 과정에 외부강사가 링크로 올린 교재 — 성함으로 응답과 짝지어 교재 칸에 아이콘으로 */
     var MATS = [], TELS = {};
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + room);
