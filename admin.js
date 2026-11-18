@@ -20426,10 +20426,12 @@ ui.preSurveyOpen = async function(){
     var msgOf = function(u){ var WDk = ['일','월','화','수','목','금','토'], fd = function(d){ var x = new Date(d + 'T00:00:00'); return (x.getMonth()+1) + '.' + x.getDate() + '(' + WDk[x.getDay()] + ')'; };
         var pdT = /^\d{4}-\d{2}-\d{2}$/.test(ps[0]||'') ? fd(ps[0]) + (/^\d{4}-\d{2}-\d{2}$/.test(ps[1]||'') ? ' ~ ' + fd(ps[1]) : '') : '';
         var due = V.matDue || ui._prevFri(ps[0] || ''), rb = V.replyBy || ui._prevFri(ps[0] || '');
-        return '[한국공항공사 항공기술훈련원]\n\n안녕하십니까.\n' + cname + (profNm ? '\n담임교수 ' + profNm + '입니다.' : ' 담당자입니다.')
-          + '\n\n강사님의 출강 가능 일정 조사와\n교재 제출을 부탁드리고자 연락드립니다.\n아래 링크에서 제출해 주시면\n과정 운영에 소중히 참고하겠습니다.\n바쁘신 중에도 협조해 주셔서 감사합니다.'
-          + '\n\n* 과정명 : ' + cname + (pdT ? '\n* 교육일정 : ' + pdT : '') + (rb && rb >= ui._ymd(new Date()) ? '\n* 회신 마감 : ' + fd(rb) + '까지' : '') + (due ? '\n* 교재 제출 : ' + fd(due) + '까지' : '')
-          + '\n\n▶ 제출 링크\n' + u; };
+        /* [K223] 휴대폰 문자 폭(한 줄 13자 안팎)에 맞춰 짧게 끊고, 요점은 ▶ 제목 + 한 줄 값으로 */
+        var pdS = pdT.replace(/ ~ /, '~');
+        return '[항공기술훈련원]\n\n안녕하십니까.\n' + cname + '\n' + (profNm ? '담임교수 ' + profNm + '입니다.' : '담당자입니다.')
+          + '\n\n출강 가능 일정과\n교재 제출을 부탁드립니다.'
+          + (pdS ? '\n\n▶ 교육일정\n' + pdS : '') + (rb && rb >= ui._ymd(new Date()) ? '\n\n▶ 회신 마감\n' + fd(rb) + '까지' : '') + (due ? '\n\n▶ 교재 제출\n' + fd(due) + '까지' : '')
+          + '\n\n아래 링크에서\n제출해 주세요.\n' + u + '\n\n감사합니다.'; };
     /* [K168] 이 과정에 외부강사가 링크로 올린 교재 — 성함으로 응답과 짝지어 교재 칸에 아이콘으로 */
     var MATS = [], TELS = {};
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + room);
