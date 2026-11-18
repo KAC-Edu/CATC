@@ -290,7 +290,7 @@
           if(!stale && !v.period && pd && ps[0] && ps[1]){ var ds = []; Object.keys(v.resp || {}).forEach(function(k){ var r = v.resp[k] || {}; Object.keys(Object.assign({}, r.p1 || {}, r.p2 || {})).forEach(function(x){ ds.push(x.slice(0,10)); }); }); stale = ds.length && ds.every(function(d){ return d < ps[0] || d > ps[1]; }); }
           if(stale){ v = { course: v.course }; rg = {}; } })();
         SV.days = daysOf(rg.s || ps[0] || '', rg.e || ps[1] || '', hol);
-        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || prevFri(ps[0] || '')); SV.replyBy = String(v.replyBy || prevFri(ps[0] || '')); /* [K196] 기본 = 과정 시작 전주 금요일 */ SV.resp = v.resp || {}; SV.note = String(v.note || '');
+        SV.blocks = v.blocks || {}; SV.bk = v.bk || {}; SV.matDue = String(v.matDue || prevFri(ps[0] || '')); SV.replyBy = String(v.replyBy || prevFri2(ps[0] || '')); /* [K196] 기본 = 과정 시작 전주 금요일 */ SV.resp = v.resp || {}; SV.note = String(v.note || '');
         SV.on = SV.days.length > 0 && v.enabled !== false; SV.loaded = true;
         svOnName(true); svDraw(); drawHead(); drawMail();
       });
@@ -330,6 +330,7 @@
     };
   }
   function prevFri(st){ if(!/^\d{4}-\d{2}-\d{2}$/.test(st||'')) return ''; var d = new Date(st + 'T00:00:00'), off = ((d.getDay() - 5 + 7) % 7) || 7; d.setDate(d.getDate() - off); return ymd(d); }
+  function prevFri2(st){ var f = prevFri(st); if(!f) return ''; var d = new Date(f + 'T00:00:00'); d.setDate(d.getDate() - 7); return ymd(d); }   // [K228] 회신 마감 기본 = 2주 전 금요일
   function drawHead(){
     var el = document.getElementById('hdInfo'); if(!el) return;
     var ps = String(SV.period||'').split('~').map(function(x){ return x.trim(); });
