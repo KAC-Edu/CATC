@@ -20428,16 +20428,16 @@ ui.preSurveyOpen = async function(){
     var msgOf = function(u){ var WDk = ['일','월','화','수','목','금','토'], fd = function(d){ var x = new Date(d + 'T00:00:00'); return (x.getMonth()+1) + '.' + x.getDate() + '(' + WDk[x.getDay()] + ')'; };
         var pdT = /^\d{4}-\d{2}-\d{2}$/.test(ps[0]||'') ? fd(ps[0]) + (/^\d{4}-\d{2}-\d{2}$/.test(ps[1]||'') ? ' ~ ' + fd(ps[1]) : '') : '';
         var due = V.matDue || ui._prevFri(ps[0] || ''), rb = V.replyBy || ui._prevFri(ps[0] || '');
-        /* [K224] 공손하게 — 감사 인사로 시작, 부탁드리는 말투, 끝에 담임교수 연락처(👤📞✉️). 휴대폰 폭에 맞춰 짧게 */
+        /* [K224·K226] 공손하게 — 감사 인사로 시작, 부탁드리는 말투, 끝에 담임교수 연락처. 기호는 모든 휴대폰·단체문자에서 깨지지 않는 ■ ☎ ▼ 만. 휴대폰 폭에 맞춰 짧게 */
         var pdS = pdT.replace(/ ~ /, '~');
-        return '[항공기술훈련원]\n\n안녕하십니까 😊\n' + cname + '\n' + (profNm ? '담임교수 ' + profNm + '입니다.' : '담당자입니다.')
+        return '[항공기술훈련원]\n\n안녕하십니까.\n' + cname + '\n' + (profNm ? '담임교수 ' + profNm + '입니다.' : '담당자입니다.')
           + '\n\n늘 저희 교육에\n힘을 보태 주셔서\n진심으로 감사드립니다.'
           + '\n\n이번 과정 준비를 위해\n강사님의 출강 가능 일정과\n교재를 여쭙고자 합니다.'
-          + (pdS ? '\n\n📅 교육일정\n' + pdS : '') + (rb && rb >= ui._ymd(new Date()) ? '\n\n⏰ 회신 부탁드리는 날\n' + fd(rb) + '까지' : '') + (due ? '\n\n📎 교재 제출\n' + fd(due) + '까지' : '')
-          + '\n\n편하실 때 맨 아래 링크에\n남겨 주시면 됩니다 🙏'
+          + (pdS ? '\n\n■ 교육일정\n' + pdS : '') + (rb && rb >= ui._ymd(new Date()) ? '\n\n■ 회신 부탁드리는 날\n' + fd(rb) + '까지' : '') + (due ? '\n\n■ 교재 제출\n' + fd(due) + '까지' : '')
+          + '\n\n편하실 때 맨 아래 링크에\n남겨 주시면 감사하겠습니다.'
           + '\n\n궁금하신 점은\n언제든 편히 연락 주세요.'
-          + (profNm || profTel || profMail ? '\n' + (profNm ? '\n👤 ' + profNm + ' 교수' : '') + (profTel ? '\n📞 ' + profTel : '') + (profMail ? '\n✉️ ' + profMail : '') : '')
-          + '\n\n감사합니다.\n\n👇 제출 링크\n' + u; };   // [K225] 링크는 맨 끝 — 미리보기 카드가 메시지 아래에 붙도록
+          + (profNm || profTel || profMail ? '\n' + (profNm ? '\n담임교수 ' + profNm : '') + (profTel ? '\n☎ ' + profTel : '') + (profMail ? '\nE-mail ' + profMail : '') : '')
+          + '\n\n감사합니다.\n\n▼ 제출 링크\n' + u; };   // [K225] 링크는 맨 끝 — 미리보기 카드가 메시지 아래에 붙도록
     /* [K168] 이 과정에 외부강사가 링크로 올린 교재 — 성함으로 응답과 짝지어 교재 칸에 아이콘으로 */
     var MATS = [], TELS = {};
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + room);
