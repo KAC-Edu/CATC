@@ -21204,15 +21204,26 @@ ui._svySolve = function(items){   // items: [{t, r(회차 레코드, 선택)}]
     order.sort(function(a,b){ return b.n - a.n; });
     var cut = function(t){ t = String(t).replace(/\s+/g,' ').trim(); return t.length > 38 ? t.slice(0, 38) + '…' : t; };
     var monTxt = function(g){ var ks = Object.keys(g.mons); return ks.length && ks.length <= 3 ? ks.join('·') : ''; };
-    var esc = ui._esc, P = [], a = order[0];
-    var wxA = /냉방|난방/.test(a.lab) && monTxt(a);
-    var b2 = order[1], tie = !!(b2 && b2.n === a.n);   /* [K237] 1건이거나 동률이면 '가장 많았습니다'라고 쓰지 않음 */
-    P.push((tie ? '「' + esc(a.lab) + '」·「' + esc(b2.lab) + '」 관련 의견이 각 <b>' + a.n + '건</b>씩 제기되었습니다' : (a.n < 2 ? '「' + esc(a.lab) + '」 관련 의견이 <b>1건</b> 제기되었습니다' : '「' + esc(a.lab) + '」 관련 의견이 <b>' + a.n + '건</b>으로 가장 많았습니다')) + (a.ex[0] ? ' <span class="sq">(예: "' + esc(cut(a.ex[0])) + '")</span>' : '') + '. '
-        + (wxA ? '특히 <b>' + esc(monTxt(a)) + '</b> 과정에서 집중적으로 제기된 만큼, 계절 요인을 고려하여 ' : (a.n < 2 && !tie ? '해당 의견을 고려할 때 ' : '이러한 점을 고려할 때 ')) + '<b>' + esc(tie ? a.lab + '·' + b2.lab : a.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(a.fix) + '</span>' + (tie ? '<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(b2.fix) + '</span>' : ''));
-    order.slice(tie ? 2 : 1, tie ? 4 : 3).forEach(function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
-        P.push((i ? '아울러 ' : '이어서 ') + '「' + esc(g.lab) + '」(' + g.n + '건' + (wx ? ' · ' + esc(monTxt(g)) + ' 과정' : '') + ')도 함께 검토가 필요해 보입니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(g.fix) + '</span>'); });
-    var rest = order.slice(tie ? 4 : 3); if(rest.length) P.push('그 밖에 ' + rest.slice(0, 3).map(function(g){ return esc(g.lab); }).join(', ') + ' 등 ' + rest.length + '개 주제의 의견도 있습니다.');
-    return '<div class="svySol"><div class="svySolT"><i class="fa-solid fa-lightbulb"></i> 개선 방향 제안 <span>불만·개선 의견을 바탕으로 플랫폼이 정리 · 조치 완료한 의견은 제외</span></div>' + P.map(function(x){ return '<p>' + x + '</p>'; }).join('') + '</div>';
+    /* [K241] 읽기 쉽게 — 한 줄 요약 + 우선순위 카드(① 현황 / 방향 / 조치) + 그 밖의 주제 */
+    var esc = ui._esc, total = 0; order.forEach(function(g){ total += g.n; });
+    var top = order.slice(0, 3), rest = order.slice(3), a = top[0], b2 = top[1], tie = !!(b2 && b2.n === a.n);
+    var lead = order.length === 1 ? '불만·개선 의견을 정리한 결과, 아래 주제에 대한 개선이 필요할 것으로 사료됩니다.'
+        : '불만·개선 의견을 주제별로 묶어 보니 <b>' + order.length + '개 주제</b>로 나뉘었고, 그중 의견이 많은 순서로 정리했습니다.';
+    var NUM = ['①','②','③'];
+    var card = function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
+        var st = i === 0 && !tie && g.n >= 2 ? '의견이 <b>' + g.n + '건</b>으로 가장 많이 제기되었습니다.' : '의견이 <b>' + g.n + '건</b> 제기되었습니다.';
+        if(wx) st += ' 주로 <b>' + esc(monTxt(g)) + '</b> 과정에서 나왔습니다.';
+        var dir = i === 0 ? (wx ? '계절 요인을 고려하여 <b>' + esc(g.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.' : '<b>' + esc(g.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.')
+            : (wx ? '계절에 앞서 미리 점검이 필요해 보입니다.' : '함께 검토가 필요해 보입니다.');
+        return '<div class="ssC"><div class="ssN">' + NUM[i] + '</div><div class="ssB"><div class="ssH">' + esc(g.lab) + '<span class="ssCnt">' + g.n + '건</span></div>'
+            + '<div class="ssL"><span class="ssK">현황</span><span>' + st + (g.ex[0] ? '<br><span class="sq">예) "' + esc(cut(g.ex[0])) + '"</span>' : '') + '</span></div>'
+            + '<div class="ssL"><span class="ssK">방향</span><span>' + dir + '</span></div>'
+            + '<div class="ssL fx"><span class="ssK k2">조치</span><span>' + esc(g.fix) + '</span></div></div></div>'; };
+    return '<div class="svySol"><div class="svySolT"><i class="fa-solid fa-lightbulb"></i> 개선 방향 제안 <span>불만·개선 의견을 바탕으로 플랫폼이 정리 · 조치 완료한 주제는 제외</span></div>'
+        + '<p class="ssLead">' + lead + '</p>'
+        + '<div class="ssG">' + top.map(card).join('') + '</div>'
+        + (rest.length ? '<p class="ssRest">그 밖에 ' + rest.slice(0, 4).map(function(g){ return '<b>' + esc(g.lab) + '</b>(' + g.n + ')'; }).join(', ') + (rest.length > 4 ? ' 등 ' + rest.length + '개 주제' : '') + '의 의견도 있습니다.</p>' : '')
+        + '</div>';
 };
 /* [K235] 조치 완료는 '주제' 단위 — 완료 체크 후에는 숨기고, 그 뒤에 열린 회차에서 같은 주제가 다시 나오면 '다시 제기됨'으로 되살린다 */
 ui._isMore = function(b){ var d = b.parentNode.parentNode.querySelector('.isDet'); if(!d) return; var o = d.style.display === 'none';   /* [K239] 바로 다음 요소가 <style>이라 펼쳐지지 않던 문제 */ d.style.display = o ? '' : 'none'; b.innerHTML = o ? '<i class="fa-solid fa-chevron-up"></i> 회차별 점수 접기' : '<i class="fa-solid fa-chevron-down"></i> 회차별 점수 상세 보기'; };   // [K238]
@@ -21248,7 +21259,7 @@ ui._svySolCard = function(){
     host.querySelectorAll('input[data-tk]').forEach(function(cb){ cb.onchange = function(){ ui._svyDoneTog(cb.getAttribute('data-tk'), cb.getAttribute('data-lab'), cb.checked); setTimeout(ui._svySolCard, cb.checked ? 400 : 0); }; });
     var ht = document.getElementById('solHidT'); if(ht) ht.onclick = function(e){ e.preventDefault(); ui._svySolShowDone = !ui._svySolShowDone; ui._svySolCard(); };
 };
-ui._SVY_SOL_CSS = '<style>.svySol{margin-top:12px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd}.svySolT{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:900;color:#075985;margin-bottom:6px}.svySolT i{color:#0284c7}.svySolT span{font-size:12.5px;font-weight:700;color:#64748b}.svySol p{margin:6px 0 0;font-size:15.5px;font-weight:700;color:#0f172a;line-height:1.7}.svySol .fx{color:#0369a1}.svySol .fx2{display:block;margin-top:3px;padding-left:12px;font-size:14.5px;color:#0369a1;font-weight:800}.svySol .fx2 i{font-size:11px;margin-right:4px}.svySol .sq{color:#64748b;font-weight:600;font-size:14px}</style>';
+ui._SVY_SOL_CSS = '<style>.svySol{margin-top:12px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd}.svySolT{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:900;color:#075985;margin-bottom:6px}.svySolT i{color:#0284c7}.svySolT span{font-size:12.5px;font-weight:700;color:#64748b}.svySol p{margin:6px 0 0;font-size:15.5px;font-weight:700;color:#0f172a;line-height:1.7}.ssLead{color:#334155!important}.ssG{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.ssC{display:flex;gap:10px;padding:14px;border-radius:12px;background:#fff;border:1px solid #e0f2fe}.ssN{flex-shrink:0;font-size:22px;font-weight:900;color:#0284c7;line-height:1.1}.ssB{flex:1;min-width:0}.ssH{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:900;color:#0f172a;margin-bottom:8px}.ssCnt{padding:2px 9px;border-radius:999px;background:#e0f2fe;color:#0369a1;font-size:13px}.ssL{display:flex;gap:8px;align-items:flex-start;margin-top:6px;font-size:14.5px;font-weight:700;color:#1e293b;line-height:1.6}.ssK{flex-shrink:0;padding:1px 8px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:12.5px;font-weight:900;margin-top:2px}.ssK.k2{background:#dbeafe;color:#1d4ed8}.ssL.fx>span:last-child{color:#0369a1;font-weight:800}.ssRest{margin-top:12px!important;font-size:14.5px!important;color:#475569!important}.svySol .fx{color:#0369a1}.svySol .fx2{display:block;margin-top:3px;padding-left:12px;font-size:14.5px;color:#0369a1;font-weight:800}.svySol .fx2 i{font-size:11px;margin-right:4px}.svySol .sq{color:#64748b;font-weight:600;font-size:14px}</style>';
 ui._svyKey = function(t){ var s = String(t || '').replace(/\s+/g,''), h1 = 5381, h2 = 52711; for(var i = 0; i < s.length; i++){ var c = s.charCodeAt(i); h1 = (h1 * 33) ^ c; h2 = (h2 * 31) ^ c; } return 'k' + (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36); };
 ui._svyDoneRef = function(){ return firebase.database().ref('system/coord/surveyDone'); };
 ui._svyDoneLoad = function(cb){ if(ui._svyDoneMap){ cb && cb(); return; } ui._svyDoneRef().once('value').then(function(s){ ui._svyDoneMap = s.val() || {}; cb && cb(); }).catch(function(){ ui._svyDoneMap = {}; cb && cb(); }); };
