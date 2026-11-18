@@ -21105,11 +21105,29 @@ ui.surveyOpen = async function(){
     var inst = {}; list.forEach(function(r, ri){ ((r.inst || {}).list || []).forEach(function(x){ (inst[x.n] = inst[x.n] || { n: x.n, s: {} }).s[ri] = x.score; }); });
     var ins = Object.keys(inst).map(function(k){ var v = inst[k], arr = Object.keys(v.s).map(function(i){ return v.s[i]; }); v.avg = arr.reduce(function(a,b){ return a+b; },0) / arr.length; v.cnt = arr.length; return v; }).sort(function(a,b){ return b.cnt - a.cnt || b.avg - a.avg; });
     h += '<div style="' + card + '"><div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chalkboard-user" style="color:#ea580c"></i> 강사 선호도 변화 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 이름은 가림 · 응답자 기준 점수</span></div>'
-      + '<div style="overflow:auto;margin-top:12px"><table class="svyT"><thead><tr><th style="text-align:left;padding-left:14px">강사</th><th>출강</th><th>평균</th>' + th + '</tr></thead><tbody>'
+      + (function(){   /* [K238] 위에 요약 그래프(출강 많은 순 · 평균 높은 순), 회차별 표는 [상세 보기]로 펼침 */
+          if(!ins.length) return '<div style="padding:20px;color:#94a3b8;font-weight:800">강사 점수가 없습니다</div>';
+          var all = [], rep2 = ins.filter(function(v){ return v.cnt >= 2; }); ins.forEach(function(v){ Object.keys(v.s).forEach(function(i){ all.push(v.s[i]); }); });
+          var tot = all.reduce(function(a,b){ return a+b; },0) / all.length, top = (rep2.length ? rep2 : ins).slice().sort(function(a,b){ return b.avg - a.avg || b.cnt - a.cnt; });
+          var byCnt = ins.slice(0, 10), mxC = byCnt[0].cnt, best = top.slice(0, 10);
+          var lo = Math.min.apply(null, best.map(function(v){ return v.avg; }).concat([tot])) - 1.5, hi = 100;
+          var col = function(v){ return v >= 98 ? '#16a34a' : v >= 95 ? '#22c55e' : v >= 90 ? '#eab308' : '#ef4444'; };
+          var kpi = function(lb, val, sub, c){ return '<div class="isK"><div class="isKl">' + lb + '</div><div class="isKv" style="color:' + c + '">' + val + '</div><div class="isKs">' + sub + '</div></div>'; };
+          var bar = function(v, w, c, txt){ return '<div class="isB"><span class="isBn">' + esc(v.n) + '</span><span class="isBt"><i style="width:' + Math.max(4, w) + '%;background:' + c + '"></i></span><span class="isBv">' + txt + '</span></div>'; };
+          return '<div class="isKs4">' + kpi('출강 강사', ins.length + '명', list.length + '개 회차 기준', '#0f172a') + kpi('강사 전체 평균', f1(tot) + '점', '모든 회차 · 모든 강사', '#4f46e5')
+                + kpi('최다 출강', esc(byCnt[0].n), byCnt[0].cnt + '회 · 평균 ' + f1(byCnt[0].avg) + '점', '#ea580c') + kpi('최고 평균' + (rep2.length ? ' (2회↑)' : ''), esc(top[0].n), f1(top[0].avg) + '점 · ' + top[0].cnt + '회 출강', '#16a34a') + '</div>'
+            + '<div class="isG2"><div class="isP"><div class="isPt"><i class="fa-solid fa-person-chalkboard" style="color:#ea580c"></i> 출강 많은 강사 <span>TOP ' + byCnt.length + '</span></div>'
+                + byCnt.map(function(v){ return bar(v, v.cnt / mxC * 100, 'linear-gradient(90deg,#fdba74,#ea580c)', '<b>' + v.cnt + '회</b><small>' + f1(v.avg) + '점</small>'); }).join('') + '</div>'
+              + '<div class="isP"><div class="isPt"><i class="fa-solid fa-star" style="color:#16a34a"></i> 평균 점수 높은 강사 <span>TOP ' + best.length + (rep2.length ? ' · 2회 이상 출강' : '') + '</span></div>'
+                + best.map(function(v){ return bar(v, (v.avg - lo) / (hi - lo) * 100, col(v.avg), '<b style="color:' + col(v.avg) + '">' + f1(v.avg) + '</b><small>' + v.cnt + '회</small>'); }).join('') + '</div></div>'
+            + '<div style="text-align:center;margin-top:16px"><button class="isMore" onclick="ui._isMore(this)"><i class="fa-solid fa-chevron-down"></i> 회차별 점수 상세 보기</button></div>'
+            + '<style>.isKs4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.isK{padding:14px 16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center}.isKl{font-size:13.5px;font-weight:900;color:#64748b}.isKv{font-size:24px;font-weight:900;margin-top:4px}.isKs{font-size:13px;font-weight:800;color:#94a3b8;margin-top:2px}.isG2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.isP{padding:16px 18px;border-radius:14px;border:1px solid #e2e8f0;background:#fff}.isPt{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:10px}.isPt span{font-size:12.5px;color:#94a3b8;font-weight:800;margin-left:4px}.isB{display:flex;align-items:center;gap:10px;padding:5px 0}.isBn{width:64px;flex-shrink:0;font-size:15.5px;font-weight:900;color:#334155}.isBt{flex:1;height:14px;border-radius:999px;background:#f1f5f9;overflow:hidden}.isBt i{display:block;height:100%;border-radius:999px}.isBv{width:96px;flex-shrink:0;text-align:right;font-size:15.5px;font-weight:900;color:#0f172a}.isBv small{margin-left:6px;font-size:12.5px;color:#94a3b8;font-weight:800}.isMore{border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:999px;padding:9px 20px;font:inherit;font-size:15px;font-weight:900;cursor:pointer}.isMore:hover{background:#e0e7ff}@media(max-width:900px){.isKs4{grid-template-columns:repeat(2,1fr)}.isG2{grid-template-columns:1fr}}</style>';
+        })()
+      + '<div style="display:none"><div style="overflow:auto;margin-top:12px"><table class="svyT"><thead><tr><th style="text-align:left;padding-left:14px">강사</th><th>출강</th><th>평균</th>' + th + '</tr></thead><tbody>'
       + ins.map(function(v){ return '<tr><td style="text-align:left;padding-left:14px;font-weight:900">' + esc(v.n) + '</td><td>' + v.cnt + '회</td>' + cell(v.avg) + list.map(function(r, ri){
           var c0 = cell(v.s[ri]); if(v.s[ri] == null) return c0; var mc = insCms(r, v.n).length;
           return mc ? c0.replace('<td style="', '<td class="svyInsC" data-rid="' + esc(r.id) + '" data-n="' + esc(v.n) + '" title="눌러서 이 강사님이 언급된 의견 보기" style="cursor:pointer;position:relative;').replace('</td>', '<sup class="svyNb" style="background:#7c3aed">' + mc + '</sup></td>') : c0; }).join('') + '</tr>'; }).join('')
-      + '</tbody></table></div><div style="margin-top:8px;font-size:13px;font-weight:800;color:#64748b"><sup class="svyNb" style="position:static;display:inline-block;background:#7c3aed;margin-right:4px">2</sup> = 그 회차 의견 중 이 강사님 이름이 들어간 글 수 · 칸을 누르면 아래에 펼쳐집니다</div></div>';
+      + '</tbody></table></div><div style="margin-top:8px;font-size:13px;font-weight:800;color:#64748b"><sup class="svyNb" style="position:static;display:inline-block;background:#7c3aed;margin-right:4px">2</sup> = 그 회차 의견 중 이 강사님 이름이 들어간 글 수 · 칸을 누르면 아래에 펼쳐집니다</div></div></div>';
     /* 의견 분석 */
     var cms = []; list.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(/(무엇입니까|하십니까|이유는|있습니까|어떠셨|바랍니다\?)\s*\??\s*$/.test(c.t) || /^\d+-\d+\./.test(String(c.t).trim())) return; cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), ym: (/^\d{4}-\d{2}/.test(r.period || '') ? String(r.period).slice(0,4) + '년 ' + Number(String(r.period).slice(5,7)) + '월' : ''), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c), wx: ui._svyWx(c.t, r), _r: r }); }); });
     var bad = cms.filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }), good = cms.filter(function(c){ return c.tag === 'pos'; });
@@ -21183,14 +21201,16 @@ ui._svySolve = function(items){   // items: [{t, r(회차 레코드, 선택)}]
     var monTxt = function(g){ var ks = Object.keys(g.mons); return ks.length && ks.length <= 3 ? ks.join('·') : ''; };
     var esc = ui._esc, P = [], a = order[0];
     var wxA = /냉방|난방/.test(a.lab) && monTxt(a);
-    P.push('「' + esc(a.lab) + '」 관련 의견이 <b>' + a.n + '건</b>으로 가장 많았습니다' + (a.ex[0] ? ' <span class="sq">(예: "' + esc(cut(a.ex[0])) + '")</span>' : '') + '. '
-        + (wxA ? '특히 <b>' + esc(monTxt(a)) + '</b> 과정에서 집중적으로 제기된 만큼, 계절 요인을 고려하여 ' : '이러한 점을 고려할 때 ') + '<b>' + esc(a.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(a.fix) + '</span>');
-    order.slice(1, 3).forEach(function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
+    var b2 = order[1], tie = !!(b2 && b2.n === a.n);   /* [K237] 1건이거나 동률이면 '가장 많았습니다'라고 쓰지 않음 */
+    P.push((tie ? '「' + esc(a.lab) + '」·「' + esc(b2.lab) + '」 관련 의견이 각 <b>' + a.n + '건</b>씩 제기되었습니다' : (a.n < 2 ? '「' + esc(a.lab) + '」 관련 의견이 <b>1건</b> 제기되었습니다' : '「' + esc(a.lab) + '」 관련 의견이 <b>' + a.n + '건</b>으로 가장 많았습니다')) + (a.ex[0] ? ' <span class="sq">(예: "' + esc(cut(a.ex[0])) + '")</span>' : '') + '. '
+        + (wxA ? '특히 <b>' + esc(monTxt(a)) + '</b> 과정에서 집중적으로 제기된 만큼, 계절 요인을 고려하여 ' : (a.n < 2 && !tie ? '해당 의견을 고려할 때 ' : '이러한 점을 고려할 때 ')) + '<b>' + esc(tie ? a.lab + '·' + b2.lab : a.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(a.fix) + '</span>' + (tie ? '<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(b2.fix) + '</span>' : ''));
+    order.slice(tie ? 2 : 1, tie ? 4 : 3).forEach(function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
         P.push((i ? '아울러 ' : '이어서 ') + '「' + esc(g.lab) + '」(' + g.n + '건' + (wx ? ' · ' + esc(monTxt(g)) + ' 과정' : '') + ')도 함께 검토가 필요해 보입니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(g.fix) + '</span>'); });
-    if(order.length > 3) P.push('그 밖에 ' + order.slice(3, 6).map(function(g){ return esc(g.lab); }).join(', ') + ' 등 ' + (order.length - 3) + '개 주제의 의견도 있습니다.');
+    var rest = order.slice(tie ? 4 : 3); if(rest.length) P.push('그 밖에 ' + rest.slice(0, 3).map(function(g){ return esc(g.lab); }).join(', ') + ' 등 ' + rest.length + '개 주제의 의견도 있습니다.');
     return '<div class="svySol"><div class="svySolT"><i class="fa-solid fa-lightbulb"></i> 개선 방향 제안 <span>불만·개선 의견을 바탕으로 플랫폼이 정리 · 조치 완료한 의견은 제외</span></div>' + P.map(function(x){ return '<p>' + x + '</p>'; }).join('') + '</div>';
 };
 /* [K235] 조치 완료는 '주제' 단위 — 완료 체크 후에는 숨기고, 그 뒤에 열린 회차에서 같은 주제가 다시 나오면 '다시 제기됨'으로 되살린다 */
+ui._isMore = function(b){ var d = b.parentNode.nextElementSibling, o = d.style.display === 'none'; d.style.display = o ? '' : 'none'; b.innerHTML = o ? '<i class="fa-solid fa-chevron-up"></i> 회차별 점수 접기' : '<i class="fa-solid fa-chevron-down"></i> 회차별 점수 상세 보기'; };   // [K238]
 ui._svyTopicKey = function(lab){ return 'T' + ui._svyKey((ui._svyCurSer || '') + '|' + lab); };
 ui._svyTopicDone = function(lab){ return (ui._svyDoneMap || {})[ui._svyTopicKey(lab)] || null; };
 ui._svyStartMs = function(r){ var m = String((r && r.period) || '').match(/\d{4}-\d{2}-\d{2}/); return m ? new Date(m[0] + 'T00:00:00').getTime() : 0; };
