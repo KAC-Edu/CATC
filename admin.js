@@ -20903,7 +20903,7 @@ ui._svyYM = function(r){ var d = String((r && r.period) || '').match(/\d{4}-\d{2
 ui._svyWx = function(t, r){ var s = String(t || ''); var cold = /춥|추워|추움|추웠|추운|쌀쌀|난방|히터|보일러|한파|겨울|온수|이불/.test(s), hot = /덥|더워|더움|더웠|더운|냉방|에어컨|폭염|여름|선풍기|찜통/.test(s), wx = cold || hot || /날씨|온도|기온/.test(s);
     var mon = ui._svyMon(r); if(!wx || !mon) return '';
     var c = hot && !cold ? ['#fff7ed','#c2410c','#fed7aa','fa-sun'] : (cold && !hot ? ['#eff6ff','#1d4ed8','#bfdbfe','fa-snowflake'] : ['#f0fdfa','#0f766e','#99f6e4','fa-temperature-half']);
-    return '<span title="날씨 관련 의견 — 이 과정이 열린 달" style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:' + c[0] + ';color:' + c[1] + ';border:1px solid ' + c[2] + ';font-size:13px;font-weight:900;white-space:nowrap"><i class="fa-solid ' + c[3] + '"></i>' + mon + ' 과정</span>'; };
+    return '<span title="날씨 관련 의견 — 이 과정이 열린 달" style="flex-shrink:0;align-self:flex-start;height:auto;line-height:1.3;margin-top:2px;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;background:' + c[0] + ';color:' + c[1] + ';border:1px solid ' + c[2] + ';font-size:12px;font-weight:900;white-space:nowrap"><i class="fa-solid ' + c[3] + '"></i>' + mon + ' 과정</span>'; };
 ui._svyUnit = function(r){ return /\d+\s*기/.test(String((r && r.title) || '')) ? '기' : '차'; };   // [K229] 신입사원 과정은 '기수'로 표기
 ui._svyTag = function(t){
     var s0 = String(t||'').trim();
