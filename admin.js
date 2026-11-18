@@ -20852,7 +20852,7 @@ async function kacSurveyParse(doc){
   if(R.total == null){ var t = [R.op.score, R.env.score, R.inst.score].filter(function(x){ return x != null; }); R.total = t.length ? Math.round(t.reduce(function(a,b){return a+b;},0)/t.length*1000)/1000 : null; }
   // 주관식
   var TRIV = /^[\s.\-·~_ㆍ,!]*(번\s*호|답\s*변|의견\s*(없음|없습니다)|없슴|만족(함|합니다|스럽습니다|스러웠습니다)?|없(음|습니다|다|더|어요)|해당\s*(사항)?\s*없음|특이사항\s*없음|민족합니다|좋(음|습니다|았습니다)|감사(합니다)?|예|아니오|모두|전부|n\/?a|x)?[\s.\-·~_ㆍ,!]*$/i;
-  var push = function(cat, txt, grp){ txt = String(txt||'').replace(/^[Ÿ·▪■]\s*/,'').replace(/\d*\s*[가-힣,·]+\s*\((?:[^)]*?)(이유|과목|소감|의향|사유)[^)]*\)\??/g,' ').replace(/(^|\s)\d{1,3}(?=\s|$)/g,' ').replace(/\s+/g,' ').replace(/^[O○●•ㅇ·\-\s]+/,'').trim(); if(!txt || TRIV.test(txt) || txt.length < 3) return; R.comments.push({ c: cat || '', t: txt, g: grp }); };
+  var push = function(cat, txt, grp){ txt = String(txt||'').replace(/[\uE000-\uF8FF\uFFFD]/g,' ').replace(/^\s*[Ÿ·▪■]\s*/,'').replace(/\d*\s*[가-힣,·]+\s*\((?:[^)]*?)(이유|과목|소감|의향|사유)[^)]*\)\??/g,' ').replace(/(^|\s)\d{1,3}(?=\s|$)/g,' ').replace(/\s+/g,' ').replace(/^[O○●•ㅇ·\-\s]+/,'').trim(); if(!txt || TRIV.test(txt) || txt.length < 3) return; R.comments.push({ c: cat || '', t: txt, g: grp }); };
   secs.forEach(function(S){
     if(!/S$|opinion/.test(S.k)) return;
     var grp = S.k === 'envS' ? 'env' : (S.k === 'opinion' ? 'opinion' : 'op');
@@ -20876,9 +20876,11 @@ async function kacSurveyParse(doc){
     } else {
       var gp = null;
       S.lines.forEach(function(l){ if(/답\s*변|소감청취|^번호/.test(l.t) && l.t.length < 30) return;
-        var bullet = /^[O○●•ㅇŸ·▪■]\s?/.test(l.t);
+        if(S._stop) return; if(/^\d+-\d+\.\s*\S/.test(l.t.trim())){ S._stop = 1; return; }   /* [K232] 다음 번호 항목(예: 3-1. 강사 만족도)부터는 의견이 아님 */
+        if(/\([가-힣]{2,4}\)\s*\d{2,3}(\.\d)?$|^평균\s*\d{2,3}(\.\d)?$/.test(l.t.trim())) return;
+        var bullet = /^[O○●•ㅇŸ·▪■\uE000-\uF8FF]\s?/.test(l.t);   // [K232] 한글 문서의 특수 글머리표(사용자 정의 문자)도 인식
         if(/^\(그\s*외\)|^<[^>]+>$|^-\s*\d+\s*-$/.test(l.t.trim())) return;   // [K229] '(그 외) 없음…' 요약줄·<소제목>·쪽번호 건너뜀
-        if(!gp || bullet || l.p !== gp.p || l.y - gp.y2 > 20){ if(gp) push('', gp.t, grp); gp = { p:l.p, y:l.y, y2:l.y, t:l.t }; } else { gp.t += ' ' + l.t; gp.y2 = l.y; } });
+        if(!gp || bullet || l.p !== gp.p || l.y - gp.y2 > (gp.b ? 34 : 20)){ if(gp) push('', gp.t, grp); gp = { p:l.p, y:l.y, y2:l.y, t:l.t, b:bullet }; }   /* [K232] 글머리표(Ÿ) 글의 둘째 줄은 줄 간격이 넓어도 이어 붙임 — 끝이 잘리던 문제 */ else { gp.t += ' ' + l.t; gp.y2 = l.y; } });
       if(gp) push('', gp.t, grp);
     }
   });
@@ -20894,6 +20896,12 @@ ui._svySeriesOf = function(title){
     return { key: name.replace(/[\s\-_·.()]/g,''), name: name };
 };
 ui._svyRoundOf = function(title){ var m = String(title||'').match(/(\d+)\s*차/) || String(title||'').match(/제?\s*(\d+)\s*기/); return m ? Number(m[1]) : 0; };
+/* [K232] 날씨(추위·더위·냉난방) 언급 글에는 그 과정이 열린 '월'을 눈에 띄게 붙인다 */
+ui._svyMon = function(r){ var d = String((r && r.period) || '').match(/\d{4}-\d{2}-\d{2}/g) || []; if(!d.length) return ''; var m1 = Number(d[0].slice(5,7)), m2 = d[1] ? Number(d[1].slice(5,7)) : m1; return m1 === m2 ? m1 + '월' : m1 + '~' + m2 + '월'; };
+ui._svyWx = function(t, r){ var s = String(t || ''); var cold = /춥|추워|추움|추웠|추운|쌀쌀|난방|히터|보일러|한파|겨울|온수|이불/.test(s), hot = /덥|더워|더움|더웠|더운|냉방|에어컨|폭염|여름|선풍기|찜통/.test(s), wx = cold || hot || /날씨|온도|기온/.test(s);
+    var mon = ui._svyMon(r); if(!wx || !mon) return '';
+    var c = hot && !cold ? ['#fff7ed','#c2410c','#fed7aa','fa-sun'] : (cold && !hot ? ['#eff6ff','#1d4ed8','#bfdbfe','fa-snowflake'] : ['#f0fdfa','#0f766e','#99f6e4','fa-temperature-half']);
+    return '<span title="날씨 관련 의견 — 이 과정이 열린 달" style="flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:' + c[0] + ';color:' + c[1] + ';border:1px solid ' + c[2] + ';font-size:13px;font-weight:900;white-space:nowrap"><i class="fa-solid ' + c[3] + '"></i>' + mon + ' 과정</span>'; };
 ui._svyUnit = function(r){ return /\d+\s*기/.test(String((r && r.title) || '')) ? '기' : '차'; };   // [K229] 신입사원 과정은 '기수'로 표기
 ui._svyTag = function(t){
     var s0 = String(t||'').trim();
@@ -21100,7 +21108,7 @@ ui.surveyOpen = async function(){
           return mc ? c0.replace('<td style="', '<td class="svyInsC" data-rid="' + esc(r.id) + '" data-n="' + esc(v.n) + '" title="눌러서 이 강사님이 언급된 의견 보기" style="cursor:pointer;position:relative;').replace('</td>', '<sup class="svyNb" style="background:#7c3aed">' + mc + '</sup></td>') : c0; }).join('') + '</tr>'; }).join('')
       + '</tbody></table></div><div style="margin-top:8px;font-size:13px;font-weight:800;color:#64748b"><sup class="svyNb" style="position:static;display:inline-block;background:#7c3aed;margin-right:4px">2</sup> = 그 회차 의견 중 이 강사님 이름이 들어간 글 수 · 칸을 누르면 아래에 펼쳐집니다</div></div>';
     /* 의견 분석 */
-    var cms = []; list.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(/(무엇입니까|하십니까|이유는|있습니까|어떠셨|바랍니다\?)\s*\??\s*$/.test(c.t) || /^\d+-\d+\./.test(String(c.t).trim())) return; cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), ym: (/^\d{4}-\d{2}/.test(r.period || '') ? String(r.period).slice(0,4) + '년 ' + Number(String(r.period).slice(5,7)) + '월' : ''), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c) }); }); });
+    var cms = []; list.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(/(무엇입니까|하십니까|이유는|있습니까|어떠셨|바랍니다\?)\s*\??\s*$/.test(c.t) || /^\d+-\d+\./.test(String(c.t).trim())) return; cms.push({ t: c.t, c: c.c, g: c.g, r: lab(r), ym: (/^\d{4}-\d{2}/.test(r.period || '') ? String(r.period).slice(0,4) + '년 ' + Number(String(r.period).slice(5,7)) + '월' : ''), tag: ui._svyTag(c.t), cat: ui._svyCatOf(c), wx: ui._svyWx(c.t, r), _r: r }); }); });
     var bad = cms.filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }), good = cms.filter(function(c){ return c.tag === 'pos'; });
     var cc = {}; bad.forEach(function(c){ cc[c.cat] = (cc[c.cat] || 0) + 1; });
     var cats = Object.keys(cc).sort(function(a,b){ return cc[b] - cc[a]; }), mx = cats.length ? cc[cats[0]] : 1;
@@ -21123,12 +21131,81 @@ ui.surveyOpen = async function(){
     ui._svyBind(host);
     ui._svyShow('bad', '');
 };
+/* [K232] 불만·개선 의견 아래 '조치 방안' 제안(플랫폼 안 규칙표) + [조치 완료] 체크 → 다음부터 목록에서 숨김 */
+ui._SVY_FIX = [
+    [/수건/, '수건 지급 수량을 늘리고(1인 2매 이상) 생활관 비치 수량을 주기적으로 점검', '수건 지급'],
+    [/에어컨|냉방|덥|더워|더움|더웠|시원/, '냉방 온도·풍향을 점검하고, 자리별 온도 차가 크면 서큘레이터를 배치', '냉방·더위'],
+    [/춥|추워|추움|추웠|추운|난방|히터|보일러|온수/, '동절기 과정 전 난방기·온수 사전 점검, 가동 시간과 설정 온도 조정', '난방·추위'],
+    [/환기|냄새|곰팡/, '정기 환기·탈취를 실시하고 원인 시설(배수구·에어컨 필터 등) 점검', '환기·냄새'],
+    [/노후|낡|리모델링|오래된/, '시설 개선 목록에 올려 예산 반영 검토', '시설 노후'],
+    [/와이파이|wifi|wi-fi|인터넷|끊기|끊겨/i, '무선 AP 위치·속도를 점검하고 접속 안내문을 비치', '인터넷·와이파이'],
+    [/세탁/, '세탁실 이용 시간·세탁기 대수 확대 검토', '세탁실'],
+    [/휴게|좁/, '휴게 공간 추가 확보 또는 이용 시간대 분산', '휴게 공간'],
+    [/음주|술/, '생활관 음주 규정과 그 이유를 입교 OT에서 미리 안내', '음주 규정'],
+    [/마이크/, '강의 전 마이크·배터리 점검, 예비 마이크 비치', '마이크'],
+    [/좌석|자리/, '주 단위 좌석 순환 배치 운영', '좌석 배정'],
+    [/모니터|화면|프로젝터|빔|스크린|고개/, '화면 위치·밝기 점검, 뒷자리용 보조 모니터 배치 검토', '화면·모니터'],
+    [/배치|원형/, '조별 활동 시간에는 책상을 원형(조별)으로 바꿔 배치', '책상 배치'],
+    [/책상|의자|다리/, '책상·의자 상태 점검 및 교체 검토', '책상·의자'],
+    [/밥\s?시간|식사\s?시간|점심\s?시간/, '식사 시간 연장(또는 오후 시작 시간 조정) 검토', '식사 시간'],
+    [/식당|식사|밥|메뉴|반찬|음식|간식|야식/, '급식 업체와 식단 다양화·만족도 개선 협의', '식사·메뉴'],
+    [/팀빌딩|친해|교류|동기/, '팀빌딩·조 간 교류 프로그램을 과정 초반에 추가', '동기 교류·팀빌딩'],
+    [/촉박|빡빡|쉴\s?새|쉬는\s?시간|피곤|시간이\s?(부족|없)|시간\s?부족/, '하루 일정 밀도를 재검토하고 쉬는 시간·자율 시간 확보', '일정 밀도'],
+    [/기간|[23]\s?주/, '교육 기간 확대 또는 과목 재배치 검토(차기 계획 반영)', '교육 기간'],
+    [/노래방|탁구|헬스|운동|체육|폼롤러|당구|편의/, '편의·체육시설 운영 시간과 기구 보강 검토', '편의·체육시설'],
+    [/교재|자료|ppt|피피티|인쇄|컬러|책자/i, '교재를 미리(PDF) 배포하고 컬러 인쇄·자료 보완 검토', '교재·자료'],
+    [/실습|장비/, '실습 시간 비중 확대, 실습 장비 추가 확보 검토', '실습'],
+    [/견학|현장/, '현장 견학 일정 편성 검토', '현장 견학'],
+    [/강사|강의(?!실)|설명|전달|수업(?!\s?받는\s?공간)/, '해당 강사님께 의견을 전달하고 강의 방식 개선 협의', '강사·강의'],
+    [/감염|방역/, '감염병 대응 체계 안내 보강', '감염병 대응'],
+    [/셔틀|버스|차량|주차/, '셔틀·주차 운영 시간과 안내 점검', '셔틀·주차'],
+    [/시험|평가|과제/, '평가·과제 일정과 범위를 사전에 안내', '평가·과제'],
+    [/침대|이불|베개|침구/, '침구 교체·추가 지급', '침구'],
+    [/청소|지저분|더럽|위생/, '청소 주기와 위생 상태 점검', '청소·위생'],
+    [/소음|시끄/, '소음원 확인 후 차단 조치', '소음'],
+    [/불친절|친절|응대/, '응대 담당자에게 의견 공유, 응대 교육 실시', '응대 친절']
+];
+ui._svyFixOf = function(t){ var s = String(t || ''), out = []; ui._SVY_FIX.forEach(function(f){ if(out.length < 2 && f[0].test(s)) out.push(f[1]); }); return out.length ? out : ['담당 부서에 의견을 전달하고 조치 계획 검토']; };
+/* [K234] 불만·개선 의견 묶음 → '이러이러하다 보니 ○○에 초점을 맞춘 개선이 필요할 것으로 사료됩니다' 형태의 개선 방향 문장 */
+ui._svySolve = function(items){   // items: [{t, r(회차 레코드, 선택)}]
+    var DM = ui._svyDoneMap || {}, G = {}, order = [], seen = {};
+    (items || []).forEach(function(it){ var t = String(it.t || ''), k0 = t.replace(/\s+/g,''); if(seen[k0] || DM[ui._svyKey(t)]) return; seen[k0] = 1;
+        var hit = 0; ui._SVY_FIX.forEach(function(f){ if(hit >= 2 || !f[0].test(t)) return; hit++; var g = G[f[2]] || (G[f[2]] = { lab:f[2], fix:f[1], n:0, ex:[], mons:{} }); if(!g.n) order.push(g); g.n++; if(g.ex.length < 1) g.ex.push(t); var m = it.r ? ui._svyMon(it.r) : ''; if(m) g.mons[m] = (g.mons[m] || 0) + 1; }); });
+    if(!order.length) return '';
+    order.sort(function(a,b){ return b.n - a.n; });
+    var cut = function(t){ t = String(t).replace(/\s+/g,' ').trim(); return t.length > 38 ? t.slice(0, 38) + '…' : t; };
+    var monTxt = function(g){ var ks = Object.keys(g.mons); return ks.length && ks.length <= 3 ? ks.join('·') : ''; };
+    var esc = ui._esc, P = [], a = order[0];
+    var wxA = /냉방|난방/.test(a.lab) && monTxt(a);
+    P.push('「' + esc(a.lab) + '」 관련 의견이 <b>' + a.n + '건</b>으로 가장 많았습니다' + (a.ex[0] ? ' <span class="sq">(예: "' + esc(cut(a.ex[0])) + '")</span>' : '') + '. '
+        + (wxA ? '특히 <b>' + esc(monTxt(a)) + '</b> 과정에서 집중적으로 제기된 만큼, 계절 요인을 고려하여 ' : '이러한 점을 고려할 때 ') + '<b>' + esc(a.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(a.fix) + '</span>');
+    order.slice(1, 3).forEach(function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
+        P.push((i ? '아울러 ' : '이어서 ') + '「' + esc(g.lab) + '」(' + g.n + '건' + (wx ? ' · ' + esc(monTxt(g)) + ' 과정' : '') + ')도 함께 검토가 필요해 보입니다.<span class="fx2"><i class="fa-solid fa-arrow-right"></i> 조치 방안: ' + esc(g.fix) + '</span>'); });
+    if(order.length > 3) P.push('그 밖에 ' + order.slice(3, 6).map(function(g){ return esc(g.lab); }).join(', ') + ' 등 ' + (order.length - 3) + '개 주제의 의견도 있습니다.');
+    return '<div class="svySol"><div class="svySolT"><i class="fa-solid fa-lightbulb"></i> 개선 방향 제안 <span>불만·개선 의견을 바탕으로 플랫폼이 정리 · 조치 완료한 의견은 제외</span></div>' + P.map(function(x){ return '<p>' + x + '</p>'; }).join('') + '</div>';
+};
+ui._SVY_SOL_CSS = '<style>.svySol{margin-top:12px;padding:14px 16px;border-radius:14px;background:linear-gradient(135deg,#f0f9ff,#ecfeff);border:1px solid #bae6fd}.svySolT{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:900;color:#075985;margin-bottom:6px}.svySolT i{color:#0284c7}.svySolT span{font-size:12.5px;font-weight:700;color:#64748b}.svySol p{margin:6px 0 0;font-size:15.5px;font-weight:700;color:#0f172a;line-height:1.7}.svySol .fx{color:#0369a1}.svySol .fx2{display:block;margin-top:3px;padding-left:12px;font-size:14.5px;color:#0369a1;font-weight:800}.svySol .fx2 i{font-size:11px;margin-right:4px}.svySol .sq{color:#64748b;font-weight:600;font-size:14px}</style>';
+ui._svyKey = function(t){ var s = String(t || '').replace(/\s+/g,''), h1 = 5381, h2 = 52711; for(var i = 0; i < s.length; i++){ var c = s.charCodeAt(i); h1 = (h1 * 33) ^ c; h2 = (h2 * 31) ^ c; } return 'k' + (h1 >>> 0).toString(36) + (h2 >>> 0).toString(36); };
+ui._svyDoneRef = function(){ return firebase.database().ref('system/coord/surveyDone'); };
+ui._svyDoneLoad = function(cb){ if(ui._svyDoneMap){ cb && cb(); return; } ui._svyDoneRef().once('value').then(function(s){ ui._svyDoneMap = s.val() || {}; cb && cb(); }).catch(function(){ ui._svyDoneMap = {}; cb && cb(); }); };
+ui._svyDoneTog = function(key, txt, on){ ui._svyDoneMap = ui._svyDoneMap || {}; if(on) ui._svyDoneMap[key] = { t: String(txt).slice(0, 80), at: Date.now() }; else delete ui._svyDoneMap[key];
+    try{ ui._svyDoneRef().child(key).set(on ? ui._svyDoneMap[key] : null); }catch(e){} };
 ui._svyShow = function(tab, cat, kw){
+    if(!ui._svyDoneMap){ return ui._svyDoneLoad(function(){ ui._svyShow(tab, cat, kw); }); }
     var box = document.getElementById('svyList'); if(!box) return; ui._svyTabSt = tab; ui._svyCatSt = cat; ui._svyKwSt = kw || '';
-    var L = (ui._svyCms || []).filter(function(c){ return (tab === 'all' || (tab === 'op' ? c.g === 'opinion' : (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos'))) && (!cat || c.cat === cat) && (!kw || String(c.t).indexOf(kw) >= 0); }).slice().reverse();
+    var DM = ui._svyDoneMap || {}, nDone = 0;
+    var L = (ui._svyCms || []).filter(function(c){ var isB = c.tag === 'neg' || c.tag === 'sug'; if(isB && DM[ui._svyKey(c.t)] && !ui._svyShowDone){ if(tab === 'bad' || tab === 'all'){ if((!cat || c.cat === cat) && (!kw || String(c.t).indexOf(kw) >= 0)) nDone++; return false; } } return (tab === 'all' || (tab === 'op' ? c.g === 'opinion' : (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos'))) && (!cat || c.cat === cat) && (!kw || String(c.t).indexOf(kw) >= 0); }).slice().reverse();
     var TN = { neg:'불만', sug:'개선요청', pos:'칭찬', etc:'의견' };
     var hl = function(t){ t = ui._esc(t); return kw ? t.split(ui._esc(kw)).join('<mark style="background:#fce7f3;color:#9d174d;border-radius:4px;padding:0 2px">' + ui._esc(kw) + '</mark>') : t; };
-    box.innerHTML = L.length ? L.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><div style="flex:1">' + hl(c.t) + '<small>' + ui._esc(c.r) + ' · ' + ui._esc(c.cat) + '</small></div><span class="svyYm">' + ui._esc(c.ym || '') + '</span></div>'; }).join('') : '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">해당 의견이 없습니다</div>';
+    var doneBar = (tab === 'bad' || tab === 'all') && (nDone || ui._svyShowDone) ? '<div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:8px 12px;font-size:13.5px;font-weight:800;color:#15803d;background:#f0fdf4;border-bottom:1px solid #dcfce7">' + (ui._svyShowDone ? '조치 완료한 의견도 함께 보는 중' : '조치 완료 ' + nDone + '건은 숨겼습니다') + '<a href="#" id="svyDoneX" style="padding:3px 10px;border-radius:999px;background:#16a34a;color:#fff;text-decoration:none">' + (ui._svyShowDone ? '숨기기' : '보기') + '</a></div>' : '';
+    var solBox = tab === 'bad' && L.length ? '<div style="padding:4px 10px 10px">' + ui._svySolve(L.map(function(c){ return { t: c.t, r: c._r }; })) + '</div>' + ui._SVY_SOL_CSS : '';
+    box.innerHTML = doneBar + solBox + (L.length ? L.map(function(c){ var isB = c.tag === 'neg' || c.tag === 'sug', key = isB ? ui._svyKey(c.t) : '', dn = isB && !!DM[key];
+        var fix = isB ? '<div class="svyFix' + (dn ? ' dn' : '') + '"><i class="fa-solid fa-lightbulb"></i><span>' + ui._svyFixOf(c.t).map(ui._esc).join(' · ') + '</span><label title="조치를 마쳤으면 체크 — 다음부터 목록에서 숨겨집니다"><input type="checkbox" data-dk="' + key + '"' + (dn ? ' checked' : '') + '> 조치 완료</label></div>' : '';
+        return '<div class="svyC"' + (dn ? ' style="opacity:.55"' : '') + '><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span>' + (c.wx || '') + '<div style="flex:1">' + hl(c.t) + '<small>' + ui._esc(c.r) + ' · ' + ui._esc(c.cat) + '</small>' + fix + '</div><span class="svyYm">' + ui._esc(c.ym || '') + '</span></div>'; }).join('') : '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">해당 의견이 없습니다</div>')
+      + '<style>.svyFix{display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 10px;border-radius:10px;background:#f0f9ff;border:1px solid #bae6fd;color:#075985;font-size:14px;font-weight:800;line-height:1.5}.svyFix>i{color:#0284c7}.svyFix>span{flex:1}.svyFix label{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;background:#fff;border:1px solid #bae6fd;cursor:pointer;color:#0369a1;font-size:13px}.svyFix.dn{background:#f0fdf4;border-color:#bbf7d0;color:#166534}.svyFix.dn label{color:#15803d;border-color:#bbf7d0}</style>';
+    var byKey = {}; L.forEach(function(c){ byKey[ui._svyKey(c.t)] = c.t; });
+    box.querySelectorAll('input[data-dk]').forEach(function(cb){ cb.onchange = function(){ var k = cb.getAttribute('data-dk'); ui._svyDoneTog(k, byKey[k] || '', cb.checked); var st = box.scrollTop; setTimeout(function(){ ui._svyShow(ui._svyTabSt, ui._svyCatSt, ui._svyKwSt); box.scrollTop = st; }, cb.checked ? 450 : 0); }; });
+    var dx = document.getElementById('svyDoneX'); if(dx) dx.onclick = function(e){ e.preventDefault(); ui._svyShowDone = !ui._svyShowDone; ui._svyShow(ui._svyTabSt, ui._svyCatSt, ui._svyKwSt); };
     var cf = document.getElementById('svyCatF'); if(cf) cf.innerHTML = (cat || kw) ? '<span style="display:inline-flex;align-items:center;gap:8px;padding:5px 6px 5px 12px;border-radius:999px;background:#eef2ff;color:#3730a3">"' + ui._esc(kw || cat) + '" 의견만 보는 중<a href="#" id="svyCatX" style="padding:4px 10px;border-radius:999px;background:#4f46e5;color:#fff;text-decoration:none;font-weight:900">✕ 전체 보기</a></span>' : '';
     var x = document.getElementById('svyCatX'); if(x) x.onclick = function(e){ e.preventDefault(); document.querySelectorAll('.svyBar,.svyKw').forEach(function(b){ b.classList.remove('on'); }); ui._svyShow(ui._svyTabSt, '', ''); };
 };
@@ -21170,7 +21247,7 @@ ui._svyBind = function(host){
         var cs = ui._svyInsCms(r, n), TN = { neg:'불만', sug:'개선요청', pos:'칭찬', etc:'의견' };
         var ym = /^\d{4}-\d{2}/.test(r.period || '') ? String(r.period).slice(0,4) + '년 ' + Number(String(r.period).slice(5,7)) + '월' : '';
         det.innerHTML = '<div class="svyDet" style="border-color:#ddd6fe;background:#faf5ff"><div style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:900;color:#1e293b"><i class="fa-solid fa-chalkboard-user" style="color:#7c3aed"></i> ' + ui._esc(ui._svyLab(r)) + ' · ' + ui._esc(n) + ' 강사님 언급 ' + cs.length + '건<button class="svyDetX2" style="margin-left:auto;border:none;background:#ede9fe;color:#6d28d9;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:900;cursor:pointer">✕ 닫기</button></div>'
-          + '<div style="margin-top:10px;border:1px solid #ede9fe;border-radius:12px;background:#fff">' + cs.map(function(c){ var tg = ui._svyTag(c.t), t = ui._esc(c.t).split(ui._esc(n)).join('<mark style="background:#ede9fe;color:#5b21b6;border-radius:4px;padding:0 2px">' + ui._esc(n) + '</mark>'); return '<div class="svyC"><span class="tg ' + tg + '">' + TN[tg] + '</span><div style="flex:1">' + t + '</div><span class="svyYm">' + ym + '</span></div>'; }).join('') + '</div></div>';
+          + '<div style="margin-top:10px;border:1px solid #ede9fe;border-radius:12px;background:#fff">' + cs.map(function(c){ var tg = ui._svyTag(c.t), t = ui._esc(c.t).split(ui._esc(n)).join('<mark style="background:#ede9fe;color:#5b21b6;border-radius:4px;padding:0 2px">' + ui._esc(n) + '</mark>'); return '<div class="svyC"><span class="tg ' + tg + '">' + TN[tg] + '</span>' + ui._svyWx(c.t, r) + '<div style="flex:1">' + t + '</div><span class="svyYm">' + ym + '</span></div>'; }).join('') + '</div></div>';
         det.querySelector('.svyDetX2').onclick = function(){ td.classList.remove('on'); ui._svyDetClose('svyInsDet'); };
         try{ det.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch(e){}
     }; });
@@ -21183,7 +21260,7 @@ ui._svyBind = function(host){
         var ymR = /^\d{4}-\d{2}/.test(r.period || '') ? String(r.period).slice(0,4) + '년 ' + Number(String(r.period).slice(5,7)) + '월' : '';
         cs.sort(function(a,b){ return ord[a.tag] - ord[b.tag]; });
         det.innerHTML = '<div class="svyDet"><div style="display:flex;align-items:center;gap:8px;font-size:16px;font-weight:900;color:#1e293b"><i class="fa-solid fa-comment-dots" style="color:#6366f1"></i> ' + ui._esc(ui._svyLab(r)) + ' · ' + ui._esc(k) + ' <b style="color:#4f46e5">' + (Math.round(Number(td.getAttribute('data-sc'))*10)/10).toFixed(1) + '점</b><span style="font-size:13px;color:#94a3b8;font-weight:800">· 관련 의견 ' + cs.length + '건</span><button id="svyDetX" style="margin-left:auto;border:none;background:#e0e7ff;color:#4338ca;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:900;cursor:pointer">✕ 닫기</button></div>'
-          + (cs.length ? '<div style="margin-top:10px;border:1px solid #e0e7ff;border-radius:12px;background:#fff">' + cs.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><div style="flex:1">' + ui._esc(c.t) + '</div><span class="svyYm">' + ymR + '</span></div>'; }).join('') + '</div>'
+          + (cs.length ? '<div style="margin-top:10px;border:1px solid #e0e7ff;border-radius:12px;background:#fff">' + cs.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span>' + ui._svyWx(c.t, r) + '<div style="flex:1">' + ui._esc(c.t) + '</div><span class="svyYm">' + ymR + '</span></div>'; }).join('') + '</div>' + ui._svySolve(cs.filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }).map(function(c){ return { t: c.t, r: r }; })) + ui._SVY_SOL_CSS
               : '<div style="margin-top:10px;padding:16px;text-align:center;color:#94a3b8;font-weight:800">이 회차에는 이 문항에 대한 불만·개선 의견이 없습니다</div>') + '</div>';
         var dx = det.querySelector('#svyDetX'); if(dx) dx.onclick = function(){ td.classList.remove('on'); ui._svyDetClose('svyItemDet'); };
         try{ det.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch(e){}
@@ -21209,9 +21286,9 @@ ui._svyInsight = function(list, card){
     /* [K231] 각 문장마다 '근거'를 붙여 두고, 누르면 바로 아래에 펼친다 */
     var rlab = function(r){ return ui._svyUnit(r) === '기' ? (r._round || r.round) + '기' : String(r.year).slice(2) + '년 ' + (r._round || r.round || '') + '차'; };
     var scoreTbl = function(rows){ return '<table class="evT"><thead><tr><th>문항</th><th>' + esc(baseLab) + ' 평균</th><th>' + esc(recLab) + ' 평균</th><th>변화</th></tr></thead><tbody>' + rows.map(function(x){ var d = x.a - x.b; return '<tr><td>' + esc(x.k) + '</td><td>' + (x.b != null ? f1(x.b) : '-') + '</td><td><b>' + f1(x.a) + '</b></td><td style="color:' + (x.b == null ? '#94a3b8' : (d >= 0 ? '#15803d' : '#b91c1c')) + ';font-weight:900">' + (x.b == null ? '-' : (d >= 0 ? '+' : '') + f1(d)) + '</td></tr>'; }).join('') + '</tbody></table>'; };
-    var cmList = function(arr, tagOk, re){ var out = []; arr.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var t = String(c.t), key = t.replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(re.test(t) && tagOk(ui._svyTag(t))) out.push({ t: t, r: rlab(r), tag: ui._svyTag(t) }); }); }); return out; };
+    var cmList = function(arr, tagOk, re){ var out = []; arr.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var t = String(c.t), key = t.replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(re.test(t) && tagOk(ui._svyTag(t))) out.push({ t: t, r: rlab(r) + (ui._svyMon(r) ? ' · ' + ui._svyMon(r) : ''), tag: ui._svyTag(t), wx: ui._svyWx(t, r), _r: r }); }); }); return out; };
     var cmHtml = function(title, arr, re){ if(!arr.length) return '<div class="evS">' + esc(title) + ' · 없음</div>'; var TN = { neg:'불만', sug:'개선요청', pos:'칭찬', etc:'의견' };
-        return '<div class="evS">' + esc(title) + ' · ' + arr.length + '건</div>' + arr.slice(0, 8).map(function(c){ var tt = esc(c.t).replace(new RegExp(re.source, 'g' + (re.ignoreCase ? 'i' : '')), function(m){ return '<mark>' + m + '</mark>'; }); return '<div class="evC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><span class="tx">' + tt + '</span><span class="rr">' + esc(c.r) + '</span></div>'; }).join('') + (arr.length > 8 ? '<div class="evS" style="font-weight:700">… 외 ' + (arr.length - 8) + '건</div>' : ''); };
+        return '<div class="evS">' + esc(title) + ' · ' + arr.length + '건</div>' + arr.slice(0, 8).map(function(c){ var tt = esc(c.t).replace(new RegExp(re.source, 'g' + (re.ignoreCase ? 'i' : '')), function(m){ return '<mark>' + m + '</mark>'; }); return '<div class="evC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span>' + (c.wx || '') + '<span class="tx">' + tt + '</span><span class="rr">' + esc(c.r) + '</span></div>'; }).join('') + (arr.length > 8 ? '<div class="evS" style="font-weight:700">… 외 ' + (arr.length - 8) + '건</div>' : ''); };
     /* 1) 종합 */
     var tR = avgOf(rec, function(r){ return ui._svyVal(r,'total'); }), tB = avgOf(base, function(r){ return ui._svyVal(r,'total'); });
     var head = (tR != null && tB != null) ? recLab + ' 종합 만족도는 <b>' + f1(tR) + '점</b>으로 ' + baseLab + ' 평균(' + f1(tB) + '점)보다 ' + (Math.abs(tR - tB) < 0.3 ? '<b>비슷한 수준</b>입니다.' : (tR > tB ? '<b class="up">' + f1(tR - tB) + '점 올랐습니다.</b>' : '<b class="dn">' + f1(tB - tR) + '점 내려갔습니다.</b>')) : '';
@@ -21229,7 +21306,7 @@ ui._svyInsight = function(list, card){
     var cnt = function(arr, tagOk, re){ var n = 0; arr.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var t = String(c.t), key = t.replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(re.test(t) && tagOk(ui._svyTag(t))) n++; }); }); return n; };
     var isBad = function(t){ return t === 'neg' || t === 'sug'; }, isGood = function(t){ return t === 'pos'; };
     TOP.forEach(function(tp){ var nR = cnt(rec, isBad, tp[1]), nB = cnt(base, isBad, tp[1]), rR = nR / rec.length, rB = base.length ? nB / base.length : 0;
-        var evBad = function(){ return '<div class="evS" style="color:#475569">회차당 건수 = 해당 기간 불만·개선 의견 수 ÷ 결과지 수 (' + esc(baseLab) + ' ' + base.length + '회 · ' + esc(recLab) + ' ' + rec.length + '회)</div>' + cmHtml(recLab, cmList(rec, isBad, tp[1]), tp[1]) + cmHtml(baseLab, cmList(base, isBad, tp[1]), tp[1]); };
+        var evBad = function(){ return '<div class="evS" style="color:#475569">회차당 건수 = 해당 기간 불만·개선 의견 수 ÷ 결과지 수 (' + esc(baseLab) + ' ' + base.length + '회 · ' + esc(recLab) + ' ' + rec.length + '회)</div>' + cmHtml(recLab, cmList(rec, isBad, tp[1]), tp[1]) + cmHtml(baseLab, cmList(base, isBad, tp[1]), tp[1]) + ui._svySolve(cmList(rec, isBad, tp[1]).concat(cmList(base, isBad, tp[1])).map(function(c){ return { t: c.t, r: c._r }; })) + ui._SVY_SOL_CSS; };
         if(nR >= 2 && rR - rB >= 0.5) bad.push({ t: '<b>' + tp[0] + '</b> 관련 불만·개선요청이 늘었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>', ev: evBad() });
         else if(nB >= 2 && rB - rR >= 0.5) good.push({ t: '<b>' + tp[0] + '</b> 관련 불만이 줄었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>', ev: evBad() });
         var pR = cnt(rec, isGood, tp[1]), pB = cnt(base, isGood, tp[1]), qR = pR / rec.length, qB = base.length ? pB / base.length : 0;
