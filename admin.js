@@ -20734,11 +20734,14 @@ async function kacSurveyParse(doc){
     if(/교육환경/.test(n)) return /객관식|만족도/.test(n) ? 'envO' : 'envS';
     if(/과정운영|교육과정/.test(n)) return /객관식|만족도/.test(n) ? 'opO' : (/주관식/.test(n) ? 'opS' : null);
     if(/불만족사유/.test(n)) return 'opS';
-    if(/유익했던과목|신설희망|신설을요하는/.test(n) && n.length < 30) return 'opS';
+    if(/유익했던과목|신설희망|신설을요하는/.test(n) && n.length < 30 && /^\d+-\d+/.test(n)) return 'opS';   // [K221] '기타(가장 유익했던 과목은)' 질문 줄을 구역 제목으로 착각하지 않게(옛 양식 '1-3.'만)
     return null;
   };
   L.forEach(function(l){
-    var n = l.n, k = (n.length < 40 && !/^\d+(이수만족|교과목)/.test(n) && (/^\d?[-.\d]*\.?\s*/.test(n))) ? kindOf(n) : null;
+    /* [K221] 구역 제목 판별을 엄격하게 — 소감 속 '교육환경' 같은 말이 들어간 문장을 제목으로 착각해 의견이 사라지던 문제 */
+    var n = l.n;
+    var isHdr = !/^\d+(이수만족|교과목)/.test(n) && ((/^\d+(-\d+)?\./.test(n) && n.length < 45) || (n.length <= 26 && /객관식|주관식|만족도|강사평가|과정운영의견|소감청취|불만족사유/.test(n)));
+    var k = isHdr ? kindOf(n) : null;
     if(k && !/\(본과정|불만족하신다면|이유는/.test(n)){ sec = { k:k, lines:[], score: scoreOf(l.t) }; secs.push(sec); return; }
     if(!sec){ var sc = scoreOf(l.t); if(sc != null && R.total == null && /점수|점$/.test(n)) R.total = sc; return; }
     if(sec.lines.length === 0 && sec.score == null && /^점수/.test(n)){ sec.score = scoreOf(l.t); return; }
@@ -20768,7 +20771,7 @@ async function kacSurveyParse(doc){
     if(S.k === 'opO' || S.k === 'envO'){
       var tgt0 = S.k === 'opO' ? R.op : R.env; if(S.score != null && tgt0._ps == null) tgt0._ps = S.score;
       S.lines.forEach(function(l, idx){ var r = rowOf(l.t); if(!r) return; var lab = (r.label + ' ' + (r.label.length < 2 ? near(S.lines, idx) : '')).trim();
-        if(/소계|합계/.test(lab)) return;
+        if(/소계|합계/.test(lab) || /^교육환경$/.test(lab.replace(/\s+/g,''))) return;   // [K221] 21년 온라인 '교육환경' 묶음 문항은 뜻이 불분명해 제외
         var ke = keyOf(lab, ENK), ko = keyOf(lab, OPK), k, tgt;
         if(ke && !(ko && S.k === 'opO' && !/강의실|생활관|식당|식사|체육|친절/.test(lab))){ k = ke; tgt = R.env; } else { k = ko || lab.replace(/\(.*$/,'').trim().slice(0,12) || '기타'; tgt = (S.k === 'envO') ? R.env : R.op; }
         tgt.items.push({ k:k, sum:r.sum, N:r.N, _raw:r });
@@ -20804,7 +20807,7 @@ async function kacSurveyParse(doc){
   if(R.total != null && comp.length && (R.total < Math.min.apply(null, comp) - 0.5 || R.total > Math.max.apply(null, comp) + 0.5)) R.total = null;
   if(R.total == null){ var t = [R.op.score, R.env.score, R.inst.score].filter(function(x){ return x != null; }); R.total = t.length ? Math.round(t.reduce(function(a,b){return a+b;},0)/t.length*1000)/1000 : null; }
   // 주관식
-  var TRIV = /^[\s.\-·~_ㆍ,!]*(만족(함|합니다|스럽습니다|스러웠습니다)?|없(음|습니다|다|더|어요)|해당\s*(사항)?\s*없음|특이사항\s*없음|민족합니다|좋(음|습니다|았습니다)|감사(합니다)?|예|아니오|모두|전부|n\/?a|x)?[\s.\-·~_ㆍ,!]*$/i;
+  var TRIV = /^[\s.\-·~_ㆍ,!]*(번\s*호|답\s*변|의견\s*(없음|없습니다)|없슴|만족(함|합니다|스럽습니다|스러웠습니다)?|없(음|습니다|다|더|어요)|해당\s*(사항)?\s*없음|특이사항\s*없음|민족합니다|좋(음|습니다|았습니다)|감사(합니다)?|예|아니오|모두|전부|n\/?a|x)?[\s.\-·~_ㆍ,!]*$/i;
   var push = function(cat, txt, grp){ txt = String(txt||'').replace(/\d*\s*[가-힣,·]+\s*\((?:[^)]*?)(이유|과목|소감|의향|사유)[^)]*\)\??/g,' ').replace(/(^|\s)\d{1,3}(?=\s|$)/g,' ').replace(/\s+/g,' ').replace(/^[O○●•ㅇ·\-\s]+/,'').trim(); if(!txt || TRIV.test(txt) || txt.length < 3) return; R.comments.push({ c: cat || '', t: txt, g: grp }); };
   secs.forEach(function(S){
     if(!/S$|opinion/.test(S.k)) return;
@@ -21060,7 +21063,7 @@ ui.surveyOpen = async function(){
       + '<div><div style="font-size:14px;font-weight:900;color:#475569;margin-bottom:8px">불만·개선요청은 어디에 많을까 <span style="color:#94a3b8;font-weight:700">· 누르면 해당 의견만</span></div>'
       + (cats.length ? cats.map(function(k){ var col = CAT_C[k] || '#64748b'; return '<div class="svyBar" data-cat="' + esc(k) + '"><span class="svyBL">' + esc(k) + '</span><span class="svyBT"><i style="width:' + Math.max(6, Math.round(cc[k]/mx*100)) + '%;background:' + col + '"></i></span><b style="color:' + col + '">' + cc[k] + '</b></div>'; }).join('') : '<div style="color:#94a3b8;font-weight:800;padding:20px 0">불만·개선요청 의견이 없습니다</div>')
       + (kws.length ? '<div style="font-size:14px;font-weight:900;color:#475569;margin:16px 0 8px">자주 나온 단어 <span style="color:#94a3b8;font-weight:700">· 누르면 해당 의견</span></div><div>' + kws.map(function(w){ return '<span class="svyKw" data-kw="' + esc(w) + '" title="눌러서 이 단어가 나온 의견 보기" style="font-size:' + Math.min(20, 12 + kw[w]*1.5) + 'px">' + esc(w) + ' <b>' + kw[w] + '</b></span>'; }).join('') + '</div>' : '')
-      + '</div><div><div style="position:relative;margin-bottom:8px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#94a3b8"></i><input id="svyFind" placeholder="의견 검색 (예: 생활관, 히터, 식당, 교재)" style="width:100%;box-sizing:border-box;padding:11px 12px 11px 38px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:15px;font-weight:800;outline:none"></div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center"><button class="svyTab on" data-tab="bad">불만·개선 ' + bad.length + '</button><button class="svyTab" data-tab="good">칭찬 ' + good.length + '</button><button class="svyTab" data-tab="all">전체 ' + cms.length + '</button><span id="svyCatF" style="margin-left:auto;font-size:13px;font-weight:800;color:#6366f1"></span></div><div id="svyList" class="svyList"></div></div></div></div>';
+      + '</div><div><div style="position:relative;margin-bottom:8px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#94a3b8"></i><input id="svyFind" placeholder="의견 검색 (예: 생활관, 히터, 식당, 교재)" style="width:100%;box-sizing:border-box;padding:11px 12px 11px 38px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:15px;font-weight:800;outline:none"></div><div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center"><button class="svyTab on" data-tab="bad">불만·개선 ' + bad.length + '</button><button class="svyTab" data-tab="good">칭찬 ' + good.length + '</button><button class="svyTab" data-tab="op">소감 ' + cms.filter(function(c){ return c.g === 'opinion'; }).length + '</button><button class="svyTab" data-tab="all">전체 ' + cms.length + '</button><span id="svyCatF" style="margin-left:auto;font-size:13px;font-weight:800;color:#6366f1"></span></div><div id="svyList" class="svyList"></div></div></div></div>';
     /* 올린 자료 */
     h += '<div style="' + card + ';padding:20px 28px"><div style="font-size:16px;font-weight:900;color:#0f172a"><i class="fa-solid fa-folder-open" style="color:#64748b"></i> 올린 결과지 ' + full.length + '건 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 체크한 결과지만 분석에 넣습니다</span>' + (list.length !== full.length ? ' <span style="font-size:13px;color:#6366f1">(기간 안 ' + list.length + '건)</span>' : '') + '</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
       + full.slice().reverse().map(function(r){ return '<label class="svyRec' + (r.off ? ' off' : '') + '" title="원래 제목: ' + esc(r.title) + ' · 체크를 풀면 분석에서 빠지고, 다시 체크하면 돌아옵니다"><input type="checkbox" data-on="' + esc(r.id) + '"' + (r.off ? '' : ' checked') + '> ' + esc(r._title) + ' <small>' + esc(String(r.period).slice(0,10)) + '</small></label>'; }).join('') + '</div></div>';
@@ -21070,7 +21073,7 @@ ui.surveyOpen = async function(){
 };
 ui._svyShow = function(tab, cat, kw){
     var box = document.getElementById('svyList'); if(!box) return; ui._svyTabSt = tab; ui._svyCatSt = cat; ui._svyKwSt = kw || '';
-    var L = (ui._svyCms || []).filter(function(c){ return (tab === 'all' || (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos')) && (!cat || c.cat === cat) && (!kw || String(c.t).indexOf(kw) >= 0); }).slice().reverse();
+    var L = (ui._svyCms || []).filter(function(c){ return (tab === 'all' || (tab === 'op' ? c.g === 'opinion' : (tab === 'bad' ? (c.tag === 'neg' || c.tag === 'sug') : c.tag === 'pos'))) && (!cat || c.cat === cat) && (!kw || String(c.t).indexOf(kw) >= 0); }).slice().reverse();
     var TN = { neg:'불만', sug:'개선요청', pos:'칭찬', etc:'의견' };
     var hl = function(t){ t = ui._esc(t); return kw ? t.split(ui._esc(kw)).join('<mark style="background:#fce7f3;color:#9d174d;border-radius:4px;padding:0 2px">' + ui._esc(kw) + '</mark>') : t; };
     box.innerHTML = L.length ? L.map(function(c){ return '<div class="svyC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span><div style="flex:1">' + hl(c.t) + '<small>' + ui._esc(c.r) + ' · ' + ui._esc(c.cat) + '</small></div><span class="svyYm">' + ui._esc(c.ym || '') + '</span></div>'; }).join('') : '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">해당 의견이 없습니다</div>';
