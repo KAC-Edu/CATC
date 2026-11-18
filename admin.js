@@ -5028,7 +5028,7 @@ setMode: function(mode) {
         else if (mode === 'foodnews') { if(typeof ui.loadFoodNews==='function') ui.loadFoodNews(); }
         else if (mode === 'materials') { if(typeof ui.loadMaterials==='function') ui.loadMaterials(); }   // [K68] 교재 자료실
         else if (mode === 'presurvey') { if(typeof ui.preSurveyOpen==='function') ui.preSurveyOpen(); }   // [K173] 강사 사전조사(페이지)
-        else if (mode === 'survey') { if(typeof ui.surveyOpen==='function') ui.surveyOpen(); }   // [K185] 교육생 의견 · 추이 분석
+        else if (mode === 'survey') { if(!state.room) ui._svySel = ''; if(typeof ui.surveyOpen==='function') ui.surveyOpen(); }   // [K228] 메인에서 열면 과정 목록부터   // [K185] 교육생 의견 · 추이 분석
 
         // 4. 상단 탭 활성화 표시
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
@@ -14638,6 +14638,22 @@ annualPlanMgr.openEditorModal = async function() {
 annualPlanMgr.renderEditor = function(keepIdx) {
     const area = document.getElementById('annualPlanEditorArea');
     if (!area) return;
+    /* [K228] 올해 과정 수·폐강 수·진행 상황 요약(상단) */
+    try {
+        const sm = document.getElementById('annualPlanSummary');
+        if (sm) {
+            const td = this._today(), Y = td.slice(0, 4), all = (this.currentEditingData || []).filter(c => String(c.startDate || '').slice(0, 4) === Y);
+            const can = all.filter(c => c.cancelled), run = all.filter(c => !c.cancelled);
+            const done = run.filter(c => c.endDate && c.endDate < td).length, now = run.filter(c => c.startDate && c.endDate && c.startDate <= td && c.endDate >= td).length, plan = run.length - done - now;
+            const chip = (lab, n, bg, fg) => `<span style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; background:${bg}; color:${fg}; font-size:13px; font-weight:800;">${lab} <b style="font-size:15px;">${n}</b></span>`;
+            sm.innerHTML = `<span style="font-size:13px; font-weight:900; color:#334155;">${Y}년</span>`
+                + chip('전체 과정', all.length, '#eef2ff', '#3730a3')
+                + chip('운영', run.length, '#ecfdf5', '#047857')
+                + chip('폐강', can.length, '#fff1f2', '#be123c')
+                + `<span style="color:#cbd5e1;">|</span>`
+                + chip('종료', done, '#f1f5f9', '#475569') + chip('진행 중', now, '#dbeafe', '#1d4ed8') + chip('예정', plan, '#dcfce7', '#15803d');
+        }
+    } catch (e) {}
     const esc = this._escapeHtml;
     if (!this.currentEditingData.length) {
         area.innerHTML = "<p style='padding:24px; color:#64748b; text-align:center;'>등록된 과정이 없습니다. 상단 [과정 행 추가] 버튼으로 추가하세요.</p>";
@@ -20336,6 +20352,7 @@ ui._noteSavedTip = function(el){ try{ var t = el.parentNode.querySelector('.psvS
 ui._ymd = function(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
 ui._wd = function(s){ return /^\d{4}-\d{2}-\d{2}$/.test(s||'') ? ['일','월','화','수','목','금','토'][new Date(s + 'T00:00:00').getDay()] : ''; };
 /* [K196] 과정 시작 '전주 금요일' */
+ui._prevFri2 = function(start){ var f = ui._prevFri(start); if(!f) return ''; var d = new Date(f + 'T00:00:00'); d.setDate(d.getDate() - 7); return ui._ymd(d); };   // [K228] 강의 2주 전 금요일(회신 마감 기본)
 ui._prevFri = function(start){ if(!/^\d{4}-\d{2}-\d{2}$/.test(start||'')) return ''; var d = new Date(start + 'T00:00:00'), off = ((d.getDay() - 5 + 7) % 7) || 7; d.setDate(d.getDate() - off); return ui._ymd(d); };
 /* [K196] 큰 달력 — 브라우저 기본 달력이 작아서 직접 그린다. 교육기간은 빨간 칸으로 표시 */
 ui._bigDatePick = function(anchor, val, onPick, opt){
@@ -20427,7 +20444,7 @@ ui.preSurveyOpen = async function(){
         ui._psvLinkC = al[0] || null; }).catch(function(){});
     var msgOf = function(u){ var WDk = ['일','월','화','수','목','금','토'], fd = function(d){ var x = new Date(d + 'T00:00:00'); return (x.getMonth()+1) + '.' + x.getDate() + '(' + WDk[x.getDay()] + ')'; };
         var pdT = /^\d{4}-\d{2}-\d{2}$/.test(ps[0]||'') ? fd(ps[0]) + (/^\d{4}-\d{2}-\d{2}$/.test(ps[1]||'') ? ' ~ ' + fd(ps[1]) : '') : '';
-        var due = V.matDue || ui._prevFri(ps[0] || ''), rb = V.replyBy || ui._prevFri(ps[0] || '');
+        var due = V.matDue || ui._prevFri(ps[0] || ''), rb = V.replyBy || ui._prevFri2(ps[0] || '');
         /* [K224·K226] 공손하게 — 감사 인사로 시작, 부탁드리는 말투, 끝에 담임교수 연락처. 기호는 모든 휴대폰·단체문자에서 깨지지 않는 ■ ☎ ▼ 만. 휴대폰 폭에 맞춰 짧게 */
         var pdS = pdT.replace(/ ~ /, '~');
         return '[항공기술훈련원]\n\n안녕하십니까.\n' + cname + '\n' + (profNm ? '담임교수 ' + profNm + '입니다.' : '담당자입니다.')
@@ -20542,12 +20559,12 @@ ui.preSurveyOpen = async function(){
           + '<div style="display:flex;gap:8px;align-self:flex-start"><button id="psvCopy" class="psvLB" title="강사님께 보낼 링크 주소 복사(없으면 새로 만듦)"><i class="fa-solid fa-link"></i> 링크 복사</button><button id="psvMsgC" class="psvLB kk" title="링크가 들어간 안내 메시지 복사"><i class="fa-solid fa-comment"></i> 안내 메시지</button></div></div>';
         if(stale) h += '<div style="margin-top:14px;padding:12px 14px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;font-size:13.5px;font-weight:800;color:#92400e;display:flex;align-items:center;gap:10px"><span style="flex:1">이전 과정(<b>' + esc(V.course) + '</b>)의 조사 결과입니다.</span><button id="psvReset" style="padding:7px 13px;border:none;border-radius:9px;background:#f59e0b;color:#fff;font-weight:900;cursor:pointer">비우고 새로 시작</button></div>';
         /* [K196] 기본값 — 회신 마감·교재 제출 기한 = 과정 시작 '전주 금요일'. 조사 기간 = 오늘 ~ 회신 마감 */
-        var defDue = ui._prevFri(ps[0] || ''), dueR = V.replyBy || defDue, dueM = V.matDue || defDue, today0 = ui._ymd(new Date());
+        var defDue = ui._prevFri(ps[0] || ''), defRep = ui._prevFri2(ps[0] || ''), dueR = V.replyBy || defRep, dueM = V.matDue || defDue, today0 = ui._ymd(new Date());
         var late = dueR && dueR < today0;
         h += secStart('set', 'fa-sliders', '#6366f1', '조사 설정', (dueR ? '회신 마감 ' + md(dueR) + ' (' + ui._wd(dueR) + ')' : '') + (dueM ? ' · 교재 기한 ' + md(dueM) : '') + (V.note ? ' · 안내 문구 있음' : ''))
           /* [K209] 표처럼 간단히 — 한 줄에 '항목 · 날짜 · [바꾸기]' */
           + '<table class="psvTbl"><tbody>'
-          + '<tr><th>회신 마감</th><td><b>' + (dueR ? md(dueR) + ' (' + ui._wd(dueR) + ')' : '-') + '</b>' + (!V.replyBy && dueR ? ' <em>자동 · 전주 금요일</em>' : '') + (late ? ' <span class="psvLate"><i class="fa-solid fa-triangle-exclamation"></i> 지남</span>' : (dueR ? ' <span class="psvLeft">' + Math.round((new Date(dueR + 'T00:00:00') - new Date(today0 + 'T00:00:00')) / 86400000) + '일 남음</span>' : '')) + '</td><td class="r"><button class="psvDt" data-dt="replyBy" data-v="' + esc(dueR) + '"><i class="fa-regular fa-calendar"></i> 바꾸기</button></td></tr>'
+          + '<tr><th>회신 마감</th><td><b>' + (dueR ? md(dueR) + ' (' + ui._wd(dueR) + ')' : '-') + '</b>' + (!V.replyBy && dueR ? ' <em>자동 · 2주 전 금요일</em>' : '') + (late ? ' <span class="psvLate"><i class="fa-solid fa-triangle-exclamation"></i> 지남</span>' : (dueR ? ' <span class="psvLeft">' + Math.round((new Date(dueR + 'T00:00:00') - new Date(today0 + 'T00:00:00')) / 86400000) + '일 남음</span>' : '')) + '</td><td class="r"><button class="psvDt" data-dt="replyBy" data-v="' + esc(dueR) + '"><i class="fa-regular fa-calendar"></i> 바꾸기</button></td></tr>'
           + '<tr><th>교재 제출 기한</th><td><b>' + (dueM ? md(dueM) + ' (' + ui._wd(dueM) + ')' : '-') + '</b>' + (!V.matDue && dueM ? ' <em>자동 · 전주 금요일</em>' : '') + '</td><td class="r"><button class="psvDt" data-dt="matDue" data-v="' + esc(dueM) + '"><i class="fa-regular fa-calendar"></i> 바꾸기</button></td></tr>'
           + '</tbody></table>'
           + ((V.note || ui._psvNoteOn) ? '<textarea id="psvNote" rows="2" placeholder="강사님께 전할 말 — 강사님 화면 맨 위에 보입니다" style="width:100%;box-sizing:border-box;margin-top:12px;padding:12px 14px;border:2px solid #e2e8f0;border-radius:12px;font:inherit;font-size:15px;font-weight:700;resize:vertical;background:#fff">' + esc(V.note || '') + '</textarea>'
@@ -20963,7 +20980,7 @@ ui.surveyOpen = async function(){
     /* [K188] 과정 안에서 열면 '이 과정과 같은 이름의 설문'만 — 다른 과정은 보이지 않게 고정. 메인(현황판)에서 열면 검색·목록으로 고른다 */
     var inCourse = !!(state.room && cur);
     var sel = inCourse ? cur : (ui._svySel && series[ui._svySel] ? ui._svySel : '');
-    ui._svySel = sel;
+    if(!inCourse) ui._svySel = sel;   // [K228] 과정 안에서 본 과정은 기억하지 않음(메인에서 열면 목록부터)
     var S = series[sel] || (inCourse ? { key: cur, name: ui._svySeriesOf(ui._matCourseName ? ui._matCourseName() : '').name, list: [] } : null);
     var full = S ? S.list.slice().sort(function(a,b){ return String(a.period).localeCompare(String(b.period)); }) : [];
     ui._svyNorm(full);
