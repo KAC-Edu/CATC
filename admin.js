@@ -18435,7 +18435,7 @@ ui.confirmRouletteLeader = function(){
   else setTimeout(boot, 0);
 })();
 /* [K247] 넓은 화면(교육생 의견·강사 사전조사)에서는 리모컨이 내용을 가리지 않도록 화면 왼쪽 가장자리 탭으로 접어 둔다.
-   탭을 누르면 리모컨이 다시 나오고, 10초 동안 손대지 않으면 다시 탭으로 들어간다 */
+   탭을 누르면 리모컨이 다시 나오고, 3초 동안 손대지 않으면 다시 탭으로 들어간다 */
 (function(){
   var DOCK = ['survey', 'presurvey'], tab = null, lastMode = '', idleT = null;
   function ensureTab(){
@@ -18448,7 +18448,7 @@ ui.confirmRouletteLeader = function(){
     tab.addEventListener('click', function(){ var host = document.getElementById('courseSmartRemote'); if(!host) return; host._dockOpen = true; host.classList.remove('kac-docked'); tab.style.display = 'none'; arm(host); });
     return tab;
   }
-  function arm(host){ clearTimeout(idleT); idleT = setTimeout(function(){ host._dockOpen = false; }, 10000);
+  function arm(host){ clearTimeout(idleT); idleT = setTimeout(function(){ host._dockOpen = false; }, 3000);
     if(!host._dockArm){ host._dockArm = true; ['pointerdown','pointermove','wheel'].forEach(function(ev){ host.addEventListener(ev, function(){ if(host._dockOpen) arm(host); }, { passive:true }); }); } }
   setInterval(function(){
     var host = document.getElementById('courseSmartRemote'); if(!host) return;
@@ -18458,6 +18458,10 @@ ui.confirmRouletteLeader = function(){
     var dock = shown && DOCK.indexOf(mode) >= 0 && !host._dockOpen;
     host.classList.toggle('kac-docked', dock);
     var t = ensureTab(); t.style.display = dock ? 'flex' : 'none';
+    if(dock){   /* [K248] 사이드바 접기 탭(◀) 바로 아래에 붙여 겹치지 않게 */
+      var sb = document.getElementById('sidebarToggleTab'), r = sb && getComputedStyle(sb).display !== 'none' ? sb.getBoundingClientRect() : null;
+      if(r && r.height){ t.style.left = Math.max(0, r.left) + 'px'; t.style.top = (r.bottom + 10) + 'px'; t.style.transform = 'none'; }
+      else { t.style.left = '0px'; t.style.top = '50%'; t.style.transform = 'translateY(-50%)'; } }
   }, 400);
 })();
 
