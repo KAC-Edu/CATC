@@ -18458,9 +18458,9 @@ ui.confirmRouletteLeader = function(){
     var dock = shown && DOCK.indexOf(mode) >= 0 && !host._dockOpen;
     host.classList.toggle('kac-docked', dock);
     var t = ensureTab(); t.style.display = dock ? 'flex' : 'none';
-    if(dock){   /* [K248] 사이드바 접기 탭(◀) 바로 아래에 붙여 겹치지 않게 */
+    if(dock){   /* [K248·K249] 사이드바 접기 탭(◀)과 겹치지 않게 그 위쪽에 */
       var sb = document.getElementById('sidebarToggleTab'), r = sb && getComputedStyle(sb).display !== 'none' ? sb.getBoundingClientRect() : null;
-      if(r && r.height){ t.style.left = Math.max(0, r.left) + 'px'; t.style.top = (r.bottom + 10) + 'px'; t.style.transform = 'none'; }
+      if(r && r.height){ t.style.left = Math.max(0, r.left) + 'px'; t.style.top = Math.max(70, r.top - (t.offsetHeight || 90) - 70) + 'px';   /* [K249] 사이드바 탭보다 위쪽으로 넉넉히 띄움 */ t.style.transform = 'none'; }
       else { t.style.left = '0px'; t.style.top = '50%'; t.style.transform = 'translateY(-50%)'; } }
   }, 400);
 })();
