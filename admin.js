@@ -21078,7 +21078,7 @@ ui.surveyOpen = async function(){
       + '<div style="font-size:15px;font-weight:900;color:#64748b">최근 결과 · ' + esc(last._title) + ' <span style="color:#94a3b8">(' + esc(String(last.period).replace('~',' ~ ')) + (last.n ? ' · 응답 ' + last.n + '명' : '') + ')</span></div>'
       + '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px">' + kpi('종합', ui._svyVal(last,'total'), prev && ui._svyVal(prev,'total'), '#1e3a8a', 'fa-star') + kpi('과정운영', ui._svyVal(last,'op'), prev && ui._svyVal(prev,'op'), '#2563eb', 'fa-book-open')
       + kpi('지원시설', ui._svyVal(last,'env'), prev && ui._svyVal(prev,'env'), '#16a34a', 'fa-building') + kpi('강사', ui._svyVal(last,'inst'), prev && ui._svyVal(prev,'inst'), '#ea580c', 'fa-chalkboard-user') + '</div>'
-      + '<div style="margin-top:22px;font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chart-line" style="color:#6366f1"></i> 점수 추이 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 이상한 점은 눌러서 빼기/되돌리기</span></div>' + ui._svyChart(list, lab) + '</div>';
+      + '<div style="margin-top:22px;font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-chart-line" style="color:#6366f1"></i> 점수 추이 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 점을 누르면 그 회차 점수의 이유</span></div>' + ui._svyChart(list, lab) + '</div>';
     /* 문항별 */
     var items = []; list.forEach(function(r){ [['op', r.op], ['env', r.env]].forEach(function(p){ ((p[1] || {}).items || []).forEach(function(it){ if(/온라인|사전안내/.test(it.k) || /[\u4e00-\u9fff\ue000-\uf8ff]/.test(it.k) || !/[가-힣]/.test(it.k)) return; if(items.indexOf(p[0] + '|' + it.k) < 0) items.push(p[0] + '|' + it.k); }); }); });   // [K211] 온라인 한정(21년) 문항은 뺌
     /* [K213] 문항 칸 → 그 회차의 관련 의견 */
@@ -21333,7 +21333,9 @@ ui._svyBind = function(host){
         try{ det.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch(e){}
     }; });
     host.querySelectorAll('.svyKw').forEach(function(k){ k.onclick = function(){ var on = !k.classList.contains('on'); host.querySelectorAll('.svyKw,.svyBar').forEach(function(x){ x.classList.remove('on'); }); if(on) k.classList.add('on'); host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-tab') === 'bad'); }); ui._svyShow('bad', '', on ? k.getAttribute('data-kw') : ''); var lst = document.getElementById('svyList'); if(lst) lst.scrollTop = 0; }; });
-    host.querySelectorAll('.svyPt').forEach(function(pt){ pt.onclick = function(){ if(state.isObserver) return; var id = pt.getAttribute('data-id'), k = pt.getAttribute('data-k'), hid = pt.getAttribute('data-hid') === '1';
+    host.querySelectorAll('.svyPt').forEach(function(pt){ pt.onclick = function(){ var id = pt.getAttribute('data-id'), k = pt.getAttribute('data-k'), hid = pt.getAttribute('data-hid') === '1';
+        if(!hid){ ui._svyPtWhy(id, k); return; }   /* [K244] 점을 누르면 이유 보기 — 빼기는 이유 창 아래 링크로 */
+        if(state.isObserver) return;
         if(!confirm(hid ? '빼 두었던 이 값을 다시 그래프에 넣을까요?' : '이 값(' + pt.getAttribute('data-v') + ')을 그래프·평균에서 뺄까요?\n(데이터는 지우지 않고 숨기기만 합니다)')) return;
         ui._svyRef().child(id + '/hide/' + k).set(hid ? null : true).then(function(){ ui.surveyOpen(); }); }; });
     host.querySelectorAll('.svyTab').forEach(function(b){ b.onclick = function(){ host.querySelectorAll('.svyTab').forEach(function(x){ x.classList.remove('on'); }); b.classList.add('on'); ui._svyShow(b.getAttribute('data-tab'), ui._svyCatSt || ''); }; });
@@ -21408,9 +21410,48 @@ ui._svyChart = function(list, lab){
     ser.forEach(function(s){ var pts = [];
         list.forEach(function(r, i){ var v = ui._svyVal(r, s[1]); if(v != null) pts.push([X(i), Y(v), v, r.id]); else { var rv = raw(r, s[1]); if(rv != null && r.hide && r.hide[s[1]]) g += '<g class="svyPt" data-id="' + ui._esc(r.id) + '" data-k="' + s[1] + '" data-hid="1"><circle cx="' + X(i) + '" cy="' + Y(rv) + '" r="5" fill="#fff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2 2"><title>' + s[0] + ' ' + (Math.round(rv*10)/10) + ' (빼 둔 값 · 눌러서 되돌리기)</title></circle></g>'; } });
         if(pts.length > 1) g += '<polyline fill="none" stroke="' + s[2] + '" stroke-width="' + (s[1] === 'total' ? 4 : 2.5) + '" stroke-linejoin="round" points="' + pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' ') + '"/>';
-        pts.forEach(function(p){ g += '<g class="svyPt" data-id="' + ui._esc(p[3]) + '" data-k="' + s[1] + '" data-v="' + (Math.round(p[2]*10)/10) + '"><circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (s[1] === 'total' ? 5 : 3.5) + '" fill="#fff" stroke="' + s[2] + '" stroke-width="2.5"><title>' + s[0] + ' ' + (Math.round(p[2]*10)/10) + ' · 눌러서 빼기</title></circle></g>'; }); });
+        var lastId = list.length ? list[list.length-1].id : '';
+        pts.forEach(function(p){ var isL = p[3] === lastId;   /* [K244] 위 카드에 보이는 '최근 결과' 점은 깜빡임 */
+            g += '<g class="svyPt" data-id="' + ui._esc(p[3]) + '" data-k="' + s[1] + '" data-v="' + (Math.round(p[2]*10)/10) + '" style="cursor:pointer">'
+              + (isL ? '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="6" fill="' + s[2] + '" opacity="0.5"><animate attributeName="r" values="5;15;5" dur="1.8s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.55;0;0.55" dur="1.8s" repeatCount="indefinite"/></circle>' : '')
+              + '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isL ? 6 : (s[1] === 'total' ? 5 : 3.5)) + '" fill="' + (isL ? s[2] : '#fff') + '" stroke="' + s[2] + '" stroke-width="2.5"><title>' + s[0] + ' ' + (Math.round(p[2]*10)/10) + ' · 눌러서 이유 보기</title></circle><circle cx="' + p[0] + '" cy="' + p[1] + '" r="12" fill="transparent"/></g>'; }); });
     var leg = '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font-size:16px;font-weight:900;color:#475569">' + ser.map(function(s){ return '<span><i style="display:inline-block;width:14px;height:4px;border-radius:2px;background:' + s[2] + ';vertical-align:middle;margin-right:5px"></i>' + s[0] + '</span>'; }).join('') + '</div>';
-    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;margin-top:8px">' + g + '</svg>' + leg;
+    leg = leg.replace('</div>', '<span style="margin-left:auto;font-size:13px;color:#94a3b8;font-weight:800"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#6366f1;margin-right:5px;vertical-align:middle;animation:svyBl 1.8s infinite"></i>깜빡이는 점 = 위 카드의 최근 결과 · 점을 누르면 그 회차 점수가 왜 그런지 보여 줍니다</span></div>')
+    return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;margin-top:8px">' + g + '</svg>' + leg + '<div id="svyPtDet"></div><style>@keyframes svyBl{0%,100%{opacity:1}50%{opacity:.2}}</style>';
+};
+/* [K244] 그래프 점 → 그 회차 점수가 높/낮은 이유(다른 회차 평균과 비교 + 낮은 항목 + 관련 의견) */
+ui._svyPtWhy = function(id, k){
+    var list = ui._svyList || [], ri = -1; list.forEach(function(x, i){ if(x.id === id) ri = i; }); var box = document.getElementById('svyPtDet'); if(!box || ri < 0) return;
+    if(box.getAttribute('data-cur') === id + '|' + k){ box.innerHTML = ''; box.removeAttribute('data-cur'); return; } box.setAttribute('data-cur', id + '|' + k);
+    var r = list[ri], esc = ui._esc, f1 = function(v){ return (Math.round(v*10)/10).toFixed(1); }, lab = ui._svyLab || function(x){ return x._title || ''; };
+    var NM = { total:'종합', op:'과정운영', env:'지원시설', inst:'강사' }, others = list.filter(function(x, i){ return i !== ri; });
+    var avgO = function(fn){ var a = others.map(fn).filter(function(v){ return v != null; }); return a.length ? a.reduce(function(p,q){ return p+q; },0) / a.length : null; };
+    var v = ui._svyVal(r, k), o = avgO(function(x){ return ui._svyVal(x, k); }), d = v != null && o != null ? v - o : null;
+    var head = '<b>' + esc(lab(r)) + '</b> ' + NM[k] + ' 점수는 <b>' + (v != null ? f1(v) + '점' : '-') + '</b>' + (d != null ? (Math.abs(d) < 0.3 ? '으로, 다른 회차 평균(' + f1(o) + '점)과 <b>비슷합니다</b>.' : '으로, 다른 회차 평균(' + f1(o) + '점)보다 <b style="color:' + (d >= 0 ? '#15803d' : '#b91c1c') + '">' + f1(Math.abs(d)) + '점 ' + (d > 0 ? '높습니다' : '낮습니다') + '</b>.') : '입니다.') + (r.n ? ' <span style="color:#64748b">(응답 ' + r.n + '명)</span>' : '');
+    var kk = k;
+    if(k === 'total'){ var worst = null, wd = 1e9; ['op','env','inst'].forEach(function(s){ var a = ui._svyVal(r, s), b = avgO(function(x){ return ui._svyVal(x, s); }); if(a != null && b != null && a - b < wd){ wd = a - b; worst = s; } });
+        head += '<br>' + ['op','env','inst'].map(function(s){ var a = ui._svyVal(r, s), b = avgO(function(x){ return ui._svyVal(x, s); }); if(a == null) return ''; var dd = b != null ? a - b : null; return NM[s] + ' <b>' + f1(a) + '</b>' + (dd != null ? '<span style="color:' + (dd >= 0 ? '#15803d' : '#b91c1c') + ';font-weight:900"> (' + (dd >= 0 ? '+' : '') + f1(dd) + ')</span>' : ''); }).filter(Boolean).join(' · ');
+        if(worst && wd < -0.3){ head += '<br>가장 크게 영향을 준 것은 <b>' + NM[worst] + '</b>입니다.'; kk = worst; } else kk = worst || 'op'; }
+    var rows = [], rowT = '', why = '';
+    if(kk === 'inst'){ var L = ((r.inst || {}).list || []).slice().sort(function(a,b){ return a.score - b.score; });
+        var hist = function(n){ return avgO(function(x){ var it = ((x.inst || {}).list || []).filter(function(y){ return y.n === n; })[0]; return it ? it.score : null; }); };
+        rows = L.slice(0, 6).map(function(it){ var hh = hist(it.n); return [it.n, it.score, hh]; }); rowT = '강사';
+        var lowN = L.filter(function(it){ return v != null && it.score < v; }).slice(0, 3); if(lowN.length) why = '특히 ' + lowN.map(function(it){ return '<b>' + esc(it.n) + '</b>(' + f1(it.score) + '점)'; }).join(', ') + ' 강사 점수가 낮아 평균을 끌어내렸습니다.'; }
+    else { var G = kk === 'env' ? r.env : r.op, IT = ((G || {}).items || []).filter(function(it){ return !/온라인|사전안내/.test(it.k) && it.score > 30; }).slice().sort(function(a,b){ return a.score - b.score; });
+        var histI = function(kn){ return avgO(function(x){ var it = (((x[kk] || {}).items) || []).filter(function(y){ return y.k === kn; })[0]; return it && it.score > 30 ? it.score : null; }); };
+        rows = IT.slice(0, 6).map(function(it){ return [it.k, it.score, histI(it.k)]; }); rowT = '문항';
+        var dn = rows.filter(function(x){ return x[2] != null && x[1] - x[2] <= -1; }).slice(0, 3); if(dn.length) why = '평소보다 많이 내려간 문항: ' + dn.map(function(x){ return '<b>' + esc(x[0]) + '</b>(' + f1(x[1]) + '점, ' + f1(x[1] - x[2]) + ')'; }).join(', ') + '.'; }
+    var tbl = rows.length ? '<table class="evT" style="margin-top:10px"><thead><tr><th>' + rowT + ' (낮은 순)</th><th>이 회차</th><th>다른 회차 평균</th><th>차이</th></tr></thead><tbody>' + rows.map(function(x){ var dd = x[2] != null ? x[1] - x[2] : null; return '<tr><td>' + esc(x[0]) + '</td><td><b>' + f1(x[1]) + '</b></td><td>' + (x[2] != null ? f1(x[2]) : '-') + '</td><td style="font-weight:900;color:' + (dd == null ? '#94a3b8' : (dd >= 0 ? '#15803d' : '#b91c1c')) + '">' + (dd == null ? '처음' : (dd >= 0 ? '+' : '') + f1(dd)) + '</td></tr>'; }).join('') + '</tbody></table>' : '';
+    var RE = kk === 'inst' ? /강사|강의|수업|교수|설명|전달|발표/ : (kk === 'env' ? /생활관|숙소|기숙사|식당|식사|밥|강의실|시설|난방|냉방|에어컨|히터|추|더|와이파이|인터넷|세탁|수건|체육|헬스|노래방|편의|화장실|샤워|침대|이불|소음|냄새/ : /과정|교과목|과목|일정|시간|기간|교재|자료|실습|견학|운영|커리큘럼|내용/);
+    var seen = {}, TN = { neg:'불만', sug:'개선요청' };
+    var cms = (r.comments || []).filter(function(c){ var t = String(c.t), key = t.replace(/\s+/g,''); if(seen[key]) return false; seen[key] = 1; var tg = ui._svyTag(t); return (tg === 'neg' || tg === 'sug') && (RE.test(t) || (kk === 'env' ? c.g === 'env' : (kk === 'op' ? c.g === 'op' : false))); }).slice(0, 8);
+    var cmH = '<div class="evS">이 회차 관련 불만·개선 의견 · ' + cms.length + '건</div>' + (cms.length ? cms.map(function(c){ var tg = ui._svyTag(c.t); return '<div class="evC"><span class="tg ' + tg + '">' + TN[tg] + '</span>' + ui._svyWx(c.t, r) + '<span class="tx">' + esc(c.t) + '</span></div>'; }).join('') : '<div style="padding:8px 4px;color:#94a3b8;font-weight:800;font-size:14px">관련 의견이 없습니다 — 점수만 낮고 사유를 적은 교육생은 없었습니다.</div>');
+    box.innerHTML = '<div class="evB" style="display:block;margin-top:12px;padding:16px 18px;border-color:#c7d2fe;background:#f8faff"><div style="display:flex;align-items:flex-start;gap:10px"><i class="fa-solid fa-magnifying-glass-chart" style="color:#6366f1;font-size:18px;margin-top:3px"></i><div style="flex:1;font-size:16px;font-weight:700;color:#0f172a;line-height:1.75">' + head + (why ? '<br>' + why : '') + '</div>'
+        + '<button id="svyPtX" style="border:none;background:#e0e7ff;color:#4338ca;border-radius:999px;padding:5px 12px;font:inherit;font-size:13px;font-weight:900;cursor:pointer">✕ 닫기</button></div>' + tbl + cmH
+        + (state.isObserver ? '' : '<div style="text-align:right;margin-top:10px"><a href="#" id="svyPtHide" style="font-size:13px;font-weight:800;color:#94a3b8">잘못 읽힌 값이면 그래프에서 빼기</a></div>') + '</div>';
+    box.querySelector('#svyPtX').onclick = function(){ box.innerHTML = ''; box.removeAttribute('data-cur'); };
+    var hb = box.querySelector('#svyPtHide'); if(hb) hb.onclick = function(e){ e.preventDefault(); if(!confirm('이 값(' + (v != null ? f1(v) : '') + ')을 그래프·평균에서 뺄까요?\n(데이터는 지우지 않고 숨기기만 합니다)')) return; ui._svyRef().child(id + '/hide/' + k).set(true).then(function(){ ui.surveyOpen(); }); };
+    try{ box.scrollIntoView({ behavior:'smooth', block:'nearest' }); }catch(e){}
 };
 
 /* === CATC-ADMIN-JS-END-OK v=J73R (파일 끝 무결성 마커) — 배포 후 이 줄이 보이면 완전본입니다. 안 보이면 파일이 잘린 것 → 재배포 필요 === */
