@@ -18434,6 +18434,32 @@ ui.confirmRouletteLeader = function(){
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else setTimeout(boot, 0);
 })();
+/* [K247] 넓은 화면(교육생 의견·강사 사전조사)에서는 리모컨이 내용을 가리지 않도록 화면 왼쪽 가장자리 탭으로 접어 둔다.
+   탭을 누르면 리모컨이 다시 나오고, 10초 동안 손대지 않으면 다시 탭으로 들어간다 */
+(function(){
+  var DOCK = ['survey', 'presurvey'], tab = null, lastMode = '', idleT = null;
+  function ensureTab(){
+    if(tab) return tab;
+    tab = document.createElement('button'); tab.id = 'remoteDockTab'; tab.type = 'button'; tab.title = '리모컨 열기';
+    tab.innerHTML = '<img src="forty.png" alt="" onerror="this.outerHTML=\'<i class=&quot;fa-solid fa-gamepad&quot;></i>\'"><span>리모컨</span>';
+    tab.style.cssText = 'position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:9000;display:none;flex-direction:column;align-items:center;gap:4px;padding:10px 7px 10px 5px;border:none;border-radius:0 14px 14px 0;background:linear-gradient(180deg,#4f46e5,#7c3aed);color:#fff;font:inherit;font-size:12px;font-weight:900;cursor:pointer;box-shadow:2px 4px 14px rgba(79,70,229,.35);writing-mode:horizontal-tb';
+    var st = document.createElement('style'); st.textContent = '#remoteDockTab img{width:30px;height:30px;object-fit:contain}#remoteDockTab span{writing-mode:vertical-rl;letter-spacing:2px}#remoteDockTab:hover{padding-left:9px}#courseSmartRemote.kac-docked{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transition:opacity .2s}';
+    document.head.appendChild(st); document.body.appendChild(tab);
+    tab.addEventListener('click', function(){ var host = document.getElementById('courseSmartRemote'); if(!host) return; host._dockOpen = true; host.classList.remove('kac-docked'); tab.style.display = 'none'; arm(host); });
+    return tab;
+  }
+  function arm(host){ clearTimeout(idleT); idleT = setTimeout(function(){ host._dockOpen = false; }, 10000);
+    if(!host._dockArm){ host._dockArm = true; ['pointerdown','pointermove','wheel'].forEach(function(ev){ host.addEventListener(ev, function(){ if(host._dockOpen) arm(host); }, { passive:true }); }); } }
+  setInterval(function(){
+    var host = document.getElementById('courseSmartRemote'); if(!host) return;
+    var mode = (window.state && state.currentMode) || '';
+    if(mode !== lastMode){ lastMode = mode; host._dockOpen = false; }
+    var shown = getComputedStyle(host).display !== 'none' && !!(window.state && state.room);
+    var dock = shown && DOCK.indexOf(mode) >= 0 && !host._dockOpen;
+    host.classList.toggle('kac-docked', dock);
+    var t = ensureTab(); t.style.display = dock ? 'flex' : 'none';
+  }, 400);
+})();
 
 
 // ===== [우측 더보기 사이드바] 슬라이드 패널 토글 (HTML 버튼에서 호출하나 정의가 없었음) =====
