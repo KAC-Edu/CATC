@@ -18047,7 +18047,7 @@ ui.confirmRouletteLeader = function(){
           host.style.right = 'auto'; host.style.transform = 'none';
         }
       }catch(e){}
-      setTimeout(function(){ try{ scheduleAutoCollapse(host, 10000); }catch(e){} }, 0);
+      setTimeout(function(){ try{ scheduleAutoCollapse(host, 3000); }catch(e){} }, 0);   // [K251] 펼친 상태 약 3초
     }
     host.innerHTML =
       '<div class="hex-drag-handle" title="길게 눌러 위치 이동"><i class="fa-solid fa-grip-lines"></i><span>길게 눌러 이동</span></div>'+
@@ -18334,7 +18334,7 @@ ui.confirmRouletteLeader = function(){
   var _autoCollapseTimer = null;
   function scheduleAutoCollapse(host, ms){
     clearTimeout(_autoCollapseTimer);
-    _autoCollapseTimer = setTimeout(function(){ setCollapsed(host, true); _remotePendingNav = false; }, (ms||4000));
+    _autoCollapseTimer = setTimeout(function(){ setCollapsed(host, true); _remotePendingNav = false; }, (ms||3000));   // [K251] 4초 → 3초
   }
   // [J75] 이미 과정현황 페이지에 있으면 '과정현황으로 이동' 단계는 의미가 없다.
   //  → 그럴 땐 중앙 버튼을 '펼침 ↔ 접힘' 단순 토글로만 동작시킨다.
@@ -18437,7 +18437,7 @@ ui.confirmRouletteLeader = function(){
 /* [K247] 넓은 화면(교육생 의견·강사 사전조사)에서는 리모컨이 내용을 가리지 않도록 화면 왼쪽 가장자리 탭으로 접어 둔다.
    탭을 누르면 리모컨이 다시 나오고, 3초 동안 손대지 않으면 다시 탭으로 들어간다 */
 (function(){
-  var DOCK = ['survey', 'presurvey'], tab = null, lastMode = '', idleT = null;
+  var DOCK = null /* [K251] 모든 화면 */, tab = null, lastMode = '', idleT = null;
   function ensureTab(){
     if(tab) return tab;
     tab = document.createElement('button'); tab.id = 'remoteDockTab'; tab.type = 'button'; tab.title = '리모컨 열기';
@@ -18453,9 +18453,9 @@ ui.confirmRouletteLeader = function(){
   setInterval(function(){
     var host = document.getElementById('courseSmartRemote'); if(!host) return;
     var mode = (window.state && state.currentMode) || '';
-    if(mode !== lastMode){ lastMode = mode; host._dockOpen = false; }
+    if(mode !== lastMode){ lastMode = mode; host._dockOpen = true; arm(host); }   /* [K251] 화면을 옮기면 3초간 보여 주고, 안 쓰면 왼쪽 탭으로 */
     var shown = getComputedStyle(host).display !== 'none' && !!(window.state && state.room);
-    var dock = shown && DOCK.indexOf(mode) >= 0 && !host._dockOpen;
+    var dock = shown && (!DOCK || DOCK.indexOf(mode) >= 0) && !host._dockOpen;
     host.classList.toggle('kac-docked', dock);
     var t = ensureTab(); t.style.display = dock ? 'flex' : 'none';
     if(dock){   /* [K248·K249] 사이드바 접기 탭(◀)과 겹치지 않게 그 위쪽에 */
