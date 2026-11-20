@@ -19033,7 +19033,7 @@ ui._matRenderList = function(){
         return '<div class="mat-row" style="display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #eef2f7; border-radius:12px; margin-bottom:9px; background:#fff;">'
           /* [K70] 일괄 다운로드용 선택 */
           + '<input type="checkbox" class="matRowChk" value="'+id+'" onchange="ui._matSyncBulk()" style="width:17px; height:17px; flex-shrink:0; cursor:pointer;">'
-          + '<i class="fa-solid fa-file-pdf" style="font-size:22px; color:#dc2626; flex-shrink:0;"></i>'
+          + ui._matFileIc(m.fileName, 22)   /* [K250] 파일 형식대로 아이콘·이름(한글/PDF/PPT…) */
           + '<div style="flex:1; min-width:0;">'
             + '<div style="font-size:14.5px; font-weight:800; color:#0f172a; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
             + '<div style="font-size:11.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ui._esc(m.uploader||'-')+' · '+ds+' · '+window.kacMaterials.fmtSize(m.size)+'</div>'
@@ -19563,6 +19563,8 @@ ui._matLibSource = function(){
     });
 };
 /* 교재 한 줄 (체크박스 포함) */
+ui._matFileIc = function(fn, sz){ var e = String(fn||'').split('.').pop().toLowerCase(), M = { pdf:['fa-file-pdf','#dc2626','PDF'], hwp:['fa-file-lines','#1d4ed8','한글'], hwpx:['fa-file-lines','#1d4ed8','한글'], doc:['fa-file-word','#2563eb','WORD'], docx:['fa-file-word','#2563eb','WORD'], ppt:['fa-file-powerpoint','#ea580c','PPT'], pptx:['fa-file-powerpoint','#ea580c','PPT'], xls:['fa-file-excel','#16a34a','EXCEL'], xlsx:['fa-file-excel','#16a34a','EXCEL'], zip:['fa-file-zipper','#7c3aed','ZIP'], mp4:['fa-file-video','#0891b2','영상'], jpg:['fa-file-image','#0ea5e9','사진'], jpeg:['fa-file-image','#0ea5e9','사진'], png:['fa-file-image','#0ea5e9','사진'] }, a = M[e] || ['fa-file','#64748b', e ? e.toUpperCase().slice(0,4) : '파일'];
+    return '<span title="' + a[2] + ' 파일" style="display:inline-flex;flex-direction:column;align-items:center;width:34px;flex-shrink:0;line-height:1"><i class="fa-solid ' + a[0] + '" style="font-size:' + (sz||20) + 'px;color:' + a[1] + '"></i><b style="margin-top:3px;font-size:9.5px;font-weight:900;color:' + a[1] + ';letter-spacing:-.2px">' + a[2] + '</b></span>'; };
 ui._matLibRow = function(m, indent){
     var already = !!(ui._matCourse||{})[m.id];
     var d=new Date(m.uploadedAt||0), p=function(n){return String(n).padStart(2,'0');};
@@ -19570,7 +19572,7 @@ ui._matLibRow = function(m, indent){
     return '<label style="display:flex; align-items:center; gap:12px; padding:12px 14px; margin-left:'+(indent||0)+'px; border-radius:11px; cursor:pointer; background:'+(already?'#f8fafc':'#fff')+';">'
       /* [K79] 이미 연결된 교재도 체크 가능 — 자료실에서 삭제하려면 고를 수 있어야 한다 */
       + '<input type="checkbox" class="matLibChk" value="'+m.id+'" style="width:17px; height:17px; flex-shrink:0;">'
-      + '<i class="fa-solid fa-file-pdf" style="color:'+(already?'#cbd5e1':'#dc2626')+'; font-size:16px; flex-shrink:0;"></i>'
+      + '<span style="'+(already?'opacity:.45;':'')+'">' + ui._matFileIc(m.fileName, 17) + '</span>'
       + '<div style="flex:1; min-width:0;">'
         + '<div style="font-size:15.5px; font-weight:800; color:'+(already?'#94a3b8':'#0f172a')+'; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">'+ui._esc(m.title||m.fileName)+'</div>'
         + '<div style="font-size:12.5px; color:#94a3b8; font-weight:700; margin-top:3px;">'+ds+' · '+window.kacMaterials.fmtSize(m.size)
