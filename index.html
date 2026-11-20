@@ -5479,6 +5479,8 @@ function _kacMatRender(){
     var icon = function(fn){
         var e = String(fn||'').split('.').pop().toLowerCase();
         if(e==='pdf') return ['fa-file-pdf','#dc2626'];
+        if(e==='hwp'||e==='hwpx') return ['fa-file-lines','#1d4ed8'];   // [K250] 한글
+        if(e==='doc'||e==='docx') return ['fa-file-word','#2563eb'];
         if(e==='ppt'||e==='pptx') return ['fa-file-powerpoint','#ea580c'];
         if(e==='xls'||e==='xlsx') return ['fa-file-excel','#16a34a'];
         if(e==='zip') return ['fa-file-zipper','#7c3aed'];
