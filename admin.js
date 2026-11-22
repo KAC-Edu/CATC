@@ -21202,7 +21202,7 @@ ui._SVY_FIX = [
     [/노후|낡|리모델링|오래된/, '시설 개선 목록에 올려 예산 반영 검토', '시설 노후'],
     [/와이파이|wifi|wi-fi|인터넷|끊기|끊겨/i, '무선 AP 위치·속도를 점검하고 접속 안내문을 비치', '인터넷·와이파이'],
     [/세탁/, '세탁실 이용 시간·세탁기 대수 확대 검토', '세탁실'],
-    [/휴게|좁/, '휴게 공간 추가 확보 또는 이용 시간대 분산', '휴게 공간'],
+    [/휴게/, '휴게 공간 추가 확보 또는 이용 시간대 분산', '휴게 공간'],
     [/음주|술/, '생활관 음주 규정과 그 이유를 입교 OT에서 미리 안내', '음주 규정'],
     [/마이크/, '강의 전 마이크·배터리 점검, 예비 마이크 비치', '마이크'],
     [/(밥|식사|배식|점심|아침|저녁)[가-힣]{0,3}\s?시간/, '식사 시간 연장(또는 오후 시작 시간 조정) 검토', '식사 시간'],
@@ -21238,27 +21238,24 @@ ui._svySolve = function(items){   // items: [{t, r(회차 레코드, 선택)}]
     order.sort(function(a,b){ return b.n - a.n; });
     var cut = function(t){ t = String(t).replace(/\s+/g,' ').trim(); return t.length > 38 ? t.slice(0, 38) + '…' : t; };
     var monTxt = function(g){ var ks = Object.keys(g.mons); return ks.length && ks.length <= 3 ? ks.join('·') : ''; };
-    /* [K241] 읽기 쉽게 — 한 줄 요약 + 우선순위 카드(① 현황 / 방향 / 조치) + 그 밖의 주제 */
-    var esc = ui._esc, total = 0; order.forEach(function(g){ total += g.n; });
-    var top = order.slice(0, 3), rest = order.slice(3), a = top[0], b2 = top[1], tie = !!(b2 && b2.n === a.n);
-    var lead = order.length === 1 ? '불만·개선 의견을 정리한 결과, 아래 주제에 대한 개선이 필요할 것으로 사료됩니다.'
-        : '불만·개선 의견을 주제별로 묶어 보니 <b>' + order.length + '개 주제</b>로 나뉘었고, 그중 의견이 많은 순서로 정리했습니다.';
-    var NUM = ['①','②','③'];
-    var card = function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
-        var st = i === 0 && !tie && g.n >= 2 ? '의견이 <b>' + g.n + '건</b>으로 가장 많이 제기되었습니다.' : '의견이 <b>' + g.n + '건</b> 제기되었습니다.';
-        if(wx) st += ' 주로 <b>' + esc(monTxt(g)) + '</b> 과정에서 나왔습니다.';
-        var dir = i === 0 ? (wx ? '계절 요인을 고려하여 <b>' + esc(g.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.' : '<b>' + esc(g.lab) + '</b> 부분에 초점을 맞춘 개선이 필요할 것으로 사료됩니다.')
-            : (wx ? '계절에 앞서 미리 점검이 필요해 보입니다.' : '함께 검토가 필요해 보입니다.');
-        var RC = ['#dc2626','#ea580c','#d97706'][i];   /* [K243] 주제명을 순위별 강조색으로 */
-        return '<div class="ssC" style="border-left:4px solid ' + RC + '"><div class="ssN" style="color:' + RC + '">' + NUM[i] + '</div><div class="ssB"><div class="ssH" style="color:' + RC + '">' + esc(g.lab) + '<span class="ssCnt" style="background:' + RC + '1a;color:' + RC + '">' + g.n + '건</span></div>'
-            + '<div class="ssL"><span class="ssK">현황</span><span>' + st + (g.ex[0] ? '<br><span class="sq">예) "' + esc(cut(g.ex[0])) + '"</span>' : '') + '</span></div>'
-            + '<div class="ssL"><span class="ssK">방향</span><span>' + dir + '</span></div>'
-            + '<div class="ssFix" style="border-color:' + RC + '66"><div class="ssFixT" style="color:' + RC + '"><i class="fa-solid fa-screwdriver-wrench"></i> 조치 방안</div><div class="ssFixB">' + esc(g.fix) + '</div></div></div></div>'; };   /* [K253] 조치는 점선 블록으로 눈에 띄게 */
-    return '<div class="svySol"><div class="svySolT"><i class="fa-solid fa-lightbulb"></i> 개선 방향 제안 <span>불만·개선 의견을 바탕으로 플랫폼이 정리 · 조치 완료한 주제는 제외</span></div>'
+    /* [K254] 더 단순하게 — 결론 한 줄 + '주제 → 조치' 목록(예시는 작게 한 줄) */
+    var esc = ui._esc, top = order.slice(0, 3), rest = order.slice(3), a = top[0], b2 = top[1], tie = !!(b2 && b2.n === a.n);
+    var RC = ['#dc2626','#ea580c','#d97706'], NUM = ['①','②','③'];
+    var lead = tie ? '「' + esc(a.lab) + '」·「' + esc(b2.lab) + '」 개선이 우선 필요할 것으로 사료됩니다.'
+        : (a.n >= 2 ? '의견이 가장 많은 「' + esc(a.lab) + '」 개선이 우선 필요할 것으로 사료됩니다.' : '아래 주제에 대한 검토가 필요할 것으로 사료됩니다.');
+    var row = function(g, i){ var wx = /냉방|난방/.test(g.lab) && monTxt(g);
+        return '<div class="ssR"><div class="ssRL"><span class="ssNo" style="color:' + RC[i] + '">' + NUM[i] + '</span><div><div class="ssRT" style="color:' + RC[i] + '">' + esc(g.lab) + ' <span class="ssRC">' + g.n + '건' + (wx ? ' · ' + esc(monTxt(g)) + ' 과정' : '') + '</span></div>'
+            + (g.ex[0] ? '<div class="ssEx">"' + esc(cut(g.ex[0])) + '"</div>' : '') + '</div></div>'
+            + '<div class="ssRF" style="border-color:' + RC[i] + '55"><i class="fa-solid fa-arrow-right" style="color:' + RC[i] + '"></i><span>' + esc(g.fix) + '</span></div></div>'; };
+    return '<div class="svySol"><div class="svySolT"><i class="fa-solid fa-lightbulb"></i> 개선 방향 제안</div>'
         + '<p class="ssLead">' + lead + '</p>'
-        + '<div class="ssG">' + top.map(card).join('') + '</div>'
-        + (rest.length ? '<p class="ssRest">그 밖에 ' + rest.slice(0, 4).map(function(g){ return '<b>' + esc(g.lab) + '</b>(' + g.n + ')'; }).join(', ') + (rest.length > 4 ? ' 등 ' + rest.length + '개 주제' : '') + '의 의견도 있습니다.</p>' : '')
-        + '</div>';
+        + '<div class="ssHd"><span>주제 · 의견 수</span><span>조치 방안</span></div>'
+        + top.map(row).join('')
+        + (rest.length ? '<p class="ssRest">그 밖에 ' + rest.slice(0, 4).map(function(g){ return esc(g.lab) + '(' + g.n + ')'; }).join(', ') + (rest.length > 4 ? ' 등 ' + rest.length + '개 주제' : '') + '</p>' : '')
+        + '<style>.ssLead{font-size:16.5px!important;font-weight:900!important;color:#0f172a!important;margin:4px 0 10px!important}.ssHd{display:grid;grid-template-columns:minmax(220px,1fr) 1.3fr;gap:14px;padding:0 4px 6px;font-size:12.5px;font-weight:900;color:#94a3b8}'
+        + '.ssR{display:grid;grid-template-columns:minmax(220px,1fr) 1.3fr;gap:14px;align-items:center;padding:12px 4px;border-top:1px solid #e0f2fe}.ssRL{display:flex;gap:8px;align-items:flex-start}.ssNo{font-size:20px;font-weight:900;line-height:1.2}.ssRT{font-size:17px;font-weight:900}.ssRC{font-size:13px;font-weight:800;color:#64748b;margin-left:4px}'
+        + '.ssEx{margin-top:3px;font-size:13px;font-weight:700;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:340px}.ssRF{display:flex;gap:8px;align-items:center;padding:10px 12px;border:2px dashed #bae6fd;border-radius:10px;background:#fff;font-size:15.5px;font-weight:900;color:#0f172a;line-height:1.5}'
+        + '.ssRest{margin-top:8px!important;padding-top:8px;border-top:1px solid #e0f2fe;font-size:13.5px!important;color:#64748b!important}@media(max-width:800px){.ssR,.ssHd{grid-template-columns:1fr}.ssHd span:last-child{display:none}}</style></div>';
 };
 /* [K235] 조치 완료는 '주제' 단위 — 완료 체크 후에는 숨기고, 그 뒤에 열린 회차에서 같은 주제가 다시 나오면 '다시 제기됨'으로 되살린다 */
 ui._isMore = function(b){ var d = b.parentNode.parentNode.querySelector('.isDet'); if(!d) return; var o = d.style.display === 'none';   /* [K239] 바로 다음 요소가 <style>이라 펼쳐지지 않던 문제 */ d.style.display = o ? '' : 'none'; b.innerHTML = o ? '<i class="fa-solid fa-chevron-up"></i> 회차별 점수 접기' : '<i class="fa-solid fa-chevron-down"></i> 회차별 점수 상세 보기'; };   // [K238]
