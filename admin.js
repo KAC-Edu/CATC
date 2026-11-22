@@ -20594,7 +20594,7 @@ ui.preSurveyOpen = async function(){
         var keys = Object.keys(resp).sort(function(a,b){ return (resp[a].at||0)-(resp[b].at||0); });
         var stale = V.course && V.course !== cname;
         /* [K177] 항목별 접기/펼치기 — 머리를 누르면 아래로 상세가 펼쳐진다(기본: 강의 가능 일정만 펼침) */
-        var OPEN = ui._psvOpen || (ui._psvOpen = { resp: keys.length > 0 });   // [K210] 열 때마다 새로 — 응답이 있으면 '응답 내역'만 펼침
+        var OPEN = ui._psvOpen || (ui._psvOpen = { resp: true });   /* [K264] 응답 내역은 늘 펼친 채로 시작 */   // [K210] 열 때마다 새로 — 응답이 있으면 '응답 내역'만 펼침
         var secStart = function(id, ic, col, title, sum){ var on = !!OPEN[id];
             return '<div class="psvAcc' + (on ? ' on' : '') + '" id="psvSec-' + id + '"><div class="psvAccH" data-acc="' + id + '"><i class="fa-solid ' + ic + '" style="color:' + col + ';width:22px;text-align:center"></i><span>' + title + '</span>'
               + (sum ? '<span class="psvSum">' + sum + '</span>' : '') + '<span style="flex:1"></span><i class="fa-solid fa-chevron-down psvChev"></i></div><div class="psvAccB" style="display:' + (on ? 'block' : 'none') + '">'; };
@@ -20610,6 +20610,7 @@ ui.preSurveyOpen = async function(){
         /* [K196] 기본값 — 회신 마감·교재 제출 기한 = 과정 시작 '전주 금요일'. 조사 기간 = 오늘 ~ 회신 마감 */
         var defDue = ui._prevFri(ps[0] || ''), defRep = ui._prevFri2(ps[0] || ''), dueR = V.replyBy || defRep, dueM = V.matDue || defDue, today0 = ui._ymd(new Date());
         var late = dueR && dueR < today0;
+        h += '<!--PSV_RESP-->';   /* [K265] 응답 내역은 맨 위, 접지 않고 늘 보임 */
         h += secStart('set', 'fa-sliders', '#6366f1', '조사 설정', (dueR ? '회신 마감 ' + md(dueR) + ' (' + ui._wd(dueR) + ')' : '') + (dueM ? ' · 교재 기한 ' + md(dueM) : '') + (V.note ? ' · 안내 문구 있음' : ''))
           /* [K209] 표처럼 간단히 — 한 줄에 '항목 · 날짜 · [바꾸기]' */
           + '<table class="psvTbl"><tbody>'
@@ -20675,7 +20676,7 @@ ui.preSurveyOpen = async function(){
                   + '</tbody></table>' : '<div style="margin-top:10px;text-align:center;color:#94a3b8;font-weight:800">없음</div>')
               + '</div></div>' + secEnd;
         }
-        h += secStart('resp', 'fa-list-check', '#16a34a', '응답 내역', keys.length ? keys.length + '명' + (nMat ? ' · 교재 ' + nMat + '명' : '') : '아직 없음');
+        var hh = h; h = '<div class="psvAcc on" id="psvSec-resp" style="border-color:#86efac"><div class="psvAccH" style="cursor:default"><i class="fa-solid fa-list-check" style="color:#16a34a;width:22px;text-align:center"></i><span>응답 내역</span><span class="psvSum">' + (keys.length ? keys.length + '명' + (nMat ? ' · 교재 ' + nMat + '명' : '') : '아직 없음') + '</span><span style="flex:1"></span></div><div class="psvAccB" style="display:block">';
         if(!keys.length) h += '<div style="padding:22px;text-align:center;color:#94a3b8;font-weight:800;border:1px dashed #e2e8f0;border-radius:12px">아직 응답이 없습니다. [강사님께 보낼 링크]를 복사해 보내 주세요.</div>';
         else {
             h += '<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:16px"><table class="rt" style="border-spacing:0;table-layout:auto;width:100%"><thead><tr><th>강사</th><th>출강</th><th>1안</th><th>2안</th><th>숙박</th><th>픽업</th><th>교재</th><th>전달 사항</th><th>제출</th><th></th></tr></thead><tbody>';
@@ -20685,7 +20686,7 @@ ui.preSurveyOpen = async function(){
             });
             h += '</tbody></table></div>';
         }
-        h += secEnd;
+        h += secEnd; var rh = h; hh = hh.replace('<!--PSV_RESP-->', function(){ return rh; }); h = hh;
         box.innerHTML = h;
         /* [K204] 창 없이 바로 복사 — 링크가 없으면 누르는 순간 새로 만들어 복사(기간: 과정 종료 1주 뒤, 지난 과정이면 60일) */
         var linkGo = function(asMsg, asQr){
@@ -20728,7 +20729,7 @@ ui.preSurveyOpen = async function(){
             pv.querySelector('#pvNo').onclick = function(){ pv.remove(); };
             pv.querySelector('#pvCp').onclick = function(){ pv.remove(); linkGo(true); };
         };
-        var setAcc = function(id, on){ var sec = box.querySelector('#psvSec-' + id); if(!sec) return; OPEN[id] = on; sec.classList.toggle('on', on); sec.querySelector('.psvAccB').style.display = on ? 'block' : 'none'; };
+        var setAcc = function(id, on){ if(id === 'resp') on = true; var sec = box.querySelector('#psvSec-' + id); if(!sec) return; OPEN[id] = on; sec.classList.toggle('on', on); sec.querySelector('.psvAccB').style.display = on ? 'block' : 'none'; };
         box.querySelectorAll('[data-acc]').forEach(function(hd){ hd.onclick = function(){ var id = hd.getAttribute('data-acc'); setAcc(id, !OPEN[id]); }; });
         box.querySelectorAll('[data-acc-go]').forEach(function(c){ c.onclick = function(){ var id = c.getAttribute('data-acc-go'); if(!id) return; setAcc(id, true); var sec = box.querySelector('#psvSec-' + id); if(sec) sec.scrollIntoView({ behavior:'smooth', block:'start' }); }; });
         box.querySelectorAll('[data-kk]').forEach(function(b){ b.onclick = function(){ var t = (V._kakaoOne || {})[b.getAttribute('data-kk')] || ''; ui._clipNow(t).then(function(ok){ if(ok) ui._linkToast('이 강사님 카톡 문구를 복사했습니다'); else prompt('아래 내용을 복사하세요', t); }); }; });
