@@ -7776,7 +7776,7 @@ resetShuttleRequests: function() {
             await firebase.database().ref().update(updates);
             var m=document.getElementById('profSwapModal'); if(m) m.remove();
             var _arr=kacProfList(name), _mn=_arr[0]||name;
-            if(ui.showAlert) ui.showAlert(!name ? '✅ 담임교수를 <b>미정</b>으로 저장했습니다. (연간계획 반영)' : _arr.length>1
+            if(ui.showAlert) ui.showAlert(!name ? '✅ 담임교수를 미정으로 저장했습니다. (연간계획 반영)' : _arr.length>1
                 ? ('✅ 담임교수 '+_arr.length+'명을 배정했습니다.\n\n'+_arr.join(' · ')+'\n★ 대표: '+_mn+' 교수\n(연간교육계획에도 반영)')
                 : ('✅ 담임교수를 '+_mn+' 교수로 교체했습니다. (연간계획 반영)'));
             // 검색창을 대표 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
@@ -10037,6 +10037,12 @@ const scheduleMgr = {
         ui._undoPageZoom(ov);   // [K134]
         ov.querySelectorAll('button[data-a="prev"],button[data-a="next"],#schFsNo').forEach(el => { el.style.position = 'fixed'; el.style.zIndex = '3'; });
         const cv = ov.querySelector('#schFsCv'), no = ov.querySelector('#schFsNo');
+        /* [K267] 발표 중에는 버튼(여백 포함 원본·✕·◀▶·쪽번호)을 숨김 — 마우스를 움직이면 2.5초 동안 다시 보임 */
+        (function(){ const ctl = ov.querySelectorAll('button[data-a], #schFsNo'); let t = null;
+            ctl.forEach(el => { el.style.transition = 'opacity .3s'; });
+            const show = () => { ctl.forEach(el => { el.style.opacity = '1'; el.style.pointerEvents = ''; }); ov.style.cursor = 'grab'; clearTimeout(t); t = setTimeout(hide, 2500); };
+            const hide = () => { if (!document.body.contains(ov)) return; ctl.forEach(el => { el.style.opacity = '0'; el.style.pointerEvents = 'none'; }); ov.style.cursor = 'none'; };
+            ov.addEventListener('mousemove', show); ov.addEventListener('touchstart', show, { passive: true }); show(); })();
         /* [K129] 맞춤 방식: 'page'(한 쪽 전체) ↔ 'width'(가로 꽉 채움 · 위아래 스크롤) — 버튼 또는 더블클릭 */
         /* [K132] 'fill' = 흰 여백을 잘라내고 가로세로 비율 그대로 화면에 최대한 꽉(기본) / 'page' = 여백 포함 원본 그대로 */
         let fitMode = noCrop ? 'page' : 'fill';
