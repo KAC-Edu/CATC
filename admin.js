@@ -21444,8 +21444,12 @@ ui._svyChart = function(list, lab){
     var cw = list.length < 2 ? 120 : (W-pl-pr) / (list.length - 1);
     list.forEach(function(r, i){ g += '<rect class="svyCol" data-ri="' + i + '" x="' + (X(i) - cw/2) + '" y="' + (pt - 6) + '" width="' + cw + '" height="' + (H - pt - pb + 34) + '" rx="10" fill="#6366f1" fill-opacity="0" style="cursor:pointer"><title>' + ui._esc(lab(r)) + ' · 눌러서 볼 점수 고르기</title></rect>'
         + '<text x="' + X(i) + '" y="' + (H-pb+22) + '" text-anchor="middle" font-size="15" fill="#475569" font-weight="800" pointer-events="none">' + ui._esc(lab(r)) + '</text>'; });   /* [K258] 점이 뭉쳐 있어도 회차를 누르면 4개 점수 중 고를 수 있게 */
+    /* [K259] 같은 회차에서 점이 겹치면(세로 14px 이내) 좌우로 살짝 벌려 하나씩 누를 수 있게 */
+    var DX = list.map(function(r){ var a = []; ser.forEach(function(s){ var v = ui._svyVal(r, s[1]); if(v != null) a.push([s[1], Y(v)]); }); a.sort(function(p, q){ return p[1] - q[1]; });
+        var o = {}, grp = [], flush = function(){ if(grp.length > 1) grp.forEach(function(x, j){ o[x[0]] = (j - (grp.length - 1) / 2) * 16; }); grp = []; };
+        a.forEach(function(x){ if(grp.length && x[1] - grp[grp.length-1][1] >= 14) flush(); grp.push(x); }); flush(); return o; });
     ser.forEach(function(s){ var pts = [];
-        list.forEach(function(r, i){ var v = ui._svyVal(r, s[1]); if(v != null) pts.push([X(i), Y(v), v, r.id]); else { var rv = raw(r, s[1]); if(rv != null && r.hide && r.hide[s[1]]) g += '<g class="svyPt" data-id="' + ui._esc(r.id) + '" data-k="' + s[1] + '" data-hid="1"><circle cx="' + X(i) + '" cy="' + Y(rv) + '" r="5" fill="#fff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2 2"><title>' + s[0] + ' ' + (Math.round(rv*10)/10) + ' (빼 둔 값 · 눌러서 되돌리기)</title></circle></g>'; } });
+        list.forEach(function(r, i){ var v = ui._svyVal(r, s[1]); if(v != null) pts.push([X(i) + (DX[i][s[1]] || 0), Y(v), v, r.id]); else { var rv = raw(r, s[1]); if(rv != null && r.hide && r.hide[s[1]]) g += '<g class="svyPt" data-id="' + ui._esc(r.id) + '" data-k="' + s[1] + '" data-hid="1"><circle cx="' + X(i) + '" cy="' + Y(rv) + '" r="5" fill="#fff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2 2"><title>' + s[0] + ' ' + (Math.round(rv*10)/10) + ' (빼 둔 값 · 눌러서 되돌리기)</title></circle></g>'; } });
         if(pts.length > 1) g += '<polyline fill="none" stroke="' + s[2] + '" stroke-width="' + (s[1] === 'total' ? 4 : 2.5) + '" stroke-linejoin="round" points="' + pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' ') + '"/>';
         var lastId = list.length ? list[list.length-1].id : '';
         pts.forEach(function(p){ var isL = p[3] === lastId;   /* [K244] 위 카드에 보이는 '최근 결과' 점은 깜빡임 */
