@@ -21543,6 +21543,11 @@ ui._svyChart = function(list, lab){
     var DX = list.map(function(r){ var a = []; ser.forEach(function(s){ var v = ui._svyVal(r, s[1]); if(v != null) a.push([s[1], Y(v)]); }); a.sort(function(p, q){ return p[1] - q[1]; });
         var o = {}, grp = [], flush = function(){ if(grp.length > 1) grp.forEach(function(x, j){ o[x[0]] = (j - (grp.length - 1) / 2) * 16; }); grp = []; };
         a.forEach(function(x){ if(grp.length && x[1] - grp[grp.length-1][1] >= 14) flush(); grp.push(x); }); flush(); return o; });
+    /* [K269] 맨 끝 회차는 왼쪽으로만, 맨 앞 회차는 오른쪽으로만 벌려 그래프 밖으로 나가지 않게 */
+    DX.forEach(function(o, i){ var ks = Object.keys(o); if(!ks.length) return; var vs = ks.map(function(k){ return o[k]; }), mx = Math.max.apply(null, vs), mn = Math.min.apply(null, vs);
+        if(i === list.length - 1) ks.forEach(function(k){ o[k] -= mx; }); else if(i === 0) ks.forEach(function(k){ o[k] -= mn; }); });
+    /* [K269] 위 카드(최근 결과)가 그래프의 어느 회차인지 — 늘 보이는 세로 띠 */
+    if(list.length > 1){ var lx = X(list.length - 1); g += '<rect x="' + (lx - 40) + '" y="' + (pt - 8) + '" width="48" height="' + (H - pt - pb + 8) + '" rx="10" fill="#6366f1" opacity="0.07" pointer-events="none"/><line x1="' + lx + '" x2="' + lx + '" y1="' + (pt - 4) + '" y2="' + (H - pb) + '" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5" pointer-events="none"/><text x="' + (lx - 16) + '" y="' + (pt + 2) + '" text-anchor="end" font-size="12" font-weight="900" fill="#6366f1" pointer-events="none">▲ 위 카드 = 최근 결과</text>'; }
     ser.forEach(function(s){ var pts = [];
         list.forEach(function(r, i){ var v = ui._svyVal(r, s[1]); if(v != null) pts.push([X(i) + (DX[i][s[1]] || 0), Y(v), v, r.id]); else { var rv = raw(r, s[1]); if(rv != null && r.hide && r.hide[s[1]]) g += '<g class="svyPt" data-id="' + ui._esc(r.id) + '" data-k="' + s[1] + '" data-hid="1"><circle cx="' + X(i) + '" cy="' + Y(rv) + '" r="5" fill="#fff" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="2 2"><title>' + s[0] + ' ' + (Math.round(rv*10)/10) + ' (빼 둔 값 · 눌러서 되돌리기)</title></circle></g>'; } });
         if(pts.length > 1) g += '<polyline fill="none" stroke="' + s[2] + '" stroke-width="' + (s[1] === 'total' ? 4 : 2.5) + '" stroke-linejoin="round" points="' + pts.map(function(p){ return p[0] + ',' + p[1]; }).join(' ') + '"/>';
