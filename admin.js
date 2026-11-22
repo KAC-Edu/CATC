@@ -7596,7 +7596,7 @@ resetShuttleRequests: function() {
         // ※ currentName 은 화면 표시용("김정민 외 2명")이라 못 믿는다 → 실제 저장값을 읽는다.
         firebase.database().ref('courses/'+room+'/status').once('value').then(function(snap){
             var st = snap.val() || {};
-            ui._profSwap = { room: room, names: kacProfAll(st), main: kacProfMain(st) };
+            ui._profSwap = { room: room, names: kacProfAll(st), main: kacProfMain(st), undecided: !kacProfAll(st).length };
 
             var old = document.getElementById('profSwapModal'); if(old) old.remove();
             var modal = document.createElement('div'); modal.id='profSwapModal'; modal.className='prof-swap-overlay';
@@ -7631,7 +7631,13 @@ resetShuttleRequests: function() {
             return;
         }
         var mainNm = (sel.main && sel.names.indexOf(sel.main)>=0) ? sel.main : (sel.names[0]||'');
-        box.innerHTML = list.map(function(p){
+        /* [K266] 담임 미정 — 맨 위 '미정'을 고르면 담임 없이 저장 */
+        var undec = !!sel.undecided && !sel.names.length;
+        box.innerHTML = '<div class="prof-swap-item'+(undec?' is-current':'')+'" style="border-style:dashed">'
+                 + '<button class="prof-swap-pick" onclick="ui._profSwapUndecided()" title="아직 담임이 정해지지 않았을 때">'
+                 +   (undec?'<i class="fa-solid fa-square-check"></i>':'<i class="fa-regular fa-square"></i>')
+                 +   '<span class="prof-swap-name" style="color:#64748b">미정</span><span style="margin-left:8px;font-size:13px;font-weight:700;color:#94a3b8">담임이 아직 정해지지 않음</span>'
+                 + '</button></div>' + list.map(function(p){
             var raw = String(p.name).trim();
             var nm  = e(raw);
             var q   = raw.replace(/'/g, "\\'");
@@ -7653,12 +7659,13 @@ resetShuttleRequests: function() {
         var sum = document.getElementById('profSwapSum');
         if(sum){
             sum.innerHTML = !sel.names.length
-                ? '<span style="color:#ef4444;">담임을 1명 이상 선택하세요</span>'
+                ? (undec ? '<span style="color:#64748b;font-weight:800;">담임 <b>미정</b>으로 저장합니다</span>' : '<span style="color:#ef4444;">담임을 고르거나 [미정]을 선택하세요</span>')
                 : ('★ <b>'+e(mainNm)+'</b> 교수 대표' + (sel.names.length>1 ? (' · 총 '+sel.names.length+'명') : ''));
         }
     },
+    _profSwapUndecided: function(){ var sel = ui._profSwap; sel.undecided = !(sel.undecided && !sel.names.length); if(sel.undecided){ sel.names = []; sel.main = ''; } ui._profSwapRender(); },
     _profSwapToggle: function(name){
-        var sel = ui._profSwap, i = sel.names.indexOf(name);
+        var sel = ui._profSwap, i = sel.names.indexOf(name); sel.undecided = false;
         if(i>=0){ sel.names.splice(i,1); if(sel.main===name) sel.main=''; }
         else sel.names.push(name);
         ui._profSwapRender();
@@ -7672,7 +7679,7 @@ resetShuttleRequests: function() {
     _profSwapSave: function(){
         var sel = ui._profSwap;
         if(!sel.room) return;
-        if(!sel.names.length){ ui.showAlert('담임 교수를 1명 이상 선택해 주세요.'); return; }
+        if(!sel.names.length){ if(sel.undecided){ ui._assignProfToRoom(sel.room, ''); return; } ui.showAlert('담임 교수를 고르거나 [미정]을 선택해 주세요.'); return; }
         // 대표를 맨 앞으로 → professorName(대표)·연간계획 prof 문자열 모두 자연스럽게 정렬된다
         var main = (sel.main && sel.names.indexOf(sel.main)>=0) ? sel.main : sel.names[0];
         var ordered = [main].concat(sel.names.filter(function(n){ return n!==main; }));
@@ -7735,13 +7742,13 @@ resetShuttleRequests: function() {
     // [담임교수 배정] 방 status + 연간계획(system/annualPlan) 함께 갱신
     _assignProfToRoom: async function(room, name){
         room=String(room||'').trim(); name=String(name||'').trim();
-        if(!room || !name) return;
+        if(!room) return;   // [K266] name이 비면 '담임 미정'으로 저장
         var updates={};
         kacProfUpdates(updates, room, name);                       // [J89] "장두석,박호원"처럼 여러 명도 인식
         updates['courses/'+room+'/status/professorManual']=true;   // 수동 지정 — 연간계획 자동동기화가 덮어쓰지 않도록 보존
         // 오픈톡방 링크 동기화 (대표 기준)
         var _mainP = kacProfList(name)[0] || name;
-        try{ var ks=await firebase.database().ref('system/professorProfiles/'+_mainP+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){}
+        if(_mainP){ try{ var ks=await firebase.database().ref('system/professorProfiles/'+_mainP+'/kakaoLink').get(); updates['courses/'+room+'/settings/kakaoLink']=ks.val()||''; }catch(e){} }
         // 연간교육계획도 함께 수정: 이 방의 과정명·기간과 일치하는 계획 항목의 교수(prof) 갱신
         try{
             var cs=await firebase.database().ref('courses/'+room+'/settings').once('value');
@@ -7769,11 +7776,11 @@ resetShuttleRequests: function() {
             await firebase.database().ref().update(updates);
             var m=document.getElementById('profSwapModal'); if(m) m.remove();
             var _arr=kacProfList(name), _mn=_arr[0]||name;
-            if(ui.showAlert) ui.showAlert(_arr.length>1
+            if(ui.showAlert) ui.showAlert(!name ? '✅ 담임교수를 <b>미정</b>으로 저장했습니다. (연간계획 반영)' : _arr.length>1
                 ? ('✅ 담임교수 '+_arr.length+'명을 배정했습니다.\n\n'+_arr.join(' · ')+'\n★ 대표: '+_mn+' 교수\n(연간교육계획에도 반영)')
                 : ('✅ 담임교수를 '+_mn+' 교수로 교체했습니다. (연간계획 반영)'));
             // 검색창을 대표 교수명으로 자동 갱신 → 교체 후에도 결과가 사라지지 않고 그대로 보이게
-            try{ var inp=document.getElementById('homeSearchInput'); if(inp){ inp.value=_mn; ui.renderHomeSearch(_mn); } }catch(e){}
+            try{ var inp=document.getElementById('homeSearchInput'); if(inp && _mn){ inp.value=_mn; ui.renderHomeSearch(_mn); } }catch(e){}
             /* [K46] 과정 화면(과정 운영 현황) 안에서 교체했을 때 이전 교수가 그대로 남던 문제 —
                홈 검색만 갱신하고 현재 방 히어로(과정 담임)는 즉시 갱신하지 않아, 새로고침 후에야 반영됐다.
                → 지금 보고 있는 방과 같으면 저장값을 다시 읽어 화면(대표/외 N명)을 즉시 반영한다. */
