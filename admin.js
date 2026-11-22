@@ -21232,7 +21232,7 @@ ui._svyFixOf = function(t){ var s = String(t || ''), out = []; ui._SVY_FIX.forEa
 ui._svySolve = function(items){   // items: [{t, r(회차 레코드, 선택)}]
     var G = {}, order = [], seen = {};
     (items || []).forEach(function(it){ var t = String(it.t || ''), k0 = t.replace(/\s+/g,''); if(seen[k0]) return; seen[k0] = 1;
-        var hit = 0; ui._SVY_FIX.forEach(function(f){ if(hit >= 2 || !f[0].test(t)) return; hit++; var g = G[f[2]] || (G[f[2]] = { lab:f[2], fix:f[1], n:0, ex:[], mons:{} }); if(!g.n) order.push(g); g.n++; var tc = t.replace(/^\(그\s*외\)\s*/,'').trim(); if(tc.length >= 8 && (!g.ex[0] || Math.abs(tc.length - 30) < Math.abs(g.ex[0].length - 30))) g.ex[0] = tc;   /* [K243] 예시는 30자 안팎의 깔끔한 글로 */ var m = it.r ? ui._svyMon(it.r) : ''; if(m) g.mons[m] = (g.mons[m] || 0) + 1; }); });
+        var hit = 0; ui._SVY_FIX.forEach(function(f){ if(hit >= 1 || !f[0].test(t)) return; hit++; var g = G[f[2]] || (G[f[2]] = { lab:f[2], fix:f[1], n:0, ex:[], mons:{} }); if(!g.n) order.push(g); g.n++; var tc = t.replace(/^\(그\s*외\)\s*/,'').trim(); if(tc.length >= 8 && (!g.ex[0] || Math.abs(tc.length - 30) < Math.abs(g.ex[0].length - 30))) g.ex[0] = tc;   /* [K243] 예시는 30자 안팎의 깔끔한 글로 */ var m = it.r ? ui._svyMon(it.r) : ''; if(m) g.mons[m] = (g.mons[m] || 0) + 1; }); });
     order = order.filter(function(g){ return !ui._svyTopicHidden(g.lab, items); });
     if(!order.length) return '';
     order.sort(function(a,b){ return b.n - a.n; });
@@ -21274,7 +21274,7 @@ ui._svySolCard = function(){
     var esc = ui._esc, items = (ui._svyCms || []).filter(function(c){ return c.tag === 'neg' || c.tag === 'sug'; }).map(function(c){ return { t: c.t, r: c._r, lab: c.r, tag: c.tag }; });
     var G = {}, order = [], seen = {};
     items.forEach(function(it){ var k0 = String(it.t).replace(/\s+/g,''); if(seen[k0]) return; seen[k0] = 1; var hit = 0;
-        ui._SVY_FIX.forEach(function(f){ if(hit >= 2 || !f[0].test(it.t)) return; hit++; var g = G[f[2]] || (G[f[2]] = { lab:f[2], fix:f[1], re:f[0], list:[] }); if(!g.list.length) order.push(g); g.list.push(it); }); });
+        ui._SVY_FIX.forEach(function(f){ if(hit >= 1 || !f[0].test(it.t)) return; hit++; var g = G[f[2]] || (G[f[2]] = { lab:f[2], fix:f[1], re:f[0], list:[] }); if(!g.list.length) order.push(g); g.list.push(it); }); });
     order.sort(function(a,b){ return b.list.length - a.list.length; });
     var vis = order.filter(function(g){ return !ui._svyTopicHidden(g.lab, items); }), hid = order.filter(function(g){ return ui._svyTopicHidden(g.lab, items); });
     var TN = { neg:'불만', sug:'개선요청' };
