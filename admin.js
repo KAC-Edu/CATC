@@ -21099,8 +21099,8 @@ ui.surveyOpen = async function(){
                     + '<td style="color:#64748b;font-weight:800">' + (lr ? f1(ui._svyVal(lr, 'total')) + '점 <small style="color:#94a3b8">(' + esc(lastP(sr)) + ')</small>' : '-') + '</td>'
                     + '<td style="color:#a5b4fc"><i class="fa-solid fa-chevron-right"></i></td></tr>'; }).join('') + '</tbody></table></div>'
             : '<div style="padding:40px;text-align:center;color:#94a3b8;font-weight:800">아직 올린 설문평가 결과가 없습니다. [설문평가 결과 올리기]로 시작하세요.</div>')
-          + '</div>' + css0 + '<style>.svyCatT th{padding:12px;font-size:14px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center;white-space:nowrap}.svyCatT td{padding:16px 12px;font-size:16px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyCatT tbody tr{cursor:pointer;transition:background .12s}.svyCatT tbody tr:hover td{background:#f5f7ff}.svyCatT tbody tr:last-child td{border-bottom:none}.svyCatT mark{background:#fef08a;border-radius:4px;padding:0 2px}</style>' + '<div id="svyNone" style="display:none;padding:30px;text-align:center;color:#94a3b8;font-weight:800">찾는 과정이 없습니다</div>';
-        ui._svyBind(host); return;
+          + '</div><div id="svyPlanCard" style="' + card + '"><div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800"><i class="fa-solid fa-spinner fa-spin"></i> 연도별 과정 불러오는 중…</div></div>' + css0 + '<style>.svyCatT th{padding:12px;font-size:14px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center;white-space:nowrap}.svyCatT td{padding:16px 12px;font-size:16px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyCatT tbody tr{cursor:pointer;transition:background .12s}.svyCatT tbody tr:hover td{background:#f5f7ff}.svyCatT tbody tr:last-child td{border-bottom:none}.svyCatT mark{background:#fef08a;border-radius:4px;padding:0 2px}</style>' + '<div id="svyNone" style="display:none;padding:30px;text-align:center;color:#94a3b8;font-weight:800">찾는 과정이 없습니다</div>';
+        ui._svyBind(host); ui._svyPlanLoad(); return;
     }
     ui._svyLastMsg = '';
     if(!list.length){ host.innerHTML = h + css0 + '<div style="' + card + ';padding:50px;text-align:center;color:#94a3b8;font-weight:800">이 계열의 결과지를 올리면 추이가 여기에 그려집니다.</div>'; ui._svyBind(host); return; }
@@ -21431,6 +21431,56 @@ ui._svyInlineDet = function(td, id){ ui._svyDetClose(id); var row = td.parentNod
     tr.innerHTML = '<td colspan="' + row.children.length + '" style="padding:6px 6px 14px;background:#fff;text-align:left;white-space:normal"><div id="' + id + '"></div></td>'; row.parentNode.insertBefore(tr, row.nextSibling); return tr.querySelector('#' + id); };
 ui._svyDetClose = function(id){ var tr = document.getElementById(id + 'Tr'); if(tr) tr.remove(); };
 /* 점수 추이 선 그래프(SVG) */
+/* [K260] 연도별 항기원 과정 전체 + 설문 등재 현황. 연간계획은 해마다 새로 올라오므로 system/coord/planHistory/{연도}에 쌓아 둔다 */
+ui._svyPlanLoad = async function(){
+    var box = document.getElementById('svyPlanCard'); if(!box) return;
+    try{
+        var pv = (await firebase.database().ref('system/annualPlan').once('value')).val() || {}, up = {};
+        Object.keys(pv).forEach(function(k){ var c = pv[k] || {}; if(!c.name || !/^\d{4}-\d{2}-\d{2}/.test(String(c.startDate || ''))) return;
+            var y = String(c.startDate).slice(0,4), key = (String(c.startDate) + '_' + String(c.name)).replace(/[.#$\/\[\]]/g, '_').slice(0, 120);
+            up[y + '/' + key] = { name: String(c.name), startDate: String(c.startDate).slice(0,10), endDate: String(c.endDate || c.startDate).slice(0,10), cancelled: !!c.cancelled, prof: String(c.prof || '') }; });
+        var ref = firebase.database().ref('system/coord/planHistory');
+        if(Object.keys(up).length){ try{ await ref.update(up); }catch(e){} }
+        ui._svyPlanHist = (await ref.once('value')).val() || {};
+    }catch(e){ ui._svyPlanHist = ui._svyPlanHist || {}; }
+    ui._svyPlanCard();
+};
+ui._svyPlanCard = function(){
+    var box = document.getElementById('svyPlanCard'); if(!box) return;
+    var esc = ui._esc, H = ui._svyPlanHist || {}, series = ui._svySeries || {}, f1 = function(v){ return (Math.round(v*10)/10).toFixed(1); };
+    var d0 = new Date(), td = d0.getFullYear() + '-' + String(d0.getMonth()+1).padStart(2,'0') + '-' + String(d0.getDate()).padStart(2,'0');
+    var yset = {}; Object.keys(H).forEach(function(y){ if(/^\d{4}$/.test(y)) yset[y] = 1; }); Object.keys(series).forEach(function(k){ series[k].list.forEach(function(r){ if(r.year) yset[String(r.year)] = 1; }); });
+    var years = Object.keys(yset).sort(); if(!years.length){ box.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">연간계획이 아직 없습니다.</div>'; return; }
+    var Y = ui._svyPlanY && yset[ui._svyPlanY] ? ui._svyPlanY : (yset[td.slice(0,4)] ? td.slice(0,4) : years[years.length-1]);
+    var rows = Object.keys(H[Y] || {}).map(function(k){ return H[Y][k]; }).sort(function(a,b){ return String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name)); });
+    var ms = function(s){ return new Date(String(s).slice(0,10) + 'T00:00:00').getTime(); }, DAY = 864e5;
+    var used = {};
+    var NK = function(k){ return String(k || '').replace(/\[[^\]]*\]|\([^)]*\)|과정|\s/g, ''); }, byN = {}; Object.keys(series).forEach(function(k){ byN[NK(k)] = k; });   /* 이름 표기가 조금 달라도('…과정', '[신규]') 같은 계열로 */
+    rows.forEach(function(c){ var sk0 = ui._svySeriesOf(c.name).key, sk = series[sk0] ? sk0 : (byN[NK(sk0)] || sk0), sr = series[sk]; c._sk = sr ? sk : ''; c._rec = null;
+        if(sr){ var a = ms(c.startDate) - 7*DAY, b = ms(c.endDate || c.startDate) + 7*DAY; sr.list.forEach(function(r){ var st = ms(String(r.period || '').slice(0,10)); if(!used[r.id] && st >= a && st <= b && !c._rec){ c._rec = r; used[r.id] = 1; } }); }
+        c._st = c.cancelled ? 'can' : (c.endDate && c.endDate < td ? 'done' : (c.startDate <= td ? 'now' : 'plan')); });
+    var orphan = []; Object.keys(series).forEach(function(k){ series[k].list.forEach(function(r){ if(String(r.year) === Y && !used[r.id]) orphan.push(r); }); });
+    var n = { all: rows.length, can: 0, done: 0, now: 0, plan: 0, reg: 0 }; rows.forEach(function(c){ n[c._st]++; if(c._rec) n.reg++; });
+    var chip = function(l, v, bg, fg){ return '<span class="plC" style="background:' + bg + ';color:' + fg + '">' + l + ' <b>' + v + '</b></span>'; };
+    var ST = { can:['폐강','#fff1f2','#be123c'], done:['종료','#f1f5f9','#475569'], now:['진행 중','#dbeafe','#1d4ed8'], plan:['예정','#dcfce7','#15803d'] };
+    var md = function(s){ s = String(s || ''); return s ? Number(s.slice(5,7)) + '.' + Number(s.slice(8,10)) : ''; };
+    var body = rows.length ? rows.map(function(c){ var st = ST[c._st], r = c._rec, v = r ? ui._svyVal(r, 'total') : null;
+        var sv = r ? '<span class="plS ok">' + (v != null ? f1(v) + '점' : '등재') + '</span>' : (c._st === 'done' ? '<span class="plS no">미등재</span>' : '<span style="color:#cbd5e1">-</span>');
+        return '<tr class="plR' + (c._sk ? ' go' : '') + (c._st === 'can' ? ' cn' : '') + '"' + (c._sk ? ' data-psel="' + esc(c._sk) + '" title="눌러서 이 과정의 설문 추이 보기"' : '') + '><td class="plD">' + md(c.startDate) + (c.endDate && c.endDate !== c.startDate ? ' ~ ' + md(c.endDate) : '') + '</td><td class="plN">' + esc(c.name) + '</td><td>' + esc(String(c.prof || '').split(/[,\/]/)[0] || '-') + '</td><td><span class="plT" style="background:' + st[1] + ';color:' + st[2] + '">' + st[0] + '</span></td><td>' + sv + '</td><td style="color:#c7d2fe">' + (c._sk ? '<i class="fa-solid fa-chevron-right"></i>' : '') + '</td></tr>'; }).join('')
+        : '<tr><td colspan="6" style="padding:30px;color:#94a3b8;font-weight:800">' + Y + '년 연간계획이 저장되어 있지 않습니다' + (orphan.length ? ' — 이 해에 올린 설문 결과 ' + orphan.length + '건은 위 과정 목록에서 볼 수 있습니다' : '') + '</td></tr>';
+    box.innerHTML = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-calendar-days" style="color:#0ea5e9"></i> 연도별 과정 · 설문 등재 현황</div><span style="flex:1"></span>'
+        + '<div class="plY">' + years.map(function(y){ return '<button data-py="' + y + '" class="' + (y === Y ? 'on' : '') + '">' + y + '</button>'; }).join('') + '</div></div>'
+        + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px">' + chip('전체 과정', n.all, '#eef2ff', '#3730a3') + chip('종료', n.done, '#f1f5f9', '#475569') + chip('진행 중', n.now, '#dbeafe', '#1d4ed8') + chip('예정', n.plan, '#dcfce7', '#15803d') + chip('폐강', n.can, '#fff1f2', '#be123c')
+        + '<span style="color:#cbd5e1">|</span>' + chip('설문 등재', n.reg + ' / ' + (n.done + n.now), '#ecfeff', '#0e7490') + '<span style="font-size:12.5px;font-weight:800;color:#94a3b8">· 종료·진행 과정 중 설문 결과를 올린 수</span></div>'
+        + '<div style="overflow:auto;margin-top:12px;border:1px solid #e2e8f0;border-radius:16px;max-height:560px"><table class="plTb"><thead><tr><th style="width:120px">기간</th><th style="text-align:left">과정명</th><th>담임</th><th>상태</th><th>설문 결과</th><th style="width:30px"></th></tr></thead><tbody>' + body + '</tbody></table></div>'
+        + '<div style="margin-top:8px;font-size:12.5px;font-weight:800;color:#94a3b8">연간계획 기준 · 설문 제목이 같은 과정은 해가 바뀌어도 같은 계열로 이어서 쌓입니다 · 미등재 = 끝난 과정인데 설문 결과지를 아직 안 올림</div>'
+        + '<style>.plY{display:flex;gap:4px;padding:4px;border-radius:999px;background:#f1f5f9}.plY button{border:none;background:none;padding:6px 14px;border-radius:999px;font:inherit;font-size:14px;font-weight:900;color:#64748b;cursor:pointer}.plY button.on{background:#fff;color:#0f172a;box-shadow:0 2px 6px rgba(15,23,42,.1)}'
+        + '.plC{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:800}.plC b{font-size:15px}.plTb{width:100%;border-collapse:separate;border-spacing:0}.plTb th{position:sticky;top:0;z-index:1;padding:11px 10px;font-size:13.5px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center;white-space:nowrap}'
+        + '.plTb td{padding:11px 10px;font-size:15px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.plD{color:#64748b;font-weight:800}.plN{text-align:left!important;font-weight:900;color:#0f172a;white-space:normal!important}.plR.go{cursor:pointer}.plR.go:hover{background:#f8faff}.plR.cn td{color:#94a3b8}.plR.cn .plN{text-decoration:line-through;color:#94a3b8}'
+        + '.plT{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12.5px;font-weight:900}.plS{display:inline-block;padding:3px 10px;border-radius:8px;font-size:13.5px;font-weight:900}.plS.ok{background:#dcfce7;color:#15803d}.plS.no{background:#f1f5f9;color:#94a3b8}</style>';
+    box.querySelectorAll('[data-py]').forEach(function(b){ b.onclick = function(){ ui._svyPlanY = b.getAttribute('data-py'); ui._svyPlanCard(); }; });
+    box.querySelectorAll('[data-psel]').forEach(function(tr){ tr.onclick = function(){ ui._svySel = tr.getAttribute('data-psel'); ui._svyQ = ''; ui._svyYF = ui._svyYT = 0; ui.surveyOpen(); try{ window.scrollTo(0,0); }catch(e){} }; });
+};
 ui._svyChart = function(list, lab){
     var W = 1000, H = 300, pl = 46, pr = 20, pt = 18, pb = 46;
     var ser = [['종합', 'total', '#1e3a8a'], ['과정운영', 'op', '#2563eb'], ['지원시설', 'env', '#16a34a'], ['강사', 'inst', '#ea580c']];
