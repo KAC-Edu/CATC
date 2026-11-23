@@ -21483,7 +21483,10 @@ ui._svyDetClose = function(id){ var tr = document.getElementById(id + 'Tr'); if(
 /* [K271] 입교등록 카카오톡 채널 QR — 주소는 전 과정 공통(system/sharedGuide/kakaoChannel). '/chat'을 붙여 채팅방으로 바로 열리게 */
 ui._kakaoChNorm = function(u){ u = String(u || '').trim(); if(!u) return ''; if(!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); u = u.replace(/\/+$/, '').replace(/\/(chat|friend)$/i, ''); return u; };
 ui._kakaoChUrl = function(){ /* [K274] 오픈톡방과 별개로 — 늘 카카오 채널 채팅방으로 바로 (전 과정 공통 주소) */
-    var b = ui._kakaoChBase || ''; return b ? kacKakaoChat(b) : ''; };
+    var b = ui._kakaoChBase || ui.KAKAO_CH_DEFAULT; var m = String(b).match(/pf\.kakao\.com\/(_[A-Za-z0-9]+)/i);
+    /* [K276] 휴대폰 카메라로 찍으면 브라우저가 채널 소개 화면으로 보내 버리는 문제 — 우리 쪽 연결 페이지(kch.html)가 카카오톡 앱의 채널 채팅방을 바로 연다 */
+    return m ? location.origin + location.pathname.replace(/[^\/]*$/, '') + 'kch.html?c=' + m[1] : kacKakaoChat(b); };
+ui.KAKAO_CH_DEFAULT = 'https://pf.kakao.com/_dnxexfX';   // [K276] 항공기술훈련원 채널(고정) — 강사가 따로 넣지 않아도 됨
 ui._kakaoRoomPoll = function(){ var r = state.room || ''; if(r === ui._kakaoRoomFor) return; ui._kakaoRoomFor = r; ui._kakaoRoomLink = '';
     if(ui._kakaoRoomRef){ try{ ui._kakaoRoomRef.off(); }catch(e){} ui._kakaoRoomRef = null; }
     if(r){ try{ ui._kakaoRoomRef = firebase.database().ref('courses/' + r + '/settings/kakaoLink'); ui._kakaoRoomRef.on('value', function(s){ ui._kakaoRoomLink = String(s.val() || '').trim(); ui._kakaoChDraw(); }); }catch(e){} }
