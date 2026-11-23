@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>항공기술훈련원 카카오톡 채널</title>
+<!-- [K276] 카카오톡 채널 채팅방 바로가기 연결 페이지.
+     휴대폰 카메라로 QR을 찍으면 브라우저가 열려 채널 '소개 화면'으로 가는 문제가 있어,
+     여기서 카카오톡 앱의 채널 채팅방(kakaoplus://plusfriend/chat/채널ID)을 바로 열고,
+     앱이 안 열리면 채널 채팅 웹 주소로 넘어간다. -->
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#FEE500;font-family:-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;color:#191919}
+.c{text-align:center;padding:30px 24px;max-width:360px}
+.t{font-size:22px;font-weight:900}.s{margin-top:8px;font-size:15px;font-weight:700;color:#3b3b3b}
+a.b{display:block;margin-top:22px;padding:16px;border-radius:14px;background:#191919;color:#FEE500;font-size:17px;font-weight:900;text-decoration:none}
+a.w{display:block;margin-top:10px;font-size:13.5px;font-weight:700;color:#3b3b3b}
+</style></head><body><div class="c">
+<div class="t">💬 항공기술훈련원 채널</div>
+<div class="s" id="msg">카카오톡 채팅방을 여는 중입니다…</div>
+<a class="b" id="go" href="#">카카오톡 채팅방 열기</a>
+<a class="w" id="web" href="#">카카오톡이 안 열리면 여기를 눌러 주세요</a>
+</div>
+<script>
+(function(){
+  var q = location.search.match(/[?&]c=(_[A-Za-z0-9]+)/), id = q ? q[1] : '_dnxexfX';
+  var web = 'https://pf.kakao.com/' + id + '/chat', app = 'kakaoplus://plusfriend/chat/' + id;
+  var ua = navigator.userAgent || '', android = /Android/i.test(ua), inKakao = /KAKAOTALK/i.test(ua);
+  var intent = 'intent://plusfriend/chat/' + id + '#Intent;scheme=kakaoplus;package=com.kakao.talk;S.browser_fallback_url=' + encodeURIComponent(web) + ';end';
+  var open = (android && !inKakao) ? intent : app;
+  document.getElementById('go').href = open;
+  document.getElementById('web').href = web;
+  var t0 = Date.now();
+  try{ location.href = open; }catch(e){}
+  setTimeout(function(){
+    if(document.hidden || Date.now() - t0 > 2600) return;   // 앱으로 넘어갔으면 그대로
+    document.getElementById('msg').textContent = '아래 버튼을 눌러 채팅방으로 들어가 주세요';
+  }, 1800);
+})();
+</script>
+</body></html>
