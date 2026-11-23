@@ -2644,6 +2644,9 @@ function kacIsRealStudent(s, key){
   return true;
 }
 window.kacIsRealStudent = kacIsRealStudent;
+/* [K273] 카카오 채널 주소(pf.kakao.com/_xxx)는 홈(소개) 화면으로 가므로 '/chat'을 붙여 채팅방으로 바로 열리게 */
+function kacKakaoChat(u){ u = String(u || '').trim(); var m = u.match(/^(https?:\/\/)?pf\.kakao\.com\/(_[A-Za-z0-9]+)/i); return m ? 'https://pf.kakao.com/' + m[2] + '/chat' : u; }
+window.kacKakaoChat = kacKakaoChat;
 function kacProfMain(st){
     if (!st) return '';
     var arr = kacProfList(st.professorNames && st.professorNames.length ? st.professorNames : st.professorName);
@@ -11502,7 +11505,7 @@ init: function() {
                 _profEl.innerHTML = guideMgr._kakaoQrHTML();
                 try {
                     const tgt = document.getElementById('guideKakaoQrBig');
-                    const url = (guideMgr._slot().kakaoLink) || '';
+                    const url = kacKakaoChat((guideMgr._slot().kakaoLink) || '');   // [K273] 채널 주소면 채팅방으로 바로
                     if (tgt && url && typeof QRCode !== 'undefined') {
                         tgt.innerHTML = '';
                         new QRCode(tgt, { text: url, width: 420, height: 420, correctLevel: QRCode.CorrectLevel.H });
@@ -18116,17 +18119,21 @@ ui.confirmRouletteLeader = function(){
     try{ if(_noteRef) _noteRef.off(); }catch(e){}
     try{
       _noteRef = firebase.database().ref('system/coord/dashNotes/' + noteKey(w));
-      _noteRef.on('value', function(s){ var v = s.val(); _noteSrv[w] = Array.isArray(v) ? v : null; try{ if(document.getElementById('dashQuickNotes')) renderNotes(noteSelected()); }catch(e){} });
+      _noteRef.on('value', function(s){ var v = s.val(); _noteSrv[w] = Array.isArray(v) ? v : null; try{ kakaoCardSync(noteSelected()); if(document.getElementById('dashQuickNotes')) renderNotes(noteSelected()); }catch(e){} });
     }catch(e){}
   }
+  /* [K275] 포스트잇 전용 항목 — '카카오채널 QR'. 체크하면 포스트잇에 생기고 사이드바 QR 카드도 보임, 빼면 둘 다 숨김 */
+  var NC = choices.concat([{ mode:'kakaoch', label:'카카오채널 QR', icon:'fa-qrcode' }]);
+  function kakaoCardSync(picked){ try{ var c = document.getElementById('kakaoChCard'); if(c) c.style.display = (picked || []).indexOf('kakaoch') >= 0 ? 'flex' : 'none'; }catch(e){} }
+  setTimeout(function(){ try{ noteWatch(); }catch(e){} try{ kakaoCardSync(noteSelected()); }catch(e){} }, 2500);
   function noteSelected(){
     try{
       var w = noteWho(), sv = _noteSrv[w];
-      if(Array.isArray(sv)){ var s2 = sv.filter(function(k){ return choices.some(function(c){ return c.mode === k; }); }); if(s2.length) return s2; }
+      if(Array.isArray(sv)){ var s2 = sv.filter(function(k){ return NC.some(function(c){ return c.mode === k; }); }); if(s2.length) return s2; }
     }catch(e){}
     try{
       var v = JSON.parse(localStorage.getItem(NOTE_KEY) || 'null');
-      if(Array.isArray(v)){ v = v.filter(function(k){ return choices.some(function(c){ return c.mode === k; }); }); if(v.length) return v; }
+      if(Array.isArray(v)){ v = v.filter(function(k){ return NC.some(function(c){ return c.mode === k; }); }); if(v.length) return v; }
     }catch(e){}
     return ['attendance','qa','quiz','schedule','materials'];
   }
@@ -18135,7 +18142,7 @@ ui.confirmRouletteLeader = function(){
     var cur = noteSelected();
     var ov = document.createElement('div'); ov.id = 'dashNoteSettings'; ov.className = 'hex-settings-overlay';
     ov.innerHTML = '<div class="hex-settings-card"><div class="hex-settings-head"><div><b>바로가기 포스트잇 설정 <span style="display:inline-block; margin-left:6px; padding:2px 9px; border-radius:999px; background:#dcfce7; color:#15803d; font-size:11.5px; font-weight:900; vertical-align:middle;">🌐 전체 공통</span></b><small>필요한 메뉴만 골라 주세요(개수 제한 없음). 모든 교수님·모든 PC·모든 과정에 똑같이 적용됩니다.</small></div><button type="button" data-close>&times;</button></div>'
-      + '<div class="hex-settings-list">' + choices.map(function(item){
+      + '<div class="hex-settings-list">' + NC.map(function(item){
           return '<label><input type="checkbox" value="'+esc(item.mode)+'" '+(cur.indexOf(item.mode)>=0?'checked':'')+'><i class="fa-solid '+esc(item.icon)+'"></i><span>'+esc(item.label)+'</span></label>';
         }).join('') + '</div><div class="hex-settings-foot"><span data-cnt></span><button type="button" data-save>적용</button></div></div>';
     document.body.appendChild(ov);
@@ -18149,13 +18156,14 @@ ui.confirmRouletteLeader = function(){
       try{ localStorage.setItem(NOTE_KEY, JSON.stringify(vals)); }catch(e){}
       var w = noteWho();
       if(w){ _noteSrv[w] = vals; try{ firebase.database().ref('system/coord/dashNotes/' + noteKey(w)).set(vals); }catch(e){} }
-      ov.remove(); renderNotes(vals);
+      ov.remove(); renderNotes(vals); kakaoCardSync(vals);
     };
     sync();
   }
   var NOTE_COLORS = [['#fef9c3','#ca8a04'],['#dcfce7','#16a34a'],['#dbeafe','#2563eb'],['#fce7f3','#db2777'],['#ede9fe','#7c3aed'],['#ffedd5','#ea580c']];
   function renderNotes(picked){
     try{ noteWatch(); }catch(e){}
+    kakaoCardSync(picked);
     try{
       var view = document.getElementById('view-dashboard'); if(!view) return;
       if(!document.getElementById('dashNotesCss')){
@@ -18178,7 +18186,7 @@ ui.confirmRouletteLeader = function(){
       if(box.parentNode !== host2) host2.appendChild(box);
       box.innerHTML = '<div class="dqn-head"><span>바로가기 <span title="전체 공통 — 모든 교수님·모든 PC·모든 과정" style="padding:1px 6px; border-radius:999px; background:#dcfce7; color:#15803d; font-size:10px; font-weight:900;">공통</span></span><button type="button" title="바로가기 고르기(모든 과정 공통)" data-dqn-gear><i class="fa-solid fa-gear"></i></button></div>'
         + picked.map(function(mode, i){
-            var it = choices.filter(function(c){ return c.mode === mode; })[0]; if(!it) return '';
+            var it = NC.filter(function(c){ return c.mode === mode; })[0]; if(!it) return '';
             var c = NOTE_COLORS[i % NOTE_COLORS.length];
             return '<button type="button" class="dqn" data-mode="'+esc(it.mode)+'" style="background:'+c[0]+';"><i class="fa-solid '+esc(it.icon)+'" style="color:'+c[1]+';"></i><span>'+esc(it.label)+'</span></button>';
           }).join('');
@@ -18186,6 +18194,7 @@ ui.confirmRouletteLeader = function(){
         if(e.target.closest('[data-dqn-gear]')) return openNoteSettings();
         var b = e.target.closest('.dqn'); if(!b) return;
         var m = b.getAttribute('data-mode');
+        if(m === 'kakaoch'){ try{ ui.kakaoChOpen(); }catch(err){} return; }   // [K275] 카카오 채널 QR 크게
         try{ if(typeof ui !== 'undefined' && ui.setMode) ui.setMode(m); }catch(err){}
       };
     }catch(e){}
@@ -21471,6 +21480,53 @@ ui._svyInlineDet = function(td, id){ ui._svyDetClose(id); var row = td.parentNod
     tr.innerHTML = '<td colspan="' + row.children.length + '" style="padding:6px 6px 14px;background:#fff;text-align:left;white-space:normal"><div id="' + id + '"></div></td>'; row.parentNode.insertBefore(tr, row.nextSibling); return tr.querySelector('#' + id); };
 ui._svyDetClose = function(id){ var tr = document.getElementById(id + 'Tr'); if(tr) tr.remove(); };
 /* 점수 추이 선 그래프(SVG) */
+/* [K271] 입교등록 카카오톡 채널 QR — 주소는 전 과정 공통(system/sharedGuide/kakaoChannel). '/chat'을 붙여 채팅방으로 바로 열리게 */
+ui._kakaoChNorm = function(u){ u = String(u || '').trim(); if(!u) return ''; if(!/^https?:\/\//i.test(u)) u = 'https://' + u.replace(/^\/+/, ''); u = u.replace(/\/+$/, '').replace(/\/(chat|friend)$/i, ''); return u; };
+ui._kakaoChUrl = function(){ /* [K274] 오픈톡방과 별개로 — 늘 카카오 채널 채팅방으로 바로 (전 과정 공통 주소) */
+    var b = ui._kakaoChBase || ''; return b ? kacKakaoChat(b) : ''; };
+ui._kakaoRoomPoll = function(){ var r = state.room || ''; if(r === ui._kakaoRoomFor) return; ui._kakaoRoomFor = r; ui._kakaoRoomLink = '';
+    if(ui._kakaoRoomRef){ try{ ui._kakaoRoomRef.off(); }catch(e){} ui._kakaoRoomRef = null; }
+    if(r){ try{ ui._kakaoRoomRef = firebase.database().ref('courses/' + r + '/settings/kakaoLink'); ui._kakaoRoomRef.on('value', function(s){ ui._kakaoRoomLink = String(s.val() || '').trim(); ui._kakaoChDraw(); }); }catch(e){} }
+    ui._kakaoChDraw(); };
+ui.kakaoChInit = function(){
+    if(ui._kakaoChSub) return; ui._kakaoChSub = true;
+    try{ firebase.database().ref('system/sharedGuide/kakaoChannel').on('value', function(s){ ui._kakaoChBase = ui._kakaoChNorm(s.val() || ''); ui._kakaoChDraw(); }); }catch(e){}
+    
+};
+ui._kakaoChDraw = function(){
+    var box = document.getElementById('kakaoChQr'), sub = document.getElementById('kakaoChSub'), url = ui._kakaoChUrl(); if(!box) return;
+    box.innerHTML = ''; if(sub) sub.textContent = url ? '눌러서 크게 보기' : '처음 한 번 주소 등록';
+    if(url){ try{ new QRCode(box, { text: url, width: 48, height: 48, correctLevel: QRCode.CorrectLevel.M }); }catch(e){ box.textContent = 'QR'; } } else box.textContent = '등록';
+};
+ui.kakaoChSet = function(){
+    var cur = ui._kakaoChBase || '';
+    var v = prompt('항공기술훈련원 카카오톡 채널 주소를 넣어 주세요. (모든 과정 공통 · 한 번만)\n오픈톡방 상단 공지의 [교육생용(CATC)] 링크를 열면 나오는 채널 주소입니다.\n(예: https://pf.kakao.com/_abcde — 채널 관리자센터 > 채널 URL)\n뒤에 /chat 은 자동으로 붙여 채팅방으로 바로 열리게 합니다.', cur);
+    if(v === null) return false; v = ui._kakaoChNorm(v);
+    if(v && !/kakao\.com/i.test(v) && !confirm('카카오 주소가 아닌 것 같습니다. 그대로 저장할까요?\n' + v)) return false;
+    try{ firebase.database().ref('system/sharedGuide/kakaoChannel').set(v || null); }catch(e){}
+    ui._kakaoChBase = v; ui._kakaoChDraw(); return !!v;
+};
+ui.kakaoChOpen = function(){
+    ui.kakaoChInit();
+    if(!ui._kakaoChUrl()){ if(state.isObserver) return ui.showAlert('채널 주소가 아직 등록되지 않았습니다.'); if(!ui.kakaoChSet()) return; }
+    var url = ui._kakaoChUrl(), old = document.getElementById('kakaoChBig'); if(old){ old.remove(); return; }
+    var ov = document.createElement('div'); ov.id = 'kakaoChBig'; ov.title = '누르면 닫힘';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483500;background:rgba(15,23,42,.82);display:flex;align-items:center;justify-content:center;cursor:pointer;animation:kchIn .2s ease';
+    var sz = Math.min(window.innerWidth, window.innerHeight) * 0.62;
+    ov.innerHTML = '<div style="background:#FEE500;border-radius:32px;padding:34px 40px 26px;text-align:center;box-shadow:0 30px 90px rgba(0,0,0,.45)">'
+        + '<div style="font-size:' + Math.round(sz/12) + 'px;font-weight:900;color:#191919"><i class="fa-solid fa-comment"></i> ' + '카카오톡 채널로 바로 입장' + '</div>'
+        + '<div id="kakaoChBigQr" style="display:inline-block;margin-top:18px;padding:18px;background:#fff;border-radius:20px"></div>'
+        + '<div style="margin-top:16px;font-size:' + Math.round(sz/19) + 'px;font-weight:900;color:#191919">휴대폰 카메라로 비춰 주세요</div>'
+        + '<div style="margin-top:6px;font-size:14px;font-weight:800;color:#3b3b3b">' + '채널 채팅방에서 입교등록 · 질문하기 · 퀴즈(게스트 입장)를 이용하세요' + '</div>'
+        + (state.isObserver ? '' : '<a href="#" id="kakaoChEdit" style="display:inline-block;margin-top:12px;font-size:12.5px;font-weight:800;color:#6b5d00">채널 주소 바꾸기</a>') + '</div>'
+        + '<style>@keyframes kchIn{from{opacity:0}to{opacity:1}}</style>';
+    document.body.appendChild(ov);
+    try{ new QRCode(ov.querySelector('#kakaoChBigQr'), { text: url, width: Math.round(sz), height: Math.round(sz), correctLevel: QRCode.CorrectLevel.M }); }catch(e){}
+    var close = function(){ ov.remove(); document.removeEventListener('keydown', esc, true); }, esc = function(e){ if(e.key === 'Escape'){ e.stopPropagation(); close(); } };
+    ov.onclick = close; document.addEventListener('keydown', esc, true);
+    var ed = ov.querySelector('#kakaoChEdit'); if(ed) ed.onclick = function(e){ e.preventDefault(); e.stopPropagation(); close(); if(ui.kakaoChSet()) ui.kakaoChOpen(); };
+};
+setTimeout(function(){ try{ ui.kakaoChInit(); }catch(e){} }, 1500);
 /* [K260] 연도별 항기원 과정 전체 + 설문 등재 현황. 연간계획은 해마다 새로 올라오므로 system/coord/planHistory/{연도}에 쌓아 둔다 */
 ui._svyPlanLoad = async function(){
     var box = document.getElementById('svyPlanCard'); if(!box) return;
