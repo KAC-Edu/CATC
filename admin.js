@@ -18777,7 +18777,7 @@ ui.applyShuttleFilter = function () {
             if (_onWaiting()) {
                 var backToCourse = (_waitFrom === 'dashboard');
                 var label = backToCourse ? '과정 운영 현황' : '통합 교육 현황판';
-                b.innerHTML = '<i class="fa-solid fa-chevron-left"></i><span>' + label + '</span>';
+                b.innerHTML = '<i class="fa-solid fa-reply"></i><span>' + label + '</span>';   // [K284] 다른 화면과 같은 ↩ 아이콘
                 b.title = '뒤로 — ' + label + '으로 돌아갑니다';
                 b.classList.add('is-back');
             } else {
@@ -21613,10 +21613,19 @@ ui.svyReportOpen = async function(id){
     var newSub = cm.filter(function(c){ return /신설|추가|있었으면|있으면 좋|생겼으면/.test(c.t) && /과목|강의|실습|교육|견학/.test(c.t); }).map(function(c){ return String(c.t).replace(/\s+/g,' ').trim(); }).slice(0, 2);
     var opItems = ((r.op || {}).items || []).filter(function(it){ return it.score > 30 && ui._svyOkK(it.k); }), opLow = opItems.filter(function(it){ return it.score < 95; }).map(function(it){ return it.k; });
     var envItems = ((r.env || {}).items || []).filter(function(it){ return it.score > 30 && ui._svyOkK(it.k); }), envLow = envItems.slice().sort(function(a,b){ return a.score - b.score; }).filter(function(it){ return it.score < 97; }).slice(0, 2).map(function(it){ return it.k; });
-    var envIss = {}; cm.forEach(function(c){ if(c.g !== 'env') return; var t = String(c.t); if(tag(t) !== 'neg' && tag(t) !== 'sug') return; var f = (ui._SVY_FIX || []).filter(function(x){ return x[0].test(t); })[0]; if(f) envIss[f[2]] = (envIss[f[2]] || 0) + 1; });
+    var envIss = {}; cm.forEach(function(c){ if(c.g !== 'env') return; var t = String(c.t); if(tag(t) !== 'neg' && tag(t) !== 'sug') return; var f = (ui._SVY_FIX || []).filter(function(x){ return x[0].test(t) && !/강사|일정|기간|교재|실습|견학|평가|동기|팀빌딩/.test(x[2]); })[0]; if(f) envIss[f[2]] = (envIss[f[2]] || 0) + 1; });
     var envTop = Object.keys(envIss).sort(function(a,b){ return envIss[b] - envIss[a]; }).slice(0, 3);
     var ops = cm.filter(function(c){ return c.g === 'opinion' && !isTriv(c.t); }), posN = ops.filter(function(c){ return tag(c.t) === 'pos'; }).length, sugO = ops.filter(function(c){ var g = tag(c.t); return g === 'sug' || g === 'neg'; }).map(function(c){ return String(c.t).replace(/\s+/g,' ').trim(); });
     var cut = function(t, n){ return t.length > n ? t.slice(0, n) + '…' : t; };
+    /* [K283] 칸을 더 채움 — 강사 평가 · 직전 회차 대비 · 향후 개선 방향 */
+    var IL = ((r.inst || {}).list || []).filter(function(x){ return x.score > 30; }).slice().sort(function(a,b){ return b.score - a.score; }), ivv = ui._svyVal(r, 'inst');
+    var instTxt = IL.length ? '- 강사평가 평균 ' + f2(ivv) + '점 · 출강 ' + IL.length + '명' + (IL[0] ? ', 최고 ' + IL[0].n + '(' + f2(IL[0].score) + ')' : '') + (IL.filter(function(x){ return x.score < 95; }).length ? '\n- 95점 미만: ' + IL.filter(function(x){ return x.score < 95; }).map(function(x){ return x.n + '(' + f2(x.score) + ')'; }).join(', ') + ' — 강의 방식 보완 협의 필요' : '\n- 모든 강사 95점 이상으로 고른 만족도') : '';
+    var ri = full.indexOf(r), pv = ri > 0 ? full[ri - 1] : null, dl = function(k){ var a = ui._svyVal(r, k), b = pv ? ui._svyVal(pv, k) : null; return a != null && b != null ? (a - b >= 0 ? '+' : '') + (Math.round((a - b)*100)/100).toFixed(2) : '-'; };
+    var prevTxt = pv ? '- 직전 회차(' + (pv._title || pv.title) + ') 대비 종합 ' + dl('total') + ', 과정운영 ' + dl('op') + ', 교육환경 ' + dl('env') + ', 강사 ' + dl('inst') : '- 비교할 직전 회차 자료 없음';
+    var badAll = cm.filter(function(c){ var g = tag(c.t); return (g === 'neg' || g === 'sug') && !isTriv(c.t); }).map(function(c){ return { t: c.t }; }), G2 = {}, O2 = [];
+    badAll.forEach(function(it){ var f = (ui._SVY_FIX || []).filter(function(x){ return x[0].test(it.t); })[0]; if(!f) return; if(!G2[f[2]]){ G2[f[2]] = { lab: f[2], fix: f[1], n: 0 }; O2.push(G2[f[2]]); } G2[f[2]].n++; });
+    O2.sort(function(a,b){ return b.n - a.n; });
+    var planTxt = O2.length ? O2.slice(0, 3).map(function(g){ return '- ' + g.lab + '(' + g.n + '건): ' + g.fix; }).join('\n') : '- 특이 개선 요구 없음 — 현 운영 수준 유지';
     var A = [
         '1. 과정운영 결과', '- 과정운영 만족도 ' + f2(opv) + '점, 전체평균 ' + f2(tot) + '점으로 ' + grade(tot),
         '2. 과정의 운영 (교과목의 편성 등)', opLow.length ? '- ' + opLow.join(', ') + ' 항목은 상대적으로 낮아 보완 검토 필요' : '- 교과목 구성, 교재, 업무수행 등 전 항목에서 높은 만족도 확인',
@@ -21624,13 +21633,18 @@ ui.svyReportOpen = async function(id){
         '3. 교육환경', '- 교육환경 만족도 ' + f2(envv) + '점으로 ' + (envv >= 95 ? '전반적으로 양호' : '일부 보완 필요'),
         envTop.length ? '- ' + envTop.join(', ') + ' 등 일부 개선 필요 의견 존재' : '- 교육환경 관련 별도 개선요구는 없으며 만족도 높음',
         envLow.length && envTop.length ? '- (상대적으로 낮은 항목) ' + envLow.join(', ') : '',
-        '4. 교육전반에 대한 소감', (ops.length && (posN >= ops.length / 2 || sugO.length <= ops.length / 3) ? '- 매우 유익하고 만족스러운 교육이라는 의견이 다수' : '- 교육 전반에 대한 다양한 의견 제시') + (sugO.length ? '\n- (건의) ' + cut(sugO[0], 50) : '')
+        '4. 강사 평가', instTxt || '- 강사 점수 자료 없음',
+        '5. 교육전반에 대한 소감', (ops.length && (posN >= ops.length / 2 || sugO.length <= ops.length / 3) ? '- 매우 유익하고 만족스러운 교육이라는 의견이 다수' : '- 교육 전반에 대한 다양한 의견 제시') + (sugO.length ? '\n- (건의) ' + cut(sugO[0], 45) : '') + '\n- 응답 ' + (r.n || '-') + '명 · 의견 ' + cm.length + '건 (불만·개선 ' + badAll.length + '건)',
+        '6. 전기 대비 변화', prevTxt,
+        '7. 향후 개선 방향', planTxt
     ].filter(Boolean).join('\n');
     var cat = (typeof kacDefCat === 'function' ? kacDefCat(r.title) : '') === 'duty-legal' ? 0 : 1;
     var V = function(k, d){ return saved[k] != null ? saved[k] : d; };
     var F = {
-        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof), oper: V('oper', serD.oper || ''),
-        purpose: V('purpose', serD.purpose || ''), c0: V('c0', cat === 0 ? '〇' : '-'), c1: V('c1', cat === 1 ? '〇' : '-'), c2: V('c2', '-'), c3: V('c3', '-'),
+        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof || '-'), oper: V('oper', serD.oper || '-'),
+        purpose: V('purpose', serD.purpose || (/신입/.test(r.title) ? '신입사원에게 회사의 비전·사업과 조직문화를 이해시키고 직무 기초역량과 동기 간 유대를 함양하여 조기 적응을 지원함'
+            : /초기/.test(r.title) ? '항공정보통신시설 직무를 부여하기 위하여 기본이론 및 동작원리 등을 이해시키고 현장에서 시행하는 직무교육에 대비하기 위함'
+            : /정기/.test(r.title) ? '자격인증 소지자에게 시설관리·유지보수 업무 역량 향상과 신기술 도입 등 지식과 기량을 습득시키기 위함' : '과정 운영 목적을 입력해 주세요')), c0: V('c0', cat === 0 ? '〇' : '-'), c1: V('c1', cat === 1 ? '〇' : '-'), c2: V('c2', '-'), c3: V('c3', '-'),
         plan: V('plan', r.n ? String(r.n) : ''), done: V('done', r.n ? String(r.n) : ''), fail: V('fail', '-'), why: V('why', '-'),
         iOut: V('iOut', String(nOut)), iIn: V('iIn', String(nIn)), iSum: V('iSum', String(ins.length)), anal: V('anal', A),
         s1: V('s1', f2(opv)), s2: V('s2', f2(envv)), s3: V('s3', f2(ui._svyVal(r, 'inst'))), s4: V('s4', f2(tot))
@@ -21650,7 +21664,7 @@ ui.svyReportOpen = async function(id){
         + '<tr><th rowspan="2">설문평가</th><td colspan="2" class="h">교육과정운영</td><td class="h">교육환경</td><td class="h">강사평가</td><td colspan="2" class="h">총 평균</td></tr>'
         + '<tr><td colspan="2">' + E('s1', 'c') + '</td>' + CHK('s2') + CHK('s3') + '<td colspan="2">' + E('s4', 'c b') + '</td></tr></table></div>';
     var CSS = '.rpPage{width:210mm;min-height:297mm;box-sizing:border-box;padding:16mm 18mm 14mm 20mm;background:#fff;color:#000;font-family:"Malgun Gothic","맑은 고딕",sans-serif;font-size:11pt}.rpTitle{margin:6mm 0 7mm}.rpE.t{font-size:18pt;font-weight:900;text-align:center;letter-spacing:-.5px}'
-        + '.rpT{width:100%;border-collapse:collapse;table-layout:fixed}.rpT th,.rpT td{border:1px solid #000;padding:2.2mm 2mm;vertical-align:middle}.rpT th{width:22mm;background:#f2f2f2;font-weight:700;text-align:center;line-height:1.4}.rpT td.h{background:#fafafa;text-align:center;font-weight:700}.rpT td.an{vertical-align:top;height:120mm}'
+        + '.rpT{width:100%;border-collapse:collapse;table-layout:fixed}.rpT th,.rpT td{border:1px solid #000;padding:2.2mm 2mm;vertical-align:middle}.rpT th{width:22mm;background:#f2f2f2;font-weight:700;text-align:center;line-height:1.4}.rpT td.h{background:#fafafa;text-align:center;font-weight:700}.rpT td.an{vertical-align:top;height:132mm;font-size:10.5pt}'
         + '.rpE{outline:none;min-height:1.2em;line-height:1.6;white-space:normal;word-break:keep-all}.rpE.c{text-align:center}.rpE.b{font-weight:900}.rpE:focus{background:#fffbeb;box-shadow:0 0 0 2px #fde68a}';
     var old = document.getElementById('svyRptOv'); if(old) old.remove();
     var full2 = full.slice().reverse(), ov = document.createElement('div'); ov.id = 'svyRptOv';
