@@ -18887,16 +18887,34 @@ ui._matCourseName = function(){
 };
 
 /* 현재 담임/강사 이름 — 업로드한 사람 표기용 */
+/* [K278] 담임이 지정되지 않은 과정 — 올릴 때 '누가 올리는지' 교수님 명단에서 고르게 한다 */
+ui._matHasProf = function(){ try{ var el = document.getElementById('dashProfNameOnly'), n = el ? String(el.innerText||'').trim() : ''; return !!(n && n !== '-' && !/^(미지정|미정|미상)$/.test(n)); }catch(e){ return false; } };
+ui._matPickWho = function(){
+    return new Promise(function(resolve){
+        var names = []; try{ (profMgr.list || []).forEach(function(p){ var n = String(p.name || '').trim(); if(n && names.indexOf(n) < 0) names.push(n); }); }catch(e){}
+        var last = ui._matPickedWho || '';
+        var ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+        ov.innerHTML = '<div style="background:#fff;border-radius:20px;padding:24px 26px;width:100%;max-width:520px;box-shadow:0 24px 60px rgba(15,23,42,.35)">'
+            + '<div style="font-size:18px;font-weight:900;color:#0f172a"><i class="fa-solid fa-user-pen" style="color:#2563eb"></i> 누가 올리나요?</div>'
+            + '<div style="margin-top:6px;font-size:13px;font-weight:700;color:#64748b">이 과정은 담임이 지정되지 않았습니다. 고른 교수님 이름으로 올라가고, 그 교수님의 자료실 용량에 잡힙니다.</div>'
+            + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:16px;max-height:50vh;overflow:auto">'
+            + (names.length ? names.map(function(n){ var on = n === last; return '<button data-n="' + ui._esc(n) + '" style="padding:12px 8px;border-radius:12px;border:2px solid ' + (on ? '#2563eb' : '#e2e8f0') + ';background:' + (on ? '#eff6ff' : '#fff') + ';font:inherit;font-size:15.5px;font-weight:900;color:#0f172a;cursor:pointer">' + ui._esc(n) + '</button>'; }).join('') : '<div style="grid-column:1/-1;padding:16px;color:#94a3b8;font-weight:800;text-align:center">등록된 교수님이 없습니다</div>')
+            + '</div><div style="display:flex;justify-content:flex-end;margin-top:16px"><button data-x style="padding:11px 22px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer">취소</button></div></div>';
+        document.body.appendChild(ov);
+        var done = function(v){ ov.remove(); if(v) ui._matPickedWho = v; resolve(v || ''); };
+        ov.querySelectorAll('[data-n]').forEach(function(b){ b.onclick = function(){ done(b.getAttribute('data-n')); }; });
+        ov.querySelector('[data-x]').onclick = function(){ done(''); }; ov.onclick = function(e){ if(e.target === ov) done(''); };
+    });
+};
 ui._matWho = function(ask){
     try{
         var el = document.getElementById('dashProfNameOnly');
         var n = el ? String(el.innerText||'').trim() : '';
-        if(n && n !== '-' && !/^(미지정|미정|미상)$/.test(n)) return n;   // [K277] 담임 미정 과정에서 '미지정 교수' 이름으로 올라가던 문제
+        if(n && n !== '-' && !/^(미지정|미정|미상)$/.test(n)) return n;
+        if(ui._matPickedWho) return ui._matPickedWho;   // [K278] 담임 미지정 과정에서 고른 교수님   // [K277] 담임 미정 과정에서 '미지정 교수' 이름으로 올라가던 문제
     }catch(e){}
     try{ var s = String(localStorage.getItem('kac_admin_prof')||'').trim(); if(s && !/^(미지정|미정|미상)$/.test(s)) return s;
-        if(!ask) return '강사';
-        var a = String(prompt('교재를 올리는 분의 성함을 적어 주세요. (내 자료실 용량이 이 이름으로 잡힙니다 · 이 PC에 기억)', '') || '').trim();
-        if(a){ localStorage.setItem('kac_admin_prof', a); return a; } }catch(e){}
+    }catch(e){}
     return '강사';
 };
 
@@ -19438,7 +19456,8 @@ ui._matUploadFiles = async function(files){
 };
 ui._matUploadRun = async function(){
     var files = ui._matQueue;          // 같은 배열 — 진행 중 추가되면 length 가 늘어난다
-    var room = state.room, who = ui._matWho(true);   // [K277] 담임이 없으면 올리는 분 성함을 한 번 묻는다
+    var room = state.room, who = ui._matWho();
+    if(!ui._matHasProf()){ who = await ui._matPickWho(); if(!who){ ui._matQueue = []; return; } }   // [K278] 담임 미지정 → 올리는 교수님 선택
     var pb = document.getElementById('matProgress');
     var done = 0, fail = 0;
     var show = function(msg, color){
@@ -21106,6 +21125,7 @@ ui.surveyOpen = async function(){
     if(!host.innerHTML.trim() || ui._svyLastK !== preK){ host.innerHTML = '<div style="padding:80px;text-align:center;color:#94a3b8;font-weight:800;background:#fff;border-radius:24px"><i class="fa-solid fa-spinner fa-spin" style="font-size:26px;color:#6366f1"></i><div style="margin-top:12px;font-size:16px">불러오는 중…</div></div>'; try{ window.scrollTo(0,0); }catch(e){} }
     ui._svyLastK = preK;
     var all = {}; try{ all = (await ui._svyRef().once('value')).val() || {}; }catch(e){}
+    try{ await new Promise(function(res){ ui._svyDoneLoad(res); }); }catch(e){}   // [K280] 조치 완료 날짜 → 분석·그래프에 표시
     var lim = new Date().getFullYear() - 10;   // 10년 지난 자료 정리
     Object.keys(all).forEach(function(k){ var y = Number((all[k] || {}).year) || 0; if(y && y < lim){ ui._svyRef().child(k).remove().catch(function(){}); ui._svyCmRef().child(k).remove().catch(function(){}); delete all[k]; } });
     var recs = Object.keys(all).map(function(k){ return Object.assign({ id: k }, all[k]); });
@@ -21328,6 +21348,8 @@ ui._svyStartMs = function(r){ var m = String((r && r.period) || '').match(/\d{4}
 ui._svyTopicNew = function(lab, items){ var d = ui._svyTopicDone(lab); if(!d) return []; var f = ui._SVY_FIX.filter(function(x){ return x[2] === lab; })[0]; if(!f) return [];
     return (items || []).filter(function(it){ return it.r && ui._svyStartMs(it.r) > (d.at || 0) && f[0].test(String(it.t || '')); }); };
 ui._svyTopicHidden = function(lab, items){ return !!ui._svyTopicDone(lab) && !ui._svyTopicNew(lab, items).length; };
+ui._svyDoneList = function(){ var M = ui._svyDoneMap || {}, out = []; (ui._SVY_FIX || []).forEach(function(f){ var k = ui._svyTopicKey(f[2]), d = M[k]; if(d && d.at) out.push({ lab: f[2], re: f[0], at: Number(d.at), key: k }); }); return out.sort(function(a,b){ return a.at - b.at; }); };
+ui._svyYmdOf = function(ms){ var d = new Date(Number(ms)); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
 ui._svySolCard = function(){
     var host = document.getElementById('svySolCard'); if(!host) return;
     if(!ui._svyDoneMap){ host.innerHTML = '<div style="padding:20px;color:#94a3b8;font-weight:800">불러오는 중…</div>'; return ui._svyDoneLoad(ui._svySolCard); }
@@ -21341,7 +21363,7 @@ ui._svySolCard = function(){
     var row = function(g, done){ var key = ui._svyTopicKey(g.lab), nw = ui._svyTopicNew(g.lab, items), last = g.list[g.list.length - 1], mon = last && last.r ? ui._svyYM(last.r) : '';
         var cms = g.list.slice().reverse().slice(0, 10).map(function(c){ var tt = esc(c.t).replace(new RegExp(g.re.source, 'g' + (g.re.ignoreCase ? 'i' : '')), function(m){ return '<mark>' + m + '</mark>'; }); return '<div class="evC"><span class="tg ' + c.tag + '">' + TN[c.tag] + '</span>' + ui._svyWx(c.t, c.r) + '<span class="tx">' + tt + '</span><span class="rr">' + esc(c.lab) + (c.r && ui._svyYM(c.r) ? ' · ' + ui._svyYM(c.r) : '') + '</span></div>'; }).join('') + (g.list.length > 10 ? '<div class="evS">… 외 ' + (g.list.length - 10) + '건</div>' : '');
         return '<tr class="solR' + (done ? ' dn' : '') + '" data-k="' + key + '"><td class="solT"><i class="fa-solid fa-chevron-right solChev"></i> ' + esc(g.lab) + (nw.length ? ' <span class="solNew">조치 후 다시 제기 ' + nw.length + '건</span>' : '') + '</td><td><b>' + g.list.length + '</b>건</td><td class="solFx">' + esc(g.fix) + '</td><td>' + esc(mon) + '</td>'
-            + '<td><label class="solChk" onclick="event.stopPropagation()"><input type="checkbox" data-tk="' + key + '" data-lab="' + esc(g.lab) + '"' + (done ? ' checked' : '') + '> 조치 완료</label></td></tr>'
+            + '<td><label class="solChk" onclick="event.stopPropagation()"><input type="checkbox" data-tk="' + key + '" data-lab="' + esc(g.lab) + '"' + (done ? ' checked' : '') + '> 조치 완료</label>' + (done && ui._svyTopicDone(g.lab) && ui._svyTopicDone(g.lab).at ? '<div><a href="#" class="solDt" data-dk="' + key + '" onclick="event.stopPropagation()" title="조치한 날짜 바꾸기 — 그래프 깃발·전후 비교에 쓰입니다">' + ui._svyYmdOf(ui._svyTopicDone(g.lab).at).slice(2).replace(/-/g,'.') + ' 완료 <i class="fa-solid fa-pen"></i></a></div>' : '') + '</td></tr>'
             + '<tr class="solD" data-for="' + key + '" style="display:none"><td colspan="5" style="text-align:left"><div class="evB" style="display:block;margin:0">' + cms + '</div></td></tr>'; };
     var sol = ui._svySolve(items);
     host.innerHTML = '<div style="display:flex;align-items:center;gap:8px;font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-screwdriver-wrench" style="color:#0284c7"></i> 개선 방향 · 조치 관리 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 불만·개선 의견을 주제별로 묶어 조치 방안을 제안합니다 · 조치를 마치면 체크</span></div>'
@@ -21349,8 +21371,12 @@ ui._svySolCard = function(){
         + (vis.length || hid.length ? '<table class="solTbl"><thead><tr><th>주제</th><th>의견</th><th>조치 방안</th><th>최근 언급</th><th>상태</th></tr></thead><tbody>' + vis.map(function(g){ return row(g, false); }).join('')
             + (hid.length ? '<tr><td colspan="5" style="text-align:right;padding:10px 6px"><a href="#" id="solHidT" style="font-size:13.5px;font-weight:900;color:#15803d;text-decoration:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:999px;padding:4px 12px">' + (ui._svySolShowDone ? '조치 완료 ' + hid.length + '건 숨기기' : '조치 완료 ' + hid.length + '건 보기') + '</a></td></tr>' + (ui._svySolShowDone ? hid.map(function(g){ return row(g, true); }).join('') : '') : '')
             + '</tbody></table>' : '')
-        + ui._SVY_SOL_CSS + '<style>.solTbl{width:100%;border-collapse:collapse;margin-top:14px}.solTbl th{font-size:14px;color:#64748b;font-weight:900;padding:9px 8px;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center}.solTbl td{padding:11px 8px;border-bottom:1px solid #f1f5f9;font-size:15.5px;text-align:center;vertical-align:middle}.solR{cursor:pointer}.solR:hover{background:#f8fafc}.solR.dn{opacity:.55}.solT{text-align:left!important;font-weight:900;color:#0f172a;white-space:nowrap}.solChev{font-size:11px;color:#94a3b8;transition:transform .2s;margin-right:4px}.solR.open .solChev{transform:rotate(90deg)}.solFx{text-align:left!important;color:#0369a1;font-weight:800}.solNew{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:900}.solChk{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;border:1px solid #bae6fd;background:#fff;color:#0369a1;font-size:13.5px;font-weight:900;cursor:pointer;white-space:nowrap}.solR.dn .solChk{border-color:#bbf7d0;color:#15803d}</style>';
+        + ui._SVY_SOL_CSS + '<style>.solTbl{width:100%;border-collapse:collapse;margin-top:14px}.solTbl th{font-size:14px;color:#64748b;font-weight:900;padding:9px 8px;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center}.solTbl td{padding:11px 8px;border-bottom:1px solid #f1f5f9;font-size:15.5px;text-align:center;vertical-align:middle}.solR{cursor:pointer}.solR:hover{background:#f8fafc}.solR.dn{opacity:.55}.solT{text-align:left!important;font-weight:900;color:#0f172a;white-space:nowrap}.solChev{font-size:11px;color:#94a3b8;transition:transform .2s;margin-right:4px}.solR.open .solChev{transform:rotate(90deg)}.solFx{text-align:left!important;color:#0369a1;font-weight:800}.solNew{display:inline-block;margin-left:6px;padding:2px 8px;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:12px;font-weight:900}.solDt{display:inline-block;margin-top:4px;font-size:12px;font-weight:900;color:#15803d;text-decoration:none}.solDt i{font-size:10px;margin-left:2px}.solChk{display:inline-flex;align-items:center;gap:5px;padding:4px 11px;border-radius:999px;border:1px solid #bae6fd;background:#fff;color:#0369a1;font-size:13.5px;font-weight:900;cursor:pointer;white-space:nowrap}.solR.dn .solChk{border-color:#bbf7d0;color:#15803d}</style>';
     host.querySelectorAll('.solR').forEach(function(tr){ tr.onclick = function(){ var d = host.querySelector('.solD[data-for="' + tr.getAttribute('data-k') + '"]'); var on = d.style.display === 'none'; d.style.display = on ? '' : 'none'; tr.classList.toggle('open', on); }; });
+    host.querySelectorAll('.solDt').forEach(function(a){ a.onclick = function(e){ e.preventDefault(); e.stopPropagation(); var k = a.getAttribute('data-dk'), d = (ui._svyDoneMap || {})[k]; if(!d) return;
+        var v = prompt('조치한 날짜를 적어 주세요 (예: 2025-09-15)\n이 날짜를 기준으로 조치 전·후 의견을 비교하고, 점수 그래프에 깃발로 표시합니다.', ui._svyYmdOf(d.at)); if(v === null) return; v = String(v).trim();
+        if(!/^\d{4}-\d{1,2}-\d{1,2}$/.test(v)) return ui.showAlert('날짜는 2025-09-15 처럼 적어 주세요.'); var p = v.split('-'), ms = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])).getTime();
+        d.at = ms; try{ ui._svyDoneRef().child(k).update({ at: ms }); }catch(err){} ui._svySolCard(); }; });   /* [K280] 지난 조치도 날짜를 넣을 수 있게 */
     host.querySelectorAll('input[data-tk]').forEach(function(cb){ cb.onchange = function(){ ui._svyDoneTog(cb.getAttribute('data-tk'), cb.getAttribute('data-lab'), cb.checked); setTimeout(ui._svySolCard, cb.checked ? 400 : 0); }; });
     var ht = document.getElementById('solHidT'); if(ht) ht.onclick = function(e){ e.preventDefault(); ui._svySolShowDone = !ui._svySolShowDone; ui._svySolCard(); };
 };
@@ -21472,10 +21498,28 @@ ui._svyInsight = function(list, card){
     var isBad = function(t){ return t === 'neg' || t === 'sug'; }, isGood = function(t){ return t === 'pos'; };
     TOP.forEach(function(tp){ var nR = cnt(rec, isBad, tp[1]), nB = cnt(base, isBad, tp[1]), rR = nR / rec.length, rB = base.length ? nB / base.length : 0;
         var evBad = function(){ return '<div class="evS" style="color:#475569">회차당 건수 = 해당 기간 불만·개선 의견 수 ÷ 결과지 수 (' + esc(baseLab) + ' ' + base.length + '회 · ' + esc(recLab) + ' ' + rec.length + '회)</div>' + ui._svySolve(cmList(rec, isBad, tp[1]).concat(cmList(base, isBad, tp[1])).map(function(c){ return { t: c.t, r: c._r }; })) + ui._SVY_SOL_CSS + cmHtml(recLab, cmList(rec, isBad, tp[1]), tp[1]) + cmHtml(baseLab, cmList(base, isBad, tp[1]), tp[1]); };   /* [K258] 제안 먼저 */
-        if(nR >= 2 && rR - rB >= 0.5) bad.push({ t: '<b>' + tp[0] + '</b> 관련 불만·개선요청이 늘었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>', ev: evBad() });
-        else if(nB >= 2 && rB - rR >= 0.5) good.push({ t: '<b>' + tp[0] + '</b> 관련 불만이 줄었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>', ev: evBad() });
         var pR = cnt(rec, isGood, tp[1]), pB = cnt(base, isGood, tp[1]), qR = pR / rec.length, qB = base.length ? pB / base.length : 0;
-        if(pR >= 2 && (pB === 0 || qR - qB >= 0.7)) good.push({ t: '<b>' + tp[0] + '</b>에 대한 호평이 ' + (pB === 0 ? '새로 나타났습니다' : '늘었습니다') + ' <span class="ev">(' + recLab + ' ' + pR + '건)</span>', ev: cmHtml(recLab, cmList(rec, isGood, tp[1]), tp[1]) + cmHtml(baseLab, cmList(base, isGood, tp[1]), tp[1]) }); });
+        var badUp = nR >= 2 && rR - rB >= 0.5, goodUp = pR >= 2 && (pB === 0 || qR - qB >= 0.7);
+        /* [K279] 같은 주제에서 호평과 불만이 함께 늘면 한 줄로 — 회차별 흐름(예: 시설 개선 후 좋아짐)을 표로 보여 준다 */
+        if(badUp && goodUp){
+            var allR = base.concat(rec), rowsM = allR.map(function(r){ return { l: rlab(r), b: cnt([r], isBad, tp[1]), g: cnt([r], isGood, tp[1]) }; }).filter(function(x){ return x.b || x.g; });
+            var lastB = rowsM.length ? rowsM[rowsM.length-1] : null, trend = lastB ? (lastB.g > lastB.b ? '가장 최근 회차는 <b style="color:#15803d">호평이 더 많아</b> 좋아지는 흐름으로 보입니다' : (lastB.b > lastB.g ? '가장 최근 회차도 <b style="color:#b91c1c">불만·개선이 더 많습니다</b>' : '최근 회차는 호평과 불만이 비슷합니다')) : '';
+            bad.push({ t: '<b>' + tp[0] + '</b> — 호평과 불만·개선이 <b>함께</b> 늘었습니다 <span class="ev">(관심 증가 · 회차별 흐름 확인)</span>',
+                ev: '<div class="evS" style="color:#475569">이용이 늘거나 시설이 바뀌는 중이면 두 의견이 함께 늘 수 있습니다. ' + trend + '.</div>'
+                    + '<table class="evT"><thead><tr><th>회차</th><th>불만·개선</th><th>호평</th></tr></thead><tbody>' + rowsM.map(function(x){ return '<tr><td>' + esc(x.l) + '</td><td style="color:' + (x.b ? '#b91c1c' : '#cbd5e1') + ';font-weight:900">' + x.b + '</td><td style="color:' + (x.g ? '#15803d' : '#cbd5e1') + ';font-weight:900">' + x.g + '</td></tr>'; }).join('') + '</tbody></table>'
+                    + cmHtml(recLab + ' 불만·개선', cmList(rec, isBad, tp[1]), tp[1]) + cmHtml(recLab + ' 호평', cmList(rec, isGood, tp[1]), tp[1]) });
+            return;
+        }
+        if(badUp) bad.push({ t: '<b>' + tp[0] + '</b> 관련 불만·개선요청이 늘었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>', ev: evBad() });
+        else if(nB >= 2 && rB - rR >= 0.5) good.push({ t: '<b>' + tp[0] + '</b> 관련 불만이 줄었습니다 <span class="ev">(회차당 ' + f1(rB) + '→' + f1(rR) + '건)</span>', ev: evBad() });
+        if(goodUp) good.push({ t: '<b>' + tp[0] + '</b>에 대한 호평이 ' + (pB === 0 ? '새로 나타났습니다' : '늘었습니다') + ' <span class="ev">(' + recLab + ' ' + pR + '건)</span>', ev: cmHtml(recLab, cmList(rec, isGood, tp[1]), tp[1]) + cmHtml(baseLab, cmList(base, isGood, tp[1]), tp[1]) }); });
+    /* [K280] 조치 완료 주제 — 조치 날짜 전·후 회차당 의견 수 비교 */
+    try{ ui._svyDoneList().forEach(function(dn){ var bf = list.filter(function(r){ return ui._svyStartMs(r) < dn.at; }), af = list.filter(function(r){ return ui._svyStartMs(r) >= dn.at; }); if(!af.length || !bf.length) return;
+        var bB = cnt(bf, isBad, dn.re) / bf.length, bA = cnt(af, isBad, dn.re) / af.length, gB = cnt(bf, isGood, dn.re) / bf.length, gA = cnt(af, isGood, dn.re) / af.length, ds = ui._svyYmdOf(dn.at);
+        var dTxt = ds.slice(0,4) + '년 ' + Number(ds.slice(5,7)) + '월', sub = '<span class="ev">(회차당 불만 ' + f1(bB) + '→' + f1(bA) + '건 · 호평 ' + f1(gB) + '→' + f1(gA) + '건)</span>';
+        var tbl = '<div class="evS" style="color:#475569">조치 완료일 ' + ds + ' 기준 · 조치 전 ' + bf.length + '회 · 조치 후 ' + af.length + '회</div><table class="evT"><thead><tr><th></th><th>조치 전</th><th>조치 후</th></tr></thead><tbody><tr><td>불만·개선 (회차당)</td><td>' + f1(bB) + '</td><td><b>' + f1(bA) + '</b></td></tr><tr><td>호평 (회차당)</td><td>' + f1(gB) + '</td><td><b>' + f1(gA) + '</b></td></tr></tbody></table>' + cmHtml('조치 후 의견', cmList(af, function(t){ return t === 'neg' || t === 'sug' || t === 'pos'; }, dn.re), dn.re);
+        if(bA < bB - 0.2 || gA > gB + 0.2) good.unshift({ t: '<b>' + esc(dn.lab) + '</b> — <b>' + dTxt + ' 조치</b> 이후 좋아졌습니다 ' + sub, ev: tbl });
+        else if(bA > bB + 0.2) bad.unshift({ t: '<b>' + esc(dn.lab) + '</b> — ' + dTxt + ' 조치 이후에도 불만이 이어집니다 ' + sub, ev: tbl }); }); }catch(e){}
     if(!head && !good.length && !bad.length) return '';
     var li = function(arr, cls, ic){ return arr.map(function(x){ return '<li class="' + cls + ' evL" onclick="ui._svyEvTog(this, event)" title="눌러서 근거 보기"><i class="fa-solid ' + ic + '"></i><div style="flex:1"><span>' + x.t + ' <i class="fa-solid fa-chevron-down evChev"></i></span><div class="evB">' + (x.ev || '') + '</div></div></li>'; }).join(''); };
     return '<div class="svyRep" style="' + card + '"><div style="display:flex;align-items:center;gap:8px;font-size:19px;font-weight:900;color:#3b0764"><i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed"></i> 한눈에 보는 분석 <span style="font-size:13px;color:#7c3aed;font-weight:800;opacity:.8">· ' + esc(recLab) + ' vs ' + esc(baseLab) + ' · 결과지 자동 비교</span></div>'
@@ -21617,6 +21661,11 @@ ui._svyChart = function(list, lab){
     /* [K269] 맨 끝 회차는 왼쪽으로만, 맨 앞 회차는 오른쪽으로만 벌려 그래프 밖으로 나가지 않게 */
     DX.forEach(function(o, i){ var ks = Object.keys(o); if(!ks.length) return; var vs = ks.map(function(k){ return o[k]; }), mx = Math.max.apply(null, vs), mn = Math.min.apply(null, vs);
         if(i === list.length - 1) ks.forEach(function(k){ o[k] -= mx; }); else if(i === 0) ks.forEach(function(k){ o[k] -= mn; }); });
+    /* [K280] 조치 완료 깃발 — 조치 날짜 바로 뒤 첫 회차 앞에 표시 */
+    try{ var fl = {}; ui._svyDoneList().forEach(function(dn){ var j = -1; list.forEach(function(r, i){ if(j < 0 && ui._svyStartMs(r) >= dn.at) j = i; }); if(j <= 0) return; (fl[j] = fl[j] || []).push(dn.lab); });
+        Object.keys(fl).forEach(function(j){ var fx = (X(Number(j)) + X(Number(j) - 1)) / 2, labs = fl[j];
+            g += '<g pointer-events="none"><line x1="' + fx + '" x2="' + fx + '" y1="' + (pt + 2) + '" y2="' + (H - pb) + '" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="3 4" opacity=".7"/><path d="M' + fx + ' ' + (pt + 2) + ' l12 5 l-12 5 z" fill="#16a34a"/>'
+               + '<text x="' + (fx + 15) + '" y="' + (pt + 11) + '" font-size="11.5" font-weight="900" fill="#15803d">' + ui._esc(labs.slice(0,2).join('·') + (labs.length > 2 ? ' 외 ' + (labs.length - 2) : '')) + ' 조치</text></g>'; }); }catch(e){}
     /* [K269] 위 카드(최근 결과)가 그래프의 어느 회차인지 — 늘 보이는 세로 띠 */
     if(list.length > 1){ var lx = X(list.length - 1); g += '<rect x="' + (lx - 40) + '" y="' + (pt - 8) + '" width="48" height="' + (H - pt - pb + 8) + '" rx="10" fill="#6366f1" opacity="0.07" pointer-events="none"/><line x1="' + lx + '" x2="' + lx + '" y1="' + (pt - 4) + '" y2="' + (H - pb) + '" stroke="#6366f1" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.5" pointer-events="none"/><text x="' + (lx - 16) + '" y="' + (pt + 2) + '" text-anchor="end" font-size="12" font-weight="900" fill="#6366f1" pointer-events="none">▲ 위 카드 = 최근 결과</text>'; }
     ser.forEach(function(s){ var pts = [];
