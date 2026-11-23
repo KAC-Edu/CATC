@@ -21161,7 +21161,7 @@ ui.surveyOpen = async function(){
           + (sel === cur ? '<span style="padding:3px 10px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:12.5px;font-weight:900">현재 운영 과정</span>' : '')
           + '<span style="font-size:13.5px;font-weight:800;color:#94a3b8">결과지 ' + S.list.length + '건 · ' + yrs(S) + '</span>'
           + '<span style="flex:1"></span>'
-          + (years.length > 1 ? '<span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:900;color:#475569">기간 <select id="svyYF" class="svyYs">' + years.map(function(y){ return '<option' + (y === yf ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select> ~ <select id="svyYT" class="svyYs">' + years.map(function(y){ return '<option' + (y === yt ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>' + ((yf !== years[0] || yt !== years[years.length-1]) ? ' <a href="#" id="svyYAll" style="color:#6366f1;text-decoration:none;font-size:13px">전체</a>' : '') + '</span>' : '') + upBtn + '</div>'
+          + (years.length > 1 ? '<span style="display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:900;color:#475569">기간 <select id="svyYF" class="svyYs">' + years.map(function(y){ return '<option' + (y === yf ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select> ~ <select id="svyYT" class="svyYs">' + years.map(function(y){ return '<option' + (y === yt ? ' selected' : '') + '>' + y + '</option>'; }).join('') + '</select>' + ((yf !== years[0] || yt !== years[years.length-1]) ? ' <a href="#" id="svyYAll" style="color:#6366f1;text-decoration:none;font-size:13px">전체</a>' : '') + '</span>' : '') + (full.length ? '<button onclick="ui.svyReportOpen()" class="svyHB" style="background:#0f172a;color:#fff" title="교육운영 결과보고(1쪽) — 회차를 골라 출력"><i class="fa-solid fa-file-lines"></i> 결과 보고서</button>' : '') + upBtn + '</div>'
         : '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="position:relative;flex:1;min-width:280px"><i class="fa-solid fa-magnifying-glass" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:16px"></i>'
           + '<input id="svyQ" autocomplete="off" placeholder="과정명으로 찾기 (예: 항공정보통신 초기, 감시 정기)" value="' + esc(ui._svyQ || '') + '" style="width:100%;box-sizing:border-box;padding:14px 16px 14px 44px;border:2px solid #e2e8f0;border-radius:14px;font:inherit;font-size:17px;font-weight:800;outline:none"></div>' + upBtn + '</div>')
       + '<div style="margin-top:10px;font-size:12.5px;font-weight:700;color:#94a3b8"><i class="fa-solid fa-shield-halved"></i> PDF 원본은 저장하지 않고 점수·의견만 저장 · 강사 이름은 장*석처럼 가림 · 10년 지난 자료는 자동 정리 · 여러 개를 한 번에 골라도 됩니다</div>'
@@ -21206,7 +21206,7 @@ ui.surveyOpen = async function(){
         return (r.comments || []).filter(function(c){ var key = String(c.t).replace(/\s+/g,''); if(seen[key]) return false; seen[key] = 1; var hint = String(c.c||'').replace(/\s+/g,'');
             return m[0].test(hint) || (m[1] && ui._svyCatOf(c) === m[1] && (!/^생활관/.test(k) || !/생활관(시설|관리)/.test(hint) || m[0].test(hint))); })
           .map(function(c){ return { t: c.t, tag: ui._svyTag(c.t) }; }).filter(function(c){ return c.tag !== 'etc' || String(c.t).length >= 12; }); };
-    ui._svyItemCms = itemCms; ui._svyList = list; ui._svyLab = lab;
+    ui._svyItemCms = itemCms; ui._svyList = list; ui._svyLab = lab; ui._svyFull = full; ui._svySerName = S ? S.name : '';
     var cell = function(v){ if(v == null) return '<td style="color:#cbd5e1">-</td>'; var bg = v >= 98 ? '#dcfce7' : v >= 95 ? '#f0fdf4' : v >= 90 ? '#fef9c3' : '#fee2e2', fg = v >= 95 ? '#15803d' : v >= 90 ? '#a16207' : '#b91c1c'; return '<td style="background:' + bg + ';color:' + fg + ';font-weight:900">' + f1(v) + '</td>'; };
     var th = list.map(function(r){ return '<th>' + esc(lab(r)) + '</th>'; }).join('');
     h += '<div style="' + card + '"><div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-table-cells" style="color:#2563eb"></i> 문항별 변화 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 98↑ 초록 / 90~95 노랑 / 90↓ 빨강</span></div>'
@@ -21271,7 +21271,7 @@ ui.surveyOpen = async function(){
     h += '<div id="svySolCard" style="' + card + '"></div>';   // [K235] 교육생 목소리 아래 — 개선 방향 · 조치 관리
     /* 올린 자료 */
     h += '<div style="' + card + ';padding:20px 28px"><div style="font-size:16px;font-weight:900;color:#0f172a"><i class="fa-solid fa-folder-open" style="color:#64748b"></i> 올린 결과지 ' + full.length + '건 <span style="font-size:13px;color:#94a3b8;font-weight:700">· 체크한 결과지만 분석에 넣습니다</span>' + (list.length !== full.length ? ' <span style="font-size:13px;color:#6366f1">(기간 안 ' + list.length + '건)</span>' : '') + '</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">'
-      + full.slice().reverse().map(function(r){ return '<label class="svyRec' + (r.off ? ' off' : '') + '" title="원래 제목: ' + esc(r.title) + ' · 체크를 풀면 분석에서 빠지고, 다시 체크하면 돌아옵니다"><input type="checkbox" data-on="' + esc(r.id) + '"' + (r.off ? '' : ' checked') + '> ' + esc(r._title) + ' <small>' + esc(String(r.period).slice(0,10)) + '</small></label>'; }).join('') + '</div></div>';
+      + full.slice().reverse().map(function(r){ return '<label class="svyRec' + (r.off ? ' off' : '') + '" title="원래 제목: ' + esc(r.title) + ' · 체크를 풀면 분석에서 빠지고, 다시 체크하면 돌아옵니다"><input type="checkbox" data-on="' + esc(r.id) + '"' + (r.off ? '' : ' checked') + '> ' + esc(r._title) + ' <small>' + esc(String(r.period).slice(0,10)) + '</small><a href="#" onclick="event.preventDefault();event.stopPropagation();ui.svyReportOpen(\'' + esc(r.id) + '\')" title="이 회차 결과 보고서" style="margin-left:6px;color:#0f172a"><i class="fa-solid fa-file-lines"></i></a></label>'; }).join('') + '</div></div>';
     host.innerHTML = h + css0 + '<style>.svyT{border-collapse:separate;border-spacing:0;width:100%}.svyT th{padding:12px 12px;font-size:15.5px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;white-space:nowrap;text-align:center}.svyT td{padding:13px 12px;font-size:17.5px;text-align:center;border-bottom:1px solid #f1f5f9;white-space:nowrap}.svyG{display:inline-block;padding:3px 9px;border-radius:999px;font-size:13px;font-weight:900}.svyG.op{background:#dbeafe;color:#1d4ed8}.svyIC{position:relative}.svyInsC:hover{outline:2px solid #7c3aed;outline-offset:-2px}.svyInsC.on{outline:3px solid #6d28d9;outline-offset:-3px}.svyIC:hover{outline:2px solid #6366f1;outline-offset:-2px}.svyIC.on{outline:3px solid #4f46e5;outline-offset:-3px}.svyNb{position:absolute;top:4px;right:6px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#ef4444;color:#fff;font-size:12px;font-weight:900;line-height:19px}.svyDet{margin-top:14px;border:2px solid #c7d2fe;border-radius:16px;background:#f8faff;padding:14px 16px}.svyG.env{background:#dcfce7;color:#15803d}.svyVoice{display:grid;grid-template-columns:minmax(260px,1fr) 1.3fr;gap:18px;margin-top:14px}@media(max-width:900px){.svyVoice{grid-template-columns:1fr}}.svyBar{display:flex;align-items:center;gap:10px;padding:7px 8px;border-radius:10px;cursor:pointer}.svyBar:hover,.svyBar.on{background:#f1f5f9}.svyBL{width:140px;font-size:16.5px;font-weight:900;color:#334155}.svyBT{flex:1;height:14px;background:#f1f5f9;border-radius:999px;overflow:hidden}.svyBT i{display:block;height:100%;border-radius:999px}.svyKw{display:inline-block;margin:3px;padding:5px 11px;border-radius:999px;background:#fdf2f8;color:#9d174d;font-weight:900}.svyKw b{color:#db2777}.svyKw{cursor:pointer;transition:background .15s}.svyKw:hover,.svyKw.on{background:#db2777;color:#fff}.svyKw:hover b,.svyKw.on b{color:#fff}.svyYs{padding:7px 8px;border:2px solid #e2e8f0;border-radius:10px;font:inherit;font-size:14px;font-weight:900}.svyPt{cursor:pointer}.svyTab{padding:9px 16px;border:2px solid #e2e8f0;border-radius:999px;background:#fff;font:inherit;font-size:15px;font-weight:900;color:#475569;cursor:pointer}.svyTab.on{border-color:#4f46e5;background:#eef2ff;color:#3730a3}.svyList{max-height:460px;overflow:auto;border:1px solid #eef2f7;border-radius:14px}.svyC{display:flex;gap:10px;padding:14px 16px;border-bottom:1px solid #f1f5f9;font-size:17px;font-weight:700;color:#334155;line-height:1.6}.svyC .tg{flex-shrink:0;padding:3px 10px;height:fit-content;border-radius:999px;font-size:13.5px;font-weight:900}.svyC .tg.neg{background:#fee2e2;color:#b91c1c}.svyC .tg.sug{background:#fef3c7;color:#a16207}.svyC .tg.pos{background:#dcfce7;color:#15803d}.svyC .tg.etc{background:#f1f5f9;color:#64748b}.svyC small{display:block;color:#94a3b8;font-weight:800;font-size:12px}.svyYm{flex-shrink:0;align-self:center;padding:4px 12px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:14px;font-weight:900;white-space:nowrap}.svyRec{cursor:pointer;user-select:none}.svyRec input{width:16px;height:16px;accent-color:#4f46e5;cursor:pointer;margin:0}.svyRec.off{opacity:.5;text-decoration:line-through;background:#fff}.svyRec{display:inline-flex;align-items:center;gap:6px;padding:7px 13px 7px 11px;border-radius:999px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13.5px;font-weight:800;color:#334155}.svyRec small{color:#94a3b8}.svyRec button{border:none;background:none;color:#cbd5e1;cursor:pointer}.svyRec button:hover{color:#dc2626}</style>';
     ui._svyBind(host);
     ui._svyShow('bad', '');
@@ -21587,6 +21587,95 @@ ui.kakaoChOpen = function(){
     var ed = ov.querySelector('#kakaoChEdit'); if(ed) ed.onclick = function(e){ e.preventDefault(); e.stopPropagation(); close(); if(ui.kakaoChSet()) ui.kakaoChOpen(); };
 };
 setTimeout(function(){ try{ ui.kakaoChInit(); }catch(e){} }, 1500);
+/* [K282] 교육운영 결과보고(1쪽) — 교수가 과정 종료 후 쓰던 한글 양식과 같은 모양. 설문 결과로 자동 작성 + 칸마다 고쳐 쓰기 + 저장 + 인쇄/PDF */
+ui._svyRptRef = function(){ return firebase.database().ref('system/coord/surveyReport'); };
+ui.svyReportOpen = async function(id){
+    var full = ui._svyFull || [], r = id ? full.filter(function(x){ return x.id === id; })[0] : full[full.length - 1]; if(!r) return;
+    var esc = ui._esc, f2 = function(v){ return v == null ? '-' : (Math.round(v*100)/100).toFixed(2); };
+    var cm = []; try{ cm = (await ui._svyCmRef().child(r.id).once('value')).val() || []; }catch(e){}
+    var saved = {}, serD = {}; try{ saved = (await ui._svyRptRef().child(r.id).once('value')).val() || {}; serD = (await ui._svyRptRef().child('_series/' + String(r.series || '').replace(/[.#$\/\[\]]/g,'_')).once('value')).val() || {}; }catch(e){}
+    /* 연간계획 기록에서 담임 찾기 */
+    var prof = ''; try{ var ph = (await firebase.database().ref('system/coord/planHistory/' + String(r.year || '')).once('value')).val() || {}, st = ui._svyStartMs(r);
+        Object.keys(ph).forEach(function(k){ var c = ph[k]; if(prof || !c || !c.name) return; var sk = ui._svySeriesOf(c.name).key.replace(/과정|\s/g,''), rk = String(r.series || '').replace(/과정|\s/g,''); var cs = new Date(c.startDate + 'T00:00:00').getTime(); if(sk === rk && Math.abs(cs - st) <= 7*864e5) prof = String(c.prof || '').split(/[,\/]/)[0]; }); }catch(e){}
+    /* 기간 */
+    var ds = String(r.period || '').match(/\d{4}-\d{2}-\d{2}/g) || [], pTxt = '';
+    if(ds.length){ var a = new Date(ds[0] + 'T00:00:00'), b = new Date((ds[1] || ds[0]) + 'T00:00:00'), days = Math.round((b - a) / 864e5) + 1;
+        pTxt = a.getFullYear() + '. ' + (a.getMonth()+1) + '. ' + a.getDate() + '. ~ ' + (b.getFullYear() !== a.getFullYear() ? b.getFullYear() + '. ' : '') + (b.getMonth()+1) + '. ' + b.getDate() + '.(' + (days <= 7 ? '1주' : days + '일') + ')'; }
+    /* 강사 현황 — 교수 명단과 같은 이름(가린 이름 기준)은 사내(교수) */
+    var ins = ((r.inst || {}).list || []).map(function(x){ return x.n; }), profs = []; try{ profs = (profMgr.list || []).map(function(p){ return ui._svyMask(String(p.name || '').trim()); }); }catch(e){}
+    var nIn = ins.filter(function(n){ return profs.indexOf(n) >= 0; }).length, nOut = ins.length - nIn;
+    /* 분석 문장 자동 작성 */
+    var isTriv = function(t){ t = String(t).replace(/\s/g,''); return t.length < 3 || /^(없음|없습니다|의견이없습니다|만족|만족합니다|매우만족|모든과정만족|전과목|해당없음|\.+)$/.test(t) || /만족|좋았|감사/.test(t) && t.length < 12; };
+    var tag = function(t){ return ui._svyTag(t); }, opv = ui._svyVal(r, 'op'), envv = ui._svyVal(r, 'env'), tot = r.total;
+    var grade = function(v){ return v == null ? '' : (v >= 95 ? '우수' : v >= 90 ? '양호' : '보통'); };
+    var useful = {}; cm.forEach(function(c){ if(c.g === 'op' && /기타/.test(c.c || '') && !isTriv(c.t) && String(c.t).length <= 30 && !/없/.test(c.t)) { var k = String(c.t).replace(/\s+/g,' ').trim(); useful[k] = (useful[k] || 0) + 1; } });
+    var usefulTop = Object.keys(useful).sort(function(a,b){ return useful[b] - useful[a]; }).slice(0, 3);
+    var newSub = cm.filter(function(c){ return /신설|추가|있었으면|있으면 좋|생겼으면/.test(c.t) && /과목|강의|실습|교육|견학/.test(c.t); }).map(function(c){ return String(c.t).replace(/\s+/g,' ').trim(); }).slice(0, 2);
+    var opItems = ((r.op || {}).items || []).filter(function(it){ return it.score > 30 && ui._svyOkK(it.k); }), opLow = opItems.filter(function(it){ return it.score < 95; }).map(function(it){ return it.k; });
+    var envItems = ((r.env || {}).items || []).filter(function(it){ return it.score > 30 && ui._svyOkK(it.k); }), envLow = envItems.slice().sort(function(a,b){ return a.score - b.score; }).filter(function(it){ return it.score < 97; }).slice(0, 2).map(function(it){ return it.k; });
+    var envIss = {}; cm.forEach(function(c){ if(c.g !== 'env') return; var t = String(c.t); if(tag(t) !== 'neg' && tag(t) !== 'sug') return; var f = (ui._SVY_FIX || []).filter(function(x){ return x[0].test(t); })[0]; if(f) envIss[f[2]] = (envIss[f[2]] || 0) + 1; });
+    var envTop = Object.keys(envIss).sort(function(a,b){ return envIss[b] - envIss[a]; }).slice(0, 3);
+    var ops = cm.filter(function(c){ return c.g === 'opinion' && !isTriv(c.t); }), posN = ops.filter(function(c){ return tag(c.t) === 'pos'; }).length, sugO = ops.filter(function(c){ var g = tag(c.t); return g === 'sug' || g === 'neg'; }).map(function(c){ return String(c.t).replace(/\s+/g,' ').trim(); });
+    var cut = function(t, n){ return t.length > n ? t.slice(0, n) + '…' : t; };
+    var A = [
+        '1. 과정운영 결과', '- 과정운영 만족도 ' + f2(opv) + '점, 전체평균 ' + f2(tot) + '점으로 ' + grade(tot),
+        '2. 과정의 운영 (교과목의 편성 등)', opLow.length ? '- ' + opLow.join(', ') + ' 항목은 상대적으로 낮아 보완 검토 필요' : '- 교과목 구성, 교재, 업무수행 등 전 항목에서 높은 만족도 확인',
+        usefulTop.length ? '-(유익했던 과목) ' + usefulTop.join(', ') + ' 등' : '', newSub.length ? '-(신설·보완 요청) ' + newSub.map(function(t){ return cut(t, 40); }).join(' / ') : '',
+        '3. 교육환경', '- 교육환경 만족도 ' + f2(envv) + '점으로 ' + (envv >= 95 ? '전반적으로 양호' : '일부 보완 필요'),
+        envTop.length ? '- ' + envTop.join(', ') + ' 등 일부 개선 필요 의견 존재' : '- 교육환경 관련 별도 개선요구는 없으며 만족도 높음',
+        envLow.length && envTop.length ? '- (상대적으로 낮은 항목) ' + envLow.join(', ') : '',
+        '4. 교육전반에 대한 소감', (ops.length && (posN >= ops.length / 2 || sugO.length <= ops.length / 3) ? '- 매우 유익하고 만족스러운 교육이라는 의견이 다수' : '- 교육 전반에 대한 다양한 의견 제시') + (sugO.length ? '\n- (건의) ' + cut(sugO[0], 50) : '')
+    ].filter(Boolean).join('\n');
+    var cat = (typeof kacDefCat === 'function' ? kacDefCat(r.title) : '') === 'duty-legal' ? 0 : 1;
+    var V = function(k, d){ return saved[k] != null ? saved[k] : d; };
+    var F = {
+        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof), oper: V('oper', serD.oper || ''),
+        purpose: V('purpose', serD.purpose || ''), c0: V('c0', cat === 0 ? '〇' : '-'), c1: V('c1', cat === 1 ? '〇' : '-'), c2: V('c2', '-'), c3: V('c3', '-'),
+        plan: V('plan', r.n ? String(r.n) : ''), done: V('done', r.n ? String(r.n) : ''), fail: V('fail', '-'), why: V('why', '-'),
+        iOut: V('iOut', String(nOut)), iIn: V('iIn', String(nIn)), iSum: V('iSum', String(ins.length)), anal: V('anal', A),
+        s1: V('s1', f2(opv)), s2: V('s2', f2(envv)), s3: V('s3', f2(ui._svyVal(r, 'inst'))), s4: V('s4', f2(tot))
+    };
+    var E = function(k, cls){ return '<div class="rpE' + (cls ? ' ' + cls : '') + '" contenteditable="true" data-f="' + k + '">' + esc(F[k]).replace(/\n/g, '<br>') + '</div>'; };
+    var CHK = function(k){ return '<td>' + E(k, 'c') + '</td>'; };
+    var page = '<div class="rpPage"><div class="rpTitle">' + E('title', 'c t') + '</div><table class="rpT">'
+        + '<tr><th>교육기간</th><td colspan="2">' + E('period') + '</td><th>담임 교수</th><td>' + E('prof', 'c') + '</td><th>과정운영자</th><td>' + E('oper', 'c') + '</td></tr>'
+        + '<tr><th>과정운영<br>목 적</th><td colspan="6">' + E('purpose') + '</td></tr>'
+        + '<tr><th rowspan="2">교육구분</th><td colspan="2" class="h">직무법정</td><td class="h">직무역량</td><td class="h">가치역량</td><td colspan="2" class="h">관계역량</td></tr>'
+        + '<tr><td colspan="2">' + E('c0', 'c') + '</td>' + CHK('c1') + CHK('c2') + '<td colspan="2">' + E('c3', 'c') + '</td></tr>'
+        + '<tr><th rowspan="2">교육인원</th><td colspan="2" class="h">계획</td><td class="h">수료</td><td class="h">미수료</td><td colspan="2" class="h">사유</td></tr>'
+        + '<tr><td colspan="2">' + E('plan', 'c') + '</td>' + CHK('done') + CHK('fail') + '<td colspan="2">' + E('why', 'c') + '</td></tr>'
+        + '<tr><th rowspan="2">강사현황</th><td colspan="2" class="h">사외강사</td><td colspan="2" class="h">사내강사(교수)</td><td colspan="2" class="h">계</td></tr>'
+        + '<tr><td colspan="2">' + E('iOut', 'c') + '</td><td colspan="2">' + E('iIn', 'c') + '</td><td colspan="2">' + E('iSum', 'c') + '</td></tr>'
+        + '<tr><th>과정운영<br>결과 및<br>분석</th><td colspan="6" class="an">' + E('anal') + '</td></tr>'
+        + '<tr><th rowspan="2">설문평가</th><td colspan="2" class="h">교육과정운영</td><td class="h">교육환경</td><td class="h">강사평가</td><td colspan="2" class="h">총 평균</td></tr>'
+        + '<tr><td colspan="2">' + E('s1', 'c') + '</td>' + CHK('s2') + CHK('s3') + '<td colspan="2">' + E('s4', 'c b') + '</td></tr></table></div>';
+    var CSS = '.rpPage{width:210mm;min-height:297mm;box-sizing:border-box;padding:16mm 18mm 14mm 20mm;background:#fff;color:#000;font-family:"Malgun Gothic","맑은 고딕",sans-serif;font-size:11pt}.rpTitle{margin:6mm 0 7mm}.rpE.t{font-size:18pt;font-weight:900;text-align:center;letter-spacing:-.5px}'
+        + '.rpT{width:100%;border-collapse:collapse;table-layout:fixed}.rpT th,.rpT td{border:1px solid #000;padding:2.2mm 2mm;vertical-align:middle}.rpT th{width:22mm;background:#f2f2f2;font-weight:700;text-align:center;line-height:1.4}.rpT td.h{background:#fafafa;text-align:center;font-weight:700}.rpT td.an{vertical-align:top;height:120mm}'
+        + '.rpE{outline:none;min-height:1.2em;line-height:1.6;white-space:normal;word-break:keep-all}.rpE.c{text-align:center}.rpE.b{font-weight:900}.rpE:focus{background:#fffbeb;box-shadow:0 0 0 2px #fde68a}';
+    var old = document.getElementById('svyRptOv'); if(old) old.remove();
+    var full2 = full.slice().reverse(), ov = document.createElement('div'); ov.id = 'svyRptOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.72);display:flex;flex-direction:column;align-items:center;overflow:auto;padding:16px 0 40px';
+    ov.innerHTML = '<div style="position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;border-radius:14px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.25)">'
+        + '<b style="font-size:15px;color:#0f172a"><i class="fa-solid fa-file-lines" style="color:#2563eb"></i> 교육운영 결과보고</b>'
+        + '<select id="rpSel" style="padding:7px 10px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;font-size:14px;font-weight:800">' + full2.map(function(x){ return '<option value="' + esc(x.id) + '"' + (x.id === r.id ? ' selected' : '') + '>' + esc(x._title || x.title) + ' (' + esc(String(x.period).slice(0,10)) + ')</option>'; }).join('') + '</select>'
+        + '<span style="font-size:12.5px;font-weight:700;color:#64748b">칸을 눌러 바로 고칠 수 있습니다</span>'
+        + (state.isObserver ? '' : '<button id="rpSave" style="padding:8px 14px;border:none;border-radius:9px;background:#16a34a;color:#fff;font:inherit;font-weight:900;cursor:pointer"><i class="fa-solid fa-floppy-disk"></i> 저장</button>')
+        + '<button id="rpReset" style="padding:8px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer" title="저장한 내용을 지우고 설문 결과로 다시 자동 작성">자동 작성으로 되돌리기</button>'
+        + '<button id="rpPrint" style="padding:8px 14px;border:none;border-radius:9px;background:#2563eb;color:#fff;font:inherit;font-weight:900;cursor:pointer"><i class="fa-solid fa-print"></i> 인쇄 · PDF</button>'
+        + '<button id="rpX" style="padding:8px 12px;border:none;border-radius:9px;background:#f1f5f9;color:#334155;font:inherit;font-weight:900;cursor:pointer">✕ 닫기</button></div>'
+        + '<div style="box-shadow:0 20px 60px rgba(0,0,0,.4)">' + page + '</div><style>' + CSS + '</style>';
+    document.body.appendChild(ov);
+    var collect = function(){ var o = {}; ov.querySelectorAll('[data-f]').forEach(function(el){ o[el.getAttribute('data-f')] = el.innerText.replace(/ /g,' ').trim(); }); return o; };
+    var close = function(){ ov.remove(); document.removeEventListener('keydown', escK, true); }, escK = function(e){ if(e.key === 'Escape' && !(e.target && e.target.isContentEditable)){ e.stopPropagation(); close(); } };
+    document.addEventListener('keydown', escK, true);
+    ov.querySelector('#rpX').onclick = close;
+    ov.querySelector('#rpSel').onchange = function(){ ui.svyReportOpen(this.value); };
+    var sv = ov.querySelector('#rpSave'); if(sv) sv.onclick = function(){ var o = collect(); o.savedAt = Date.now(); try{ ui._svyRptRef().child(r.id).set(o); ui._svyRptRef().child('_series/' + String(r.series || '').replace(/[.#$\/\[\]]/g,'_')).update({ purpose: o.purpose || '', oper: o.oper || '' }); }catch(e){} ui._linkToast ? ui._linkToast('결과 보고서를 저장했습니다 · 목적·과정운영자는 같은 과정 다음 회차에도 자동으로 들어갑니다') : ui.showAlert('저장했습니다.'); };
+    ov.querySelector('#rpReset').onclick = function(){ if(!confirm('저장한 내용을 지우고 설문 결과로 다시 자동 작성할까요?')) return; try{ ui._svyRptRef().child(r.id).remove().then(function(){ ui.svyReportOpen(r.id); }); }catch(e){} };
+    ov.querySelector('#rpPrint').onclick = function(){ var w = window.open('', '_blank'); if(!w) return ui.showAlert('팝업이 막혀 있습니다. 브라우저 주소창 오른쪽에서 팝업을 허용해 주세요.');
+        var pg = ov.querySelector('.rpPage').cloneNode(true); pg.querySelectorAll('[contenteditable]').forEach(function(el){ el.removeAttribute('contenteditable'); });
+        w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(collect().title || '교육운영 결과보고') + '</title><style>@page{size:A4;margin:0}body{margin:0}' + CSS + '</style></head><body>' + pg.outerHTML + '<script>window.onload=function(){setTimeout(function(){window.print();},200);};<\/script></body></html>'); w.document.close(); };
+};
 /* [K260] 연도별 항기원 과정 전체 + 설문 등재 현황. 연간계획은 해마다 새로 올라오므로 system/coord/planHistory/{연도}에 쌓아 둔다 */
 ui._svyPlanLoad = async function(){
     var box = document.getElementById('svyPlanCard'); if(!box) return;
