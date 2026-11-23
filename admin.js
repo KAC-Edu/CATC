@@ -19458,6 +19458,11 @@ ui._matUploadRun = async function(){
     var files = ui._matQueue;          // 같은 배열 — 진행 중 추가되면 length 가 늘어난다
     var room = state.room, who = ui._matWho();
     if(!ui._matHasProf()){ who = await ui._matPickWho(); if(!who){ ui._matQueue = []; return; } }   // [K278] 담임 미지정 → 올리는 교수님 선택
+    /* [K285] 옵저버→강사 전환 직후 등 화면 글자가 아직 비어 있을 때 — 과정명은 서버 설정에서, 이름은 '강사'로 채워 빈 칸으로 저장되지 않게 */
+    var cname = ui._matCourseName();
+    if(!cname && room){ try{ cname = String((await firebase.database().ref('courses/' + room + '/settings/courseName').once('value')).val() || '').trim(); }catch(e){} }
+    if(!cname) cname = room ? ('Room ' + room) : '';
+    who = String(who || '').trim() || '강사';
     var pb = document.getElementById('matProgress');
     var done = 0, fail = 0;
     var show = function(msg, color){
@@ -19493,7 +19498,7 @@ ui._matUploadRun = async function(){
         }
         show('<i class="fa-solid fa-spinner fa-spin"></i> ('+(i+1)+'/'+files.length+') '+ui._esc(f.name)+' 올리는 중…');
         try{
-            var rec = await window.kacMaterials.upload(f, who, ui._matCourseName());
+            var rec = await window.kacMaterials.upload(f, who, cname);
             await window.kacMaterials.link(room, rec.id, who);
             try{ (ui._matAll = ui._matAll || []).push(rec); }catch(e){}   // [K121] 같은 묶음 안에서도 사용량 누적
             done++;
