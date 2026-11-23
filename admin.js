@@ -18887,13 +18887,17 @@ ui._matCourseName = function(){
 };
 
 /* 현재 담임/강사 이름 — 업로드한 사람 표기용 */
-ui._matWho = function(){
+ui._matWho = function(ask){
     try{
         var el = document.getElementById('dashProfNameOnly');
         var n = el ? String(el.innerText||'').trim() : '';
-        if(n && n !== '-') return n;
+        if(n && n !== '-' && !/^(미지정|미정|미상)$/.test(n)) return n;   // [K277] 담임 미정 과정에서 '미지정 교수' 이름으로 올라가던 문제
     }catch(e){}
-    try{ return String(localStorage.getItem('kac_admin_prof')||'').trim() || '강사'; }catch(e){ return '강사'; }
+    try{ var s = String(localStorage.getItem('kac_admin_prof')||'').trim(); if(s && !/^(미지정|미정|미상)$/.test(s)) return s;
+        if(!ask) return '강사';
+        var a = String(prompt('교재를 올리는 분의 성함을 적어 주세요. (내 자료실 용량이 이 이름으로 잡힙니다 · 이 PC에 기억)', '') || '').trim();
+        if(a){ localStorage.setItem('kac_admin_prof', a); return a; } }catch(e){}
+    return '강사';
 };
 
 /* [K118] 올린 사람 표기 — '장두석 교수', '홍길동 과정운영자' 처럼 직함을 붙인다 */
@@ -18950,8 +18954,12 @@ ui.matEditUploader = function(id){
 
 /* 업로드 암호 확보 — 없으면 1회 묻는다.
    [K68] 브라우저 기본 prompt 는 입력값이 그대로 보여서, 가려지는 전용 입력창을 쓴다. */
-ui._matEnsureKey = function(){
-    if(window.kacMaterials.getKey()) return Promise.resolve(true);
+/* [K277] 암호 확인 — 'ok' / 'bad'(틀림) / 'net'(서버 연결 안 됨 → 막지 않음) */
+ui._matKeyCheck = async function(k){ try{ var r = await fetch(window.kacMaterials.API + '/f/materials/__keycheck__', { method:'DELETE', headers:{ 'X-Upload-Key': k } }); return r.ok ? 'ok' : ((r.status === 401 || r.status === 403) ? 'bad' : 'net'); }catch(e){ return 'net'; } };
+ui._matEnsureKey = async function(){
+    /* [K277] 저장된 암호가 틀린 채로 남아 있으면 암호 창 없이 진행하다 '업로드 실패'가 나던 문제 — 먼저 서버에 확인하고, 틀리면 바로 다시 묻는다 */
+    var k0 = window.kacMaterials.getKey(), badMsg = '';
+    if(k0){ if(ui._matKeyOkFor === k0) return true; var c0 = await ui._matKeyCheck(k0); if(c0 !== 'bad'){ if(c0 === 'ok') ui._matKeyOkFor = k0; return true; } window.kacMaterials.clearKey(); badMsg = '저장돼 있던 암호가 맞지 않습니다. 다시 입력해 주세요.'; }
     return new Promise(function(resolve){
         var ov = document.createElement('div');
         ov.id = 'matKeyOv';
@@ -18973,7 +18981,8 @@ ui._matEnsureKey = function(){
         var inp = ov.querySelector('#matKeyInput');
         var err = ov.querySelector('#matKeyErr');
         var finish = function(ok){ try{ ov.remove(); }catch(e){} resolve(ok); };
-        var submit = function(){
+        if(badMsg){ err.style.display = 'block'; err.textContent = badMsg; }
+        var submit = async function(){
             var v = String(inp.value||'').trim();
             if(!v){
                 err.style.display='block';
@@ -18981,7 +18990,10 @@ ui._matEnsureKey = function(){
                 inp.focus();
                 return;
             }
-            window.kacMaterials.setKey(v);
+            var okb = ov.querySelector('#matKeyOk'); okb.disabled = true; okb.textContent = '확인 중…';
+            var c = await ui._matKeyCheck(v); okb.disabled = false; okb.textContent = '확인';
+            if(c === 'bad'){ err.style.display = 'block'; err.textContent = '암호가 맞지 않습니다. 다시 확인해 주세요.'; inp.select(); return; }
+            window.kacMaterials.setKey(v); if(c === 'ok') ui._matKeyOkFor = v;
             finish(true);
         };
         ov.querySelector('#matKeyOk').onclick = submit;
@@ -19426,7 +19438,7 @@ ui._matUploadFiles = async function(files){
 };
 ui._matUploadRun = async function(){
     var files = ui._matQueue;          // 같은 배열 — 진행 중 추가되면 length 가 늘어난다
-    var room = state.room, who = ui._matWho();
+    var room = state.room, who = ui._matWho(true);   // [K277] 담임이 없으면 올리는 분 성함을 한 번 묻는다
     var pb = document.getElementById('matProgress');
     var done = 0, fail = 0;
     var show = function(msg, color){
