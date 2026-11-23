@@ -14631,6 +14631,7 @@ annualPlanMgr.openEditorModal = async function() {
         this.currentEditingData = arr
             .filter(c => c && (c.name || c.startDate))
             .map(c => ({
+                _origName: c.name || '',   // [K286] 편집기에서 과정명만 바꾼 경우를 '이름 교체'로 알아보기 위해
                 no:        c.no || 0,
                 name:      c.name || '',
                 startDate: c.startDate || '',
@@ -15008,6 +15009,18 @@ annualPlanMgr.saveAndSync = async function() {
         const planData = {};
         clean.forEach((c, i) => { planData[`c${i}`] = c; });
         await firebase.database().ref(this.PLAN_KEY).set(planData);
+
+        /* [K286] 과정명만 고친 행 → 그 이름을 쓰는 방도 새 이름으로 바꾼다.
+           (예전엔 이름이 달라지면 '새 과정'으로 보고 빈 방에 하나 더 만들어, 옛 이름 방이 그대로 남았다) */
+        try {
+            const renames = this.currentEditingData.filter(c => c && c._origName && c.name && c._origName.trim() !== c.name.trim())
+                .map(c => ({ from: c._origName.trim(), to: c.name.trim() }));
+            if (renames.length) {
+                const rs = (await firebase.database().ref('courses').once('value')).val() || {}, ru = {};
+                Object.keys(rs).forEach(r => { const nm = String(((rs[r] || {}).settings || {}).courseName || '').trim(); const hit = renames.find(x => x.from === nm); if (hit) ru[`courses/${r}/settings/courseName`] = hit.to; });
+                if (Object.keys(ru).length) { await firebase.database().ref().update(ru); console.log('[annualPlanMgr] 과정명 교체 반영:', ru); }
+            }
+        } catch (e) { console.warn('[annualPlanMgr] 과정명 교체 반영 실패', e); }
 
         // 2) 잠금 인식 룸 재배치
         const syncRes = await this._syncRoomsLockAware(clean);
