@@ -21031,7 +21031,8 @@ ui._svyTag = function(t){
     if(s0.replace(/\s/g,'').length < 10) return /좋았|만족|감사|최고|유익|맛있|친절/.test(s0) ? 'pos' : 'etc';   // 너무 짧은 조각은 분류하지 않음
     /* [K215] 칭찬이 여러 번 나오고 바꿔 달라는 말이 없으면 칭찬 — 예) "너무 좋았습니다. 모든 식당이 항기원만 같았으면 좋겠습니다" */
     var posN = (s0.match(/좋았|좋습|만족|감사|최고|맛있|훌륭|친절|깔끔|유익/g) || []).length;
-    if(/(만|처럼)\s?(같았|같)으면/.test(s0) && /좋았|만족|최고/.test(s0)) return 'pos';   // '모든 식당이 항기원만 같았으면' = 칭찬
+    if(/(만|처럼)\s?(같았|같)으면/.test(s0) && /좋았|만족|최고/.test(s0)) return 'pos';
+    if(/(제외하고|빼고|말고|외에는|외엔)[는은]?\s?[^.!]{0,12}(만족|좋았|좋습|최고|훌륭)/.test(s0)) return 'pos';   // [K281] '~것 제외하고는 너무 만족' = 칭찬   // '모든 식당이 항기원만 같았으면' = 칭찬
     if(/(였|었|았|했|됐|되었)으면|좋았을\s?(것|거)\s?같|좋을\s?(것|거)\s?같|좋겠/.test(s0) && !/좋았습니다|만족/.test(s0.replace(/좋았을/g,''))) return 'sug';   /* [K256] '~였으면 좋았을 것 같습니다'는 칭찬이 아니라 개선요청 */
     if(posN >= 2 && !/추가|개선|바꿔|바뀌|교체|늘려|줄여|있었으면|생겼으면|필요|아쉽|불편|였으면|었으면|좋았을/.test(s0)) return 'pos';
     if(/(있|했|하|되|됐|주셨|주시|해주셨|해주시|해\s주시)으면|바랍니다|바람|원합|원해요|원함|희망|추가(해|되|로|를|했|하)|요청|건의|좋겠|좋을\s?(것|거)\s?같|개선(이|을|해|되|이\s?필요)|필요합니다|필요함|필요할\s?(것|듯)|필요해\s?보|필요하다고/.test(s)) return 'sug';
@@ -21741,7 +21742,7 @@ ui._svyPtWhy = function(id, k, pt){
     var causeH = causes.length ? causes.map(function(c, i){ return '<div class="wyC"><div class="wyCt"><span class="wyNo" style="background:' + COL + '">' + (i+1) + '</span><b>' + esc(c.t) + '</b><span class="wyCs">' + esc(c.s) + '</span>' + (c.dd != null ? '<span class="wyCd" style="color:' + (c.dd >= 0 ? '#15803d' : '#b91c1c') + '">' + (c.dd >= 0 ? '+' : '') + f1(c.dd) + '</span>' : '') + '</div>'
             + (c.ex ? '<div class="wyEx">"' + esc(cut(c.ex, 70)) + '"</div>' : '<div class="wyEx" style="font-style:normal">관련 의견 없음 — 점수만 ' + (low ? '낮게' : '높게') + ' 나옴</div>') + '</div>'; }).join('')
         : '<div class="wyEx" style="font-style:normal">' + (!rows.length && kk !== 'inst' ? '이 회차는 문항별 점수가 읽히지 않았고, 관련 의견도 없습니다.' : '두드러진 원인이 없습니다.') + '</div>';
-    var allH = cms.length ? '<details class="wyAll"><summary>관련 교육생 의견 전체 ' + cms.length + '건 보기</summary>' + cms.map(function(c){ var tg = ui._svyTag(c.t); return '<div class="wyI"><span class="tg ' + tg + '">' + TN[tg] + '</span><span>' + esc(String(c.t).replace(/\s+/g,' ').trim()) + '</span></div>'; }).join('') + '</details>' : '';
+    var allH = cms.length ? '<details class="wyAll" open><summary>관련 교육생 의견 (불만·개선) ' + cms.length + '건</summary>' + cms.map(function(c){ var tg = ui._svyTag(c.t); return '<div class="wyI"><span class="tg ' + tg + '">' + TN[tg] + '</span><span>' + esc(String(c.t).replace(/\s+/g,' ').trim()) + '</span></div>'; }).join('') + '</details>' : '';
     box.innerHTML = '<div class="wyBg"></div><div class="wyP"><div class="wyTop" style="border-bottom-color:' + COL + '33"><span class="wyBadge" style="background:' + COL + '">' + NM[k] + ' · ' + esc(lab(r)) + '</span><b class="wyTt">왜 이 점수일까</b><button id="svyPtX" class="wyX" title="닫기 (ESC)">✕</button></div>'
         + '<div class="wyBody"><div class="wyBig"><span style="color:' + COL + '">' + (v != null ? f1(v) : '-') + '<small>점</small></span><div><div class="wyV" style="color:' + (d == null || Math.abs(d) < 0.3 ? '#475569' : (d > 0 ? '#15803d' : '#b91c1c')) + '">' + verdict + '</div><div class="wyO">다른 회차 평균 ' + (o != null ? f1(o) + '점' : '-') + (r.n ? ' · 응답 ' + r.n + '명' : '') + '</div></div></div>'
         + sub3 + lead
