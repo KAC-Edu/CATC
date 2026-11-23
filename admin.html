@@ -516,18 +516,14 @@
   /* [J96] '강의실 실시간 현황판'에 들어와 있을 때는 이 자리가 브랜드가 아니라 '뒤로가기'다.
      들어온 곳(통합 교육 현황판 / 과정 운영 현황)이 어디냐에 따라 글자가 바뀌므로
      알약 모양으로 감싸서 '누르는 버튼'임을 분명히 보이게 한다. */
+  /* [K284] 다른 화면(과정 안 뒤로가기: ↩ Room #B | 과정명)과 같은 모양으로 — 알약 테두리 없이 */
   #kacBrandBtn.is-back{
-      display:inline-flex; align-items:center; gap:7px;
-      font-size:16px; font-weight:800; letter-spacing:0;
-      padding:7px 17px 7px 13px; border-radius:999px;
-      background:rgba(255,255,255,.10);
-      border:1px solid rgba(255,255,255,.22);
+      display:inline-flex; align-items:center; gap:10px;
+      font-size:18px; font-weight:900; letter-spacing:0;
+      padding:0; border:none; background:none;
   }
-  #kacBrandBtn.is-back:hover{
-      color:#93c5fd; text-shadow:none;
-      background:rgba(147,197,253,.18);
-      border-color:rgba(147,197,253,.55);
-  }
+  #kacBrandBtn.is-back i{ font-size:20px; }
+  #kacBrandBtn.is-back:hover{ color:#93c5fd; text-shadow:0 0 12px rgba(147,197,253,.6); }
 
   /* [J93] 과정 안(과정운영현황·소메뉴)에서도 좌측 상단에 마우스를 올리면
      현황판 브랜드와 '똑같은' 파란 글로우가 나오게 한다.
@@ -3258,7 +3254,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=261123K282"></script>
+    <script src="admin.js?v=261123K284"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
