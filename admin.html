@@ -329,6 +329,11 @@
 <button class="btn-action" onclick="ui.setMode('presurvey')" style="height:42px; font-size:13.5px; margin-top:8px; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;">
     <i class="fa-solid fa-user-clock"></i> 강사 사전조사
 </button>
+<!-- [K271] 입교등록 카카오톡 채널 QR — 누르면 화면 가운데 크게, 다시 누르면 원래대로 -->
+<div id="kakaoChCard" onclick="ui.kakaoChOpen()" title="눌러서 크게 보기 (강당 화면용)" style="margin-top:8px; display:none; align-items:center; gap:10px; padding:8px 10px; border-radius:12px; background:#FEE500; cursor:pointer;">
+    <div id="kakaoChQr" style="width:54px; height:54px; flex-shrink:0; background:#fff; border-radius:8px; padding:3px; box-sizing:border-box; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:10px; font-weight:800;">QR</div>
+    <div style="min-width:0; line-height:1.35;"><div style="font-size:13.5px; font-weight:900; color:#191919;"><i class="fa-solid fa-comment"></i> 카카오 채널 QR</div><div id="kakaoChSub" style="font-size:11.5px; font-weight:800; color:#3b3b3b;">눌러서 크게 보기</div></div>
+</div>
                     <!-- 데이터 연동용 숨김 입력창 -->
                     <input type="text" id="courseNameInput" style="display:none;">
                     <input type="password" id="roomPw" style="display:none;">
@@ -3253,7 +3258,7 @@ function setupAcc(btn){
 
 
 
-    <script src="admin.js?v=261122K270"></script>
+    <script src="admin.js?v=261123K275"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <!-- ── 화면 자동 맞춤(auto-fit): 가로+세로 모두 화면에 맞게 자동 축소 · JDS260613 ──
      원인: Windows 디스플레이 배율(125%/150%)·저해상도 화면에서 유효 뷰포트가 작아져
