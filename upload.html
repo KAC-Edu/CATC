@@ -223,12 +223,12 @@
 
   /* [K160] 화면 단순화 — ① 성함 ② 파일 두 단계만. 한 과정에 링크 1개를 여러 강사가 함께 쓰므로 '내 파일'은 성함으로 구분 */
   function render(){
-    var saved = ''; try{ saved = localStorage.getItem('kac_ext_name') || ''; }catch(e){}
+    var saved = ''; try{ localStorage.removeItem('kac_ext_name'); }catch(e){}   /* [K292] 성함은 미리 채우지 않음 — 같은 폰을 다른 강사가 쓰거나 남이 보는 화면일 수 있어서. 성함을 넣으면 저장된 내용은 그대로 불러온다 */
     app.innerHTML = '<div class="top"><i class="fa-solid fa-chalkboard-user"></i> 강의 일정 · 교재 제출</div>'
       + '<div class="course">' + esc(info.c || ('Room ' + info.r)) + '</div>'
       + '<div id="hdInfo"></div>'
       + '<div class="step"><span class="no">1</span> 성함</div>'
-      + '<input type="text" id="nm" placeholder="홍길동" value="' + esc(saved) + '" autocomplete="name">'
+      + '<input type="text" id="nm" placeholder="홍길동" value="" autocomplete="off">'
       + '<div id="svWrap"></div>'
       /* [K179] 교재는 '선택' — 설문 제출과 분리된 별도 카드(번호 없음). 나중에 같은 링크로 다시 와서 올려도 됨 */
       + '<div class="optCard" id="optCard"><div class="optHead accH" id="optTog"><i class="fa-solid fa-paperclip"></i> 강의 교재 제출 <span class="optTag">선택</span><span id="optDue" class="optDue"></span><i class="fa-solid fa-chevron-down chev"></i></div><div class="accB">'
@@ -554,7 +554,6 @@
     var pure = ttl ? nm.replace(TTL_RE, '').trim() : nm;
     var rec = { name: pure, title: ttl || my.title || '강사', avail: my.avail, p1: (my.avail!=='가능'?null:my.p1), p2: (my.avail!=='가능'?null:my.p2), stay: my.avail==='가능' && my.stay===true, pickup: my.avail==='가능' && my.pickup===true,
                 pkPlace: (my.pickup && my.avail==='가능') ? my.pkPlace : null, pkArr: (my.pickup && my.avail==='가능') ? (my.pkArr || null) : null, pkDep: (my.pickup && my.avail==='가능') ? (my.pkDep || null) : null, pkMemo: (my.pickup && my.avail==='가능') ? (String(my.pkMemo||'').slice(0,80) || null) : null, msg: String(my.msg||'').slice(0,500), at: Date.now(), reason: (my.avail==='불가능' && my.reason) ? my.reason : null, replyBy: (my.avail==='미정' && my.replyBy) ? my.replyBy : null, mailSent: (SV.resp[svKey(nm)]||{}).mailSent || null };
-    try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var go = document.getElementById('svGo'); if(go){ go.disabled = true; go.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 제출 중…'; }
     var telRef = firebase.database().ref('system/coord/preSurveyPhone/' + String(info.r) + '/' + svKey(nm));
     var telP = !rec.pickup ? telRef.remove() : (my.tel ? telRef.set(String(my.tel)) : Promise.resolve());
@@ -620,7 +619,6 @@
     files = Array.prototype.slice.call(files || []); if(!files.length) return;
     var nm = myName();
     if(!nm){ var ni = document.getElementById('nm'); ni.focus(); ni.classList.add('need'); setTimeout(function(){ ni.classList.remove('need'); }, 1200); return; }
-    try{ localStorage.setItem('kac_ext_name', nm); }catch(e){}
     var bad = files.filter(function(f){ return !/\.pdf$/i.test(f.name || ''); });
     if(bad.length){ alert('PDF 파일만 올려 주세요.\n(제외: ' + bad.map(function(f){ return f.name; }).join(', ') + ')'); files = files.filter(function(f){ return /\.pdf$/i.test(f.name || ''); }); if(!files.length) return; }
     var list = document.getElementById('list');
