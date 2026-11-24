@@ -19551,9 +19551,22 @@ ui.matRemove = function(id){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 수정할 수 없습니다.');
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
     if(!m) return ui.matUnlink(id);          // 자료실에서 이미 사라진 항목 → 목록에서만 제거
-    /* [K184] 과정 화면에서는 '이번 과정에서만 빼기'만 — 완전 삭제는 [자료실에서 가져오기] 화면에서 */
-    if(!confirm('"' + (m.title||m.fileName) + '"\n이번 과정에서 뺄까요?\n\n교육생 화면에서만 사라지고, 자료실에는 그대로 남습니다.\n(완전 삭제는 [자료실에서 가져오기] 화면에서 할 수 있습니다)')) return;
-    ui.matUnlink(id, 1);
+    /* [K291] 과정 화면에서도 바로 완전 삭제 — 빼기/삭제를 고르는 창 (자주 지우는데 자료실까지 가야 해서 불편했음) */
+    var old = document.getElementById('matRmOv'); if(old) old.remove();
+    var mine = (m.uploader === ui._matWho()), ov = document.createElement('div'); ov.id = 'matRmOv';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483100;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML = '<div style="background:#fff;border-radius:20px;padding:24px 26px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(15,23,42,.35)">'
+        + '<div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all">"' + ui._esc(m.title || m.fileName) + '"</div>'
+        + '<div style="margin-top:4px;font-size:13px;font-weight:700;color:#64748b">올린 사람: ' + ui._esc(ui._matWhoLabel ? ui._matWhoLabel(m) : (m.uploader || '-')) + '</div>'
+        + '<button data-a="un" style="display:block;width:100%;margin-top:18px;padding:14px;border:2px solid #cbd5e1;border-radius:12px;background:#fff;text-align:left;font:inherit;cursor:pointer"><b style="font-size:15.5px;color:#0f172a"><i class="fa-solid fa-minus" style="color:#64748b"></i> 이번 과정에서만 빼기</b><div style="margin-top:3px;font-size:12.5px;font-weight:700;color:#64748b">교육생 화면에서만 사라지고 자료실에는 남아 다음에 다시 쓸 수 있습니다</div></button>'
+        + '<button data-a="del" style="display:block;width:100%;margin-top:10px;padding:14px;border:2px solid #fecaca;border-radius:12px;background:#fef2f2;text-align:left;font:inherit;cursor:pointer"><b style="font-size:15.5px;color:#b91c1c"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</b><div style="margin-top:3px;font-size:12.5px;font-weight:700;color:#991b1b">파일까지 지웁니다 · 되돌릴 수 없습니다' + (mine ? '' : ' · <b>본인이 올린 자료가 아닙니다</b>') + '</div></button>'
+        + '<div style="text-align:right;margin-top:14px"><button data-a="x" style="padding:9px 20px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer">취소</button></div></div>';
+    document.body.appendChild(ov);
+    var close = function(){ ov.remove(); };
+    ov.onclick = function(e){ if(e.target === ov) close(); };
+    ov.querySelector('[data-a="x"]').onclick = close;
+    ov.querySelector('[data-a="un"]').onclick = function(){ close(); ui.matUnlink(id, 1); };
+    ov.querySelector('[data-a="del"]').onclick = function(){ close(); ui.matDestroy(id); };
 };
 
 /* ── 연결 해제 / 삭제 ───────────────────────────────────── */
