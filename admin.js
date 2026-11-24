@@ -21726,8 +21726,10 @@ ui.svyReportOpen = async function(id){
     ov.querySelector('#rpX').onclick = close;
     /* [K289] A4 한 장 보기 — 화면 높이에 맞춰 줄여 한 장 전체를 보여 줌(기본). 버튼으로 실제 크기와 전환 */
     var wrap = ov.querySelector('#rpWrap'), fitBtn = ov.querySelector('#rpFit'), fitOn = ui._rpFit !== false;
-    var applyFit = function(){ if(!wrap) return; var pg = wrap.querySelector('.rpPage'); if(!pg) return; wrap.style.zoom = ''; var bar = ov.firstElementChild, avH = window.innerHeight - (bar ? bar.offsetHeight : 60) - 60, avW = window.innerWidth - 40;
-        var z = fitOn ? Math.min(1, avH / pg.offsetHeight, avW / pg.offsetWidth) : 1; wrap.style.zoom = String(Math.max(0.3, z)); if(fitBtn) fitBtn.querySelector('span').textContent = fitOn ? '실제 크기' : '한 장 보기'; };
+    var applyFit = function(){ if(!wrap) return; var pg = wrap.querySelector('.rpPage'); if(!pg) return; wrap.style.zoom = '';
+        /* [K290] 화면에 실제로 그려진 크기(플랫폼 전체 확대·축소 배율 포함)로 재서, 툴바 아래 남은 높이를 꽉 채우게 */
+        var bar = ov.firstElementChild, br = bar ? bar.getBoundingClientRect() : { bottom: 70 }, pr = pg.getBoundingClientRect(), avH = window.innerHeight - br.bottom - 18, avW = window.innerWidth - 30;
+        var z = fitOn ? Math.min(1.6, avH / pr.height, avW / pr.width) : 1; wrap.style.zoom = String(Math.max(0.3, z)); if(fitBtn) fitBtn.querySelector('span').textContent = fitOn ? '실제 크기' : '한 장 보기'; };
     if(fitBtn) fitBtn.onclick = function(){ fitOn = !fitOn; ui._rpFit = fitOn; applyFit(); };
     applyFit(); window.addEventListener('resize', applyFit);
     var _close0 = close; close = function(){ window.removeEventListener('resize', applyFit); _close0(); }; ov.querySelector('#rpX').onclick = close;
