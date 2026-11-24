@@ -10035,7 +10035,7 @@ const scheduleMgr = {
             + '<button type="button" data-a="next" style="position:absolute; right:18px; top:50%; transform:translateY(-50%); width:58px; height:58px; border:none; border-radius:50%; background:rgba(255,255,255,.14); color:#fff; font-size:22px; cursor:pointer;"><i class="fa-solid fa-chevron-right"></i></button>'
             + '<div id="schFsNo" style="position:absolute; bottom:16px; left:50%; transform:translateX(-50%); padding:7px 16px; border-radius:999px; background:rgba(0,0,0,.55); color:#fff; font-size:15px; font-weight:900;"></div>'
             + '<button type="button" data-a="close" style="position:fixed; top:16px; right:16px; width:46px; height:46px; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:20px; cursor:pointer; z-index:3;">✕</button>'
-            + '<button type="button" data-a="fit" style="position:fixed; top:16px; right:74px; height:46px; padding:0 16px; border:none; border-radius:23px; background:#2563eb; color:#fff; font-size:14px; font-weight:900; cursor:pointer; z-index:3;"><i class="fa-solid fa-expand"></i> <span>여백 포함 원본</span></button>';
+            + '<button type="button" data-a="fit" title="여백 포함 원본 보기 / 화면 꽉 채우기" style="position:fixed; top:16px; right:74px; width:46px; height:46px; padding:0; border:none; border-radius:50%; background:rgba(255,255,255,.16); color:#fff; font-size:17px; cursor:pointer; z-index:3;"><i class="fa-solid fa-expand"></i><span style="display:none"></span></button>';
         document.body.appendChild(ov);
         ui._undoPageZoom(ov);   // [K134]
         ov.querySelectorAll('button[data-a="prev"],button[data-a="next"],#schFsNo').forEach(el => { el.style.position = 'fixed'; el.style.zIndex = '3'; });
@@ -10052,7 +10052,7 @@ const scheduleMgr = {
         const applyFitLayout = () => {
             const fb = ov.querySelector('button[data-a="fit"] span');
             ov.style.display = 'flex'; ov.style.overflowY = 'hidden'; ov.style.touchAction = 'none'; cv.style.margin = ''; cv.style.maxWidth = '100vw'; cv.style.maxHeight = '100vh';
-            if (fb) fb.textContent = (fitMode === 'fill') ? '여백 포함 원본' : '화면 꽉 채우기';
+            if (fb) { const bt = fb.parentNode; bt.title = (fitMode === 'fill') ? '여백 포함 원본 보기' : '화면 꽉 채우기'; const ic = bt.querySelector('i'); if (ic) ic.className = 'fa-solid ' + (fitMode === 'fill' ? 'fa-expand' : 'fa-compress'); }   // [K308] 글자 대신 아이콘
         };
         let cur = Math.max(1, Math.min(pdf.numPages, start || 1)), busy = false, pending = 0;
         applyFitLayout();
@@ -10082,10 +10082,10 @@ const scheduleMgr = {
         document.addEventListener('keydown', onKey, true); window.addEventListener('resize', onResize);
         const toggleFit = () => { fitMode = (fitMode === 'fill') ? 'page' : 'fill'; applyFitLayout(); draw(cur); };
         ov.addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; const a = b.getAttribute('data-a'); if (a === 'prev') go(-1); else if (a === 'next') go(1); else if (a === 'close') close(); else if (a === 'fit') toggleFit(); });
-        ov.addEventListener('dblclick', (e) => { if (!e.target.closest('button')) toggleFit(); });
+        ov.addEventListener('contextmenu', (e) => { if (e.target.closest('button')) return; e.preventDefault(); go(-1); });   // [K308] 오른쪽 클릭 = 이전 쪽
         // 마우스·손가락 드래그로 넘기기 (왼쪽/위로 밀면 다음, 오른쪽/아래로 밀면 이전)
         let sx = 0, sy = 0, dragging = false;
-        ov.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; dragging = true; sx = e.clientX; sy = e.clientY; ov.style.cursor = 'grabbing'; try { ov.setPointerCapture(e.pointerId); } catch (_) {} });
+        ov.addEventListener('pointerdown', (e) => { if (e.target.closest('button') || e.button === 2) return; dragging = true; sx = e.clientX; sy = e.clientY; ov.style.cursor = 'grabbing'; try { ov.setPointerCapture(e.pointerId); } catch (_) {} });
         let sTop = 0;
         ov.addEventListener('pointerdown', () => { sTop = ov.scrollTop; });
         ov.addEventListener('pointermove', (e) => { if (!dragging) return; const dx = e.clientX - sx, dy = e.clientY - sy;
@@ -10093,7 +10093,7 @@ const scheduleMgr = {
         ov.addEventListener('pointerup', (e) => {
             if (!dragging) return; dragging = false; ov.style.cursor = 'grab';
             const dx = e.clientX - sx, dy = e.clientY - sy, ax = Math.abs(dx), ay = Math.abs(dy);
-            if (Math.max(ax, ay) < 50) { cv.style.transform = 'translateX(0)'; return; }
+            if (Math.max(ax, ay) < 50) { cv.style.transform = 'translateX(0)'; if (e.button === 0 && Math.max(ax, ay) < 8) go(1); return; }   // [K308] 왼쪽 클릭 = 다음 쪽
             if (ax >= ay) go(dx < 0 ? 1 : -1); else go(dy < 0 ? 1 : -1);
         });
         ov.addEventListener('pointercancel', () => { dragging = false; cv.style.transform = 'translateX(0)'; });
@@ -10104,7 +10104,7 @@ const scheduleMgr = {
         };
         window.addEventListener('wheel', wheelH, { passive: false, capture: true });   // [K128] 휠을 문서 단계에서 받아 확실히 넘김
         document.addEventListener('fullscreenchange', function fsc(){ if (!document.fullscreenElement && document.body.contains(ov)) { /* ESC 로 전체화면만 풀린 경우에도 뷰어 닫기 */ document.removeEventListener('fullscreenchange', fsc); close(); } });
-        try { const rf = ov.requestFullscreen || ov.webkitRequestFullscreen; if (rf) await rf.call(ov); } catch (e) {}
+        try { if (!document.fullscreenElement) { const rf = ov.requestFullscreen || ov.webkitRequestFullscreen; if (rf) await rf.call(ov); } } catch (e) {}
         await new Promise(r => setTimeout(r, 180));   // [K127] 전체화면 크기가 확정된 뒤 그린다(작게 그려지던 원인)
         await draw(cur);
     },
@@ -20128,6 +20128,7 @@ ui.matPresent = async function(id){
     if(typeof pdfjsLib === 'undefined') return ui.showAlert('PDF 모듈을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     try{ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; }catch(e){}
     var dual = !!(window.screen && window.screen.isExtended);
+    if(!dual){ try{ var de = document.documentElement, rq = de.requestFullscreen || de.webkitRequestFullscreen; if(rq && !document.fullscreenElement) rq.call(de); }catch(e){} }   // [K308] 누른 즉시 모니터 전체화면
     var mode = 'single';
     if(dual){
         mode = await new Promise(function(res){
@@ -20170,7 +20171,7 @@ ui.matPresent = async function(id){
         task.onProgress = function(p){ if(p) _setPct(p.loaded || 0, p.total || 0); };
         pdf = await task.promise;
     }
-    catch(e){ ld.remove(); return ui.showAlert('PDF 를 열지 못했습니다.\n' + ((e&&e.message)||'')); }
+    catch(e){ ld.remove(); try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(_){} return ui.showAlert('PDF 를 열지 못했습니다.\n' + ((e&&e.message)||'')); }
     try{ await pdf.getPage(1); }catch(e){}
     _setPct(_tot || 1, _tot || 1);
     ld.remove();
