@@ -21871,9 +21871,14 @@ ui._svyPlanCard = function(){
     var esc = ui._esc, H = ui._svyPlanHist || {}, series = ui._svySeries || {}, f1 = function(v){ return (Math.round(v*10)/10).toFixed(1); };
     var d0 = new Date(), td = d0.getFullYear() + '-' + String(d0.getMonth()+1).padStart(2,'0') + '-' + String(d0.getDate()).padStart(2,'0');
     var yset = {}; Object.keys(H).forEach(function(y){ if(/^\d{4}$/.test(y)) yset[y] = 1; }); Object.keys(series).forEach(function(k){ series[k].list.forEach(function(r){ if(r.year) yset[String(r.year)] = 1; }); });
+    Object.keys(yset).forEach(function(y){ var hasPlan = Object.keys(H[y] || {}).length, hasSvy = Object.keys(series).some(function(k){ return series[k].list.some(function(r){ return String(r.year) === y; }); }); if(!hasPlan && !hasSvy) delete yset[y]; });
     var years = Object.keys(yset).sort(); if(!years.length){ box.innerHTML = '<div style="padding:30px;text-align:center;color:#94a3b8;font-weight:800">연간계획이 아직 없습니다.</div>'; return; }
     var Y = ui._svyPlanY && yset[ui._svyPlanY] ? ui._svyPlanY : (yset[td.slice(0,4)] ? td.slice(0,4) : years[years.length-1]);
-    var rows = Object.keys(H[Y] || {}).map(function(k){ return H[Y][k]; }).sort(function(a,b){ return String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name)); });
+    /* [K307] 연간계획이 없는 해(2021~2025 등)는 빈 표 대신 그해 올린 설문 결과지로 과정 목록을 만든다 · 아무 자료 없는 해는 탭에서 뺌 */
+    var fromSvy = !Object.keys(H[Y] || {}).length;
+    var rows = fromSvy ? (function(){ var o = []; Object.keys(series).forEach(function(k){ series[k].list.forEach(function(r){ var d = String(r.period || '').match(/\d{4}-\d{2}-\d{2}/g) || []; if(String(r.year) !== Y || !d.length) return; o.push({ name: r._title || r.title, startDate: d[0], endDate: d[1] || d[0], prof: '', cancelled: false }); }); }); return o; })()
+        : Object.keys(H[Y] || {}).map(function(k){ return H[Y][k]; });
+    rows.sort(function(a,b){ return String(a.startDate).localeCompare(String(b.startDate)) || String(a.name).localeCompare(String(b.name)); });
     var ms = function(s){ return new Date(String(s).slice(0,10) + 'T00:00:00').getTime(); }, DAY = 864e5;
     var used = {};
     var NK = function(k){ return String(k || '').replace(/\[[^\]]*\]|\([^)]*\)|과정|\s/g, ''); }, byN = {}; Object.keys(series).forEach(function(k){ byN[NK(k)] = k; });   /* 이름 표기가 조금 달라도('…과정', '[신규]') 같은 계열로 */
@@ -21898,6 +21903,7 @@ ui._svyPlanCard = function(){
         + '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px">' + chip('전체 과정', n.all, '#eef2ff', '#3730a3') + chip('종료', n.done, '#f1f5f9', '#475569') + chip('진행 중', n.now, '#dbeafe', '#1d4ed8') + chip('예정', n.plan, '#dcfce7', '#15803d') + chip('폐강', n.can, '#fff1f2', '#be123c')
         + '<span style="color:#cbd5e1">|</span>' + chip('설문 등재', n.reg + ' / ' + (n.done + n.now), '#ecfeff', '#0e7490') + '<span style="font-size:12.5px;font-weight:800;color:#94a3b8">· 종료·진행 과정 중 설문 결과를 올린 수</span></div>'
         + '<div style="overflow:auto;margin-top:12px;border:1px solid #e2e8f0;border-radius:16px;max-height:560px"><table class="plTb"><thead><tr><th style="width:120px">기간</th><th style="text-align:left">과정명</th><th>담임</th><th>상태</th><th>설문 결과</th><th style="width:30px"></th></tr></thead><tbody>' + body + '</tbody></table></div>'
+        + (fromSvy ? '<div style="margin-top:8px;font-size:12.5px;font-weight:800;color:#b45309"><i class="fa-solid fa-circle-info"></i> ' + Y + '년은 연간계획 기록이 없어, 그해 올린 설문 결과지로 목록을 만들었습니다</div>' : '')
         + '<div style="margin-top:8px;font-size:12.5px;font-weight:800;color:#94a3b8">연간계획 기준 · 설문 제목이 같은 과정은 해가 바뀌어도 같은 계열로 이어서 쌓입니다 · 미등재 = 끝난 과정인데 설문 결과지를 아직 안 올림</div></div>'
         + '<style>.plY{display:flex;gap:4px;padding:4px;border-radius:999px;background:#f1f5f9}.plY button{border:none;background:none;padding:6px 14px;border-radius:999px;font:inherit;font-size:14px;font-weight:900;color:#64748b;cursor:pointer}.plY button.on{background:#fff;color:#0f172a;box-shadow:0 2px 6px rgba(15,23,42,.1)}'
         + '.plC{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:800}.plC b{font-size:15px}.plTb{width:100%;border-collapse:separate;border-spacing:0}.plTb th{position:sticky;top:0;z-index:1;padding:11px 10px;font-size:13.5px;font-weight:900;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;text-align:center;white-space:nowrap}'
