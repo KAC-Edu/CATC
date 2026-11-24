@@ -20981,7 +20981,7 @@ async function kacSurveyParse(doc){
       if(!S.lines.some(function(l){ return IT.test(l.n); })){   // [K229] 강의자세·기법·기여도 구분 없는 양식
         S.lines.forEach(function(l, idx){ var r = rowOf(l.t); if(!r) return; var txt = r.label + ' ' + near(S.lines, idx);
           var mm = txt.match(new RegExp('([가-힣]{2,4})\\s*' + TTL.source)); if(/평균|합계|소계/.test(r.label)) return;
-          list.push({ n: mm ? mm[1] : '', rows: [{ k:'종합', sum:r.sum, N:r.N }] }); });
+          list.push({ n: mm ? mm[1] : '', rows: [{ k:'종합', sum:r.sum, N:r.N, d:[r.a,r.b,r.c,r.d,r.e] }] }); });
         return;
       }
       S.lines.forEach(function(l, idx){
@@ -20991,7 +20991,7 @@ async function kacSurveyParse(doc){
         var nm = nameNear(idx); if(!nm){ var mm = l.t.match(/([가-힣]{2,4})\s*(?:\(\s*\d*\s*\)?)?\s*(강의자세|강의기법|기여도)/); if(mm && !IT.test(mm[1]) && !/소계|합계|강사명|설문/.test(mm[1])) nm = mm[1]; }
         if(!nm){ [-1,-2,1].forEach(function(dd){ var l2 = S.lines[idx+dd]; if(!nm && l2 && Math.abs(l2.y - l.y) < 26){ var t2 = l2.t.replace(/[\s()0-9]/g,''); if(/^[가-힣]{2,4}$/.test(t2) && !IT.test(t2) && !/소계|합계/.test(t2)) nm = t2; } }); }
         if(nm && !cur.n) cur.n = nm;
-        cur.rows.push({ k:it, sum:r.sum, N:r.N });
+        cur.rows.push({ k:it, sum:r.sum, N:r.N, d:[r.a,r.b,r.c,r.d,r.e] });   // [K298] 5점~1점 응답 수
       });
     }
   });
@@ -21001,7 +21001,7 @@ async function kacSurveyParse(doc){
   /* [K229] 같은 문항이 여러 번(1차·2차 등) 나오면 응답 수를 합쳐서 계산 */
   [R.op, R.env].forEach(function(T){ var m = {}; T.items.forEach(function(x){ if(m[x.k]){ m[x.k].sum += x.sum; m[x.k].N += (x.N||0); } else m[x.k] = { k:x.k, sum:x.sum, N:(x.N||0) }; });
     T.items = Object.keys(m).map(function(k){ var v = m[k]; return { k:k, score: sc(v.sum, v.N) }; }); });
-  R.inst.list = (R._ir||[]).filter(function(x){ return x.rows.length; }).map(function(x){ var s=0; x.rows.forEach(function(r){ s+=r.sum; }); var N = Math.max.apply(null, x.rows.map(function(r){ return r.N; })) || Nf; return { n:x.n || '강사', score: Math.round(s/(5*N*x.rows.length)*100000)/1000 }; });
+  R.inst.list = (R._ir||[]).filter(function(x){ return x.rows.length; }).map(function(x){ var s=0; x.rows.forEach(function(r){ s+=r.sum; }); var N = Math.max.apply(null, x.rows.map(function(r){ return r.N; })) || Nf; var dd = [0,0,0,0,0]; x.rows.forEach(function(r){ (r.d || []).forEach(function(v, i){ dd[i] += Number(v) || 0; }); }); return { n:x.n || '강사', score: Math.round(s/(5*N*x.rows.length)*100000)/1000, dist: dd, k: x.rows.length }; });
   delete R._ir;
   var avg = function(arr){ var v = arr.map(function(x){ return x.score; }).filter(function(x){ return x != null; }); return v.length ? Math.round(v.reduce(function(a,b){ return a+b; },0)/v.length*1000)/1000 : null; };
   var pick = function(T, arr){ var a = avg(arr); var ps = T._ps; delete T._ps; if(!arr.length || (ps != null && ps < 30)) ps = null; T.score = (ps != null && (a == null || Math.abs(ps - a) < 1.5)) ? ps : a; };
@@ -21138,7 +21138,7 @@ ui._svyIngest = async function(files){
             var maskTxt = function(t){ t = String(t||''); names.forEach(function(n){ t = t.split(n).join(ui._svyMask(n)); }); return t.replace(/([가-힣])[가-힣]{1,2}(\s*)(교수|강사)님/g, '$1**$2$3님').slice(0, 400); };
             var rec = { title: r.title, series: sr.key, seriesName: sr.name, round: ui._svyRoundOf(r.title), year: year, period: r.period || '', n: r.n || 0,
                 total: r.total, op: { score: r.op.score, items: r.op.items }, env: { score: r.env.score, items: r.env.items },
-                inst: { score: r.inst.score, list: (r.inst.list || []).map(function(x){ return { n: ui._svyMask(x.n), score: x.score }; }) },
+                inst: { score: r.inst.score, list: (r.inst.list || []).map(function(x){ var o = { n: ui._svyMask(x.n), score: x.score }; if(x.dist && x.dist.some(function(v){ return v > 0; })){ o.dist = x.dist; o.k = x.k || 1; } return o; }) },
                 nc: (r.comments || []).length,
                 at: Date.now(), by: (ui._matWho ? ui._matWho() : '') };
             var key = (sr.key + '_' + (st || (year + '-' + rec.round))).replace(/[.#$\[\]\/]/g,'_');
@@ -21273,12 +21273,20 @@ ui.surveyOpen = async function(){
       + (function(){   /* [K238] 위에 요약 그래프(출강 많은 순 · 평균 높은 순), 회차별 표는 [상세 보기]로 펼침 */
           if(!ins.length) return '<div style="padding:20px;color:#94a3b8;font-weight:800">강사 점수가 없습니다</div>';
           var all = [], minN = Math.max(3, Math.ceil(list.length / 4)); while(minN > 1 && !ins.some(function(v){ return v.cnt >= minN; })) minN--; var rep2 = ins.filter(function(v){ return v.cnt >= minN; });   /* [K240] 2회 출강 100점이 1위가 되지 않도록 — 회차 수의 1/4(최소 3회) 이상 출강자만 순위 */ ins.forEach(function(v){ Object.keys(v.s).forEach(function(i){ all.push(v.s[i]); }); });
-          var tot = all.reduce(function(a,b){ return a+b; },0) / all.length, top = (rep2.length ? rep2 : ins).slice().sort(function(a,b){ return b.avg - a.avg || b.cnt - a.cnt; });
+          var tot = all.reduce(function(a,b){ return a+b; },0) / all.length;
+          /* [K299] 공평한 비교 — 최근 3회 평균(모두 같은 횟수로) / 회차 보정(같은 회차 다른 강사 대비 차이) / 전체 평균 */
+          var MODE = ui._insMode || 'r3', rs = {}; ins.forEach(function(v){ Object.keys(v.s).forEach(function(i){ (rs[i] = rs[i] || { s:0, c:0 }); rs[i].s += v.s[i]; rs[i].c++; }); });
+          ins.forEach(function(v){ var ks = Object.keys(v.s).map(Number).sort(function(a,b){ return b - a; }), l3 = ks.slice(0, 3);
+              v.r3 = l3.length ? l3.reduce(function(a,i){ return a + v.s[i]; }, 0) / l3.length : v.avg;
+              var gs = ks.map(function(i){ var R = rs[i]; return R.c > 1 ? v.s[i] - (R.s - v.s[i]) / (R.c - 1) : null; }).filter(function(x){ return x != null; });
+              v.adj = gs.length ? tot + gs.reduce(function(a,b){ return a+b; }, 0) / gs.length : v.avg;
+              v.m = MODE === 'r3' ? v.r3 : MODE === 'adj' ? v.adj : v.avg; });
+          var top = (rep2.length ? rep2 : ins).slice().sort(function(a,b){ return b.m - a.m || b.cnt - a.cnt; });
           var byCnt = ins.slice(0, 10), mxC = byCnt[0].cnt, best = top.slice(0, 10);
-          var lo = Math.min.apply(null, best.map(function(v){ return v.avg; }).concat([tot])) - 1.5, hi = 100;
+          var lo = Math.min.apply(null, best.map(function(v){ return v.m; }).concat([tot])) - 1.5, hi = 100;
           var col = function(v){ return v >= 98 ? '#16a34a' : v >= 95 ? '#22c55e' : v >= 90 ? '#eab308' : '#ef4444'; };
           var kpi = function(lb, val, sub, c){ return '<div class="isK"><div class="isKl">' + lb + '</div><div class="isKv" style="color:' + c + '">' + val + '</div><div class="isKs">' + sub + '</div></div>'; };
-          var bar = function(v, w, c, txt){ return '<div class="isB"><span class="isBn">' + esc(v.n) + '</span><span class="isBt"><i style="width:' + Math.max(4, w) + '%;background:' + c + '"></i></span><span class="isBv">' + txt + '</span></div>'; };
+          var bar = function(v, w, c, txt){ return '<div class="isB" style="cursor:pointer" title="눌러서 점수가 왜 이런지 보기" data-insw="' + esc(v.n) + '" onclick="ui._svyInsWhy(this.getAttribute(\'data-insw\'))"><span class="isBn">' + esc(v.n) + '</span><span class="isBt"><i style="width:' + Math.max(4, w) + '%;background:' + c + '"></i></span><span class="isBv">' + txt + '</span></div>'; };
           return '<div class="isKs4">' + kpi('출강 강사', ins.length + '명', list.length + '개 회차 기준', '#0f172a') + kpi('강사 전체 평균', f1(tot) + '점', '모든 회차 · 모든 강사', '#4f46e5')
                 + (function(){   /* [K240] '최다 출강'·'최고 평균' 대신 — 최근 회차 강사 평균(직전 대비) · 최근 회차 1위 */
                     var li = list.length - 1, lr = list[li], avgAt = function(i){ var a = ins.map(function(v){ return v.s[i]; }).filter(function(x){ return x != null; }); return a.length ? a.reduce(function(p,q){ return p+q; },0) / a.length : null; };
@@ -21288,13 +21296,13 @@ ui.surveyOpen = async function(){
                          + (best1 ? kpi('최근 회차 1위', esc(best1.n), esc(lab(lr)) + ' · ' + f1(best1.s[li]) + '점', '#16a34a') : kpi('최근 회차 1위', '-', esc(lab(lr)) + ' 강사 점수 없음', '#94a3b8')); })() + '</div>'
             + '<div class="isG2"><div class="isP"><div class="isPt"><i class="fa-solid fa-person-chalkboard" style="color:#ea580c"></i> 출강 많은 강사 <span>TOP ' + byCnt.length + '</span></div>'
                 + byCnt.map(function(v){ return bar(v, v.cnt / mxC * 100, 'linear-gradient(90deg,#fdba74,#ea580c)', '<b>' + v.cnt + '회</b><small>' + f1(v.avg) + '점</small>'); }).join('') + '</div>'
-              + '<div class="isP"><div class="isPt"><i class="fa-solid fa-star" style="color:#16a34a"></i> 평균 점수 높은 강사 <span>TOP ' + best.length + (minN > 1 ? ' · ' + minN + '회 이상 출강한 강사만' : '') + '</span></div>'
-                + best.map(function(v){ return bar(v, (v.avg - lo) / (hi - lo) * 100, col(v.avg), '<b style="color:' + col(v.avg) + '">' + f1(v.avg) + '</b><small>' + v.cnt + '회</small>'); }).join('') + '</div></div>'
+              + '<div class="isP"><div class="isPt"><i class="fa-solid fa-star" style="color:#16a34a"></i> 강사 점수 순위 <span>TOP ' + best.length + (minN > 1 ? ' · ' + minN + '회 이상 출강' : '') + '</span></div>' + '<div class="isMd">' + [['r3','최근 3회','강사마다 가장 최근 3회만 평균 — 출강 횟수가 달라도 같은 조건으로 비교'],['adj','회차 보정','회차마다 같은 회차 다른 강사와의 차이를 평균 — 교육생 분위기·평가 성향 차이를 걷어냄'],['all','전체 평균','출강한 모든 회차의 단순 평균']].map(function(o){ return '<button type="button" class="' + (MODE === o[0] ? 'on' : '') + '" title="' + o[2] + '" onclick="ui._insMode=\'' + o[0] + '\';ui.surveyOpen()">' + o[1] + '</button>'; }).join('') + '</div>' + '<div style="font-size:12px;font-weight:700;color:#94a3b8;margin:-4px 0 8px">' + (MODE === 'r3' ? '강사마다 최근 3회만 평균 — 12회 출강자와 5회 출강자를 같은 조건으로 비교' : MODE === 'adj' ? '같은 회차 다른 강사와의 차이로 계산 — 회차마다 다른 교육생 성향을 걷어낸 점수' : '출강한 모든 회차의 단순 평균') + '</div>'
+                + best.map(function(v){ return bar(v, (v.m - lo) / (hi - lo) * 100, col(v.m), '<b style="color:' + col(v.m) + '">' + f1(v.m) + '</b><small>' + v.cnt + '회</small>'); }).join('') + '</div></div>'
             + '<div style="text-align:center;margin-top:16px"><button class="isMore" onclick="ui._isMore(this)"><i class="fa-solid fa-chevron-down"></i> 회차별 점수 상세 보기</button></div>'
-            + '<style>.isKs4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.isK{padding:14px 16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center}.isKl{font-size:13.5px;font-weight:900;color:#64748b}.isKv{font-size:24px;font-weight:900;margin-top:4px}.isKs{font-size:13px;font-weight:800;color:#94a3b8;margin-top:2px}.isG2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.isP{padding:16px 18px;border-radius:14px;border:1px solid #e2e8f0;background:#fff}.isPt{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:10px}.isPt span{font-size:12.5px;color:#94a3b8;font-weight:800;margin-left:4px}.isB{display:flex;align-items:center;gap:10px;padding:5px 0}.isBn{width:64px;flex-shrink:0;font-size:15.5px;font-weight:900;color:#334155}.isBt{flex:1;height:14px;border-radius:999px;background:#f1f5f9;overflow:hidden}.isBt i{display:block;height:100%;border-radius:999px}.isBv{width:96px;flex-shrink:0;text-align:right;font-size:15.5px;font-weight:900;color:#0f172a}.isBv small{margin-left:6px;font-size:12.5px;color:#94a3b8;font-weight:800}.isMore{border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:999px;padding:9px 20px;font:inherit;font-size:15px;font-weight:900;cursor:pointer}.isMore:hover{background:#e0e7ff}@media(max-width:900px){.isKs4{grid-template-columns:repeat(2,1fr)}.isG2{grid-template-columns:1fr}}</style>';
+            + '<style>.isKs4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:14px}.isK{padding:14px 16px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center}.isKl{font-size:13.5px;font-weight:900;color:#64748b}.isKv{font-size:24px;font-weight:900;margin-top:4px}.isKs{font-size:13px;font-weight:800;color:#94a3b8;margin-top:2px}.isG2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}.isP{padding:16px 18px;border-radius:14px;border:1px solid #e2e8f0;background:#fff}.isPt{font-size:16px;font-weight:900;color:#0f172a;margin-bottom:10px}.isPt span{font-size:12.5px;color:#94a3b8;font-weight:800;margin-left:4px}.isMd{display:flex;gap:4px;padding:3px;border-radius:999px;background:#f1f5f9;margin:0 0 8px;width:max-content}.isMd button{border:none;background:none;padding:5px 12px;border-radius:999px;font:inherit;font-size:12.5px;font-weight:900;color:#64748b;cursor:pointer}.isMd button.on{background:#fff;color:#0f172a;box-shadow:0 1px 4px rgba(15,23,42,.12)}.isB{display:flex;align-items:center;gap:10px;padding:5px 0}.isBn{width:64px;flex-shrink:0;font-size:15.5px;font-weight:900;color:#334155}.isBt{flex:1;height:14px;border-radius:999px;background:#f1f5f9;overflow:hidden}.isBt i{display:block;height:100%;border-radius:999px}.isBv{width:96px;flex-shrink:0;text-align:right;font-size:15.5px;font-weight:900;color:#0f172a}.isBv small{margin-left:6px;font-size:12.5px;color:#94a3b8;font-weight:800}.isMore{border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:999px;padding:9px 20px;font:inherit;font-size:15px;font-weight:900;cursor:pointer}.isMore:hover{background:#e0e7ff}@media(max-width:900px){.isKs4{grid-template-columns:repeat(2,1fr)}.isG2{grid-template-columns:1fr}}</style>';
         })()
       + '<div class="isDet" style="display:none"><div style="overflow:auto;margin-top:12px"><table class="svyT"><thead><tr><th style="text-align:left;padding-left:14px">강사</th><th>출강</th><th>평균</th>' + th + '</tr></thead><tbody>'
-      + ins.map(function(v){ return '<tr><td style="text-align:left;padding-left:14px;font-weight:900">' + esc(v.n) + '</td><td>' + v.cnt + '회</td>' + cell(v.avg) + list.map(function(r, ri){
+      + ins.map(function(v){ return '<tr><td style="text-align:left;padding-left:14px;font-weight:900"><a href="#" data-insw="' + esc(v.n) + '" onclick="event.preventDefault();ui._svyInsWhy(this.getAttribute(\'data-insw\'))" title="눌러서 점수가 왜 이런지 보기" style="color:#0f172a;text-decoration:none;border-bottom:1px dashed #94a3b8">' + esc(v.n) + '</a></td><td>' + v.cnt + '회</td>' + cell(v.avg) + list.map(function(r, ri){
           var c0 = cell(v.s[ri]); if(v.s[ri] == null) return c0; var mc = insCms(r, v.n).length;
           return mc ? c0.replace('<td style="', '<td class="svyInsC" data-rid="' + esc(r.id) + '" data-n="' + esc(v.n) + '" title="눌러서 이 강사님이 언급된 의견 보기" style="cursor:pointer;position:relative;').replace('</td>', '<sup class="svyNb" style="background:#7c3aed">' + mc + '</sup></td>') : c0; }).join('') + '</tr>'; }).join('')
       + '</tbody></table></div><div style="margin-top:8px;font-size:13px;font-weight:800;color:#64748b"><sup class="svyNb" style="position:static;display:inline-block;background:#7c3aed;margin-right:4px">2</sup> = 그 회차 의견 중 이 강사님 이름이 들어간 글 수 · 칸을 누르면 아래에 펼쳐집니다</div></div></div>';
@@ -21778,6 +21786,44 @@ ui.svyReportOpen = async function(id){
     ov.querySelector('#rpPrint').onclick = function(){ var w = window.open('', '_blank'); if(!w) return ui.showAlert('팝업이 막혀 있습니다. 브라우저 주소창 오른쪽에서 팝업을 허용해 주세요.');
         var pg = ov.querySelector('.rpPage').cloneNode(true); pg.querySelectorAll('[contenteditable]').forEach(function(el){ el.removeAttribute('contenteditable'); });
         w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(collect().title || '교육운영 결과보고') + '</title><style>@page{size:A4;margin:0}body{margin:0}' + CSS + '</style></head><body>' + pg.outerHTML + '<script>window.onload=function(){setTimeout(function(){window.print();},200);};<\/script></body></html>'); w.document.close(); };
+};
+/* [K298] 강사 점수 분석 — '그 회차 전체가 낮았나(회차 효과)' vs '이 강사만 낮았나' + '소수가 아주 낮게 줬나(분포)' */
+ui._svyInsWhy = function(n){
+    var list = ui._svyList || [], esc = ui._esc, f1 = function(v){ return (Math.round(v*10)/10).toFixed(1); }, lab = ui._svyLab || function(r){ return r._title || ''; };
+    var rows = []; list.forEach(function(r){ var L = ((r.inst || {}).list || []).filter(function(x){ return x.score > 30; }), me = L.filter(function(x){ return x.n === n; })[0]; if(!me) return;
+        var oth = L.filter(function(x){ return x.n !== n; }), om = oth.length ? oth.reduce(function(a,b){ return a + b.score; }, 0) / oth.length : null;
+        var d = me.dist || null, tot = d ? d.reduce(function(a,b){ return a+b; }, 0) : 0, low = d ? d[3] + d[4] : 0, top = d ? d[0] : 0;
+        rows.push({ r: r, s: me.score, om: om, gap: om != null ? me.score - om : null, d: d, tot: tot, low: low, top: top, k: me.k || 1 }); });
+    if(!rows.length) return;
+    var verdict = function(x){
+        if(x.gap == null) return ['비교 불가', '#94a3b8', '그 회차 다른 강사 점수가 없습니다'];
+        if(x.d && x.tot && x.low > 0 && x.low / x.tot <= 0.15 && x.top / x.tot >= 0.6 && x.gap <= -1.5) return ['소수 저점', '#9333ea', '대부분 5점인데 1·2점을 준 응답 ' + Math.round(x.low / x.k) + '명 정도가 점수를 끌어내림'];
+        if(x.gap <= -3) return ['개인 차이', '#dc2626', '같은 회차 다른 강사보다 ' + f1(Math.abs(x.gap)) + '점 낮음'];
+        if(x.om < 93 && x.gap > -3) return ['회차 전체 낮음', '#d97706', '그 회차 강사 평균이 ' + f1(x.om) + '점으로 전반적으로 낮았음'];
+        return ['평소 수준', '#16a34a', '같은 회차 다른 강사와 비슷함'];
+    };
+    var V = rows.map(verdict), cnt = {}; V.forEach(function(v){ cnt[v[0]] = (cnt[v[0]] || 0) + 1; });
+    var lowRows = rows.filter(function(x){ return x.s < 95; });
+    var sum = lowRows.length ? (function(){ var vl = lowRows.map(verdict), c = {}; vl.forEach(function(v){ c[v[0]] = (c[v[0]] || 0) + 1; }); var top = Object.keys(c).sort(function(a,b){ return c[b] - c[a]; })[0];
+            return '95점 미만 ' + lowRows.length + '회 중 <b>' + top + '</b>이(가) ' + c[top] + '회로 가장 많습니다. ' + (top === '회차 전체 낮음' ? '강사 개인 문제라기보다 <b>그 회차 교육생 분위기·평가 성향</b>의 영향이 큽니다.' : top === '소수 저점' ? '<b>일부 응답자가 극단적으로 낮게 준</b> 영향이 큽니다.' : top === '개인 차이' ? '같은 회차 다른 강사보다 <b>뚜렷하게 낮아</b> 강의 방식 점검이 필요해 보입니다.' : ''); })()
+        : '모든 회차 95점 이상으로 안정적입니다.';
+    var hasD = rows.some(function(x){ return x.d; });
+    var bar = function(x){ if(!x.d || !x.tot) return '<span style="color:#cbd5e1">-</span>'; var C = ['#16a34a','#86efac','#fde68a','#fb923c','#dc2626'];
+        return '<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;min-width:120px" title="5점 ' + x.d[0] + ' · 4점 ' + x.d[1] + ' · 3점 ' + x.d[2] + ' · 2점 ' + x.d[3] + ' · 1점 ' + x.d[4] + ' (문항×응답 합계)">' + x.d.map(function(v, i){ return v ? '<i style="flex:' + v + ';background:' + C[i] + '"></i>' : ''; }).join('') + '</div><div style="font-size:11px;color:#64748b;font-weight:800;margin-top:2px">1·2점 ' + x.low + '건</div>'; };
+    var old = document.getElementById('svyInsDr'); if(old) old.remove();
+    var box = document.createElement('div'); box.id = 'svyInsDr'; document.body.appendChild(box);
+    box.innerHTML = '<div class="wyBg" style="position:fixed;inset:0;z-index:2147482990;background:rgba(15,23,42,.18)"></div><div style="position:fixed;top:0;right:0;bottom:0;width:min(560px,96vw);z-index:2147482991;background:#fff;box-shadow:-16px 0 40px rgba(15,23,42,.18);display:flex;flex-direction:column">'
+        + '<div style="display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:3px solid #fed7aa"><span style="padding:4px 12px;border-radius:999px;background:#ea580c;color:#fff;font-size:14px;font-weight:900">강사 · ' + esc(n) + '</span><b style="font-size:17px;color:#0f172a">점수가 왜 이럴까</b><button id="insX" style="margin-left:auto;width:36px;height:36px;border:none;border-radius:50%;background:#f1f5f9;font-size:16px;cursor:pointer">✕</button></div>'
+        + '<div style="flex:1;overflow-y:auto;padding:18px">'
+        + '<div style="padding:14px 16px;border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;font-size:15px;font-weight:700;color:#1e293b;line-height:1.75">' + sum + '</div>'
+        + '<div style="margin:14px 0 6px;font-size:13px;font-weight:800;color:#64748b">판정 기준 · <b style="color:#d97706">회차 전체 낮음</b>: 그 회차 강사 평균이 93점 미만이고 이 강사와 차이가 작음 · <b style="color:#dc2626">개인 차이</b>: 같은 회차 다른 강사보다 3점 이상 낮음 · <b style="color:#9333ea">소수 저점</b>: 대부분 5점인데 1·2점이 15% 이하로 섞여 점수를 끌어내림</div>'
+        + '<table style="width:100%;border-collapse:collapse;font-size:14px"><thead><tr style="background:#f8fafc;color:#64748b"><th style="padding:8px 6px;text-align:left">회차</th><th>점수</th><th>회차 강사평균</th><th>차이</th>' + (hasD ? '<th>응답 분포</th>' : '') + '<th>판정</th></tr></thead><tbody>'
+        + rows.map(function(x, i){ var v = V[i]; return '<tr style="border-top:1px solid #f1f5f9"><td style="padding:9px 6px;font-weight:900">' + esc(lab(x.r)) + '</td><td style="text-align:center;font-weight:900;color:' + (x.s < 90 ? '#dc2626' : x.s < 95 ? '#d97706' : '#16a34a') + '">' + f1(x.s) + '</td><td style="text-align:center">' + (x.om != null ? f1(x.om) : '-') + '</td><td style="text-align:center;font-weight:900;color:' + (x.gap == null ? '#94a3b8' : x.gap >= 0 ? '#16a34a' : '#dc2626') + '">' + (x.gap == null ? '-' : (x.gap >= 0 ? '+' : '') + f1(x.gap)) + '</td>' + (hasD ? '<td style="padding:6px">' + bar(x) + '</td>' : '') + '<td style="text-align:center" title="' + esc(v[2]) + '"><span style="padding:3px 9px;border-radius:999px;background:' + v[1] + '1a;color:' + v[1] + ';font-size:12px;font-weight:900;white-space:nowrap">' + v[0] + '</span></td></tr>'; }).join('')
+        + '</tbody></table>'
+        + (hasD ? '' : '<div style="margin-top:12px;padding:10px 12px;border-radius:10px;background:#f8fafc;border:1px dashed #cbd5e1;font-size:13px;font-weight:700;color:#64748b;line-height:1.6">응답 분포(5점~1점 몇 명)는 이번 업데이트부터 저장됩니다. 결과지 PDF를 <b>다시 올리면</b> "소수가 아주 낮게 줬는지"까지 볼 수 있습니다. 지금은 같은 회차 다른 강사와 비교한 판정만 보입니다.</div>')
+        + '</div></div>';
+    var close = function(){ box.remove(); document.removeEventListener('keydown', escK, true); }, escK = function(e){ if(e.key === 'Escape'){ e.stopPropagation(); close(); } };
+    document.addEventListener('keydown', escK, true); box.querySelector('#insX').onclick = close; box.querySelector('.wyBg').onclick = close;
 };
 /* [K260] 연도별 항기원 과정 전체 + 설문 등재 현황. 연간계획은 해마다 새로 올라오므로 system/coord/planHistory/{연도}에 쌓아 둔다 */
 ui._svyPlanLoad = async function(){
