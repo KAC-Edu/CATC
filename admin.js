@@ -21641,9 +21641,20 @@ ui.svyReportOpen = async function(id){
     var esc = ui._esc, f2 = function(v){ return v == null ? '-' : (Math.round(v*100)/100).toFixed(2); };
     var cm = []; try{ cm = (await ui._svyCmRef().child(r.id).once('value')).val() || []; }catch(e){}
     var saved = {}, serD = {}; try{ saved = (await ui._svyRptRef().child(r.id).once('value')).val() || {}; serD = (await ui._svyRptRef().child('_series/' + String(r.series || '').replace(/[.#$\/\[\]]/g,'_')).once('value')).val() || {}; }catch(e){}
-    /* 연간계획 기록에서 담임 찾기 */
-    var prof = ''; try{ var ph = (await firebase.database().ref('system/coord/planHistory/' + String(r.year || '')).once('value')).val() || {}, st = ui._svyStartMs(r);
-        Object.keys(ph).forEach(function(k){ var c = ph[k]; if(prof || !c || !c.name) return; var sk = ui._svySeriesOf(c.name).key.replace(/과정|\s/g,''), rk = String(r.series || '').replace(/과정|\s/g,''); var cs = new Date(c.startDate + 'T00:00:00').getTime(); if(sk === rk && Math.abs(cs - st) <= 7*864e5) prof = String(c.prof || '').split(/[,\/]/)[0]; }); }catch(e){}
+    /* [K296] 연간계획(현재 + 연도별 기록)에서 담임·과정운영자 찾기 — 같은 회차가 없으면 같은 과정의 가장 최근 회차 운영자 */
+    var prof = '', oper = '';
+    try{
+        var rk = String(r.series || '').replace(/과정|\s/g,''), st = ui._svyStartMs(r), cand = [];
+        var addC = function(c){ if(!c || !c.name || !c.startDate) return; if(ui._svySeriesOf(c.name).key.replace(/과정|\s/g,'') !== rk) return; cand.push(c); };
+        var cur = (await firebase.database().ref('system/annualPlan').once('value')).val() || {}; Object.keys(cur).forEach(function(k){ addC(cur[k]); });
+        var hist = (await firebase.database().ref('system/coord/planHistory').once('value')).val() || {}; Object.keys(hist).forEach(function(y){ var o = hist[y] || {}; Object.keys(o).forEach(function(k){ addC(o[k]); }); });
+        var ms = function(c){ return new Date(String(c.startDate).slice(0,10) + 'T00:00:00').getTime(); };
+        var same = cand.filter(function(c){ return Math.abs(ms(c) - st) <= 7*864e5; });
+        var hit = same.filter(function(c){ return c.prof; })[0]; if(hit) prof = String(hit.prof).split(/[,\/]/)[0].trim();
+        var hc = same.filter(function(c){ return c.coord; })[0];
+        if(!hc){ hc = cand.filter(function(c){ return c.coord; }).sort(function(a,b){ return ms(b) - ms(a); })[0]; }   // 최근 회차 운영자
+        if(hc) oper = String(hc.coord).trim();
+    }catch(e){}
     /* 기간 */
     var ds = String(r.period || '').match(/\d{4}-\d{2}-\d{2}/g) || [], pTxt = '';
     if(ds.length){ var a = new Date(ds[0] + 'T00:00:00'), b = new Date((ds[1] || ds[0]) + 'T00:00:00'), days = Math.round((b - a) / 864e5) + 1;
@@ -21710,7 +21721,7 @@ ui.svyReportOpen = async function(id){
     var cat = (typeof kacDefCat === 'function' ? kacDefCat(r.title) : '') === 'duty-legal' ? 0 : 1;
     var V = function(k, d){ return saved[k] != null ? saved[k] : d; };
     var F = {
-        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof || '-'), oper: V('oper', serD.oper || '-'),
+        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof || '-'), oper: V('oper', serD.oper || oper || '-'),
         purpose: V('purpose', serD.purpose || (/신입/.test(r.title) ? '신입사원에게 회사의 비전·사업과 조직문화를 이해시키고 직무 기초역량과 동기 간 유대를 함양하여 조기 적응을 지원함'
             : /초기/.test(r.title) ? '항공정보통신시설 직무를 부여하기 위하여 기본이론 및 동작원리 등을 이해시키고 현장에서 시행하는 직무교육에 대비하기 위함'
             : /정기/.test(r.title) ? '자격인증 소지자에게 시설관리·유지보수 업무 역량 향상과 신기술 도입 등 지식과 기량을 습득시키기 위함' : '과정 운영 목적을 입력해 주세요')), c0: V('c0', cat === 0 ? '〇' : '-'), c1: V('c1', cat === 1 ? '〇' : '-'), c2: V('c2', '-'), c3: V('c3', '-'),
@@ -21776,7 +21787,7 @@ ui._svyPlanLoad = async function(){
         var pv = (await firebase.database().ref('system/annualPlan').once('value')).val() || {}, up = {};
         Object.keys(pv).forEach(function(k){ var c = pv[k] || {}; if(!c.name || !/^\d{4}-\d{2}-\d{2}/.test(String(c.startDate || ''))) return;
             var y = String(c.startDate).slice(0,4), key = (String(c.startDate) + '_' + String(c.name)).replace(/[.#$\/\[\]]/g, '_').slice(0, 120);
-            up[y + '/' + key] = { name: String(c.name), startDate: String(c.startDate).slice(0,10), endDate: String(c.endDate || c.startDate).slice(0,10), cancelled: !!c.cancelled, prof: String(c.prof || '') }; });
+            up[y + '/' + key] = { name: String(c.name), startDate: String(c.startDate).slice(0,10), endDate: String(c.endDate || c.startDate).slice(0,10), cancelled: !!c.cancelled, prof: String(c.prof || ''), coord: String(c.coord || '') }; });
         var ref = firebase.database().ref('system/coord/planHistory');
         if(Object.keys(up).length){ try{ await ref.update(up); }catch(e){} }
         ui._svyPlanHist = (await ref.once('value')).val() || {};
