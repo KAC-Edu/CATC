@@ -21642,7 +21642,7 @@ ui.svyReportOpen = async function(id){
     var cm = []; try{ cm = (await ui._svyCmRef().child(r.id).once('value')).val() || []; }catch(e){}
     var saved = {}, serD = {}; try{ saved = (await ui._svyRptRef().child(r.id).once('value')).val() || {}; serD = (await ui._svyRptRef().child('_series/' + String(r.series || '').replace(/[.#$\/\[\]]/g,'_')).once('value')).val() || {}; }catch(e){}
     /* [K296] 연간계획(현재 + 연도별 기록)에서 담임·과정운영자 찾기 — 같은 회차가 없으면 같은 과정의 가장 최근 회차 운영자 */
-    var prof = '', oper = '';
+    var prof = '', oper = '', operLatest = '';
     try{
         var rk = String(r.series || '').replace(/과정|\s/g,''), st = ui._svyStartMs(r), cand = [];
         var addC = function(c){ if(!c || !c.name || !c.startDate) return; if(ui._svySeriesOf(c.name).key.replace(/과정|\s/g,'') !== rk) return; cand.push(c); };
@@ -21651,9 +21651,8 @@ ui.svyReportOpen = async function(id){
         var ms = function(c){ return new Date(String(c.startDate).slice(0,10) + 'T00:00:00').getTime(); };
         var same = cand.filter(function(c){ return Math.abs(ms(c) - st) <= 7*864e5; });
         var hit = same.filter(function(c){ return c.prof; })[0]; if(hit) prof = String(hit.prof).split(/[,\/]/)[0].trim();
-        var hc = same.filter(function(c){ return c.coord; })[0];
-        if(!hc){ hc = cand.filter(function(c){ return c.coord; }).sort(function(a,b){ return ms(b) - ms(a); })[0]; }   // 최근 회차 운영자
-        if(hc) oper = String(hc.coord).trim();
+        var hc = same.filter(function(c){ return c.coord; })[0], hl = cand.filter(function(c){ return c.coord; }).sort(function(a,b){ return ms(b) - ms(a); })[0];
+        if(hc) oper = String(hc.coord).trim(); else if(hl) operLatest = String(hl.coord).trim();   // [K297] 같은 회차 운영자 > 저장해 둔 값 > 최근 회차 운영자
     }catch(e){}
     /* 기간 */
     var ds = String(r.period || '').match(/\d{4}-\d{2}-\d{2}/g) || [], pTxt = '';
@@ -21721,7 +21720,7 @@ ui.svyReportOpen = async function(id){
     var cat = (typeof kacDefCat === 'function' ? kacDefCat(r.title) : '') === 'duty-legal' ? 0 : 1;
     var V = function(k, d){ return saved[k] != null ? saved[k] : d; };
     var F = {
-        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof || '-'), oper: V('oper', serD.oper || oper || '-'),
+        title: V('title', String(r.title || '').replace(/\s*$/, '') + ' 교육운영결과 보고'), period: V('period', pTxt), prof: V('prof', prof || '-'), oper: V('oper', oper || serD.oper || operLatest || '-'),
         purpose: V('purpose', serD.purpose || (/신입/.test(r.title) ? '신입사원에게 회사의 비전·사업과 조직문화를 이해시키고 직무 기초역량과 동기 간 유대를 함양하여 조기 적응을 지원함'
             : /초기/.test(r.title) ? '항공정보통신시설 직무를 부여하기 위하여 기본이론 및 동작원리 등을 이해시키고 현장에서 시행하는 직무교육에 대비하기 위함'
             : /정기/.test(r.title) ? '자격인증 소지자에게 시설관리·유지보수 업무 역량 향상과 신기술 도입 등 지식과 기량을 습득시키기 위함' : '과정 운영 목적을 입력해 주세요')), c0: V('c0', cat === 0 ? '〇' : '-'), c1: V('c1', cat === 1 ? '〇' : '-'), c2: V('c2', '-'), c3: V('c3', '-'),
