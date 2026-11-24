@@ -9025,9 +9025,15 @@ body.kac-noanim #noticeModal > .menu-box, body.kac-noanim #surveyModal > .menu-b
       // 안내 문구 — 무엇을 쓸 수 있는지 명확히
       if(!document.getElementById('kacGuestHomeNote')){
         var note=document.createElement('div'); note.id='kacGuestHomeNote';
-        note.style.cssText='margin:14px 0 0;padding:13px 14px;border-radius:14px;background:#f0fdfa;border:1.5px solid #99f6e4;font-size:12.5px;font-weight:800;color:#0f766e;line-height:1.7;word-break:keep-all;box-sizing:border-box;';
-        note.innerHTML='개인정보 없이 참여 중입니다 · <b>질문하기 · 퀴즈 풀기</b>만 이용할 수 있어요.<br>'
-          +'<span style="color:#64748b;font-weight:700;">출결·외출외박·차량·석식은 입교등록이 필요합니다.</span>';
+        /* [K294] 안내 문구 대신 [질문하기]·[퀴즈 풀기] 버튼 — 카카오 채널 메뉴로 들어온 것과 똑같은 주소(?room=…&menu=…)로 다시 열어
+           채널에서 누른 것과 같은 화면이 나오게 한다(앱 안에서 화면만 바꾸면 가끔 홈 카드가 겹쳐 이상하게 보였음) */
+        note.style.cssText='margin:14px 0 0;box-sizing:border-box;';
+        var go=function(menu){ try{ var u=new URL(location.href); u.search=''; u.hash=''; u.searchParams.set('room', homeRoom || (localStorage.getItem('kac_room')||'')); u.searchParams.set('menu', menu); location.href=u.toString(); }catch(e){ location.href='index.html?room='+encodeURIComponent(homeRoom||'')+'&menu='+menu; } };
+        note.innerHTML='<div style="display:flex;gap:10px;">'
+          +'<button type="button" data-gm="qna" style="flex:1;padding:16px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#0d9488,#14b8a6);color:#fff;font:inherit;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(13,148,136,.25);"><i class="fa-solid fa-circle-question" style="margin-right:6px;"></i>질문하기</button>'
+          +'<button type="button" data-gm="quiz" style="flex:1;padding:16px 8px;border:none;border-radius:14px;background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff;font:inherit;font-size:16px;font-weight:900;cursor:pointer;box-shadow:0 8px 18px rgba(245,158,11,.25);"><i class="fa-solid fa-trophy" style="margin-right:6px;"></i>퀴즈 풀기</button></div>'
+          +'<div style="margin-top:8px;text-align:center;font-size:12px;font-weight:700;color:#64748b;line-height:1.5;word-break:keep-all;">개인정보 없이 참여 중 · 출결·외출외박·차량·석식은 입교등록이 필요합니다</div>';
+        note.querySelectorAll('[data-gm]').forEach(function(b){ b.onclick=function(){ b.disabled=true; b.style.opacity='.7'; go(b.getAttribute('data-gm')); }; });
         var body=ov.querySelector('.kh-body')||ov.querySelector('.kh-card'); if(body) body.appendChild(note);
       }
       /* [K61] 게스트 → 실명 입교등록 전환 버튼 */
