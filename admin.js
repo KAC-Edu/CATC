@@ -19559,7 +19559,7 @@ ui.matRemove = function(id){
         + '<div style="font-size:17px;font-weight:900;color:#0f172a;word-break:keep-all">"' + ui._esc(m.title || m.fileName) + '"</div>'
         + '<div style="margin-top:4px;font-size:13px;font-weight:700;color:#64748b">올린 사람: ' + ui._esc(ui._matWhoLabel ? ui._matWhoLabel(m) : (m.uploader || '-')) + '</div>'
         + '<button data-a="un" style="display:block;width:100%;margin-top:18px;padding:14px;border:2px solid #cbd5e1;border-radius:12px;background:#fff;text-align:left;font:inherit;cursor:pointer"><b style="font-size:15.5px;color:#0f172a"><i class="fa-solid fa-minus" style="color:#64748b"></i> 이번 과정에서만 빼기</b><div style="margin-top:3px;font-size:12.5px;font-weight:700;color:#64748b">교육생 화면에서만 사라지고 자료실에는 남아 다음에 다시 쓸 수 있습니다</div></button>'
-        + '<button data-a="del" style="display:block;width:100%;margin-top:10px;padding:14px;border:2px solid #fecaca;border-radius:12px;background:#fef2f2;text-align:left;font:inherit;cursor:pointer"><b style="font-size:15.5px;color:#b91c1c"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</b><div style="margin-top:3px;font-size:12.5px;font-weight:700;color:#991b1b">파일까지 지웁니다 · 되돌릴 수 없습니다' + (mine ? '' : ' · <b>본인이 올린 자료가 아닙니다</b>') + '</div></button>'
+        + '<button data-a="del" style="display:block;width:100%;margin-top:10px;padding:14px;border:2px solid #fecaca;border-radius:12px;background:#fef2f2;text-align:left;font:inherit;cursor:pointer"><b style="font-size:15.5px;color:#b91c1c"><i class="fa-solid fa-trash"></i> 휴지통으로 옮기기</b><div style="margin-top:3px;font-size:12.5px;font-weight:700;color:#991b1b">3일 뒤 자동 삭제 · 그 전엔 자료실 휴지통에서 되돌리기 가능' + (mine ? '' : ' · <b>본인이 올린 자료가 아닙니다</b>') + '</div></button>'
         + '<div style="text-align:right;margin-top:14px"><button data-a="x" style="padding:9px 20px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer">취소</button></div></div>';
     document.body.appendChild(ov);
     var close = function(){ ov.remove(); };
@@ -19587,26 +19587,24 @@ ui.matDestroy = async function(id){
     var ok = await new Promise(function(res){
         var ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:2147483200;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
         ov.innerHTML = '<div style="background:#fff;border-radius:20px;padding:24px 26px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(15,23,42,.35)">'
-            + '<div style="font-size:18px;font-weight:900;color:#b91c1c"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</div>'
+            + '<div style="font-size:18px;font-weight:900;color:#b91c1c"><i class="fa-solid fa-trash"></i> 휴지통으로 옮기기</div>'
             + (mine ? '' : '<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;font-size:13.5px;font-weight:800;color:#c2410c"><i class="fa-solid fa-triangle-exclamation"></i> 본인이 올린 자료가 아닙니다</div>')
             + '<div style="margin-top:12px;font-size:15.5px;font-weight:900;color:#0f172a;word-break:keep-all">"' + ui._esc(m.title || m.fileName) + '"</div>'
             + '<div style="margin-top:3px;font-size:13px;font-weight:700;color:#64748b">올린 사람: ' + ui._esc(m.uploader || '미상') + '</div>'
-            + '<ul style="margin:14px 0 0;padding-left:18px;font-size:13.5px;font-weight:700;color:#334155;line-height:1.75"><li>다른 과정에서 쓰고 있다면 그 과정에서도 사라집니다.</li><li>파일이 지워지며 <b style="color:#b91c1c">되돌릴 수 없습니다.</b></li></ul>'
-            + '<div style="display:flex;gap:8px;margin-top:18px"><button data-x style="flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer">취소</button><button data-ok style="flex:1.4;padding:12px;border:none;border-radius:11px;background:#dc2626;color:#fff;font:inherit;font-weight:900;cursor:pointer">삭제</button></div></div>';
+            + '<ul style="margin:14px 0 0;padding-left:18px;font-size:13.5px;font-weight:700;color:#334155;line-height:1.75"><li>자료실 목록과 이번 과정에서 바로 사라집니다.</li><li><b style="color:#b91c1c">3일 뒤 자동으로 완전 삭제</b>됩니다.</li><li>그 전에는 [자료실에서 가져오기] → <b>휴지통</b>에서 되돌릴 수 있습니다.</li></ul>'
+            + '<div style="display:flex;gap:8px;margin-top:18px"><button data-x style="flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer">취소</button><button data-ok style="flex:1.4;padding:12px;border:none;border-radius:11px;background:#dc2626;color:#fff;font:inherit;font-weight:900;cursor:pointer">휴지통으로</button></div></div>';
         document.body.appendChild(ov);
         var done = function(v){ ov.remove(); res(v); };
         ov.querySelector('[data-x]').onclick = function(){ done(false); }; ov.querySelector('[data-ok]').onclick = function(){ done(true); }; ov.onclick = function(e){ if(e.target === ov) done(false); };
     });
     if(!ok) return;
-    (async function(){
-        if(!(await ui._matEnsureKey())) return;
-        try{
-            await window.kacMaterials.destroy(m);
-            await window.kacMaterials.unlink(state.room, id);
-            ui.showAlert('🗑️ 삭제했습니다.');
-            window.kacMaterials.listAll().then(function(all){ ui._matAll=all; ui._matRenderList(); });
-        }catch(e){ ui.showAlert('삭제에 실패했습니다. ' + ((e&&e.message)||'')); }
-    })();
+    /* [K295] 바로 지우지 않고 휴지통으로 — 3일 뒤 자동 삭제(그 전엔 자료실 휴지통에서 되돌리기 가능) */
+    try{
+        await firebase.database().ref('system/materials/' + id).update({ trashedAt: Date.now(), trashedBy: ui._matWho() });
+        await window.kacMaterials.unlink(state.room, id);
+        ui.showAlert('🗑️ 휴지통으로 옮겼습니다.\n3일 뒤 자동으로 삭제되며, 그 전에는 [자료실에서 가져오기] → 휴지통에서 되돌릴 수 있습니다.');
+        window.kacMaterials.listAll().then(function(all){ ui._matAll = all; ui._matRenderList(); });
+    }catch(e){ ui.showAlert('휴지통으로 옮기지 못했습니다. ' + ((e && e.message) || '')); }
 };
 
 /* ── 자료실에서 가져오기 ────────────────────────────────── */
@@ -19672,6 +19670,17 @@ ui._matLibRow = function(m, indent){
       + '</label>';
 };
 
+/* [K295] 휴지통 — listAll 결과에서 빼 두고(ui._matTrash), 3일 지난 것은 암호가 있는 창에서 조용히 완전 삭제 */
+(function(){ try{ var M = window.kacMaterials; if(!M || M._trashWrap) return; M._trashWrap = true; var orig = M.listAll;
+    M.listAll = function(){ return orig.apply(M, arguments).then(function(all){ var keep = [], trash = [], now = Date.now();
+        all.forEach(function(m){ if(m.trashedAt) trash.push(m); else keep.push(m); }); ui._matTrash = trash;
+        if(M.getKey()){ trash.filter(function(m){ return now - Number(m.trashedAt) > 3 * 864e5; }).forEach(function(m){ M.destroy(m).catch(function(){}); }); }
+        return keep; }); }; }catch(e){} })();
+ui.matTrashRestore = async function(id){ try{ await firebase.database().ref('system/materials/' + id).update({ trashedAt: null, trashedBy: null }); }catch(e){} var all = await window.kacMaterials.listAll(); ui._matAll = all; try{ ui.matRenderLibrary(); }catch(e){} try{ ui._matRenderList(); }catch(e){} };
+ui._matTrashHtml = function(){ var T = ui._matTrash || []; if(!T.length) return '';
+    var left = function(m){ var d = 3 - Math.floor((Date.now() - Number(m.trashedAt)) / 864e5); return d <= 0 ? '오늘 삭제' : d + '일 뒤 삭제'; };
+    return '<details style="margin-top:14px;border:1px dashed #fca5a5;border-radius:12px;background:#fff7f7;padding:10px 14px"><summary style="cursor:pointer;font-size:14px;font-weight:900;color:#b91c1c"><i class="fa-solid fa-trash-can"></i> 휴지통 ' + T.length + '건 <span style="font-size:12px;color:#94a3b8;font-weight:700">· 3일 뒤 자동 삭제</span></summary>'
+        + T.map(function(m){ return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #fee2e2"><span style="flex:1;min-width:0;font-size:14px;font-weight:800;color:#334155;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + ui._esc(m.title || m.fileName) + '</span><span style="font-size:12px;font-weight:800;color:#b91c1c;white-space:nowrap">' + left(m) + '</span><button type="button" onclick="ui.matTrashRestore(\'' + m.id + '\')" style="padding:5px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;font:inherit;font-size:12.5px;font-weight:900;color:#2563eb;cursor:pointer">되돌리기</button></div>'; }).join('') + '</details>'; };
 ui.matRenderLibrary = function(){
     var box = document.getElementById('matLibList'); if(!box) return;
     var q = String((document.getElementById('matLibSearch')||{}).value || '').trim().toLowerCase();
@@ -19785,7 +19794,9 @@ ui.matRenderLibrary = function(){
             + arr.map(function(m){ return ui._matLibRow(m, 8); }).join('')
             + '</div>';
         }).join('');
-};
+};/* [K295] 자료실 창 맨 아래에 휴지통(되돌리기) */
+(function(){ var _rl = ui.matRenderLibrary; ui.matRenderLibrary = function(){ var r = _rl.apply(this, arguments); try{ var b = document.getElementById('matLibList'); if(b && !b.querySelector('#matTrashBox')){ var t = ui._matTrashHtml(); if(t) b.insertAdjacentHTML('beforeend', '<div id="matTrashBox">' + t + '</div>'); } }catch(e){} return r; }; })();
+
 ui.matLinkSelected = async function(){
     var chk = Array.from(document.querySelectorAll('.matLibChk:checked')).map(function(c){ return c.value; });
     if(!chk.length) return ui.showAlert('연결할 교재를 선택해 주세요.');
