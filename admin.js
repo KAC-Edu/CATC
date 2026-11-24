@@ -21067,7 +21067,7 @@ ui._svyUnit = function(r){ return /\d+\s*기/.test(String((r && r.title) || ''))
 ui._svyTag = function(t){
     var s0 = String(t||'').trim();
     /* [K192] '불편하지 않았다 / 큰 불편 없이 / 힘드셨을텐데(상대 배려)'처럼 부정이 뒤집힌 말은 불만에서 뺀다 */
-    var s = s0.replace(/(큰\s?)?(불편|어렵|어려|부족|아쉬|문제|힘들|불만|지장)[가-힣]{0,5}\s?(없|않|안\s?되|안\s?했)/g, ' ').replace(/힘드셨|수고하셨|고생하셨|고생\s?많|애쓰셨/g, ' ');
+    var s = s0.replace(/(큰\s?)?(불편|어렵|어려|부족|아쉬|문제|힘들|불만|지장)[가-힣]{0,5}\s?(없|않|안\s?되|안\s?했)/g, ' ').replace(/힘드셨|수고하셨|고생하셨|고생\s?많|애쓰셨/g, ' ').replace(/잊지\s?못|아깝지\s?않|아쉬울\s?정도로\s?좋/g, ' ');   // [K306] '잊지 못해요' 같은 칭찬을 불만으로 보지 않음
     /* [K231] 칭찬·감사가 뚜렷하게 많은 글은 '부족·아쉽'이 섞여도 칭찬 — 예) "…부족한 물품을 채워주신 분들까지 수고 많으셨습니다. 감사합니다" */
     var posA = (s0.match(/좋았|좋습|좋은|만족|감사|최고|맛있|훌륭|친절|깔끔|유익|행복|수고|고생\s?많|애쓰|도움|최선|덕분|즐거|알찬|인상\s?깊/g) || []).length;
     var askA = /있었으면|생겼으면|했으면|되었으면|됐으면|주셨으면|바랍니다|바람|희망|건의|개선(이|을|해|되)|바꿔|교체|늘려|줄여|좋겠|필요합니다|필요함|필요할/.test(s);
@@ -21079,6 +21079,7 @@ ui._svyTag = function(t){
     /* [K215] 칭찬이 여러 번 나오고 바꿔 달라는 말이 없으면 칭찬 — 예) "너무 좋았습니다. 모든 식당이 항기원만 같았으면 좋겠습니다" */
     var posN = (s0.match(/좋았|좋습|만족|감사|최고|맛있|훌륭|친절|깔끔|유익/g) || []).length;
     if(/(만|처럼)\s?(같았|같)으면/.test(s0) && /좋았|만족|최고/.test(s0)) return 'pos';
+    if(/(셨|었|았|했|됐|되었)다면/.test(s0) && /(좋았을|도움이\s?(되었|됐)을|좋을|나았을|편했을)/.test(s0)) return 'sug';   // [K306] '~알려주셨다면 도움이 되었을 것' = 개선요청
     if(/(제외하고|빼고|말고|외에는|외엔)[는은]?\s?[^.!]{0,12}(만족|좋았|좋습|최고|훌륭)/.test(s0)) return 'pos';   // [K281] '~것 제외하고는 너무 만족' = 칭찬   // '모든 식당이 항기원만 같았으면' = 칭찬
     if(/(였|었|았|했|됐|되었)으면|좋았을\s?(것|거)\s?같|좋을\s?(것|거)\s?같|좋겠/.test(s0) && !/좋았습니다|만족/.test(s0.replace(/좋았을/g,''))) return 'sug';   /* [K256] '~였으면 좋았을 것 같습니다'는 칭찬이 아니라 개선요청 */
     if(posN >= 2 && !/추가|개선|바꿔|바뀌|교체|늘려|줄여|있었으면|생겼으면|필요|아쉽|불편|였으면|었으면|좋았을/.test(s0)) return 'pos';
@@ -21095,14 +21096,14 @@ ui._svyNorm = function(list){
 };
 ui._svyVal = function(r, k){ if(r.hide && r.hide[k]) return null; var v = k === 'total' ? r.total : (r[k] || {}).score; if(v == null || !(v > 30)) return null; if(k !== 'total' && !(((r[k] || {}).items || (r[k] || {}).list || []).length)) return null; return v; };
 ui._SVY_CAT = [
-    ['생활관', /생활관|숙소|기숙사|객실|히터|난방|냉방|에어컨|침대|이불|베개|샤워|온수|화장실|세탁|1인실|2인실|방이|방에|방음/],
+    ['생활관', /생활관|숙소|기숙사|객실|히터|난방|냉방|에어컨|침대|이불|베개|샤워|온수|화장실|세탁|1인실|2인실|호실|룸메|방\s?(배정|온도|청소|안이|이\s?좁|이\s?춥|이\s?덥)|방음/],
     ['식당', /식당|식사|밥|메뉴|반찬|음식|급식|조식|중식|석식|맛있|맛이/],
-    ['강의실·기자재', /강의실|기자재|모니터|프로젝터|빔|마이크|의자|책상|컴퓨터|노트북|스크린|실습\s?장비|키보드|마우스/],
+    ['강의실·기자재', /강의실|기자재|모니터|프로젝터|빔\s?프로|마이크|의자|책상|컴퓨터|노트북|스크린|실습\s?장비|키보드|마우스/],
     ['체육·편의', /노래방|폼롤러|헬스|체육|운동|편의시설|탁구|당구|매점|편의점|자판기|비디오|산책/],
     ['인터넷·와이파이', /와이파이|wifi|wi-fi|인터넷/i],
     ['교재·자료', /교재|자료|ppt|피피티|책자|책으로|컬러|인쇄|pdf/i],
     ['교과목·커리큘럼', /교과목|과목|커리큘럼|실습|시험|평가|진도|난이도|신설|강의\s?내용|이론/],
-    ['운영·일정', /일정|시간표|안내|공지|셔틀|차량|버스|픽업|입교|운영|휴식|쉬는\s?시간|출결|온라인|zoom|줌|기간|시간이/i]
+    ['운영·일정', /일정|시간표|안내|공지|셔틀|차량|버스|픽업|입교|운영|휴식|쉬는\s?시간|출결|온라인|zoom|줌\s?(수업|강의|회의|교육)|기간|시간이/i]
 ];
 ui._svyCatOf = function(c){
     var s = String(c.t||''), hint = String(c.c||'').replace(/\s+/g,'');
@@ -21123,7 +21124,9 @@ ui.surveyUpload = function(){
 ui._svyIngest = async function(files){
     files = files.filter(function(f){ return /\.pdf$/i.test(f.name); }); if(!files.length) return;
     try{ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js'; }catch(e){}
-    var box = document.getElementById('svyMsg'), ok = [], bad = [];
+    var box = document.getElementById('svyMsg'), ok = [], bad = [], other = [];
+    /* [K304] 과정 화면에서 올리면 그 과정 결과지만 받는다(다른 과정은 건너뜀). 과정 목록 화면에서 올리면 각 과정에 자동으로 나눠 저장 */
+    var NK = function(k){ return String(k || '').replace(/\[[^\]]*\]|\([^)]*\)|과정|\s/g, ''); }, target = NK(ui._svyCurSer || '');
     var say = function(t){ if(box){ box.style.display = 'block'; box.innerHTML = t; } };
     var exist = {}; try{ exist = (await ui._svyRef().once('value')).val() || {}; }catch(e){}
     for(var i=0;i<files.length;i++){
@@ -21134,6 +21137,7 @@ ui._svyIngest = async function(files){
             var r = await window.kacSurveyParse(doc);
             if(!r.title || (r.op.score == null && r.env.score == null && r.inst.score == null)) throw new Error('설문결과지 형식을 읽지 못했습니다');
             var sr = ui._svySeriesOf(r.title), st = (r.period || '').slice(0,10), year = Number((st || '').slice(0,4)) || 0;
+            if(target && NK(sr.key) !== target){ other.push(r.title + (year ? ' (' + year + ')' : '')); continue; }
             var names = (r.inst.list || []).map(function(x){ return x.n; }).filter(function(n){ return /^[가-힣]{2,4}$/.test(n); });
             var maskTxt = function(t){ t = String(t||''); names.forEach(function(n){ t = t.split(n).join(ui._svyMask(n)); }); return t.replace(/([가-힣])[가-힣]{1,2}(\s*)(교수|강사)님/g, '$1**$2$3님').slice(0, 400); };
             var rec = { title: r.title, series: sr.key, seriesName: sr.name, round: ui._svyRoundOf(r.title), year: year, period: r.period || '', n: r.n || 0,
@@ -21149,7 +21153,9 @@ ui._svyIngest = async function(files){
             ok.push((was ? '갱신 ' : '') + r.title + (year ? ' (' + year + ')' : ''));
         }catch(e){ bad.push(f.name + ' — ' + ((e && e.message) || '오류')); }
     }
-    ui._svyLastMsg = '<b style="color:#15803d"><i class="fa-solid fa-circle-check"></i> ' + ok.length + '건 저장</b>' + (ok.length ? '<div style="margin-top:4px;color:#475569;font-weight:700">' + ok.map(ui._esc).join(' · ') + '</div>' : '')
+    var shortL = function(a){ return a.slice(0, 4).map(ui._esc).join(' · ') + (a.length > 4 ? ' 외 ' + (a.length - 4) + '건' : ''); };
+    ui._svyLastMsg = '<b style="color:#15803d"><i class="fa-solid fa-circle-check"></i> ' + ok.length + '건 저장</b>' + (ok.length ? '<span style="margin-left:6px;color:#475569;font-weight:700">' + shortL(ok) + '</span>' : '')
+        + (other.length ? '<div style="margin-top:6px;color:#b45309;font-weight:800"><i class="fa-solid fa-circle-info"></i> 다른 과정이라 건너뜀 ' + other.length + '건 <span style="font-weight:700;color:#64748b">(' + shortL(other) + ') — 과정 목록 화면에서 올리면 각 과정에 자동 저장됩니다</span></div>' : '')
         + (bad.length ? '<div style="margin-top:6px;color:#b91c1c;font-weight:800"><i class="fa-solid fa-triangle-exclamation"></i> 읽지 못함 ' + bad.length + '건: ' + bad.map(ui._esc).join(' / ') + '</div>' : '');
     ui._svyCount();
     ui.surveyOpen();
@@ -21336,20 +21342,20 @@ ui.surveyOpen = async function(){
 /* [K232] 불만·개선 의견 아래 '조치 방안' 제안(플랫폼 안 규칙표) + [조치 완료] 체크 → 다음부터 목록에서 숨김 */
 ui._SVY_FIX = [
     [/수건/, '수건 지급 수량을 늘리고(1인 2매 이상) 생활관 비치 수량을 주기적으로 점검', '수건 지급'],
-    [/에어컨|냉방|덥|더워|더움|더웠|시원/, '냉방 온도·풍향을 점검하고, 자리별 온도 차가 크면 서큘레이터를 배치', '냉방·더위'],
+    [/에어컨|냉방|덥|더워|더움|더웠|시원(하지|치\s?않|했으면|하게\s?해|하면\s?좋)/, '냉방 온도·풍향을 점검하고, 자리별 온도 차가 크면 서큘레이터를 배치', '냉방·더위'],
     [/춥|추워|추움|추웠|추운|난방|히터|보일러|온수/, '동절기 과정 전 난방기·온수 사전 점검, 가동 시간과 설정 온도 조정', '난방·추위'],
     [/환기|냄새|곰팡/, '정기 환기·탈취를 실시하고 원인 시설(배수구·에어컨 필터 등) 점검', '환기·냄새'],
     [/노후|낡|리모델링|오래된/, '시설 개선 목록에 올려 예산 반영 검토', '시설 노후'],
     [/와이파이|wifi|wi-fi|인터넷|끊기|끊겨/i, '무선 AP 위치·속도를 점검하고 접속 안내문을 비치', '인터넷·와이파이'],
     [/세탁/, '세탁실 이용 시간·세탁기 대수 확대 검토', '세탁실'],
     [/휴게/, '휴게 공간 추가 확보 또는 이용 시간대 분산', '휴게 공간'],
-    [/음주|술/, '생활관 음주 규정과 그 이유를 입교 OT에서 미리 안내', '음주 규정'],
+    [/음주|술자리|술을|술은|술이|맥주|소주|주류|음주\s?허용/, '생활관 음주 규정과 그 이유를 입교 OT에서 미리 안내', '음주 규정'],
     [/마이크/, '강의 전 마이크·배터리 점검, 예비 마이크 비치', '마이크'],
     [/(밥|식사|배식|점심|아침|저녁)[가-힣]{0,3}\s?시간/, '식사 시간 연장(또는 오후 시작 시간 조정) 검토', '식사 시간'],
-    [/좌석|자리/, '주 단위 좌석 순환 배치 운영', '좌석 배정'],
-    [/모니터|화면|프로젝터|빔|스크린|고개/, '화면 위치·밝기 점검, 뒷자리용 보조 모니터 배치 검토', '화면·모니터'],
-    [/배치|원형/, '조별 활동 시간에는 책상을 원형(조별)으로 바꿔 배치', '책상 배치'],
-    [/책상|의자|다리/, '책상·의자 상태 점검 및 교체 검토', '책상·의자'],
+    [/좌석|앞자리|뒷자리|자리\s?(배정|배치|이동|바꾸|바뀌|순환|교체)/, '주 단위 좌석 순환 배치 운영', '좌석 배정'],
+    [/모니터|화면|프로젝터|빔\s?프로|스크린|고개/, '화면 위치·밝기 점검, 뒷자리용 보조 모니터 배치 검토', '화면·모니터'],
+    [/(책상|자리|좌석|조별|조원)\s?배치|원형/, '조별 활동 시간에는 책상을 원형(조별)으로 바꿔 배치', '책상 배치'],
+    [/책상|의자|다리를|다리가/, '책상·의자 상태 점검 및 교체 검토', '책상·의자'],
     [/식당|식사|밥|메뉴|반찬|음식|간식|야식/, '급식 업체와 식단 다양화·만족도 개선 협의', '식사·메뉴'],
     [/팀빌딩|친해|교류|동기/, '팀빌딩·조 간 교류 프로그램을 과정 초반에 추가', '동기 교류·팀빌딩'],
     [/촉박|빡빡|쉴\s?새|쉬는\s?시간|피곤|시간이\s?(부족|없)|시간\s?부족/, '하루 일정 밀도를 재검토하고 쉬는 시간·자율 시간 확보', '일정 밀도'],
@@ -21357,8 +21363,8 @@ ui._SVY_FIX = [
     [/노래방|탁구|헬스|운동|체육|폼롤러|당구|편의/, '편의·체육시설 운영 시간과 기구 보강 검토', '편의·체육시설'],
     [/교재|자료|ppt|피피티|인쇄|컬러|책자/i, '교재를 미리(PDF) 배포하고 컬러 인쇄·자료 보완 검토', '교재·자료'],
     [/실습|장비/, '실습 시간 비중 확대, 실습 장비 추가 확보 검토', '실습'],
-    [/견학|현장/, '현장 견학 일정 편성 검토', '현장 견학'],
-    [/강사|강의(?!실)|설명|전달|수업(?!\s?받는\s?공간)/, '해당 강사님께 의견을 전달하고 강의 방식 개선 협의', '강사·강의'],
+    [/견학|현장\s?(방문|학습|체험|실습|견학)/, '현장 견학 일정 편성 검토', '현장 견학'],
+    [/강사|강의(?!실)|설명|전달력|전달이|수업(?!\s?받는\s?공간)/, '해당 강사님께 의견을 전달하고 강의 방식 개선 협의', '강사·강의'],
     [/감염|방역/, '감염병 대응 체계 안내 보강', '감염병 대응'],
     [/셔틀|버스|차량|주차/, '셔틀·주차 운영 시간과 안내 점검', '셔틀·주차'],
     [/시험|평가|과제/, '평가·과제 일정과 범위를 사전에 안내', '평가·과제'],
@@ -21550,7 +21556,7 @@ ui._svyInsight = function(list, card){
     if(dn.length) bad.push({ t: '<b>' + dn.slice(0,4).join(' · ') + '</b> 점수가 ' + baseLab + '보다 낮아졌습니다.', ev: scoreTbl(dnR) });
     if(low.length) bad.push({ t: recLab + ' 기준 95점 미만: <b>' + low.slice(0,4).join(' · ') + '</b>', ev: scoreTbl(lowR) });
     /* 3) 주제별 의견 — 회차당 건수로 비교(회차 수가 달라도 공정하게) */
-    var TOP = [['견학', /견학|현장\s?(방문|학습)|ACC|센터\s?방문/i], ['실습', /실습/], ['체력단련·운동', /헬스|체력|운동|폼롤러|러닝|런닝|체육|탁구/], ['노래방', /노래방/], ['식당·식사', /식당|식사|밥|메뉴|반찬|음식|단백질/], ['생활관', /생활관|숙소|침대|벽지|샤워|객실|방음|곰팡이/], ['난방·추위', /히터|난방|추워|추움|추웠|춥/], ['와이파이·인터넷', /와이파이|wifi|인터넷/i], ['교재·자료', /교재|자료|ppt|피피티/i], ['강의·강사', /강의|교수|강사/]];
+    var TOP = [['견학', /견학|현장\s?(방문|학습)|ACC|센터\s?방문/i], ['실습', /실습/], ['체력단련·운동', /헬스|체력|운동|폼롤러|러닝\s?머신|런닝\s?머신|체육|탁구/], ['노래방', /노래방/], ['식당·식사', /식당|식사|밥|메뉴|반찬|음식|단백질/], ['생활관', /생활관|숙소|침대|벽지|샤워|객실|방음|곰팡이/], ['난방·추위', /히터|난방|추워|추움|추웠|춥/], ['와이파이·인터넷', /와이파이|wifi|인터넷/i], ['교재·자료', /교재|자료|ppt|피피티/i], ['강의·강사', /강의(?!실)|교수(?!요원)|강사/]];
     var cnt = function(arr, tagOk, re){ var n = 0; arr.forEach(function(r){ var seen = {}; (r.comments || []).forEach(function(c){ var t = String(c.t), key = t.replace(/\s+/g,''); if(seen[key]) return; seen[key] = 1; if(re.test(t) && tagOk(ui._svyTag(t))) n++; }); }); return n; };
     var isBad = function(t){ return t === 'neg' || t === 'sug'; }, isGood = function(t){ return t === 'pos'; };
     TOP.forEach(function(tp){ var nR = cnt(rec, isBad, tp[1]), nB = cnt(base, isBad, tp[1]), rR = nR / rec.length, rB = base.length ? nB / base.length : 0;
