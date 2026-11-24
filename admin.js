@@ -19578,22 +19578,26 @@ ui.matUnlink = function(id, skipConfirm){
 };
 /* [K69] 삭제 권한은 강사 전원 — 올린 교수가 전보·퇴직해도 정리할 수 있어야 하기 때문.
          대신 '남의 자료'를 지울 때는 누가 올린 것인지와 파급을 분명히 알린다. */
-ui.matDestroy = function(id){
+ui.matDestroy = async function(id){
     if(state.isObserver) return ui.showAlert('👁️ 옵저버 모드에서는 삭제할 수 없습니다.');
     var m = (ui._matAll||[]).filter(function(x){ return x.id===id; })[0];
     if(!m) return;
-    var mine = (m.uploader === ui._matWho());
-    var head = mine
-        ? '"'+(m.title||m.fileName)+'" 을(를) 자료실에서 영구 삭제합니다.\n\n'
-        : '⚠️ 본인이 올린 자료가 아닙니다.\n\n'
-          + '"'+(m.title||m.fileName)+'"\n'
-          + '올린 사람: ' + (m.uploader||'미상') + '\n\n'
-          + '삭제하면 이 자료를 쓰고 있는 다른 과정에서도 사라져\n'
-          + '교육 운영에 문제가 생길 수 있습니다.\n\n';
-    if(!confirm(head
-        + '· 다른 과정에서 쓰고 있다면 그 과정에서도 사라집니다.\n'
-        + '· 파일이 지워지며 되돌릴 수 없습니다.'
-        + (mine ? '' : '\n\n그래도 삭제하시겠습니까?'))) return;
+    /* [K293] 브라우저 기본 확인창은 글이 길면 잘려서 — 플랫폼 창으로 한눈에 */
+    var mine = (m.uploader === ui._matWho()) || !ui._matHasProf();   // 담임 미정 과정에서는 '내 것 아님'으로 단정하지 않음
+    var ok = await new Promise(function(res){
+        var ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:2147483200;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
+        ov.innerHTML = '<div style="background:#fff;border-radius:20px;padding:24px 26px;width:100%;max-width:460px;box-shadow:0 24px 60px rgba(15,23,42,.35)">'
+            + '<div style="font-size:18px;font-weight:900;color:#b91c1c"><i class="fa-solid fa-trash"></i> 자료실에서 완전 삭제</div>'
+            + (mine ? '' : '<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:#fff7ed;border:1px solid #fed7aa;font-size:13.5px;font-weight:800;color:#c2410c"><i class="fa-solid fa-triangle-exclamation"></i> 본인이 올린 자료가 아닙니다</div>')
+            + '<div style="margin-top:12px;font-size:15.5px;font-weight:900;color:#0f172a;word-break:keep-all">"' + ui._esc(m.title || m.fileName) + '"</div>'
+            + '<div style="margin-top:3px;font-size:13px;font-weight:700;color:#64748b">올린 사람: ' + ui._esc(m.uploader || '미상') + '</div>'
+            + '<ul style="margin:14px 0 0;padding-left:18px;font-size:13.5px;font-weight:700;color:#334155;line-height:1.75"><li>다른 과정에서 쓰고 있다면 그 과정에서도 사라집니다.</li><li>파일이 지워지며 <b style="color:#b91c1c">되돌릴 수 없습니다.</b></li></ul>'
+            + '<div style="display:flex;gap:8px;margin-top:18px"><button data-x style="flex:1;padding:12px;border:1px solid #cbd5e1;border-radius:11px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer">취소</button><button data-ok style="flex:1.4;padding:12px;border:none;border-radius:11px;background:#dc2626;color:#fff;font:inherit;font-weight:900;cursor:pointer">삭제</button></div></div>';
+        document.body.appendChild(ov);
+        var done = function(v){ ov.remove(); res(v); };
+        ov.querySelector('[data-x]').onclick = function(){ done(false); }; ov.querySelector('[data-ok]').onclick = function(){ done(true); }; ov.onclick = function(e){ if(e.target === ov) done(false); };
+    });
+    if(!ok) return;
     (async function(){
         if(!(await ui._matEnsureKey())) return;
         try{
