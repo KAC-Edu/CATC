@@ -21627,7 +21627,7 @@ ui.svyReportOpen = async function(id){
     var tag = function(t){ return ui._svyTag(t); }, opv = ui._svyVal(r, 'op'), envv = ui._svyVal(r, 'env'), tot = r.total;
     var grade = function(v){ return v == null ? '' : (v >= 95 ? '우수' : v >= 90 ? '양호' : '보통'); };
     var useful = {}; cm.forEach(function(c){ if(c.g === 'op' && /기타/.test(c.c || '') && !isTriv(c.t) && String(c.t).length <= 30 && !/없/.test(c.t)) { var k = String(c.t).replace(/\s+/g,' ').trim(); useful[k] = (useful[k] || 0) + 1; } });
-    var usefulTop = Object.keys(useful).sort(function(a,b){ return useful[b] - useful[a]; }).slice(0, 3);
+    var usefulTop = (function(){ var seen = {}, out = []; Object.keys(useful).sort(function(a,b){ return useful[b] - useful[a]; }).forEach(function(k){ var nk = k.replace(/\s|및|과|와|,|·/g,''); if(Object.keys(seen).some(function(s){ return s.indexOf(nk) >= 0 || nk.indexOf(s) >= 0 || s.slice(0,8) === nk.slice(0,8); })) return; seen[nk] = 1; out.push(k); }); return out.slice(0, 3); })();   // [K289] '현황 및 분류'·'현황과 분류' 같은 겹침 하나로
     var newSub = cm.filter(function(c){ return /신설|추가|있었으면|있으면 좋|생겼으면/.test(c.t) && /과목|강의|실습|교육|견학/.test(c.t); }).map(function(c){ return String(c.t).replace(/\s+/g,' ').trim(); }).slice(0, 2);
     var opItems = ((r.op || {}).items || []).filter(function(it){ return it.score > 30 && ui._svyOkK(it.k); }), opLow = opItems.filter(function(it){ return it.score < 95; }).map(function(it){ return it.k; });
     var envItems = ((r.env || {}).items || []).filter(function(it){ return it.score > 30 && ui._svyOkK(it.k); }), envLow = envItems.slice().sort(function(a,b){ return a.score - b.score; }).filter(function(it){ return it.score < 97; }).slice(0, 2).map(function(it){ return it.k; });
@@ -21716,13 +21716,21 @@ ui.svyReportOpen = async function(id){
         + (state.isObserver ? '' : '<button id="rpSave" style="padding:8px 14px;border:none;border-radius:9px;background:#16a34a;color:#fff;font:inherit;font-weight:900;cursor:pointer"><i class="fa-solid fa-floppy-disk"></i> 저장</button>')
         + '<button id="rpReset" style="padding:8px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#475569;font:inherit;font-weight:800;cursor:pointer" title="저장한 내용을 지우고 설문 결과로 다시 자동 작성">자동 작성으로 되돌리기</button>'
         + '<button id="rpPrint" style="padding:8px 14px;border:none;border-radius:9px;background:#2563eb;color:#fff;font:inherit;font-weight:900;cursor:pointer"><i class="fa-solid fa-print"></i> 인쇄 · PDF</button>'
+        + '<button id="rpFit" style="padding:8px 12px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:#334155;font:inherit;font-weight:900;cursor:pointer" title="A4 한 장이 화면에 다 보이게 / 실제 크기"><i class="fa-solid fa-expand"></i> <span>실제 크기</span></button>'
         + '<button id="rpX" style="padding:8px 12px;border:none;border-radius:9px;background:#f1f5f9;color:#334155;font:inherit;font-weight:900;cursor:pointer">✕ 닫기</button></div>'
-        + '<div style="box-shadow:0 20px 60px rgba(0,0,0,.4)">' + page + '</div><style>' + CSS + '</style>';
+        + '<div id="rpWrap" style="box-shadow:0 20px 60px rgba(0,0,0,.4);transform-origin:top center">' + page + '</div><style>' + CSS + '</style>';
     document.body.appendChild(ov);
     var collect = function(){ var o = {}; ov.querySelectorAll('[data-f]').forEach(function(el){ o[el.getAttribute('data-f')] = el.classList.contains('pw') ? el.innerText.replace(/\s+$/,'') : el.innerText.replace(/\u00a0/g,' ').trim(); }); return o; };
     var close = function(){ ov.remove(); document.removeEventListener('keydown', escK, true); }, escK = function(e){ if(e.key === 'Escape' && !(e.target && e.target.isContentEditable)){ e.stopPropagation(); close(); } };
     document.addEventListener('keydown', escK, true);
     ov.querySelector('#rpX').onclick = close;
+    /* [K289] A4 한 장 보기 — 화면 높이에 맞춰 줄여 한 장 전체를 보여 줌(기본). 버튼으로 실제 크기와 전환 */
+    var wrap = ov.querySelector('#rpWrap'), fitBtn = ov.querySelector('#rpFit'), fitOn = ui._rpFit !== false;
+    var applyFit = function(){ if(!wrap) return; var pg = wrap.querySelector('.rpPage'); if(!pg) return; wrap.style.zoom = ''; var bar = ov.firstElementChild, avH = window.innerHeight - (bar ? bar.offsetHeight : 60) - 60, avW = window.innerWidth - 40;
+        var z = fitOn ? Math.min(1, avH / pg.offsetHeight, avW / pg.offsetWidth) : 1; wrap.style.zoom = String(Math.max(0.3, z)); if(fitBtn) fitBtn.querySelector('span').textContent = fitOn ? '실제 크기' : '한 장 보기'; };
+    if(fitBtn) fitBtn.onclick = function(){ fitOn = !fitOn; ui._rpFit = fitOn; applyFit(); };
+    applyFit(); window.addEventListener('resize', applyFit);
+    var _close0 = close; close = function(){ window.removeEventListener('resize', applyFit); _close0(); }; ov.querySelector('#rpX').onclick = close;
     ov.querySelector('#rpSel').onchange = function(){ ui.svyReportOpen(this.value); };
     var sv = ov.querySelector('#rpSave'); if(sv) sv.onclick = function(){ var o = collect(); o.savedAt = Date.now(); try{ ui._svyRptRef().child(r.id).set(o); ui._svyRptRef().child('_series/' + String(r.series || '').replace(/[.#$\/\[\]]/g,'_')).update({ purpose: o.purpose || '', oper: o.oper || '' }); }catch(e){} ui._linkToast ? ui._linkToast('결과 보고서를 저장했습니다 · 목적·과정운영자는 같은 과정 다음 회차에도 자동으로 들어갑니다') : ui.showAlert('저장했습니다.'); };
     ov.querySelector('#rpReset').onclick = function(){ if(!confirm('저장한 내용을 지우고 설문 결과로 다시 자동 작성할까요?')) return; try{ ui._svyRptRef().child(r.id).remove().then(function(){ ui.svyReportOpen(r.id); }); }catch(e){} };
