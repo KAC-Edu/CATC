@@ -20505,22 +20505,23 @@ ui._preSurveyCount = function(){
     }).catch(function(){});
 };
 ui._psvQrShow = function(url, cname, exp){
+    /* [K292] 카카오 채널 QR처럼 화면 가운데 크게 — 누르면 닫힘 */
     var old = document.getElementById('psvQrOv'); if(old) old.remove();
-    var ov = document.createElement('div'); ov.id = 'psvQrOv';
-    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.6);display:flex;align-items:center;justify-content:center;padding:20px';
-    var d = exp ? new Date(Number(exp)) : null, ds = d ? (d.getMonth()+1) + '.' + d.getDate() + '까지' : '';
-    ov.innerHTML = '<div style="background:#fff;border-radius:24px;padding:28px 32px;text-align:center;max-width:440px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,.35)">'
-        + '<div style="font-size:21px;font-weight:900;color:#0f172a"><i class="fa-solid fa-qrcode" style="color:#2563eb"></i> 강사 사전조사 QR</div>'
-        + '<div style="margin-top:6px;font-size:15px;font-weight:800;color:#475569">' + ui._esc(cname || '') + '</div>'
-        + '<div id="psvQrBox" style="display:inline-block;margin-top:18px;padding:14px;border-radius:16px;border:1px solid #e2e8f0;background:#fff"></div>'
-        + '<div style="margin-top:14px;font-size:16px;font-weight:900;color:#0f172a">휴대폰 카메라로 비추면 바로 열립니다</div>'
-        + '<div style="margin-top:4px;font-size:13px;font-weight:700;color:#94a3b8">' + (ds ? '링크 유효 ' + ds + ' · ' : '') + '바깥을 누르거나 ESC로 닫기</div>'
-        + '<button id="psvQrX" style="margin-top:16px;padding:11px 26px;border:none;border-radius:12px;background:#f1f5f9;color:#334155;font:inherit;font-size:15px;font-weight:900;cursor:pointer">닫기</button></div>';
+    var ov = document.createElement('div'); ov.id = 'psvQrOv'; ov.title = '누르면 닫힘';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.82);display:flex;align-items:center;justify-content:center;cursor:pointer';
+    var d = exp ? new Date(Number(exp)) : null, ds = d ? (d.getMonth()+1) + '.' + d.getDate() + '까지' : '', sz = Math.min(window.innerWidth, window.innerHeight) * 0.6;
+    ov.innerHTML = '<div style="background:#1d4ed8;border-radius:32px;padding:30px 40px 24px;text-align:center;box-shadow:0 30px 90px rgba(0,0,0,.45)">'
+        + '<div style="font-size:' + Math.round(sz/13) + 'px;font-weight:900;color:#fff"><i class="fa-solid fa-user-clock"></i> 강사 사전조사 · 교재 제출</div>'
+        + '<div style="margin-top:4px;font-size:' + Math.round(sz/26) + 'px;font-weight:800;color:#bfdbfe">' + ui._esc(cname || '') + '</div>'
+        + '<div id="psvQrBox" style="display:inline-block;margin-top:16px;padding:18px;background:#fff;border-radius:20px"></div>'
+        + '<div style="margin-top:14px;font-size:' + Math.round(sz/19) + 'px;font-weight:900;color:#fff">휴대폰 카메라로 비춰 주세요</div>'
+        + '<div style="margin-top:6px;font-size:14px;font-weight:800;color:#bfdbfe">' + (ds ? '링크 유효 ' + ds + ' · ' : '') + '화면을 누르거나 ESC로 닫기</div></div>';
     document.body.appendChild(ov);
-    try{ new QRCode(ov.querySelector('#psvQrBox'), { text: url, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M }); }catch(e){ ov.querySelector('#psvQrBox').textContent = url; }
+    try{ new QRCode(ov.querySelector('#psvQrBox'), { text: url, width: Math.round(sz), height: Math.round(sz), correctLevel: QRCode.CorrectLevel.M }); }catch(e){ ov.querySelector('#psvQrBox').textContent = url; }
     var close = function(){ ov.remove(); document.removeEventListener('keydown', esc, true); }, esc = function(e){ if(e.key === 'Escape'){ e.stopPropagation(); close(); } };
-    ov.onclick = function(e){ if(e.target === ov) close(); }; ov.querySelector('#psvQrX').onclick = close; document.addEventListener('keydown', esc, true);
+    ov.onclick = close; document.addEventListener('keydown', esc, true);
 };
+
 ui.preSurveyOpen = async function(){
     var room = state.room; if(!room) return ui.showAlert('강의실을 먼저 선택해 주세요.');
     var esc = ui._esc, ref = firebase.database().ref('system/coord/preSurvey/' + room);
