@@ -12540,7 +12540,7 @@ var OMR = (function () {
     P: { name: 'P', W: 1000, H: 1414, marks: [[70, 70], [930, 70], [70, 1344], [930, 1344]], qr: { x: 654, y: 132, s: 236 },
       rowY0: 480, rowDy: 40, blockX: [110, 376, 642], blockW: 248, numW: 56, colOff: [80, 128, 176, 224], rx: 17, ry: 11 },
     L: { name: 'L', W: 1414, H: 1000, marks: [[70, 70], [1344, 70], [70, 930], [1344, 930]], qr: { x: 496, y: 146, s: 180 },
-      rowY0: 0, rowDy: 0, blockX: [128, 316, 504], blockW: 176, numW: 40, colOff: [61, 94, 127, 160], rx: 14, ry: 10 }
+      rowY0: 0, rowDy: 0, blockX: [128, 316, 504], blockW: 176, numW: 40, colOff: [61, 94, 127, 160], rx: 14, ry: 9 }
   };
   var G = { markSize: 56, cols: 3, maxT: 30 };
   function use(name) { var L = LAYOUTS[name] || LAYOUTS.P, k; for (k in L) G[k] = L[k]; return G; }
@@ -12549,14 +12549,14 @@ var OMR = (function () {
   function rowsOf(T) { return Math.ceil(T / G.cols); }
   function rowGeom(T) { // 첫 줄 가운데 y, 줄 간격 (가로 카드는 문항 수에 맞춰 아래 끝을 900에 맞춘다)
     if (G.name !== 'L') return { y0: G.rowY0, dy: G.rowDy };
-    var dy = Math.min(60, 497 / rowsOf(T)); return { y0: 403 + dy / 2, dy: dy };
+    return { y0: 427, dy: 48 };   // 가로 카드: 줄 간격 48 고정
   }
   function bubble(n, k, T) { // n: 문항 번호(1부터), k: 0..3
     var rows = rowsOf(T), idx = n - 1, c = Math.floor(idx / rows), r = idx % rows, g = rowGeom(T);
     return [G.blockX[c] + G.colOff[k], g.y0 + r * g.dy];
   }
   function subjBox(T, M) { // 주관식 답란 상자
-    if (G.name === 'L') return { x: 734, y: 128, w: 552, h: 772, rowH: M ? 772 / M : 0 };
+    if (G.name === 'L') { var hL = Math.min(900, Math.max(403 + rowsOf(T) * 48, 128 + (M || 0) * 64)) - 128; return { x: 734, y: 128, w: 552, h: hL, rowH: M ? hL / M : 0 }; }
     var top = G.rowY0 + rowsOf(T) * G.rowDy + 44, bottom = 1284;
     return { x: 110, y: top, w: 780, h: bottom - top, rowH: M ? (bottom - top) / M : 0 };
   }
