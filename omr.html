@@ -12533,28 +12533,35 @@ var qrcode = function() {
 
 </script>
 <script>
-/* OMR 답안지 판독 v2 — 답안지 좌표계 1000 x 1414 (A4 세로). 객관식 N문항(2열), 주관식 M문항 */
+/* OMR 카드 판독 v3 — 세로 카드(1000 x 1414)와 가로 카드(1414 x 1000) 둘 다 읽는다. 객관식 3열, 주관식은 평가관 ○✕ 채점 칸 */
 var OMR = (function () {
-  var G = {
-    W: 1000, H: 1414,
-    marks: [[70, 70], [930, 70], [70, 1344], [930, 1344]], markSize: 56,
-    qr: { x: 654, y: 132, s: 236 },
-    rowY0: 480, rowDy: 40,
-    cols: 3, blockX: [110, 376, 642], blockW: 248, numW: 56, colOff: [80, 128, 176, 224],
-    rx: 17, ry: 11, maxT: 30
+  // 카드 모양 두 가지 — P: 세로(1000 x 1414, QR 글자 KAC4), L: 가로(1414 x 1000, QR 글자 KAC5). 도구(C#)의 좌표와 똑같아야 한다.
+  var LAYOUTS = {
+    P: { name: 'P', W: 1000, H: 1414, marks: [[70, 70], [930, 70], [70, 1344], [930, 1344]], qr: { x: 654, y: 132, s: 236 },
+      rowY0: 480, rowDy: 40, blockX: [110, 376, 642], blockW: 248, numW: 56, colOff: [80, 128, 176, 224], rx: 17, ry: 11 },
+    L: { name: 'L', W: 1414, H: 1000, marks: [[70, 70], [1344, 70], [70, 930], [1344, 930]], qr: { x: 496, y: 146, s: 180 },
+      rowY0: 0, rowDy: 0, blockX: [128, 316, 504], blockW: 176, numW: 40, colOff: [61, 94, 127, 160], rx: 14, ry: 10 }
   };
+  var G = { markSize: 56, cols: 3, maxT: 30 };
+  function use(name) { var L = LAYOUTS[name] || LAYOUTS.P, k; for (k in L) G[k] = L[k]; return G; }
+  use('P');
   // 답안지에는 1번부터 끝 번호까지 전부 순서대로 놓는다(주관식 번호는 칸 대신 '주관식' 표시) — 밀려 쓰기 방지
   function rowsOf(T) { return Math.ceil(T / G.cols); }
+  function rowGeom(T) { // 첫 줄 가운데 y, 줄 간격 (가로 카드는 문항 수에 맞춰 아래 끝을 900에 맞춘다)
+    if (G.name !== 'L') return { y0: G.rowY0, dy: G.rowDy };
+    var dy = Math.min(60, 497 / rowsOf(T)); return { y0: 403 + dy / 2, dy: dy };
+  }
   function bubble(n, k, T) { // n: 문항 번호(1부터), k: 0..3
-    var rows = rowsOf(T), idx = n - 1, c = Math.floor(idx / rows), r = idx % rows;
-    return [G.blockX[c] + G.colOff[k], G.rowY0 + r * G.rowDy];
+    var rows = rowsOf(T), idx = n - 1, c = Math.floor(idx / rows), r = idx % rows, g = rowGeom(T);
+    return [G.blockX[c] + G.colOff[k], g.y0 + r * g.dy];
   }
   function subjBox(T, M) { // 주관식 답란 상자
+    if (G.name === 'L') return { x: 734, y: 128, w: 552, h: 772, rowH: M ? 772 / M : 0 };
     var top = G.rowY0 + rowsOf(T) * G.rowDy + 44, bottom = 1284;
     return { x: 110, y: top, w: 780, h: bottom - top, rowH: M ? (bottom - top) / M : 0 };
   }
   function subjMark(i, k, T, M) { // 주관식 i번째 줄의 평가관 채점 칸: k=0 ○, k=1 ✕
-    var box = subjBox(T, M); return [k ? 862 : 818, box.y + (i + 0.5) * box.rowH];
+    var box = subjBox(T, M); return [G.name === 'L' ? (k ? 1258 : 1214) : (k ? 862 : 818), box.y + (i + 0.5) * box.rowH];
   }
   // 4점 대응 → 3x3 변환 (답안지 좌표 → 사진 좌표)
   function homography(src, dst) {
@@ -12628,14 +12635,30 @@ var OMR = (function () {
     var set = [TL, TR, BL, BR];
     for (i = 0; i < 4; i++) for (j = i + 1; j < 4; j++) if (set[i] === set[j]) return { ok: false, why: '답안지를 똑바로 세워 주세요.' };
     var top = Math.hypot(TR.x - TL.x, TR.y - TL.y), left = Math.hypot(BL.x - TL.x, BL.y - TL.y), ratio = left / top;
-    if (ratio < 1.0 || ratio > 2.0) return { ok: false, why: '답안지를 세로로 세워 주세요.' };
-    var H = homography(G.marks, [[TL.x, TL.y], [TR.x, TR.y], [BL.x, BL.y], [BR.x, BR.y]]);
-    if (!H) return { ok: false, why: '위치 계산에 실패했습니다.' };
-    return { ok: true, H: H, gray: gray, w: w, h: h, corners: [[TL.x, TL.y], [TR.x, TR.y], [BR.x, BR.y], [BL.x, BL.y]] };
+    if (ratio < 0.45 || ratio > 2.2) return { ok: false, why: '답안지 전체가 반듯하게 보이게 해 주세요.' };
+    // 카드가 세로인지 가로인지, 어느 쪽이 위인지는 아직 모른다 — fit()으로 하나씩 맞춰 보고 QR이 읽히는 것을 쓴다
+    var base = { ok: true, gray: gray, w: w, h: h, ratio: ratio, corners: [[TL.x, TL.y], [TR.x, TR.y], [BR.x, BR.y], [BL.x, BL.y]] };
+    var first = fit(base, ratio >= 1 ? 'P' : 'L', 0);
+    if (!first) return { ok: false, why: '위치 계산에 실패했습니다.' };
+    base.H = first.H; base.layout = first.layout; base.rot = 0;
+    return base;
+  }
+  // 사진 속 네 귀퉁이(시계 방향: 왼위·오른위·오른아래·왼아래)에 카드 모양(layout)을 rot×90° 돌려 맞춘다
+  function fit(base, layout, rot) {
+    use(layout);
+    var c = base.corners, r = ((rot % 4) + 4) % 4, cw = [G.marks[0], G.marks[1], G.marks[3], G.marks[2]], src = [], dst = [], i;
+    for (i = 0; i < 4; i++) { src.push(cw[i]); dst.push(c[(i + r) % 4]); }
+    var H = homography(src, dst); if (!H) return null;
+    return { ok: true, H: H, gray: base.gray, w: base.w, h: base.h, corners: base.corners, ratio: base.ratio, layout: G.name, rot: r };
+  }
+  // 맞춰 볼 순서: 사진에서 세로로 길면 세로 카드부터, 가로로 길면 가로 카드부터
+  function candidates(base) {
+    return base.ratio >= 1 ? [['P', 0], ['L', 1], ['L', 3], ['P', 2]] : [['L', 0], ['P', 1], ['P', 3], ['L', 2]];
   }
   // 2단계: 칠한 칸 읽기
   function read(loc, hd) {   // hd: head() 또는 open() 결과 (T, objNums, M)
     var N = hd.objNums.length, M = hd.M, T = hd.T, ON = hd.objNums;
+    if (loc.layout) use(loc.layout);
     var H = loc.H, gray = loc.gray, w = loc.w, h = loc.h;
     function at(x, y) { var p = map(H, x, y), xi = Math.round(p[0]), yi = Math.round(p[1]); if (xi < 0 || yi < 0 || xi >= w || yi >= h) return 255; return gray[yi * w + xi]; }
     var black = 0; G.marks.forEach(function (m) { black += at(m[0], m[1]); }); black /= 4;
@@ -12664,7 +12687,8 @@ var OMR = (function () {
     return { ok: true, answers: answers, fr: fr, subj: subj };
   }
   // QR 부분만 반듯하게 펴서 잘라낸다 (큰 원본 사진에서) → jsQR에 넘길 RGBA
-  function qrCrop(rgba, bw, bh, H, k) { // k = 큰 사진 / 작업 사진 배율
+  function qrCrop(rgba, bw, bh, H, k, layout) { // k = 큰 사진 / 작업 사진 배율
+    if (layout) use(layout);
     var pad = 24, S = (G.qr.s + pad * 2) * 2, out = new Uint8ClampedArray(S * S * 4), i, j, lo = 255, hi = 0, g = new Float32Array(S * S);
     for (j = 0; j < S; j++) for (i = 0; i < S; i++) {
       var p = map(H, G.qr.x - pad + i / 2, G.qr.y - pad + j / 2), fx = p[0] * k, fy = p[1] * k;
@@ -12712,7 +12736,7 @@ var OMR = (function () {
     return { T: t.length, key: key, objNums: objNums, subjNums: subjNums, N: key.length, M: subjNums.length };
   }
   function maskOf(T, subjNums) { var m = 0, i; for (i = 0; i < subjNums.length; i++) m += Math.pow(2, subjNums[i] - 1); return m.toString(36); }
-  function seal(info, password) { // info: parseSpec 결과. 결과 글자: KAC4.문항수.주관식자리.암호문
+  function seal(info, password, layout) { // info: parseSpec 결과. 결과 글자: KAC4(세로)·KAC5(가로).문항수.주관식자리.암호문
     var N = info.key.length, plain = new Uint8Array(Math.ceil(N / 4)), i;
     for (i = 0; i < N; i++) plain[i >> 2] |= (info.key[i] - 1) << ((i & 3) * 2);
     var nonce = crypto.getRandomValues(new Uint8Array(8)), headText = info.T + '.' + maskOf(info.T, info.subjNums) + '.';
@@ -12720,19 +12744,20 @@ var OMR = (function () {
       return subtle.encrypt(ctr(nonce), k[0], plain).then(function (ct) { ct = new Uint8Array(ct);
         return macOf(k[1], headText, nonce, ct).then(function (mac) {
           var all = new Uint8Array(8 + ct.length + 8); all.set(nonce, 0); all.set(ct, 8); all.set(mac, 8 + ct.length);
-          return 'KAC4.' + headText + b64u(all);
+          return (layout === 'L' ? 'KAC5.' : 'KAC4.') + headText + b64u(all);
         });
       });
     });
   }
   // QR 글자(주소가 앞에 붙어 있어도 됨)에서 머리 정보만 읽기 — 비밀번호 없이
   function head(txt) {
-    var m = /KAC4\.(\d+)\.([0-9a-z]+)\.([A-Za-z0-9_-]+)/.exec(txt || ''); if (!m) return null;
+    var m = /KAC([45])\.(\d+)\.([0-9a-z]+)\.([A-Za-z0-9_-]+)/.exec(txt || ''); if (!m) return null;
+    var layout = m[1] === '5' ? 'L' : 'P'; m = [m[0], m[2], m[3], m[4]];
     var T = +m[1], mask = parseInt(m[2], 36), i; if (T < 1 || T > G.maxT || !isFinite(mask)) return null;
     var objNums = [], subjNums = [];
     for (i = 0; i < T; i++) { if (Math.floor(mask / Math.pow(2, i)) % 2) subjNums.push(i + 1); else objNums.push(i + 1); }
     if (objNums.length < 1 || subjNums.length > 14) return null;
-    return { T: T, N: objNums.length, M: subjNums.length, objNums: objNums, subjNums: subjNums, body: m[3], headText: m[1] + '.' + m[2] + '.' };
+    return { T: T, N: objNums.length, M: subjNums.length, objNums: objNums, subjNums: subjNums, body: m[3], headText: m[1] + '.' + m[2] + '.', layout: layout };
   }
   function open(txt, password) {
     var hd = head(txt); if (!hd) return Promise.resolve(null);
@@ -12745,12 +12770,12 @@ var OMR = (function () {
         return subtle.decrypt(ctr(nonce), k[0], ct).then(function (pt) {
           var p = new Uint8Array(pt), key = [];
           for (i = 0; i < hd.N; i++) key.push(((p[i >> 2] >> ((i & 3) * 2)) & 3) + 1);
-          return { key: key, T: hd.T, N: hd.N, M: hd.M, objNums: hd.objNums, subjNums: hd.subjNums, pt: 100 / hd.T };
+          return { key: key, T: hd.T, N: hd.N, M: hd.M, objNums: hd.objNums, subjNums: hd.subjNums, pt: 100 / hd.T, layout: hd.layout };
         });
       });
     }).catch(function () { return { bad: true }; });
   }
-  return { G: G, rowsOf: rowsOf, bubble: bubble, subjBox: subjBox, subjMark: subjMark, locate: locate, read: read, map: map, qrCrop: qrCrop, parseSpec: parseSpec, seal: seal, head: head, open: open, hasCrypto: !!subtle };
+  return { G: G, use: use, fit: fit, candidates: candidates, rowGeom: rowGeom, rowsOf: rowsOf, bubble: bubble, subjBox: subjBox, subjMark: subjMark, locate: locate, read: read, map: map, qrCrop: qrCrop, parseSpec: parseSpec, seal: seal, head: head, open: open, hasCrypto: !!subtle };
 })();
 
 
@@ -12759,6 +12784,7 @@ var STATE = { info: null, qrText: '', marked: false };
 function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function qrMatrix(text) { var q = qrcode(0, 'M'); q.addData(text); q.make(); var n = q.getModuleCount(), m = [], i, j; for (j = 0; j < n; j++) { var r = ''; for (i = 0; i < n; i++) r += q.isDark(j, i) ? '1' : '0'; m.push(r); } return m; }
 function sheetSvg(info, qrText, marks, smarks) {
+  OMR.use('P');   // 이 화면에서 직접 만드는 답안지는 세로 카드
   var G = OMR.G, N = info.key.length, M = info.M, s = [], q, k, i, j, ON = info.objNums, SN = info.subjNums;
   s.push('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + G.W + ' ' + G.H + '" role="img" aria-label="이론평가 OMR 카드 (수검자 작성용)" font-family="IBM Plex Sans KR, Malgun Gothic, Apple SD Gothic Neo, sans-serif">');
   s.push('<rect width="' + G.W + '" height="' + G.H + '" fill="#fff"/>');
@@ -12872,17 +12898,32 @@ function fitCanvas(src, sw, sh, max) { var k = Math.min(1, max / Math.max(sw, sh
 function readFrame(src, sw, sh) {
   var small = fitCanvas(src, sw, sh, 900), big = fitCanvas(src, sw, sh, 2200);
   var sd = small.getContext('2d').getImageData(0, 0, small.width, small.height);
-  var loc = OMR.locate(sd.data, small.width, small.height);
-  if (!loc.ok) return { ok: false, why: loc.why };
-  var bd = big.getContext('2d').getImageData(0, 0, big.width, big.height), txt = '';
-  var crop = OMR.qrCrop(bd.data, big.width, big.height, loc.H, big.width / small.width), z = jsQR(crop.data, crop.size, crop.size);
-  if (z && OMR.head(z.data)) txt = z.data;
-  if (!txt) { z = jsQR(bd.data, big.width, big.height); if (z && OMR.head(z.data)) txt = z.data; }
-  if (!txt) return { ok: false, why: 'QR을 읽지 못했습니다. 조금 더 가까이, 초점을 맞춰 주세요.', loc: loc };
-  return { ok: true, loc: loc, small: small, qrText: txt };
+  var base = OMR.locate(sd.data, small.width, small.height);
+  if (!base.ok) return { ok: false, why: base.why };
+  var bd = big.getContext('2d').getImageData(0, 0, big.width, big.height), k = big.width / small.width;
+  // 세로 카드·가로 카드, 네 방향을 차례로 맞춰 보고 QR이 그 모양의 것으로 읽히는 것을 쓴다
+  var cands = OMR.candidates(base), i, loc, z, hd;
+  for (i = 0; i < cands.length; i++) {
+    loc = OMR.fit(base, cands[i][0], cands[i][1]); if (!loc) continue;
+    var crop = OMR.qrCrop(bd.data, big.width, big.height, loc.H, k, loc.layout); z = jsQR(crop.data, crop.size, crop.size);
+    hd = z && OMR.head(z.data);
+    if (hd && hd.layout === loc.layout) return { ok: true, loc: loc, small: small, qrText: z.data };
+  }
+  // 그래도 안 되면 사진 전체에서 QR을 찾고, QR이 있는 자리로 방향을 고른다
+  z = jsQR(bd.data, big.width, big.height); hd = z && OMR.head(z.data);
+  if (hd) {
+    var L = z.location, qx = (L.topLeftCorner.x + L.bottomRightCorner.x) / 2 / k, qy = (L.topLeftCorner.y + L.bottomRightCorner.y) / 2 / k, best = null, bd2 = 1e18, r;
+    for (r = 0; r < 4; r++) {
+      loc = OMR.fit(base, hd.layout, r); if (!loc) continue;
+      var g = OMR.G, p = OMR.map(loc.H, g.qr.x + g.qr.s / 2, g.qr.y + g.qr.s / 2), d = (p[0] - qx) * (p[0] - qx) + (p[1] - qy) * (p[1] - qy);
+      if (d < bd2) { bd2 = d; best = loc; }
+    }
+    if (best) { OMR.use(best.layout); return { ok: true, loc: best, small: small, qrText: z.data }; }
+  }
+  return { ok: false, why: 'QR을 읽지 못했습니다. 조금 더 가까이, 초점을 맞춰 주세요.', loc: base };
 }
 function showResult(fr, info, rd) {
-  SCAN.done = true; stopCam();
+  SCAN.done = true; stopCam(); OMR.use(fr.loc.layout || 'P');
   var out = document.getElementById('out'), N = info.N, M = info.M, pt = info.pt, small = fr.small, loc = fr.loc;
   var ctx = small.getContext('2d'); ctx.lineWidth = Math.max(2, small.width / 300);
   var q, right = 0, rowsHtml = '', warn = 0;
