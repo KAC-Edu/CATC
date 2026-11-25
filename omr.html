@@ -12538,22 +12538,23 @@ var OMR = (function () {
   var G = {
     W: 1000, H: 1414,
     marks: [[70, 70], [930, 70], [70, 1344], [930, 1344]], markSize: 56,
-    qr: { x: 664, y: 132, s: 236 },
-    rowY0: 452, rowDy: 40,
-    colX: [[250, 314, 378, 442], [640, 704, 768, 832]], numX: [165, 555],
-    rx: 17, ry: 11, maxN: 40
+    qr: { x: 654, y: 132, s: 236 },
+    rowY0: 480, rowDy: 40,
+    cols: 3, blockX: [110, 376, 642], blockW: 248, numW: 56, colOff: [80, 128, 176, 224],
+    rx: 17, ry: 11, maxT: 30
   };
-  function rowsOf(N) { return Math.ceil(N / 2); }
-  function bubble(q, k, N) { // q: 0..N-1, k: 0..3
-    var rows = rowsOf(N), c = q < rows ? 0 : 1, r = q < rows ? q : q - rows;
-    return [G.colX[c][k], G.rowY0 + r * G.rowDy];
+  // 답안지에는 1번부터 끝 번호까지 전부 순서대로 놓는다(주관식 번호는 칸 대신 '주관식' 표시) — 밀려 쓰기 방지
+  function rowsOf(T) { return Math.ceil(T / G.cols); }
+  function bubble(n, k, T) { // n: 문항 번호(1부터), k: 0..3
+    var rows = rowsOf(T), idx = n - 1, c = Math.floor(idx / rows), r = idx % rows;
+    return [G.blockX[c] + G.colOff[k], G.rowY0 + r * G.rowDy];
   }
-  function subjBox(N, M) { // 주관식 답란 상자
-    var top = G.rowY0 + rowsOf(N) * G.rowDy + 44, bottom = 1284;
+  function subjBox(T, M) { // 주관식 답란 상자
+    var top = G.rowY0 + rowsOf(T) * G.rowDy + 44, bottom = 1284;
     return { x: 110, y: top, w: 780, h: bottom - top, rowH: M ? (bottom - top) / M : 0 };
   }
-  function subjMark(i, k, N, M) { // 주관식 i번째 줄의 평가관 채점 칸: k=0 ○, k=1 ✕
-    var box = subjBox(N, M); return [k ? 862 : 818, box.y + (i + 0.5) * box.rowH];
+  function subjMark(i, k, T, M) { // 주관식 i번째 줄의 평가관 채점 칸: k=0 ○, k=1 ✕
+    var box = subjBox(T, M); return [k ? 862 : 818, box.y + (i + 0.5) * box.rowH];
   }
   // 4점 대응 → 3x3 변환 (답안지 좌표 → 사진 좌표)
   function homography(src, dst) {
@@ -12633,19 +12634,20 @@ var OMR = (function () {
     return { ok: true, H: H, gray: gray, w: w, h: h, corners: [[TL.x, TL.y], [TR.x, TR.y], [BR.x, BR.y], [BL.x, BL.y]] };
   }
   // 2단계: 칠한 칸 읽기
-  function read(loc, N, M) {
+  function read(loc, hd) {   // hd: head() 또는 open() 결과 (T, objNums, M)
+    var N = hd.objNums.length, M = hd.M, T = hd.T, ON = hd.objNums;
     var H = loc.H, gray = loc.gray, w = loc.w, h = loc.h;
     function at(x, y) { var p = map(H, x, y), xi = Math.round(p[0]), yi = Math.round(p[1]); if (xi < 0 || yi < 0 || xi >= w || yi >= h) return 255; return gray[yi * w + xi]; }
     var black = 0; G.marks.forEach(function (m) { black += at(m[0], m[1]); }); black /= 4;
     var whites = [], q, k;
-    for (q = 0; q < N; q++) { var b0 = bubble(q, 0, N), b3 = bubble(q, 3, N); whites.push(at(b0[0] - 32, b0[1])); whites.push(at(b3[0] + 32, b3[1])); }
+    for (q = 0; q < N; q++) { var b0 = bubble(ON[q], 0, T), b3 = bubble(ON[q], 3, T); var b1 = bubble(ON[q], 1, T), b2 = bubble(ON[q], 2, T); whites.push(at((b0[0] + b1[0]) / 2, b0[1])); whites.push(at((b2[0] + b3[0]) / 2, b3[1])); }
     whites.sort(function (a, b) { return a - b; }); var white = whites[whites.length >> 1];
     if (white - black < 40) return { ok: false, why: '화면이 너무 어둡거나 흐립니다.' };
     var cut = black + (white - black) * 0.5, answers = [], fr = [];
     for (q = 0; q < N; q++) {
       var row = [], on = [];
       for (k = 0; k < 4; k++) {
-        var c = bubble(q, k, N), dark = 0, tot = 0, dx, dy;
+        var c = bubble(ON[q], k, T), dark = 0, tot = 0, dx, dy;
         for (dy = -1; dy <= 1; dy += 0.25) for (dx = -1; dx <= 1; dx += 0.2) {
           if (dx * dx + dy * dy > 1) continue;
           tot++; if (at(c[0] + dx * G.rx * 0.62, c[1] + dy * G.ry * 0.62) < cut) dark++;
@@ -12658,7 +12660,7 @@ var OMR = (function () {
       for (dy = -1; dy <= 1; dy += 0.25) for (dx = -1; dx <= 1; dx += 0.2) { if (dx * dx + dy * dy > 1) continue; tot++; if (at(c[0] + dx * G.rx * 0.62, c[1] + dy * G.ry * 0.62) < cut) dark++; }
       return dark / tot; }
     var subj = [], i;   // 주관식 평가관 채점: 1 = ○, 0 = ✕, null = 표시 없음, -1 = 둘 다
-    for (i = 0; i < (M || 0); i++) { var o = fill(subjMark(i, 0, N, M)) > 0.5, x = fill(subjMark(i, 1, N, M)) > 0.5; subj.push(o && x ? -1 : (o ? 1 : (x ? 0 : null))); }
+    for (i = 0; i < (M || 0); i++) { var o = fill(subjMark(i, 0, T, M)) > 0.5, x = fill(subjMark(i, 1, T, M)) > 0.5; subj.push(o && x ? -1 : (o ? 1 : (x ? 0 : null))); }
     return { ok: true, answers: answers, fr: fr, subj: subj };
   }
   // QR 부분만 반듯하게 펴서 잘라낸다 (큰 원본 사진에서) → jsQR에 넘길 RGBA
@@ -12711,11 +12713,11 @@ var OMR = (function () {
   // QR 글자(주소가 앞에 붙어 있어도 됨)에서 머리 정보만 읽기 — 비밀번호 없이
   function head(txt) {
     var m = /KAC3\.(\d+)\.([0-9a-z]+)\.([A-Za-z0-9_-]+)/.exec(txt || ''); if (!m) return null;
-    var T = +m[1], mask = 0n, i, ch; if (T < 1 || T > 60) return null;
+    var T = +m[1], mask = 0n, i, ch; if (T < 1 || T > G.maxT) return null;
     for (i = 0; i < m[2].length; i++) { ch = parseInt(m[2].charAt(i), 36); mask = mask * 36n + BigInt(ch); }
     var objNums = [], subjNums = [];
     for (i = 0; i < T; i++) { if ((mask >> BigInt(i)) & 1n) subjNums.push(i + 1); else objNums.push(i + 1); }
-    if (objNums.length < 1 || objNums.length > G.maxN || subjNums.length > 14) return null;
+    if (objNums.length < 1 || subjNums.length > 14) return null;
     return { T: T, N: objNums.length, M: subjNums.length, objNums: objNums, subjNums: subjNums, body: m[3] };
   }
   function open(txt, password) {
@@ -12741,46 +12743,56 @@ function sheetSvg(info, qrText, marks, smarks) {
   s.push('<rect width="' + G.W + '" height="' + G.H + '" fill="#fff"/>');
   G.marks.forEach(function (m) { s.push('<rect x="' + (m[0] - G.markSize / 2) + '" y="' + (m[1] - G.markSize / 2) + '" width="' + G.markSize + '" height="' + G.markSize + '" fill="#000"/>'); });
   s.push('<text x="500" y="84" text-anchor="middle" font-size="30" font-weight="700" fill="#000">직무실기평가 이론평가 답안지</text>');
-  s.push('<rect x="110" y="150" width="530" height="200" fill="none" stroke="#000" stroke-width="2"/>');
-  var rows = [['평가 시설', info.facility], ['성 명', info.name], ['평가 일시', info.date], ['점 수', '                        점']];
+  s.push('<rect x="110" y="132" width="524" height="236" fill="none" stroke="#000" stroke-width="2"/>');
+  var rows = [['평가 시설', info.facility], ['성 명', info.name], ['평가 일시', info.date], ['점 수', '점']];
   rows.forEach(function (r, n) {
-    var y = 150 + n * 50;
-    if (n) s.push('<line x1="110" y1="' + y + '" x2="640" y2="' + y + '" stroke="#000" stroke-width="1"/>');
-    s.push('<text x="130" y="' + (y + 33) + '" font-size="20" font-weight="700" fill="#000">' + r[0] + '</text>');
-    s.push('<text x="270" y="' + (y + 33) + '" font-size="20" fill="#000" xml:space="preserve">' + esc(r[1]) + '</text>');
+    var y = 132 + n * 59, BLUE = '#0a2fd0', vx = 442, v = String(r[1] || ''), col = n < 3 ? BLUE : '#000', wt = n < 3 ? ' font-weight="700"' : '';
+    if (n) s.push('<line x1="110" y1="' + y + '" x2="634" y2="' + y + '" stroke="#000" stroke-width="1"/>');
+    s.push('<text x="180" y="' + (y + 37) + '" text-anchor="middle" font-size="20" font-weight="700" fill="#000">' + r[0] + '</text>');
+    var cut = v.indexOf('(');
+    if (v.length > 17 && cut > 0) {   // 긴 시설명은 '(' 앞에서 두 줄로
+      var l1 = v.slice(0, cut).trim(), l2 = v.slice(cut).trim(), f2 = l2.length > 26 ? 13.5 : (l2.length > 21 ? 15 : 16.5);
+      s.push('<text x="' + vx + '" y="' + (y + 26) + '" text-anchor="middle" font-size="18" fill="' + col + '"' + wt + '>' + esc(l1) + '</text>');
+      s.push('<text x="' + vx + '" y="' + (y + 48) + '" text-anchor="middle" font-size="' + f2 + '" fill="' + col + '"' + wt + '>' + esc(l2) + '</text>');
+    } else s.push('<text x="' + (n === 3 ? vx + 60 : vx) + '" y="' + (y + 37) + '" text-anchor="middle" font-size="' + (v.length > 19 ? 17 : 20) + '" fill="' + col + '"' + wt + '>' + esc(v) + '</text>');
   });
-  s.push('<line x1="250" y1="150" x2="250" y2="350" stroke="#000" stroke-width="1"/>');
+  s.push('<line x1="250" y1="132" x2="250" y2="368" stroke="#000" stroke-width="1"/>');
   var mtx = qrMatrix(qrText), n = mtx.length, c = G.qr.s / n, d = '';
   for (j = 0; j < n; j++) for (i = 0; i < n; i++) if (mtx[j].charAt(i) === '1') d += 'M' + (G.qr.x + i * c).toFixed(2) + ' ' + (G.qr.y + j * c).toFixed(2) + 'h' + c.toFixed(2) + 'v' + c.toFixed(2) + 'h-' + c.toFixed(2) + 'z';
   s.push('<path d="' + d + '" fill="#000"/>');
-  s.push('<text x="500" y="392" text-anchor="middle" font-size="19" fill="#000"><tspan font-weight="700">※ 반드시 검정 펜 사용</tspan> — 객관식은 문항 번호를 확인하고 답 칸을 검게 칠하십시오. (한 문항에 하나만)</text>');
-  var rws = OMR.rowsOf(N), INK = '#b0124a', TINT = '#fbe3ea', TINT2 = '#fdf3f6';
+  s.push('<rect x="110" y="381" width="780" height="36" rx="12" fill="none" stroke="#000" stroke-width="1.6" stroke-dasharray="7 5"/>');
+  s.push('<text x="500" y="405" text-anchor="middle" font-size="17.5" fill="#000"><tspan font-weight="700">※ 반드시 검정 펜 사용</tspan> — 문항 번호를 확인하고 답 칸 하나만 검게 칠하십시오. 주관식은 아래 칸에 씁니다.</text>');
+  var rws = OMR.rowsOf(info.T), INK = '#b0124a', TINT = '#fbe3ea', TINT2 = '#fdf3f6';
   function pill(cx, cy, on, label) {
     var x = cx - G.rx, y = cy - G.ry, w = G.rx * 2, h = G.ry * 2;
     if (on) return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + G.ry + '" fill="#111"/>';
     return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + G.ry + '" fill="#fff" stroke="' + INK + '" stroke-width="1.4"/><text x="' + cx + '" y="' + (cy + 4.5) + '" text-anchor="middle" font-size="12.5" fill="#d9a3b6">' + label + '</text>';
   }
-  for (var cb = 0; cb < 2; cb++) {   // 열마다 둥근 블록: 머리줄(문항·1~4) + 5문항마다 굵은 줄
-    var nIn = cb === 0 ? rws : N - rws; if (nIn <= 0) continue;
-    var bx = G.colX[cb][0] - 124, bw = 352, by = G.rowY0 - G.rowDy / 2 - 30, bh = 30 + nIn * G.rowDy;
+  var T = info.T, isS = {}; SN.forEach(function (n) { isS[n] = 1; });
+  for (var cb = 0; cb < G.cols; cb++) {   // 열마다 둥근 블록: 머리줄(문항·1~4) + 5문항마다 굵은 줄
+    var nIn = Math.min(rws, T - cb * rws); if (nIn <= 0) continue;
+    var bx = G.blockX[cb], bw = G.blockW, by = G.rowY0 - G.rowDy / 2 - 30, bh = 30 + nIn * G.rowDy;
     s.push('<clipPath id="blk' + cb + '"><rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" rx="16"/></clipPath><g clip-path="url(#blk' + cb + ')">');
     s.push('<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" fill="#fff"/>');
     for (i = 0; i < nIn; i++) if (i % 2 === 1) s.push('<rect x="' + bx + '" y="' + (by + 30 + i * G.rowDy) + '" width="' + bw + '" height="' + G.rowDy + '" fill="' + TINT2 + '"/>');
-    s.push('<rect x="' + bx + '" y="' + (by + 30) + '" width="78" height="' + (nIn * G.rowDy) + '" fill="' + TINT + '"/>');
+    s.push('<rect x="' + bx + '" y="' + (by + 30) + '" width="' + G.numW + '" height="' + (nIn * G.rowDy) + '" fill="' + TINT + '"/>');
     s.push('<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="30" fill="' + INK + '"/>');
-    s.push('<text x="' + (bx + 39) + '" y="' + (by + 21) + '" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">문항</text>');
-    for (k = 0; k < 4; k++) s.push('<text x="' + G.colX[cb][k] + '" y="' + (by + 21) + '" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">' + (k + 1) + '</text>');
+    s.push('<text x="' + (bx + G.numW / 2) + '" y="' + (by + 21) + '" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">문항</text>');
+    for (k = 0; k < 4; k++) s.push('<text x="' + (bx + G.colOff[k]) + '" y="' + (by + 21) + '" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">' + (k + 1) + '</text>');
     for (i = 5; i < nIn; i += 5) s.push('<line x1="' + bx + '" y1="' + (by + 30 + i * G.rowDy) + '" x2="' + (bx + bw) + '" y2="' + (by + 30 + i * G.rowDy) + '" stroke="' + INK + '" stroke-width="1.6"/>');
-    s.push('<line x1="' + (bx + 78) + '" y1="' + (by + 30) + '" x2="' + (bx + 78) + '" y2="' + (by + bh) + '" stroke="' + INK + '" stroke-width="1.2"/>');
+    s.push('<line x1="' + (bx + G.numW) + '" y1="' + (by + 30) + '" x2="' + (bx + G.numW) + '" y2="' + (by + bh) + '" stroke="' + INK + '" stroke-width="1.2"/>');
     s.push('</g><rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="' + bh + '" rx="16" fill="none" stroke="' + INK + '" stroke-width="2.5"/>');
   }
-  for (q = 0; q < N; q++) {
-    var col = q < rws ? 0 : 1, b0 = OMR.bubble(q, 0, N), y = b0[1];
-    s.push('<text x="' + (G.colX[col][0] - 85) + '" y="' + (y + 7) + '" text-anchor="middle" font-size="19" font-weight="700" fill="#000">' + ON[q] + '</text>');
-    for (k = 0; k < 4; k++) { var b = OMR.bubble(q, k, N); s.push(pill(b[0], b[1], marks && marks[q] === k + 1, k + 1)); }
+  var mk = {}; if (marks) ON.forEach(function (n, qi) { mk[n] = marks[qi]; });
+  for (q = 1; q <= T; q++) {
+    var b0 = OMR.bubble(q, 0, T), b3 = OMR.bubble(q, 3, T), y = b0[1], cx = b0[0] - G.colOff[0];
+    s.push('<text x="' + (cx + G.numW / 2) + '" y="' + (y + 7) + '" text-anchor="middle" font-size="19" font-weight="700" fill="#000">' + q + '</text>');
+    if (isS[q]) { s.push('<rect x="' + (b0[0] - G.rx) + '" y="' + (y - G.ry) + '" width="' + (b3[0] - b0[0] + G.rx * 2) + '" height="' + (G.ry * 2) + '" rx="' + G.ry + '" fill="#e4e4e4"/>');
+      s.push('<text x="' + ((b0[0] + b3[0]) / 2) + '" y="' + (y + 5) + '" text-anchor="middle" font-size="13.5" font-weight="700" fill="#555">주관식 ▼ 아래에 작성</text>'); continue; }
+    for (k = 0; k < 4; k++) { var b = OMR.bubble(q, k, T); s.push(pill(b[0], b[1], mk[q] === k + 1, k + 1)); }
   }
   if (M) {
-    var box = OMR.subjBox(N, M);
+    var box = OMR.subjBox(info.T, M);
     s.push('<text x="110" y="' + (box.y - 12) + '" font-size="18" font-weight="700" fill="#000">주관식 ' + M + '문항 (문항 번호를 확인하고 답을 직접 쓰십시오)</text>');
     s.push('<rect x="' + box.x + '" y="' + box.y + '" width="' + box.w + '" height="' + box.h + '" fill="none" stroke="#000" stroke-width="2"/>');
     for (i = 0; i < M; i++) {
@@ -12793,20 +12805,16 @@ function sheetSvg(info, qrText, marks, smarks) {
     s.push('<rect x="' + cx0 + '" y="' + box.y + '" width="' + cw + '" height="' + box.h + '" fill="#e2e2e2"/>');
     for (i = 1; i < M; i++) s.push('<line x1="' + cx0 + '" y1="' + (box.y + i * box.rowH) + '" x2="' + (cx0 + cw) + '" y2="' + (box.y + i * box.rowH) + '" stroke="#000" stroke-width="1.5"/>');
     s.push('<rect x="' + cx0 + '" y="' + (box.y - 40) + '" width="' + cw + '" height="40" fill="#000"/>');
-    s.push('<text x="' + (cx0 + cw / 2) + '" y="' + (box.y - 21) + '" text-anchor="middle" font-size="16" font-weight="700" fill="#fff">평가관 전용</text>');
-    s.push('<text x="' + (cx0 + cw / 2) + '" y="' + (box.y - 6) + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">수검자 표시 금지</text>');
+    s.push('<text x="' + (cx0 + cw / 2) + '" y="' + (box.y - 21) + '" text-anchor="middle" font-size="17" font-weight="700" fill="#fff">채 점 표</text>');
+    s.push('<text x="' + (cx0 + cw / 2) + '" y="' + (box.y - 6) + '" text-anchor="middle" font-size="12.5" font-weight="700" fill="#fff">평가관 전용</text>');
     s.push('<rect x="' + (cx0 + 2.5) + '"  y="' + (box.y - 37.5) + '" width="' + (cw - 5) + '" height="' + (box.h + 35) + '" fill="none" stroke="#000" stroke-width="5"/>');
     for (i = 0; i < M; i++) for (k = 0; k < 2; k++) {
-      var sm = OMR.subjMark(i, k, N, M), on = smarks && smarks[i] === (k ? 0 : 1);
+      var sm = OMR.subjMark(i, k, info.T, M), on = smarks && smarks[i] === (k ? 0 : 1);
       var px = sm[0] - G.rx, py = sm[1] - G.ry;
       if (on) s.push('<rect x="' + px + '" y="' + py + '" width="' + (G.rx * 2) + '" height="' + (G.ry * 2) + '" rx="' + G.ry + '" fill="#111"/>');
       else s.push('<rect x="' + px + '" y="' + py + '" width="' + (G.rx * 2) + '" height="' + (G.ry * 2) + '" rx="' + G.ry + '" fill="#fff" stroke="#333" stroke-width="1.4"/><text x="' + sm[0] + '" y="' + (sm[1] + 5) + '" text-anchor="middle" font-size="13" fill="#999">' + (k ? '✕' : '○') + '</text>');
     }
   }
-  var addr = (/^(https?:\/\/[^#]+)#/.exec(qrText) || [])[1];
-  if (addr) { s.push('<text x="500" y="1340" text-anchor="middle" font-size="15" fill="#000">평가관 채점 화면  <tspan font-weight="700">' + esc(addr.replace(/^https?:\/\//, '')) + '</tspan></text>');
-    s.push('<text x="500" y="1362" text-anchor="middle" font-size="13" fill="#444">QR을 비추면 열립니다. 안 열리면 위 주소를 직접 열고, 그 화면으로 이 면 전체를 비추십시오.</text>'); }
-  else s.push('<text x="500" y="1352" text-anchor="middle" font-size="15" fill="#444">평가관: 채점 화면을 열고 이 면 전체를 비추면 채점됩니다.</text>');
   s.push('</svg>');
   return s.join('');
 }
@@ -12823,7 +12831,7 @@ function say(id, text, bad) { var e = document.getElementById(id); e.textContent
 function makeSheet() {
   var sp = OMR.parseSpec(val('fKey')), pw = val('fPw');
   if (!OMR.hasCrypto) { say('makeMsg', '이 브라우저에서는 암호화를 쓸 수 없습니다. https 주소로 열어 주세요.', true); return Promise.resolve(); }
-  if (sp.N < 1 || sp.N > OMR.G.maxN || sp.M > 14) { say('makeMsg', '문항 순서대로 객관식은 정답 번호(1~4), 주관식은 S로 적어 주세요. 예: 4144S2…', true); return Promise.resolve(); }
+  if (sp.N < 1 || sp.T > OMR.G.maxT || sp.M > 14) { say('makeMsg', '문항 순서대로 객관식은 정답 번호(1~4), 주관식은 S로 적어 주세요. 예: 4144S2…', true); return Promise.resolve(); }
   if (pw.length < 4) { say('makeMsg', '평가관 비밀번호를 4자 이상 적어 주세요.', true); return Promise.resolve(); }
   var info = sp; info.facility = val('fFac') || '시설'; info.name = val('fName') || ''; info.date = val('fDate') || '';
   return OMR.seal(info, pw).then(function (body) {
@@ -12857,7 +12865,7 @@ function showResult(fr, info, rd) {
   var q, right = 0, rowsHtml = '', warn = 0;
   for (q = 0; q < N; q++) {
     var a = rd.answers[q], key = info.key[q], ok = a === key; if (ok) right++; if (a < 0) warn++;
-    if (a > 0) { var b = OMR.bubble(q, a - 1, N), p = OMR.map(loc.H, b[0], b[1]), e = OMR.map(loc.H, b[0] + OMR.G.rx, b[1]);
+    if (a > 0) { var b = OMR.bubble(info.objNums[q], a - 1, info.T), p = OMR.map(loc.H, b[0], b[1]), e = OMR.map(loc.H, b[0] + OMR.G.rx, b[1]);
       ctx.strokeStyle = ok ? '#18b55f' : '#ff3b30'; ctx.beginPath(); ctx.arc(p[0], p[1], Math.hypot(e[0] - p[0], e[1] - p[1]) * 1.3, 0, 6.3); ctx.stroke(); }
     rowsHtml += '<tr' + (ok ? '' : ' class="wrong"') + '><td>' + info.objNums[q] + '</td><td>' + (a > 0 ? a : (a === 0 ? '안 씀' : '중복')) + '</td><td>' + key + '</td><td class="' + (ok ? 'o' : 'x') + '">' + (ok ? '○' : '✕') + '</td></tr>';
   }
@@ -12890,7 +12898,7 @@ function settle(fr, needStable) {
   return OMR.open(fr.qrText, SCAN.pw).then(function (info) {
     if (!info) { say('scanMsg', '이 QR은 이 채점 화면용이 아닙니다.', true); return false; }
     if (info.bad) { askPw('비밀번호가 맞지 않습니다. 다시 입력해 주세요.'); return false; }
-    var rd = OMR.read(fr.loc, info.N, info.M); if (!rd.ok) { say('scanMsg', rd.why, true); return false; }
+    var rd = OMR.read(fr.loc, info); if (!rd.ok) { say('scanMsg', rd.why, true); return false; }
     var sig = rd.answers.join(',') + '/' + rd.subj.join(','); if (needStable && sig !== SCAN.last) { SCAN.last = sig; say('scanMsg', '읽는 중입니다. 잠시 그대로 비춰 주세요.', false); return false; }
     say('scanMsg', '', false); showResult(fr, info, rd); return true;
   });
