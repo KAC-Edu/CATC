@@ -12688,45 +12688,66 @@ var OMR = (function () {
     return (typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64')).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
   function unb64u(t) { var b = t.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '=';
     var s = typeof atob === 'function' ? atob(b) : Buffer.from(b, 'base64').toString('binary'), out = new Uint8Array(s.length), i; for (i = 0; i < s.length; i++) out[i] = s.charCodeAt(i); return out; }
-  function keyOf(password) {
+  // 비밀번호 → 키 2개(암호화용 AES-128, 위조 확인용 HMAC). 도구(C#)와 같은 방식: PBKDF2-SHA1 60000회, 48바이트
+  function keysOf(password) {
     var enc = new TextEncoder();
-    return subtle.importKey('raw', enc.encode(String(password).trim()), 'PBKDF2', false, ['deriveKey']).then(function (base) {
-      return subtle.deriveKey({ name: 'PBKDF2', salt: enc.encode('KAC-CATC-OMR-v2'), iterations: 60000, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+    return subtle.importKey('raw', enc.encode(String(password).trim()), 'PBKDF2', false, ['deriveBits']).then(function (base) {
+      return subtle.deriveBits({ name: 'PBKDF2', salt: enc.encode('KAC-CATC-OMR-v4'), iterations: 60000, hash: 'SHA-1' }, base, 384);
+    }).then(function (bits) {
+      var b = new Uint8Array(bits);
+      return Promise.all([subtle.importKey('raw', b.slice(0, 16), { name: 'AES-CTR' }, false, ['encrypt', 'decrypt']),
+        subtle.importKey('raw', b.slice(16, 48), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])]);
     });
   }
+  function macOf(macKey, headText, nonce, ct) {
+    var h = new TextEncoder().encode(headText), all = new Uint8Array(h.length + nonce.length + ct.length);
+    all.set(h, 0); all.set(nonce, h.length); all.set(ct, h.length + nonce.length);
+    return subtle.sign('HMAC', macKey, all).then(function (s) { return new Uint8Array(s).slice(0, 8); });
+  }
+  function ctr(nonce) { var c = new Uint8Array(16); c.set(nonce, 0); return { name: 'AES-CTR', counter: c, length: 64 }; }
   // 문항 구성: spec = 문항 순서대로 '1'~'4'(객관식 정답) 또는 'S'(주관식). 정답만 2비트씩 묶어 암호화한다 (QR을 작게 유지)
   function parseSpec(spec) {
     var t = String(spec || '').toUpperCase().replace(/[^1-4S]/g, ''), key = [], objNums = [], subjNums = [], i;
     for (i = 0; i < t.length; i++) { if (t.charAt(i) === 'S') subjNums.push(i + 1); else { key.push(+t.charAt(i)); objNums.push(i + 1); } }
     return { T: t.length, key: key, objNums: objNums, subjNums: subjNums, N: key.length, M: subjNums.length };
   }
-  function maskOf(T, subjNums) { var m = 0n, i; for (i = 0; i < subjNums.length; i++) m |= 1n << BigInt(subjNums[i] - 1); return m.toString(36); }
-  function seal(info, password) { // info: parseSpec 결과
+  function maskOf(T, subjNums) { var m = 0, i; for (i = 0; i < subjNums.length; i++) m += Math.pow(2, subjNums[i] - 1); return m.toString(36); }
+  function seal(info, password) { // info: parseSpec 결과. 결과 글자: KAC4.문항수.주관식자리.암호문
     var N = info.key.length, plain = new Uint8Array(Math.ceil(N / 4)), i;
     for (i = 0; i < N; i++) plain[i >> 2] |= (info.key[i] - 1) << ((i & 3) * 2);
-    var iv = crypto.getRandomValues(new Uint8Array(12));
-    return keyOf(password).then(function (k) { return subtle.encrypt({ name: 'AES-GCM', iv: iv, tagLength: 64 }, k, plain); }).then(function (ct) {
-      var c = new Uint8Array(ct), all = new Uint8Array(12 + c.length); all.set(iv, 0); all.set(c, 12);
-      return 'KAC3.' + info.T + '.' + maskOf(info.T, info.subjNums) + '.' + b64u(all);
+    var nonce = crypto.getRandomValues(new Uint8Array(8)), headText = info.T + '.' + maskOf(info.T, info.subjNums) + '.';
+    return keysOf(password).then(function (k) {
+      return subtle.encrypt(ctr(nonce), k[0], plain).then(function (ct) { ct = new Uint8Array(ct);
+        return macOf(k[1], headText, nonce, ct).then(function (mac) {
+          var all = new Uint8Array(8 + ct.length + 8); all.set(nonce, 0); all.set(ct, 8); all.set(mac, 8 + ct.length);
+          return 'KAC4.' + headText + b64u(all);
+        });
+      });
     });
   }
   // QR 글자(주소가 앞에 붙어 있어도 됨)에서 머리 정보만 읽기 — 비밀번호 없이
   function head(txt) {
-    var m = /KAC3\.(\d+)\.([0-9a-z]+)\.([A-Za-z0-9_-]+)/.exec(txt || ''); if (!m) return null;
-    var T = +m[1], mask = 0n, i, ch; if (T < 1 || T > G.maxT) return null;
-    for (i = 0; i < m[2].length; i++) { ch = parseInt(m[2].charAt(i), 36); mask = mask * 36n + BigInt(ch); }
+    var m = /KAC4\.(\d+)\.([0-9a-z]+)\.([A-Za-z0-9_-]+)/.exec(txt || ''); if (!m) return null;
+    var T = +m[1], mask = parseInt(m[2], 36), i; if (T < 1 || T > G.maxT || !isFinite(mask)) return null;
     var objNums = [], subjNums = [];
-    for (i = 0; i < T; i++) { if ((mask >> BigInt(i)) & 1n) subjNums.push(i + 1); else objNums.push(i + 1); }
+    for (i = 0; i < T; i++) { if (Math.floor(mask / Math.pow(2, i)) % 2) subjNums.push(i + 1); else objNums.push(i + 1); }
     if (objNums.length < 1 || subjNums.length > 14) return null;
-    return { T: T, N: objNums.length, M: subjNums.length, objNums: objNums, subjNums: subjNums, body: m[3] };
+    return { T: T, N: objNums.length, M: subjNums.length, objNums: objNums, subjNums: subjNums, body: m[3], headText: m[1] + '.' + m[2] + '.' };
   }
   function open(txt, password) {
     var hd = head(txt); if (!hd) return Promise.resolve(null);
-    var all = unb64u(hd.body);
-    return keyOf(password).then(function (k) { return subtle.decrypt({ name: 'AES-GCM', iv: all.slice(0, 12), tagLength: 64 }, k, all.slice(12)); }).then(function (pt) {
-      var p = new Uint8Array(pt), key = [], i; if (p.length !== Math.ceil(hd.N / 4)) return null;
-      for (i = 0; i < hd.N; i++) key.push(((p[i >> 2] >> ((i & 3) * 2)) & 3) + 1);
-      return { key: key, T: hd.T, N: hd.N, M: hd.M, objNums: hd.objNums, subjNums: hd.subjNums, pt: 100 / hd.T };
+    var all = unb64u(hd.body); if (all.length !== 16 + Math.ceil(hd.N / 4)) return Promise.resolve(null);
+    var nonce = all.slice(0, 8), ct = all.slice(8, all.length - 8), mac = all.slice(all.length - 8);
+    return keysOf(password).then(function (k) {
+      return macOf(k[1], hd.headText, nonce, ct).then(function (want) {
+        var i, diff = 0; for (i = 0; i < 8; i++) diff |= want[i] ^ mac[i];
+        if (diff) return { bad: true };
+        return subtle.decrypt(ctr(nonce), k[0], ct).then(function (pt) {
+          var p = new Uint8Array(pt), key = [];
+          for (i = 0; i < hd.N; i++) key.push(((p[i >> 2] >> ((i & 3) * 2)) & 3) + 1);
+          return { key: key, T: hd.T, N: hd.N, M: hd.M, objNums: hd.objNums, subjNums: hd.subjNums, pt: 100 / hd.T };
+        });
+      });
     }).catch(function () { return { bad: true }; });
   }
   return { G: G, rowsOf: rowsOf, bubble: bubble, subjBox: subjBox, subjMark: subjMark, locate: locate, read: read, map: map, qrCrop: qrCrop, parseSpec: parseSpec, seal: seal, head: head, open: open, hasCrypto: !!subtle };
@@ -12763,7 +12784,7 @@ function sheetSvg(info, qrText, marks, smarks) {
   for (j = 0; j < n; j++) for (i = 0; i < n; i++) if (mtx[j].charAt(i) === '1') d += 'M' + (G.qr.x + i * c).toFixed(2) + ' ' + (G.qr.y + j * c).toFixed(2) + 'h' + c.toFixed(2) + 'v' + c.toFixed(2) + 'h-' + c.toFixed(2) + 'z';
   s.push('<path d="' + d + '" fill="#000"/>');
   s.push('<rect x="110" y="381" width="780" height="36" rx="12" fill="none" stroke="#000" stroke-width="1.6" stroke-dasharray="7 5"/>');
-  s.push('<text x="500" y="405" text-anchor="middle" font-size="17.5" fill="#000"><tspan font-weight="700">※ 반드시 검정 펜 사용</tspan> — 문항 번호를 확인하고 답 칸 하나만 검게 칠하십시오. 주관식은 아래 칸에 씁니다.</text>');
+  s.push('<text x="500" y="405" text-anchor="middle" font-size="16.5" fill="#000"><tspan font-weight="700">※ 반드시 검정 펜 사용</tspan> — 문항 번호를 확인하고 답 칸 하나만 검게 칠하십시오. 주관식은 아래 칸에 씁니다.</text>');
   var rws = OMR.rowsOf(info.T), INK = '#b0124a', TINT = '#fbe3ea', TINT2 = '#fdf3f6';
   function pill(cx, cy, on, label) {
     var x = cx - G.rx, y = cy - G.ry, w = G.rx * 2, h = G.ry * 2;
