@@ -269,6 +269,7 @@ body.previewing .pvhint{display:block;background:#1e293b;color:#cbd5e1;text-alig
 @media screen and (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
+<script>/* [K309] 모바일은 잠시 휴장 — 휴대폰·태블릿은 안내 화면으로(?forcepc=1 이면 그대로) */(function(){ try{ var pc = window.innerWidth >= 1024 && ((window.matchMedia && matchMedia('(pointer:fine)').matches) || !('ontouchstart' in window)); if(!pc && location.search.indexOf('forcepc') < 0) location.replace('dorm_admin_m.html'); }catch(e){} })();</script>
 <!-- [K309] 교육지원부 생활관 배정 프로그램(v29, 지원부 담당자 제작) — 기능은 그대로, 저장할 때마다 배정 결과를 서버로 보내 강사·운영부·교육생 화면에서 함께 쓴다 -->
 <!-- ════════ [외부 변경 · 카카오채널 연동 · 2026-06-25] catc1234 접속 게이트 ════════
      · 포털(portal.html) 경유(7777) 방식 폐지 → 이 페이지로 직접 들어올 때 접속코드 요구.
