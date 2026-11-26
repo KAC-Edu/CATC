@@ -46,6 +46,7 @@ input[type=text],input[type=number],input[type=password],input[type=url]{font:in
 .btn,.btn2{font:inherit;border:0;border-radius:10px;cursor:pointer;font-weight:700}
 .btn{display:inline-block;background:var(--accent);color:var(--panel);padding:11px 18px;font-size:16px}
 .btn2{background:var(--panel);color:var(--ink);border:1px solid var(--line);padding:9px 14px}
+[hidden]{display:none!important}
 label.btn2{display:inline-block}
 label.btn2 input{position:absolute;opacity:0;width:1px;height:1px}
 #camBox{background:#000;border-radius:12px;overflow:hidden;max-width:560px}
@@ -73,14 +74,15 @@ canvas{max-width:100%;height:auto;border-radius:8px;display:block}
 .subj3 .o{color:var(--good);font-weight:700}.subj3 .x{color:var(--bad);font-weight:700}.subj3 .u{color:var(--muted)}
 /* 채점 결과 (20261126) */
 .hero{display:grid;grid-template-columns:auto 1fr auto;gap:14px 22px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin:12px 0 14px}
-.hero .sc span{display:block;color:var(--muted);font-size:13px}.hero .sc b{font-size:46px;line-height:1.05;font-variant-numeric:tabular-nums}.hero .sc small{font-size:18px;margin-left:3px;color:var(--muted)}
-#verdict{margin-top:4px}#verdict .pill{margin-right:6px}#verdict small{color:var(--muted);font-size:12px}
+.hero .sc{text-align:center;min-width:150px}.hero .sc span{display:block;color:var(--muted);font-size:13px}.hero .sc b{font-size:68px;line-height:1;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}.hero .sc small{font-size:20px;margin-left:3px;color:var(--muted)}
+#verdict{margin-top:8px;display:flex;flex-direction:column;align-items:center;gap:3px}#verdict .pill{font-size:16px;padding:3px 18px}#verdict small{color:var(--muted);font-size:12px}
 .parts{display:flex;gap:10px;flex-wrap:wrap}.parts div{background:var(--bg);border-radius:12px;padding:8px 14px;min-width:120px}
-.parts span{display:block;color:var(--muted);font-size:12.5px}.parts b{font-size:22px;font-variant-numeric:tabular-nums}.parts small{display:block;color:var(--muted);font-size:12px}
+.parts span{display:block;color:var(--ink);font-size:14px;font-weight:700}.parts small i,.parts b i{font-style:normal}.parts b em{font-style:normal;font-size:14px;color:var(--muted);margin-left:2px;font-weight:500}.parts small strong{color:var(--ink)}.parts b{font-size:22px;font-variant-numeric:tabular-nums}.parts small{display:block;color:var(--muted);font-size:12px}
 .acts{display:flex;flex-direction:column;gap:8px}.acts .btn,.acts .btn2{border-radius:12px;white-space:nowrap}
-@media (max-width:720px){.hero{grid-template-columns:1fr 1fr}.hero .sc{grid-column:1}.parts{grid-column:2;flex-direction:column}.acts{grid-column:1/-1;flex-direction:row}.acts button{flex:1}}
+@media (max-width:720px){.hero{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.hero .sc{grid-column:1}.parts{grid-column:2;flex-direction:column}.acts{grid-column:1/-1;flex-direction:row}.acts button{flex:1}}
 .res{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:14px;align-items:start}
-@media (max-width:900px){.res{grid-template-columns:1fr}}
+@media (max-width:900px){.res{grid-template-columns:minmax(0,1fr)}}
+.hero,.res,.side,.card{min-width:0}
 .side{display:flex;flex-direction:column;gap:14px}
 .card h2 small{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
 .sheet{width:100%;border-radius:10px;border:1px solid var(--line)}
@@ -90,14 +92,31 @@ canvas{max-width:100%;height:auto;border-radius:8px;display:block}
 .qc b{font-size:12px;color:var(--muted);font-weight:500;min-width:15px}.qc span{font-size:14px;font-weight:700}.qc em{font-style:normal;font-size:12px;color:#2563eb;font-weight:700}
 .qc.ok{background:var(--good-bg)}.qc.ok span{color:var(--good)}.qc.ng{background:var(--bad-bg)}.qc.ng span{color:var(--bad)}
 .slist{display:flex;flex-direction:column;gap:4px}
-.srow{display:grid;grid-template-columns:auto 1fr auto 50px;grid-template-areas:'n . t i' 's s s s';gap:4px 8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
-.srow b{grid-area:n}.srow .strip{grid-area:s}.srow .tg{grid-area:t}.srow input{grid-area:i}
+.srow{display:grid;grid-template-columns:auto 1fr auto auto;grid-template-areas:'n . t i' 's s s s';gap:4px 8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.srow b{grid-area:n}.srow .strip{grid-area:s}.srow .sv{grid-area:t}.srow .sp{grid-area:i;font-weight:700;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
+.sv{font-size:13px;font-weight:700;border-radius:99px;padding:2px 11px}.sv.o{background:var(--good-bg);color:var(--good)}.sv.x{background:var(--bad-bg);color:var(--bad)}.sv.u{background:#fef3c7;color:#b45309}
 .srow:last-child{border-bottom:0}.srow.un b{color:#b45309}
 .srow b{font-size:14px;font-variant-numeric:tabular-nums}.srow b:after{content:'번'}
 .strip canvas{display:block;width:100%;height:auto;border-radius:6px;border:1px solid var(--line)}
 .tg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}.tg button{border:0;background:var(--panel);color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:2px 10px;cursor:pointer}
 .tg button.on[data-v="1"]{background:var(--good);color:#fff}.tg button.on[data-v="0"]{background:var(--bad);color:#fff}
 .srow input{width:50px;padding:3px 5px;font-size:13px}
+/* 비밀번호 (OTP식 6칸) 20261126 */
+.pwcard{width:min(100%,400px);padding:22px 20px 18px;border-radius:16px;text-align:center}
+.pwcard h2{font-size:18px;margin:0 0 4px}.pwcard .note{margin-bottom:16px}
+.pwcard form{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.otp{position:relative;display:flex;justify-content:center;gap:8px;cursor:text}
+.otp span{width:46px;height:56px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;color:var(--ink);transition:border-color .15s,box-shadow .15s}
+.otp span.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(15,76,92,.15);background:var(--panel)}
+.otp span.full{background:var(--panel)}
+.otp input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;border:0;color:transparent;caret-color:transparent}
+.otp.bad span{border-color:var(--bad);animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.pwcard .btn{width:100%;border-radius:12px}
+.pwcard #pwMsg{margin:0}
+.pwhint{margin-top:14px;border:2px dashed #e0524a;border-radius:14px;padding:10px 12px;color:#b42318;background:#fff5f4;font-size:13.5px;line-height:1.55}
+.pwhint span,.pwhint b{display:block}.pwhint b{color:#912018;font-size:14.5px;margin:2px 0}
+.otp:focus-within{outline:none}
 @page{size:A4 portrait;margin:0}
 @media print{ header,form.card,.bar,#viewScan{display:none!important} body,main,.paper{background:#fff;padding:0;margin:0;max-width:none}
   .make{display:block} .paper svg{width:210mm;height:297mm;min-width:0;box-shadow:none} }
@@ -140,17 +159,20 @@ canvas{max-width:100%;height:auto;border-radius:8px;display:block}
 
   <section class="view" id="viewScan">
     <div class="scanTop">
-      <div class="card" id="pwBox" hidden>
-        <form id="pwForm" class="fld" autocomplete="off">
-          <label for="pw">평가관 비밀번호</label>
-          <input type="password" id="pw" required>
+      <div class="card pwcard" id="pwBox" hidden>
+        <form id="pwForm" autocomplete="off">
+          <h2>평가관 비밀번호</h2>
+          <p class="note">숫자 6자리를 입력하면 바로 채점 화면으로 넘어갑니다</p>
+          <label class="otp" for="pw" id="otp"><span></span><span></span><span></span><span></span><span></span><span></span>
+            <input type="tel" id="pw" inputmode="numeric" autocomplete="one-time-code" maxlength="12" aria-label="평가관 비밀번호 6자리"></label>
           <button type="submit" class="btn">확인</button>
           <p id="pwMsg"></p>
         </form>
+        <div class="pwhint"><span>접속 비밀번호는 담당 교수가 보내 드린</span><b>「직무평가 답안(필답·구술)」 PDF</b><span>맨 앞 장에 있습니다.</span></div>
       </div>
       <div id="camBox" hidden><video id="cam" playsinline muted></video></div>
       <p id="scanMsg" class="note">답안지 전체가 보이게 비추면 채점합니다.</p>
-      <label class="btn2" for="photo">사진으로 채점<input type="file" id="photo" accept="image/*" capture="environment"></label>
+      <label class="btn2" for="photo" hidden>사진으로 채점<input type="file" id="photo" accept="image/*" capture="environment"></label>
     </div>
     <div id="out"></div>
   </section>
@@ -12963,7 +12985,7 @@ function rectify(fr, scale) {
   ctx.putImageData(out, 0, 0); return c;
 }
 function showResult(fr, info, rd) {
-  SCAN.done = true; SCAN.lastFr = fr; stopCam(); OMR.use(fr.loc.layout || 'P');
+  SCAN.done = true; SCAN.lastFr = fr; stopCam(); document.querySelector('label[for="photo"]').hidden = true; say('scanMsg', '', false); document.querySelector('.scanTop').hidden = true; OMR.use(fr.loc.layout || 'P');
   var G = OMR.G, out = document.getElementById('out'), N = info.N, M = info.M, pt = info.pt, T = info.T;
   var S = G.name === 'L' ? 0.8 : 0.72, sheet = rectify(fr, S), ctx = sheet.getContext('2d');
   function ring(x, y, r, color, w) { ctx.strokeStyle = color; ctx.lineWidth = w || 3; ctx.beginPath(); ctx.arc(x * S, y * S, r * S, 0, 6.3); ctx.stroke(); }
@@ -12984,17 +13006,17 @@ function showResult(fr, info, rd) {
   if (blank > N / 2) h += '<p class="msg" role="alert">객관식 ' + blank + '문항에서 칠한 칸을 찾지 못했습니다. 사진이 흐리거나 어두울 수 있으니 <b>다시 찍기</b>로 한 번 더 읽어 주세요.</p>';
   if (warn) h += '<p class="msg" role="alert">' + warn + '문항에 두 칸 이상 칠해져 있습니다. 답안지를 직접 확인해 주세요.</p>';
   h += '<div class="hero"><div class="sc"><span>합계 점수</span><b id="total">' + r1(obj) + '</b><small>점</small><div id="verdict"></div></div>'
-    + '<div class="parts"><div><span>객관식</span><b>' + right + ' / ' + N + '</b><small>' + r1(obj) + '점 (문항당 ' + r1(pt) + ')</small></div>'
-    + (M ? '<div><span>주관식</span><b id="subjCnt">-</b><small id="subjPt">-</small></div>' : '') + '</div>'
+    + '<div class="parts"><div><span>객관식</span><b>' + r1(obj) + '<em>점</em></b><small>' + N + '문항 중 <strong>' + right + '개</strong> 맞음<br>문항당 ' + r1(pt) + '점</small></div>'
+    + (M ? '<div><span>주관식</span><b><i id="subjPt">-</i><em>점</em></b><small>' + M + '문항 중 <strong id="subjCnt">-</strong> 맞음<br>문항당 ' + r1(pt) + '점</small></div>' : '') + '</div>'
     + '<div class="acts"><button type="button" class="btn2" id="retake">다시 찍기(재채점)</button><button type="button" class="btn" id="again">다음 답안지</button></div></div>';
   h += '<div class="res"><div class="card shotc"><h2>읽은 답안지 <small><i class="lg g"></i>맞음 <i class="lg r"></i>틀림 <i class="lg b"></i>정답 위치 <i class="lg y"></i>주관식 미채점</small></h2><div id="shot"></div></div><div class="side">';
   h += '<div class="card"><h2>객관식 <small>' + right + '개 맞음 · ' + (N - right) + '개 틀림</small></h2><div class="qgrid">' + cells + '</div></div>';
   if (M) {
-    h += '<div class="card"><h2>주관식 <small>오른쪽 ○✕ 칸 표시를 보고, 다르면 눌러 고치세요</small></h2><div class="slist">';
+    h += '<div class="card"><h2>주관식 <small>평가관이 칠한 ○✕ 칸을 읽었습니다</small></h2><div class="slist">';
     for (q = 0; q < M; q++) { var sv2 = rd.subj[q];
       h += '<div class="srow' + (sv2 === 1 || sv2 === 0 ? '' : ' un') + '"><b>' + info.subjNums[q] + '</b><div class="strip" id="st' + q + '"></div>'
-        + '<span class="tg" data-q="' + q + '"><button type="button" data-v="1" aria-label="맞음">○</button><button type="button" data-v="0" aria-label="틀림">✕</button></span>'
-        + '<input type="number" id="s' + q + '" min="0" max="' + r1(pt) + '" step="0.5" value="' + (sv2 === 1 ? r1(pt) : 0) + '" inputmode="decimal" aria-label="' + info.subjNums[q] + '번 점수"></div>'; }
+        + '<span class="sv ' + (sv2 === 1 ? 'o">○ 맞음' : (sv2 === 0 ? 'x">✕ 틀림' : 'u">' + (sv2 === -1 ? '○✕ 둘 다 칠함' : '○✕ 표시 없음'))) + '</span>'
+        + '<span class="sp">' + (sv2 === 1 ? r1(pt) : 0) + '점</span></div>'; }
     h += '</div><p class="note" id="subjNote"></p></div>';
   }
   h += '</div></div>';
@@ -13003,17 +13025,13 @@ function showResult(fr, info, rd) {
   // 주관식 줄마다 답안지에서 그 줄만 잘라 보여 준다
   for (q = 0; q < M; q++) { var y0 = (box.y + q * box.rowH) * S, sw = box.w * S, shh = box.rowH * S, c2 = document.createElement('canvas');
     c2.width = Math.round(sw); c2.height = Math.round(shh); c2.getContext('2d').drawImage(sheet, box.x * S, y0, sw, shh, 0, 0, c2.width, c2.height); document.getElementById('st' + q).appendChild(c2); }
-  function total() { var s = 0, o = 0, un = 0, i; for (i = 0; i < M; i++) { var el = document.getElementById('s' + i), v = Math.max(0, Math.min(pt, +el.value || 0)); s += v; if (v >= pt) o++;
-      var tg = el.parentNode.querySelector('.tg'); tg.querySelectorAll('button').forEach(function (bt) { bt.className = (+bt.getAttribute('data-v') === 1 ? v >= pt : v <= 0) ? 'on' : ''; });
-      var sv3 = rd.subj[i]; if (sv3 === null || sv3 === -1) un++; }
+  function total() { var s = 0, o = 0, un = 0, i; for (i = 0; i < M; i++) { var sv3 = rd.subj[i]; if (sv3 === 1) { s += pt; o++; } else if (sv3 !== 0) un++; }
     var t = obj + s; document.getElementById('total').textContent = r1(t);
     document.getElementById('verdict').innerHTML = '<span class="pill ' + (t >= 60 ? 'ok">합격' : 'no">불합격') + '</span><small>60점 이상 합격</small>';
-    if (M) { document.getElementById('subjCnt').textContent = o + ' / ' + M; document.getElementById('subjPt').textContent = r1(s) + '점';
-      document.getElementById('subjNote').textContent = un ? '○✕ 표시를 읽지 못한 ' + un + '문항은 0점으로 두었습니다. 사진을 보고 ○ 또는 ✕를 눌러 주세요.' : ''; } }
-  for (q = 0; q < M; q++) document.getElementById('s' + q).addEventListener('input', total);
-  out.querySelectorAll('.tg button').forEach(function (bt) { bt.addEventListener('click', function () { var qi = +bt.parentNode.getAttribute('data-q'); document.getElementById('s' + qi).value = +bt.getAttribute('data-v') ? r1(pt) : 0; total(); }); });
+    if (M) { document.getElementById('subjCnt').textContent = o + '개'; document.getElementById('subjPt').textContent = r1(s);
+      document.getElementById('subjNote').textContent = un ? '○✕ 표시를 읽지 못한 ' + un + '문항은 0점입니다. 답안지 ○✕ 칸을 칠한 뒤 「다시 찍기」를 눌러 주세요.' : ''; } }
   total();
-  function restart() { out.innerHTML = ''; SCAN.done = false; SCAN.last = ''; startCam(); window.scrollTo(0, 0); }
+  function restart() { out.innerHTML = ''; document.querySelector('.scanTop').hidden = false; SCAN.done = false; SCAN.last = ''; startCam(); window.scrollTo(0, 0); }
   document.getElementById('again').addEventListener('click', restart);
   document.getElementById('retake').addEventListener('click', restart);
   document.getElementById('camBox').hidden = true;
@@ -13031,21 +13049,26 @@ function settle(fr, needStable) {
     say('scanMsg', '', false); showResult(fr, info, rd); return true;
   });
 }
-function askPw(msg) { var b = document.getElementById('pwBox'); b.hidden = false; say('pwMsg', msg || '', !!msg); if (msg) { SCAN.pw = ''; } stopCam(); document.getElementById('camBox').hidden = true; say('scanMsg', '', false); setTimeout(function () { try { document.getElementById('pw').focus(); } catch (e) { } }, 50); }
+function drawOtp() { var v = document.getElementById('pw').value, sp = document.querySelectorAll('#otp span'), i;
+  for (i = 0; i < sp.length; i++) { sp[i].textContent = i < v.length ? '*' : ''; sp[i].className = (i < v.length ? 'full' : '') + (i === Math.min(v.length, sp.length - 1) && document.activeElement && document.activeElement.id === 'pw' ? ' on' : ''); } }
+(function () { var pw = document.getElementById('pw');
+  pw.addEventListener('input', function () { document.getElementById('otp').classList.remove('bad'); drawOtp(); if (pw.value.replace(/\s/g, '').length === 6 && /^\d{6}$/.test(pw.value)) { if (document.getElementById('pwForm').requestSubmit) document.getElementById('pwForm').requestSubmit(); else document.getElementById('pwForm').dispatchEvent(new Event('submit', { cancelable: true })); } });
+  pw.addEventListener('focus', drawOtp); pw.addEventListener('blur', drawOtp); })();
+function askPw(msg) { var b = document.getElementById('pwBox'); b.hidden = false; document.querySelector('label[for="photo"]').hidden = true; if (msg) { document.getElementById('pw').value = ''; document.getElementById('otp').classList.add('bad'); } drawOtp(); say('pwMsg', msg || '', !!msg); if (msg) { SCAN.pw = ''; } stopCam(); document.getElementById('camBox').hidden = true; say('scanMsg', '', false); setTimeout(function () { try { document.getElementById('pw').focus(); } catch (e) { } }, 50); }
 document.getElementById('pwForm').addEventListener('submit', function (ev) { ev.preventDefault(); var pw = val('pw'); if (!pw) return;
   // QR로 들어온 경우 주소의 암호문으로 비밀번호를 먼저 확인하고, 맞으면 카메라를 켠다 20261126
   var h = location.hash, chk = OMR.head(h) ? OMR.open(h, pw) : Promise.resolve(null);
   chk.then(function (info) {
-    if (info && info.bad) { say('pwMsg', '비밀번호가 맞지 않습니다. 다시 입력해 주세요.', true); document.getElementById('pw').select(); return; }
+    if (info && info.bad) { say('pwMsg', '비밀번호가 맞지 않습니다. 다시 입력해 주세요.', true); var pe = document.getElementById('pw'); pe.value = ''; document.getElementById('otp').classList.add('bad'); drawOtp(); pe.focus(); return; }
     SCAN.pw = pw; try { sessionStorage.setItem('omrPw', pw); } catch (e) { }
-    document.getElementById('pwBox').hidden = true; say('scanMsg', '답안지 전체(네 모서리 검은 네모)가 보이게 비춰 주세요.', false);
+    document.getElementById('pwBox').hidden = true; document.querySelector('label[for="photo"]').hidden = !SCAN.noCam; say('scanMsg', '답안지 전체(네 모서리 검은 네모)가 보이게 비춰 주세요.', false);
     if (SCAN.pending) { var fr = SCAN.pending; settle(fr, false).then(function (ok) { if (ok) SCAN.pending = null; }); }
     else if (!SCAN.stream && !SCAN.done) startCam();
   }); });
 function stopCam() { if (SCAN.timer) { clearInterval(SCAN.timer); SCAN.timer = null; } if (SCAN.stream) { SCAN.stream.getTracks().forEach(function (t) { t.stop(); }); SCAN.stream = null; } }
 function startCam() {
   var box = document.getElementById('camBox'), v = document.getElementById('cam');
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { box.hidden = true; return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { box.hidden = true; SCAN.noCam = true; document.querySelector('label[for="photo"]').hidden = false; say('scanMsg', '카메라를 바로 쓸 수 없는 화면입니다. 아래 「사진으로 채점」을 눌러 답안지를 찍어 주세요.', false); return; }
   navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }).then(function (st) {
     SCAN.stream = st; v.srcObject = st; box.hidden = false; v.play();
     say('scanMsg', '답안지 전체(네 모서리 검은 네모)가 보이게 비춰 주세요.', false);
@@ -13056,7 +13079,7 @@ function startCam() {
         settle(fr, true).then(function () { SCAN.busy = false; }, function () { SCAN.busy = false; });
       } catch (e) { SCAN.busy = false; }
     }, 450);
-  }).catch(function () { box.hidden = true; say('scanMsg', '카메라를 바로 쓸 수 없는 화면입니다. 아래 「사진으로 채점」을 써 주세요.', false); });
+  }).catch(function () { box.hidden = true; SCAN.noCam = true; document.querySelector('label[for="photo"]').hidden = false; say('scanMsg', '카메라를 바로 쓸 수 없는 화면입니다. 아래 「사진으로 채점」을 눌러 답안지를 찍어 주세요.', false); });
 }
 document.getElementById('photo').addEventListener('change', function (ev) {
   var f = ev.target.files && ev.target.files[0]; if (!f) return;
@@ -13078,6 +13101,9 @@ function route() {
   document.getElementById('viewScan').classList.toggle('on', view === '#scan');
   document.getElementById('tabMake').setAttribute('aria-current', view === '#make' ? 'page' : 'false');
   document.getElementById('tabScan').setAttribute('aria-current', view === '#scan' ? 'page' : 'false');
+  // 평가관(채점 화면)에는 답안지 만들기 같은 메뉴를 보이지 않는다 20261126
+  document.querySelector('header nav').hidden = view === '#scan';
+  document.querySelector('header h1').textContent = view === '#scan' ? '이론평가 OMR 채점' : '이론평가 OMR 채점';
   if (view === '#scan') { if (!SCAN.pw) askPw(''); else if (!SCAN.stream && !SCAN.done) startCam(); } else stopCam();
 }
 window.addEventListener('hashchange', route);
