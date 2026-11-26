@@ -502,7 +502,7 @@ const newUid=()=>"u"+(++uidSeq);
 
 /* ═══════ 파일 읽기 ═══════ */
 const CDN={pdf:"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
-  cfb:"https://cdnjs.cloudflare.com/ajax/libs/js-cfb/1.2.1/cfb.min.js",
+  cfb:"https://cdn.jsdelivr.net/npm/cfb@1.2.2/dist/cfb.min.js",   /* [K309] cdnjs 주소에 파일이 없어 한글(.hwp) 읽기가 실패하던 문제 */
   pako:"https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js",
   tess:"https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js",
   pdfw:"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",
