@@ -71,6 +71,33 @@ canvas{max-width:100%;height:auto;border-radius:8px;display:block}
 .subj3{display:grid;grid-template-columns:auto auto 1fr;gap:6px 12px;align-items:center}
 .subj3 input{width:80px}
 .subj3 .o{color:var(--good);font-weight:700}.subj3 .x{color:var(--bad);font-weight:700}.subj3 .u{color:var(--muted)}
+/* 채점 결과 (20261126) */
+.hero{display:grid;grid-template-columns:auto 1fr auto;gap:14px 22px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin:12px 0 14px}
+.hero .sc span{display:block;color:var(--muted);font-size:13px}.hero .sc b{font-size:46px;line-height:1.05;font-variant-numeric:tabular-nums}.hero .sc small{font-size:18px;margin-left:3px;color:var(--muted)}
+#verdict{margin-top:4px}#verdict .pill{margin-right:6px}#verdict small{color:var(--muted);font-size:12px}
+.parts{display:flex;gap:10px;flex-wrap:wrap}.parts div{background:var(--bg);border-radius:12px;padding:8px 14px;min-width:120px}
+.parts span{display:block;color:var(--muted);font-size:12.5px}.parts b{font-size:22px;font-variant-numeric:tabular-nums}.parts small{display:block;color:var(--muted);font-size:12px}
+.acts{display:flex;flex-direction:column;gap:8px}.acts .btn,.acts .btn2{border-radius:12px;white-space:nowrap}
+@media (max-width:720px){.hero{grid-template-columns:1fr 1fr}.hero .sc{grid-column:1}.parts{grid-column:2;flex-direction:column}.acts{grid-column:1/-1;flex-direction:row}.acts button{flex:1}}
+.res{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.res{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:14px}
+.card h2 small{font-weight:400;color:var(--muted);font-size:12.5px;margin-left:6px}
+.sheet{width:100%;border-radius:10px;border:1px solid var(--line)}
+.lg{display:inline-block;width:10px;height:10px;border-radius:50%;border:2.5px solid;margin:0 3px 0 8px;vertical-align:-1px}.lg.g{border-color:#16a34a}.lg.r{border-color:#ef4444}.lg.b{border-color:#2563eb;border-style:dashed}.lg.y{border-color:#f59e0b}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:4px}
+.qc{border-radius:8px;padding:3px 7px;display:flex;align-items:baseline;gap:4px;font-variant-numeric:tabular-nums;line-height:1.5}
+.qc b{font-size:12px;color:var(--muted);font-weight:500;min-width:15px}.qc span{font-size:14px;font-weight:700}.qc em{font-style:normal;font-size:12px;color:#2563eb;font-weight:700}
+.qc.ok{background:var(--good-bg)}.qc.ok span{color:var(--good)}.qc.ng{background:var(--bad-bg)}.qc.ng span{color:var(--bad)}
+.slist{display:flex;flex-direction:column;gap:4px}
+.srow{display:grid;grid-template-columns:auto 1fr auto 50px;grid-template-areas:'n . t i' 's s s s';gap:4px 8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
+.srow b{grid-area:n}.srow .strip{grid-area:s}.srow .tg{grid-area:t}.srow input{grid-area:i}
+.srow:last-child{border-bottom:0}.srow.un b{color:#b45309}
+.srow b{font-size:14px;font-variant-numeric:tabular-nums}.srow b:after{content:'번'}
+.strip canvas{display:block;width:100%;height:auto;border-radius:6px;border:1px solid var(--line)}
+.tg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}.tg button{border:0;background:var(--panel);color:var(--muted);font:inherit;font-size:13px;font-weight:700;padding:2px 10px;cursor:pointer}
+.tg button.on[data-v="1"]{background:var(--good);color:#fff}.tg button.on[data-v="0"]{background:var(--bad);color:#fff}
+.srow input{width:50px;padding:3px 5px;font-size:13px}
 @page{size:A4 portrait;margin:0}
 @media print{ header,form.card,.bar,#viewScan{display:none!important} body,main,.paper{background:#fff;padding:0;margin:0;max-width:none}
   .make{display:block} .paper svg{width:210mm;height:297mm;min-width:0;box-shadow:none} }
@@ -12907,7 +12934,7 @@ function readFrame(src, sw, sh) {
     loc = OMR.fit(base, cands[i][0], cands[i][1]); if (!loc) continue;
     var crop = OMR.qrCrop(bd.data, big.width, big.height, loc.H, k, loc.layout); z = jsQR(crop.data, crop.size, crop.size);
     hd = z && OMR.head(z.data);
-    if (hd && hd.layout === loc.layout) return { ok: true, loc: loc, small: small, qrText: z.data };
+    if (hd && hd.layout === loc.layout) return { ok: true, loc: loc, small: small, qrText: z.data, bd: bd, k: k };
   }
   // 그래도 안 되면 사진 전체에서 QR을 찾고, QR이 있는 자리로 방향을 고른다
   z = jsQR(bd.data, big.width, big.height); hd = z && OMR.head(z.data);
@@ -12918,41 +12945,77 @@ function readFrame(src, sw, sh) {
       var g = OMR.G, p = OMR.map(loc.H, g.qr.x + g.qr.s / 2, g.qr.y + g.qr.s / 2), d = (p[0] - qx) * (p[0] - qx) + (p[1] - qy) * (p[1] - qy);
       if (d < bd2) { bd2 = d; best = loc; }
     }
-    if (best) { OMR.use(best.layout); return { ok: true, loc: best, small: small, qrText: z.data }; }
+    if (best) { OMR.use(best.layout); return { ok: true, loc: best, small: small, qrText: z.data, bd: bd, k: k }; }
   }
   return { ok: false, why: 'QR을 읽지 못했습니다. 조금 더 가까이, 초점을 맞춰 주세요.', loc: base };
 }
-function showResult(fr, info, rd) {
-  SCAN.done = true; stopCam(); OMR.use(fr.loc.layout || 'P');
-  var out = document.getElementById('out'), N = info.N, M = info.M, pt = info.pt, small = fr.small, loc = fr.loc;
-  var ctx = small.getContext('2d'); ctx.lineWidth = Math.max(2, small.width / 300);
-  var q, right = 0, rowsHtml = '', warn = 0;
-  for (q = 0; q < N; q++) {
-    var a = rd.answers[q], key = info.key[q], ok = a === key; if (ok) right++; if (a < 0) warn++;
-    if (a > 0) { var b = OMR.bubble(info.objNums[q], a - 1, info.T), p = OMR.map(loc.H, b[0], b[1]), e = OMR.map(loc.H, b[0] + OMR.G.rx, b[1]);
-      ctx.strokeStyle = ok ? '#18b55f' : '#ff3b30'; ctx.beginPath(); ctx.arc(p[0], p[1], Math.hypot(e[0] - p[0], e[1] - p[1]) * 1.3, 0, 6.3); ctx.stroke(); }
-    rowsHtml += '<tr' + (ok ? '' : ' class="wrong"') + '><td>' + info.objNums[q] + '</td><td>' + (a > 0 ? a : (a === 0 ? '안 씀' : '중복')) + '</td><td>' + key + '</td><td class="' + (ok ? 'o' : 'x') + '">' + (ok ? '○' : '✕') + '</td></tr>';
+// 사진 속 답안지를 반듯하게 펴서 그린다 (답안지 좌표 → 큰 사진에서 한 점씩 가져옴) 20261126
+function rectify(fr, scale) {
+  var G = OMR.G, W = Math.round(G.W * scale), Hh = Math.round(G.H * scale), c = document.createElement('canvas'); c.width = W; c.height = Hh;
+  var ctx = c.getContext('2d'), out = ctx.createImageData(W, Hh), o = out.data, H = fr.loc.H, k = fr.k || 1, bd = fr.bd, i, j;
+  if (!bd) { ctx.drawImage(fr.small, 0, 0, W, Hh); return c; }
+  var src = bd.data, bw = bd.width, bh = bd.height;
+  for (j = 0; j < Hh; j++) for (i = 0; i < W; i++) {
+    var p = OMR.map(H, i / scale, j / scale), x = Math.round(p[0] * k), y = Math.round(p[1] * k), t = (j * W + i) * 4;
+    if (x < 0 || y < 0 || x >= bw || y >= bh) { o[t] = o[t + 1] = o[t + 2] = 255; o[t + 3] = 255; continue; }
+    var u = (y * bw + x) * 4; o[t] = src[u]; o[t + 1] = src[u + 1]; o[t + 2] = src[u + 2]; o[t + 3] = 255;
   }
+  ctx.putImageData(out, 0, 0); return c;
+}
+function showResult(fr, info, rd) {
+  SCAN.done = true; SCAN.lastFr = fr; stopCam(); OMR.use(fr.loc.layout || 'P');
+  var G = OMR.G, out = document.getElementById('out'), N = info.N, M = info.M, pt = info.pt, T = info.T;
+  var S = G.name === 'L' ? 0.8 : 0.72, sheet = rectify(fr, S), ctx = sheet.getContext('2d');
+  function ring(x, y, r, color, w) { ctx.strokeStyle = color; ctx.lineWidth = w || 3; ctx.beginPath(); ctx.arc(x * S, y * S, r * S, 0, 6.3); ctx.stroke(); }
   function r1(v) { return Math.round(v * 10) / 10; }
-  var obj = right * pt, h = '';
+  var q, right = 0, warn = 0, blank = 0, cells = '';
+  for (q = 0; q < N; q++) {
+    var a = rd.answers[q], key = info.key[q], ok = a === key, n = info.objNums[q]; if (ok) right++; if (a < 0) warn++; if (a === 0) blank++;
+    if (a > 0) { var b = OMR.bubble(n, a - 1, T); ring(b[0], b[1], G.rx * 1.45, ok ? '#16a34a' : '#ef4444'); }
+    if (!ok) { var bk = OMR.bubble(n, key - 1, T); ctx.setLineDash([4, 3]); ring(bk[0], bk[1], G.rx * 1.45, '#2563eb', 2); ctx.setLineDash([]); }
+    cells += '<div class="qc ' + (ok ? 'ok' : 'ng') + '" title="' + n + '번 · 읽은 답 ' + (a > 0 ? a : (a === 0 ? '없음' : '중복')) + ' · 정답 ' + key + '"><b>' + n + '</b><span>' + (a > 0 ? '①②③④'.charAt(a - 1) : (a === 0 ? '—' : '중복')) + '</span>'
+      + (ok ? '' : '<em>→' + '①②③④'.charAt(key - 1) + '</em>') + '</div>';
+  }
+  var obj = right * pt, box = M ? OMR.subjBox(T, M) : null, h = '';
+  // 주관식: 평가관 ○✕ 칸에 읽은 표시를 그림
+  for (q = 0; q < M; q++) { var sv = rd.subj[q], m0 = OMR.subjMark(q, 0, T, M), m1 = OMR.subjMark(q, 1, T, M);
+    if (sv === 1) ring(m0[0], m0[1], G.rx * 1.5, '#16a34a', 3.5); else if (sv === 0) ring(m1[0], m1[1], G.rx * 1.5, '#ef4444', 3.5);
+    else { ring(m0[0], m0[1], G.rx * 1.5, '#f59e0b', 3); ring(m1[0], m1[1], G.rx * 1.5, '#f59e0b', 3); } }
+  if (blank > N / 2) h += '<p class="msg" role="alert">객관식 ' + blank + '문항에서 칠한 칸을 찾지 못했습니다. 사진이 흐리거나 어두울 수 있으니 <b>다시 찍기</b>로 한 번 더 읽어 주세요.</p>';
   if (warn) h += '<p class="msg" role="alert">' + warn + '문항에 두 칸 이상 칠해져 있습니다. 답안지를 직접 확인해 주세요.</p>';
-  h += '<div class="tiles">'
-    + '<div class="tile"><span>문항 구성</span><b class="sm">객관식 ' + N + ' + 주관식 ' + M + '</b></div>'
-    + '<div class="tile"><span>객관식 (' + N + '문항 × ' + r1(pt) + '점)</span><b>' + right + ' / ' + N + ' = ' + r1(obj) + '점</b></div>'
-    + '<div class="tile"><span>합계 (60점 이상 합격)</span><b id="total">' + r1(obj) + '점</b><span id="verdict"></span></div></div>';
-  h += '<div class="cols"><div class="card"><h2>읽은 답안지 (초록 = 정답, 빨강 = 오답)</h2><div id="shot"></div></div>'
-    + '<div class="card"><h2>객관식 판독</h2><table><thead><tr><th>문항</th><th>읽은 답</th><th>정답</th><th>결과</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
-  if (M) { var un = 0; h += '<div class="card"><h2>주관식 (문항당 ' + r1(pt) + '점) — 답안지의 ○ ✕ 채점 칸을 읽었습니다</h2><div class="subj3">';
-    for (q = 0; q < M; q++) { var sv = rd.subj[q]; if (sv === null || sv === -1) un++;
-      h += '<label for="s' + q + '">' + info.subjNums[q] + '번</label><span class="' + (sv === 1 ? 'o' : (sv === 0 ? 'x' : 'u')) + '">' + (sv === 1 ? '○' : (sv === 0 ? '✕' : (sv === -1 ? '둘 다 칠함' : '미채점'))) + '</span><input type="number" id="s' + q + '" min="0" max="' + r1(pt) + '" step="0.5" value="' + (sv === 1 ? r1(pt) : 0) + '" inputmode="decimal">'; }
-    h += '</div>' + (un ? '<p class="note">미채점 ' + un + '문항은 0점으로 계산했습니다. 답안지에 ○ ✕를 칠하고 다시 비추거나, 점수를 직접 고치세요.</p>' : '') + '</div>'; }
-  h += '</div><p><button type="button" class="btn2" id="again">다음 답안지 채점</button></p>';
-  out.innerHTML = h; document.getElementById('shot').appendChild(small);
-  function total() { var s = 0, i; for (i = 0; i < M; i++) { var v = +document.getElementById('s' + i).value || 0; s += Math.max(0, Math.min(pt, v)); }
-    var t = obj + s; document.getElementById('total').textContent = r1(t) + '점';
-    document.getElementById('verdict').innerHTML = '<span class="pill ' + (t >= 60 ? 'ok">합격' : 'no">불합격') + '</span> 객관식 ' + r1(obj) + ' + 주관식 ' + r1(s); }
-  for (q = 0; q < M; q++) document.getElementById('s' + q).addEventListener('input', total); total();
-  document.getElementById('again').addEventListener('click', function () { out.innerHTML = ''; SCAN.done = false; SCAN.last = ''; startCam(); });
+  h += '<div class="hero"><div class="sc"><span>합계 점수</span><b id="total">' + r1(obj) + '</b><small>점</small><div id="verdict"></div></div>'
+    + '<div class="parts"><div><span>객관식</span><b>' + right + ' / ' + N + '</b><small>' + r1(obj) + '점 (문항당 ' + r1(pt) + ')</small></div>'
+    + (M ? '<div><span>주관식</span><b id="subjCnt">-</b><small id="subjPt">-</small></div>' : '') + '</div>'
+    + '<div class="acts"><button type="button" class="btn2" id="retake">다시 찍기(재채점)</button><button type="button" class="btn" id="again">다음 답안지</button></div></div>';
+  h += '<div class="res"><div class="card shotc"><h2>읽은 답안지 <small><i class="lg g"></i>맞음 <i class="lg r"></i>틀림 <i class="lg b"></i>정답 위치 <i class="lg y"></i>주관식 미채점</small></h2><div id="shot"></div></div><div class="side">';
+  h += '<div class="card"><h2>객관식 <small>' + right + '개 맞음 · ' + (N - right) + '개 틀림</small></h2><div class="qgrid">' + cells + '</div></div>';
+  if (M) {
+    h += '<div class="card"><h2>주관식 <small>오른쪽 ○✕ 칸 표시를 보고, 다르면 눌러 고치세요</small></h2><div class="slist">';
+    for (q = 0; q < M; q++) { var sv2 = rd.subj[q];
+      h += '<div class="srow' + (sv2 === 1 || sv2 === 0 ? '' : ' un') + '"><b>' + info.subjNums[q] + '</b><div class="strip" id="st' + q + '"></div>'
+        + '<span class="tg" data-q="' + q + '"><button type="button" data-v="1" aria-label="맞음">○</button><button type="button" data-v="0" aria-label="틀림">✕</button></span>'
+        + '<input type="number" id="s' + q + '" min="0" max="' + r1(pt) + '" step="0.5" value="' + (sv2 === 1 ? r1(pt) : 0) + '" inputmode="decimal" aria-label="' + info.subjNums[q] + '번 점수"></div>'; }
+    h += '</div><p class="note" id="subjNote"></p></div>';
+  }
+  h += '</div></div>';
+  out.innerHTML = h;
+  var shot = document.getElementById('shot'); sheet.className = 'sheet'; shot.appendChild(sheet);
+  // 주관식 줄마다 답안지에서 그 줄만 잘라 보여 준다
+  for (q = 0; q < M; q++) { var y0 = (box.y + q * box.rowH) * S, sw = box.w * S, shh = box.rowH * S, c2 = document.createElement('canvas');
+    c2.width = Math.round(sw); c2.height = Math.round(shh); c2.getContext('2d').drawImage(sheet, box.x * S, y0, sw, shh, 0, 0, c2.width, c2.height); document.getElementById('st' + q).appendChild(c2); }
+  function total() { var s = 0, o = 0, un = 0, i; for (i = 0; i < M; i++) { var el = document.getElementById('s' + i), v = Math.max(0, Math.min(pt, +el.value || 0)); s += v; if (v >= pt) o++;
+      var tg = el.parentNode.querySelector('.tg'); tg.querySelectorAll('button').forEach(function (bt) { bt.className = (+bt.getAttribute('data-v') === 1 ? v >= pt : v <= 0) ? 'on' : ''; });
+      var sv3 = rd.subj[i]; if (sv3 === null || sv3 === -1) un++; }
+    var t = obj + s; document.getElementById('total').textContent = r1(t);
+    document.getElementById('verdict').innerHTML = '<span class="pill ' + (t >= 60 ? 'ok">합격' : 'no">불합격') + '</span><small>60점 이상 합격</small>';
+    if (M) { document.getElementById('subjCnt').textContent = o + ' / ' + M; document.getElementById('subjPt').textContent = r1(s) + '점';
+      document.getElementById('subjNote').textContent = un ? '○✕ 표시를 읽지 못한 ' + un + '문항은 0점으로 두었습니다. 사진을 보고 ○ 또는 ✕를 눌러 주세요.' : ''; } }
+  for (q = 0; q < M; q++) document.getElementById('s' + q).addEventListener('input', total);
+  out.querySelectorAll('.tg button').forEach(function (bt) { bt.addEventListener('click', function () { var qi = +bt.parentNode.getAttribute('data-q'); document.getElementById('s' + qi).value = +bt.getAttribute('data-v') ? r1(pt) : 0; total(); }); });
+  total();
+  function restart() { out.innerHTML = ''; SCAN.done = false; SCAN.last = ''; startCam(); window.scrollTo(0, 0); }
+  document.getElementById('again').addEventListener('click', restart);
+  document.getElementById('retake').addEventListener('click', restart);
   document.getElementById('camBox').hidden = true;
 }
 // 읽은 한 장을 정답과 대조. 비밀번호가 없거나 틀리면 물어본다.
@@ -12963,12 +13026,22 @@ function settle(fr, needStable) {
     if (!info) { say('scanMsg', '이 QR은 이 채점 화면용이 아닙니다.', true); return false; }
     if (info.bad) { askPw('비밀번호가 맞지 않습니다. 다시 입력해 주세요.'); return false; }
     var rd = OMR.read(fr.loc, info); if (!rd.ok) { say('scanMsg', rd.why, true); return false; }
+    if (needStable && rd.answers.filter(function (v) { return v === 0; }).length > info.N / 2) { say('scanMsg', '칠한 칸이 잘 보이지 않습니다. 조금 더 밝게, 가까이 비춰 주세요.', false); return false; }
     var sig = rd.answers.join(',') + '/' + rd.subj.join(','); if (needStable && sig !== SCAN.last) { SCAN.last = sig; say('scanMsg', '읽는 중입니다. 잠시 그대로 비춰 주세요.', false); return false; }
     say('scanMsg', '', false); showResult(fr, info, rd); return true;
   });
 }
-function askPw(msg) { var b = document.getElementById('pwBox'); b.hidden = false; say('pwMsg', msg || '', !!msg); if (msg) { SCAN.pw = ''; } }
-document.getElementById('pwForm').addEventListener('submit', function (ev) { ev.preventDefault(); SCAN.pw = val('pw'); try { sessionStorage.setItem('omrPw', SCAN.pw); } catch (e) { } document.getElementById('pwBox').hidden = true; say('scanMsg', '비밀번호를 받았습니다. 답안지를 비춰 주세요.', false); });
+function askPw(msg) { var b = document.getElementById('pwBox'); b.hidden = false; say('pwMsg', msg || '', !!msg); if (msg) { SCAN.pw = ''; } stopCam(); document.getElementById('camBox').hidden = true; say('scanMsg', '', false); setTimeout(function () { try { document.getElementById('pw').focus(); } catch (e) { } }, 50); }
+document.getElementById('pwForm').addEventListener('submit', function (ev) { ev.preventDefault(); var pw = val('pw'); if (!pw) return;
+  // QR로 들어온 경우 주소의 암호문으로 비밀번호를 먼저 확인하고, 맞으면 카메라를 켠다 20261126
+  var h = location.hash, chk = OMR.head(h) ? OMR.open(h, pw) : Promise.resolve(null);
+  chk.then(function (info) {
+    if (info && info.bad) { say('pwMsg', '비밀번호가 맞지 않습니다. 다시 입력해 주세요.', true); document.getElementById('pw').select(); return; }
+    SCAN.pw = pw; try { sessionStorage.setItem('omrPw', pw); } catch (e) { }
+    document.getElementById('pwBox').hidden = true; say('scanMsg', '답안지 전체(네 모서리 검은 네모)가 보이게 비춰 주세요.', false);
+    if (SCAN.pending) { var fr = SCAN.pending; settle(fr, false).then(function (ok) { if (ok) SCAN.pending = null; }); }
+    else if (!SCAN.stream && !SCAN.done) startCam();
+  }); });
 function stopCam() { if (SCAN.timer) { clearInterval(SCAN.timer); SCAN.timer = null; } if (SCAN.stream) { SCAN.stream.getTracks().forEach(function (t) { t.stop(); }); SCAN.stream = null; } }
 function startCam() {
   var box = document.getElementById('camBox'), v = document.getElementById('cam');
@@ -12996,7 +13069,6 @@ document.getElementById('photo').addEventListener('change', function (ev) {
   img.onerror = function () { say('scanMsg', '사진 파일을 열지 못했습니다.', true); };
   img.src = url;
 });
-document.getElementById('pwForm').addEventListener('submit', function () { if (SCAN.pending) setTimeout(function () { var fr = SCAN.pending; settle(fr, false).then(function (ok) { if (ok) SCAN.pending = null; }); }, 0); });
 
 /* ---------- 화면 전환 ---------- */
 function route() {
@@ -13006,7 +13078,7 @@ function route() {
   document.getElementById('viewScan').classList.toggle('on', view === '#scan');
   document.getElementById('tabMake').setAttribute('aria-current', view === '#make' ? 'page' : 'false');
   document.getElementById('tabScan').setAttribute('aria-current', view === '#scan' ? 'page' : 'false');
-  if (view === '#scan') { if (!SCAN.stream && !SCAN.done) startCam(); } else stopCam();
+  if (view === '#scan') { if (!SCAN.pw) askPw(''); else if (!SCAN.stream && !SCAN.done) startCam(); } else stopCam();
 }
 window.addEventListener('hashchange', route);
 document.getElementById('btnMarked').addEventListener('click', function () { STATE.marked = true; drawSheet(); });
